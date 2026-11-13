@@ -99,6 +99,7 @@ def main() -> None:
         "ram_available_end_mb": last.get("ram_available_mb"),
         "last_steps": steps[-4:],
     }
+    block = None
     del held
     torch.cuda.empty_cache()
     report["allocated_after_release_mb"] = round(torch.cuda.memory_allocated() / 2**20)

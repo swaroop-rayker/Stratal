@@ -72,19 +72,20 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 **Done when**
 
 - [x] Documentation set written and committed
-- [ ] Owner: Docker Desktop running, disk image on D:, `.wslconfig` in place, downloads approved
-- [ ] S-01: the GPU is visible in a container and PyTorch reports CUDA available
-- [ ] S-02: behaviour at the VRAM limit recorded; cap fraction chosen
-- [ ] S-03: sleep and wake behaviour recorded
-- [ ] S-04: file I/O speed recorded
-- [ ] S-05: metric availability inside containers recorded
-- [ ] `docker compose up` brings postgres, redis and api to healthy
-- [ ] `GET /api/v1/health` returns ok, and an error response has the problem-details shape (test)
-- [ ] `test_NFR_10_*`: every log line is JSON and carries the bound IDs
-- [ ] `test_NFR_9_*`: the meta-test runs and reports no done-but-untested P0
-- [ ] ruff, pyright (strict) and pytest pass locally; CI workflow file present
-- [ ] README has real setup and run steps
-- [ ] RISKS.md, ERRORS.md and affected ADRs updated with spike results
+- [x] Docker Desktop running, disk image on D:, `.wslconfig` in place, downloads approved (done by the agent on the owner's instruction, 2026-11-13)
+- [x] S-01: the GPU is visible in a container and PyTorch reports CUDA available
+- [x] S-02: behaviour at the VRAM limit recorded; cap fraction chosen (0.85)
+- [ ] S-03: sleep and wake behaviour recorded — needs the owner at the laptop; the probe script is ready
+- [x] S-04: file I/O speed recorded
+- [x] S-05: metric availability inside containers recorded
+- [x] `docker compose up` brings postgres, redis and api to healthy
+- [x] `GET /api/v1/health` returns ok, and an error response has the problem-details shape (`test_API_health_*`, `test_ADR_0011_*`)
+- [x] `test_NFR_10_*`: every log line is JSON and carries the bound IDs
+- [x] `test_NFR_9_*`: the meta-test runs and reports no done-but-untested P0
+- [x] ruff, pyright (strict) and pytest pass locally; CI workflow file present (the workflow itself has never run: there is no remote)
+- [x] README has real setup and run steps
+- [x] RISKS.md, ERRORS.md and affected ADRs updated with spike results
+- [ ] The old 84.6 GB Docker disk image on C: deleted, after the owner confirms
 - [ ] Demo: stack up, health endpoint, GPU check output
 - [ ] Owner's OK to merge into `main`
 

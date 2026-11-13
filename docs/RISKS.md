@@ -42,7 +42,7 @@ Likelihood and impact are High, Medium or Low.
 - **Method:** Run `nvidia-smi` in a minimal container with GPU access. Then, in the worker image, check `torch.cuda.is_available()` and run a small matrix multiplication on the GPU.
 - **Record:** driver and CUDA versions as seen in the container; time to first CUDA call.
 - **If it fails:** check Docker Desktop's WSL integration and GPU support; fall back to Docker Engine inside Ubuntu.
-- **Result:** not run yet. WSL-level passthrough was verified on 2026-11-13.
+- **Result (2026-11-13): passed.** `nvidia-smi` in a plain `ubuntu:24.04` container reports the RTX 4050 with driver 621.24 and 6,141 MiB. In the worker image, PyTorch 2.15.0 (CUDA 13.2 build) reports CUDA available and completes a 4096×4096 matrix multiplication on the GPU. The first CUDA operation takes about 4 seconds after process start. Docker Desktop ships the NVIDIA runtime, so no toolkit install was needed. Risk R-01 is closed.
 
 ### S-02 — What happens at the VRAM limit? (M0)
 
@@ -50,7 +50,25 @@ Likelihood and impact are High, Medium or Low.
 - **Method:** Allocate tensors in 256 MB steps until failure, timing each step and reading NVML and system RAM. Repeat with PyTorch's per-process memory fraction set.
 - **Record:** the size at which an error is raised without a cap; whether allocation continues past 6 GB and how slow it gets; the gap between NVML "used" and PyTorch "reserved".
 - **Decides:** the cap fraction that keeps the driver-reported peak under 5.5 GB.
-- **Result:** not run yet.
+- **Result (2026-11-13): the risk is real, and the cap fixes it.** Run with `scripts/spikes/s02_vram_limit.py`.
+
+  | | No cap | Cap at 0.85 |
+  |---|---|---|
+  | Outcome | No error. Reached the script's 8 GB stop | `OutOfMemoryError` raised by PyTorch |
+  | Held when it stopped | 8,192 MB on a 6,140 MB card | 5,120 MB |
+  | NVML "used" at peak | 5,792 MB, flat from there on | 5,216 MB |
+  | Time per 256 MB step | up to 1.15 s once past the card's size | 0.01 s |
+  | RAM available inside the VM | unchanged | unchanged |
+
+  What this shows:
+
+  1. **Without a cap there is no out-of-memory error under WSL2.** PyTorch was given 2 GB more than the card has. The driver put the excess in shared system memory on the Windows side, and each step became 30 to 100 times slower. A real job would not crash; it would crawl, and take Windows' RAM while doing so.
+  2. **NVML cannot see the spill.** Its "used" figure stops at about 5.8 GB while PyTorch's reserved figure keeps climbing. A VRAM chart based on NVML alone would look healthy. The spill is visible only as PyTorch reserved exceeding the card's size.
+  3. **The spilled memory is not the Linux VM's.** RAM available inside the VM did not move, so the 10 GB WSL cap does not contain it.
+  4. **With the cap, the failure is a normal exception** at a known point, with every step still fast.
+  5. The CUDA context costs about 85 to 95 MB by itself.
+
+  **Decisions:** the default cap is 0.85 of the card (about 5.2 GB for PyTorch, about 5.2 GiB as NVML sees it), which keeps NFR-1 with roughly 400 MB of room for library workspaces. Every GPU process must set it before its first allocation. NFR-1 must be checked from PyTorch's reserved figure plus the context, not from NVML alone. The watchdog should alert when reserved exceeds the card's size. These are recorded in [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md). Risk R-02 is confirmed and mitigated; the mitigation is owner-implemented in M4.
 
 ### S-03 — What does sleep do to a GPU job? (M0, needs the owner at the laptop)
 
@@ -58,7 +76,7 @@ Likelihood and impact are High, Medium or Low.
 - **Method:** Run a loop that does a small GPU operation every second and logs wall-clock and monotonic time. Sleep the laptop for 2 minutes and for 20 minutes, by lid and from the Start menu, on mains power. Repeat once with hibernate.
 - **Record:** whether the loop continues; any error text; whether the clocks jump; whether a fresh container sees the GPU; whether `wsl --shutdown` is needed.
 - **Decides:** the recovery details in ADR-0008.
-- **Result:** not run yet.
+- **Result:** not run yet. It needs the owner to put the laptop to sleep. The probe is ready: `docker compose run --rm worker-gpu python scripts/spikes/s03_sleep_probe.py`.
 
 ### S-04 — How slow is the Windows mount? (M0)
 
@@ -66,7 +84,18 @@ Likelihood and impact are High, Medium or Low.
 - **Method:** Generate 10,000 synthetic JPEGs on D:. Time reading and hashing them through the mount, copying them into the volume, and reading and hashing them from the volume.
 - **Record:** files per second and MB per second for each; whether psutil's disk counters reflect the reads.
 - **Decides:** confirms copy-at-ingest; sets a realistic ingestion throughput for ETA.
-- **Result:** not run yet.
+- **Result (2026-11-13):** run with 10,000 files of 100 KB (`scripts/spikes/s04_io_speed.py`).
+
+  | Operation | Files/s | MB/s |
+  |---|---|---|
+  | Write through the Windows mount | 161 | 15.7 |
+  | Read and hash through the mount | 104 | 10.2 |
+  | Copy from the mount into the volume | 121 | 11.8 |
+  | Read and hash from the volume | 7,886 | 770 |
+
+  The volume figure is warm-cache, and a large image build was downloading at the same time, so treat these as rough. The gap is about 75 times, far beyond that noise, and the mount's cost is per file, not per byte. Norton's real-time scanning on the Windows side probably adds to it.
+
+  **Conclusion:** copy-at-ingest ([ADR-0004](decisions/ADR-0004-immutable-content-addressed-storage.md)) is confirmed. Ingesting 10,000 images should take about a minute and a half to two minutes, a one-time cost, and ingestion's ETA should assume roughly 100 files per second. Nothing after ingest may read from the mount.
 
 ### S-05 — Which metrics are available inside containers? (M0)
 
@@ -74,7 +103,21 @@ Likelihood and impact are High, Medium or Low.
 - **Method:** Query each NVML field, including per-process memory, and each psutil field, from a container with GPU access.
 - **Record:** a table of metric, source, available or not.
 - **Decides:** which columns are nullable and what the UI says for missing values.
-- **Result:** not run yet. At WSL level, temperature, power, utilization and memory were readable and fan speed was not.
+- **Result (2026-11-13):** run with `scripts/spikes/s05_metrics.py` in a container with GPU access.
+
+  | Metric | Source | In a container |
+  |---|---|---|
+  | CPU overall and per core (16) | psutil | available |
+  | RAM used, available, total; swap | psutil | available. It is the WSL VM's view: 9,944 MB total |
+  | Process RSS | psutil | available for the process itself |
+  | Disk read and write counters | psutil | available. Reads through the Windows mount were not checked separately |
+  | GPU utilization, memory-controller % | NVML | available |
+  | VRAM used and total | NVML | available, but blind to spill into shared memory (see S-02) |
+  | GPU temperature, power draw | NVML | available |
+  | Fan speed | NVML | not supported on this laptop |
+  | Per-process GPU memory | NVML | returned an empty list. No other GPU process was running, so this is not settled; it is treated as unavailable |
+
+  **Conclusion:** every MON-2.1 metric is readable. The GPU columns stay nullable, fan speed is not collected, and per-process VRAM comes from each job's own PyTorch figures as planned.
 
 ### S-06 — Florence-2 or BLIP? (M4)
 

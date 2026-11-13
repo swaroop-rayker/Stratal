@@ -35,6 +35,46 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-005 — Exceeding VRAM does not fail; it silently spills and crawls
+
+- **Date:** 2026-11-13
+- **Seen:** In spike S-02, a process allocated 8,192 MB on the 6,140 MB card with no error. Each 256 MB step went from 0.01 s to as much as 1.15 s. NVML reported 5,792 MB used throughout.
+- **Where:** M0, spike S-02; relates to BUG2, BUG3 and BUG6
+- **Cause:** Under WSL2 the Windows driver satisfies requests beyond dedicated VRAM from shared system memory instead of refusing them. NVML reports only dedicated memory, so the overflow is invisible there. This is a likely contributor to the owner's original symptoms: "VRAM bloat" that monitoring did not explain, RAM contention, and jobs that degrade instead of failing.
+- **Fix:** Every GPU process caps PyTorch's allocator at 0.85 of the card, which makes PyTorch raise a catchable `OutOfMemoryError` at 5.1 GB (ADR-0006, items 8 to 10). Verified in the same spike.
+- **Guard:** `test_NFR_1_*` and `test_BUG2_*` in M4, when the owner implements the VRAM manager. Until then the cap exists only in the spike script.
+- **Status:** cause confirmed; fix demonstrated in a spike; not yet in product code
+
+### E-004 — Type checker could not resolve the test client
+
+- **Date:** 2026-11-13
+- **Seen:** `pyright` reported 48 errors of the form `Type of "response" is unknown` in the API tests, and pytest warned: `Using httpx with starlette.testclient is deprecated; install httpx2 instead.`
+- **Where:** M0, test dependencies
+- **Cause:** The installed Starlette builds its test client on `httpx2`. With only `httpx` present it falls back at run time, but the type checker follows the `httpx2` import and finds nothing.
+- **Fix:** Replaced the dev dependency `httpx` with `httpx2` (commit `fa80872`).
+- **Guard:** `pyright` in strict mode is part of `scripts/check.ps1`.
+- **Status:** verified
+
+### E-003 — Docker kept using C: after the disk location was changed
+
+- **Date:** 2026-11-13
+- **Seen:** After setting `DataFolder` in Docker Desktop's `settings-store.json`, Docker started normally but still wrote to `C:\Users\…\AppData\Local\Docker\wsl\disk\docker_data.vhdx`.
+- **Where:** M0, environment setup, ADR-0001
+- **Cause:** `DataFolder` is the location for the Hyper-V backend's disk. For the WSL2 backend the key is `CustomWslDistroDir`. Docker's own log showed the two as `vm.resources.dataFolder` and `vm.resources.wslDataFolder`.
+- **Fix:** Removed `DataFolder`, set `CustomWslDistroDir` to `D:\Docker\wsl`. The disk image had been copied there first with Docker stopped, so nothing was lost while the wrong key was in place.
+- **Guard:** None automated. Verified by file timestamps (only the D: image changes) and by comparing the image and volume lists before and after: identical, 93 images and 13 volumes.
+- **Status:** verified
+
+### E-002 — Containers reject every HTTPS certificate
+
+- **Date:** 2026-11-13
+- **Seen:** `uv lock` in a container failed with `invalid peer certificate: UnknownIssuer` for `https://pypi.org/simple/alembic/`. Docker image pulls worked.
+- **Where:** M0, dependency installation
+- **Cause:** Norton Antivirus inspects HTTPS on the laptop. It re-signs each connection with its own root ("Norton Web/Mail Shield Root"), which Windows trusts and a Linux container does not. Image pulls go through Docker Desktop on the Windows side, which is why they were unaffected.
+- **Fix:** The Dockerfile adds any certificate found in `docker/certs/` to the image's trust store and points uv, Python and Node at it. The Norton root, a public certificate exported from the Windows store, is placed there on this machine and ignored by git. Verification is never disabled.
+- **Guard:** None automated; the build fails loudly if the certificate is missing on this machine. Model downloads in M4 will go through the same trust store.
+- **Status:** verified. The alternative, excluding these sites from Norton's HTTPS scanning, is the owner's decision.
+
 ### E-001 — The specified GPU worker settings would never release VRAM
 
 - **Date:** 2026-11-13

@@ -21,6 +21,13 @@
 5. **Python runs only in containers** (3.12). The Windows host needs Docker and git.
 6. Dependency folders (`.venv`, `node_modules`) live in images or volumes, never on the bind mount.
 
+## As implemented (2026-11-13)
+
+- The disk image is at `D:\Docker\wsl`, set with the `CustomWslDistroDir` key in `%APPDATA%\Docker\settings-store.json`. The owner delegated this change to the agent. The image was copied with Docker stopped, and the image and volume lists were identical before and after.
+- The WSL VM is capped at 10 GB ([ADR-0007](ADR-0007-memory-budget.md)); Docker reports 9.7 GiB.
+- The NVIDIA runtime ships with Docker Desktop; no separate toolkit install was needed. Spike S-01 passed.
+- Norton Antivirus inspects HTTPS on this laptop, so images trust an extra root certificate from `docker/certs/`. This was not foreseen at kickoff ([ERRORS.md](../ERRORS.md) E-002).
+
 ## Alternatives
 
 | Option | Why not |

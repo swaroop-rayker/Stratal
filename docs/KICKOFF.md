@@ -40,9 +40,18 @@ Smaller items: the error shape (CL-10), where allocator stats come from (CL-11),
 - Verified on the laptop: GPU passthrough into WSL2 works, and GPU temperature, power and utilization are readable there.
 - Not yet verified: anything inside a Docker container. Docker Desktop was not running, and the check needs downloads.
 
+## Update, 2026-11-13 (later the same day)
+
+The owner told the agent to do the four setup steps itself and approved the downloads. All four are done, and so is most of M0: the skeleton runs, and spikes S-01, S-02, S-04 and S-05 have results in [RISKS.md](RISKS.md). The steps below are kept as a record of what was done. What is still open for the owner:
+
+- **Spike S-03 (sleep).** Start the probe, put the laptop to sleep, wake it, and report what it printed.
+- **Confirm deleting the old Docker disk image on C:** (84.6 GB at `%LOCALAPPDATA%\Docker\wsl\disk\docker_data.vhdx`). Docker now runs from the copy on D:.
+- **Norton's HTTPS scanning.** Containers now trust Norton's root certificate so installs work. Whether to exclude developer sites from that scanning instead is the owner's choice.
+- The OK to merge M0 into `main`.
+
 ## What the owner does next
 
-These four steps unblock M0. The agent cannot do them: they change system settings or need a download approval.
+These four steps unblock M0. They were originally reserved for the owner because they change system settings or need a download approval.
 
 **1. Create the WSL memory config.** Make the file `C:\Users\<your user>\.wslconfig` with:
 

@@ -19,6 +19,18 @@
 6. **Verify every unload in long-lived processes.** After unloading, allocated VRAM must be back at baseline. If not, the process logs what is left and restarts itself.
 7. **Report both views.** Load and unload events show VRAM before and after (MON-3.3), from NVML and from PyTorch.
 
+## Measured on 2026-11-13 (spike S-02)
+
+- **The unverified point is now verified, and it is the bad case.** With no cap, PyTorch held 8.2 GB on the 6.1 GB card and no error was raised. The excess went to shared system memory on the Windows side and allocation became 30 to 100 times slower.
+- **NVML does not show the spill.** Its "used" figure stopped at about 5.8 GB. Only PyTorch's reserved figure showed the truth.
+- **With the allocator capped at 0.85, PyTorch raised its own `OutOfMemoryError`** at 5.1 GB held, with NVML at 5.2 GiB and every step still fast.
+
+Additions to the decision:
+
+8. **The default cap is 0.85** of the card. It is set by every GPU process before its first allocation.
+9. **NFR-1 is checked from PyTorch's reserved memory plus the CUDA context** (about 90 MB), not from NVML alone.
+10. **Reserved memory above the card's size is an alert**, because it means a process is running uncapped and spilling.
+
 ## Alternatives
 
 | Option | Why not |

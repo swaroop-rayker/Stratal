@@ -21,6 +21,26 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `.wslconfig` sets the cap; each container has a memory limit; the limits sum to 9 GB.
 - **Why:** The laptop has 15.2 GB usable and Windows needs a share. The input's 12 GB was not attainable.
 
+**Docker disk location** (M0) — [ADR-0001](decisions/ADR-0001-docker-compose-on-wsl2.md)
+- **What:** Docker's disk image lives at `D:\Docker\wsl`.
+- **How:** The image was copied with Docker stopped, then `CustomWslDistroDir` was set in Docker Desktop's settings file. The original on C: was left in place until the owner confirms deleting it.
+- **Why:** C: was nearly full. Copy-then-switch means a wrong setting cannot lose the owner's other Docker data.
+
+**Trusting the host's TLS inspection** (M0) — [ERRORS.md](ERRORS.md) E-002
+- **What:** Images trust any extra root certificate placed in `docker/certs/`.
+- **How:** The Dockerfile copies that folder into the system trust store and points uv, Python and Node at it. The files are ignored by git.
+- **Why:** Norton Antivirus re-signs HTTPS on the laptop, and containers rejected it. Trusting the same root Windows already trusts keeps verification on; disabling verification was not acceptable.
+
+**All tooling runs in containers** (M0)
+- **What:** Lint, type checks and tests run in a `dev` image; nothing Python is installed on Windows.
+- **How:** `scripts/check.ps1` calls `docker compose run dev …` for each gate; the repository is bind-mounted, so no rebuild is needed for source changes.
+- **Why:** One environment, identical to what runs the code, and the host's Python 3.14 is too new for the stack.
+
+**Test client dependency** (M0) — [ERRORS.md](ERRORS.md) E-004
+- **What:** `httpx2` is the dev dependency for FastAPI's test client, not `httpx`.
+- **How:** Swapped in `pyproject.toml` and re-locked.
+- **Why:** The installed Starlette builds its test client on `httpx2`; with `httpx` the strict type check failed.
+
 ## Storage
 
 **System of record** — [ADR-0002](decisions/ADR-0002-postgres-system-of-record.md)
