@@ -1,0 +1,116 @@
+# Stratal development stack.
+#
+#   docker compose up -d                      postgres, redis, api
+#   docker compose run --rm dev <command>     lint, type-check, tests
+#   docker compose run --rm worker-gpu <cmd>  anything that needs the GPU
+#
+# Memory limits implement NFR-2 (ADR-0007): everything together stays under 9 GB.
+
+name: stratal
+
+x-stratal-env: &stratal-env
+  STRATAL_DATABASE_URL: postgresql+psycopg://stratal:stratal@postgres:5432/stratal
+  STRATAL_REDIS_URL: redis://redis:6379/0
+  STRATAL_DATA_DIR: /data
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      # Local-only development credentials. Nothing is published outside the Compose network.
+      POSTGRES_USER: stratal
+      POSTGRES_PASSWORD: stratal
+      POSTGRES_DB: stratal
+    volumes:
+      - stratal-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stratal -d stratal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    mem_limit: 512m
+    restart: unless-stopped
+
+  redis:
+    image: redis:8
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - stratal-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    mem_limit: 256m
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: api
+    environment:
+      <<: *stratal-env
+    volumes:
+      - stratal-data:/data
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3).status == 200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    mem_limit: 400m
+    restart: unless-stopped
+
+  dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: dev
+    environment:
+      <<: *stratal-env
+    volumes:
+      - .:/app
+      - stratal-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 2500m
+
+  worker-gpu:
+    profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: worker-gpu
+    environment:
+      <<: *stratal-env
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - stratal-data:/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    mem_limit: 4500m
+
+volumes:
+  stratal-pg:
+  stratal-redis:
+  stratal-data:

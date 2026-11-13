@@ -63,7 +63,7 @@ The full split is in `docs/decisions/ADR-0012-working-model-and-git-workflow.md`
 
 - **Downloads.** State what, from where, and roughly how large, and wait for a yes.
 - **Anything needing an account, email, key or license acceptance.** The budget is free tier only.
-- **System settings**: `.wslconfig`, Docker Desktop settings, Windows power settings, NVIDIA settings. Give the owner the exact steps; do not change them.
+- **System settings.** On 2026-11-13 the owner delegated two things to the agent: `.wslconfig` and Docker Desktop's own settings. Say what you are changing before you change it, and back up the file first. Everything else stays with the owner: Windows power settings, NVIDIA settings, antivirus, firewall and anything security-related. For those, give the exact steps and do not change them.
 - **Any requirement change**, and any deviation from an approved design.
 - **Deleting data** that is not clearly a temporary file made in the current task.
 
@@ -75,7 +75,26 @@ The full split is in `docs/decisions/ADR-0012-working-model-and-git-workflow.md`
 - Memory: the WSL VM is capped at 10 GB; all containers together stay under 9 GB. VRAM: any job stays under 5.5 GB.
 - One GPU job at a time. Each job runs in its own process (ADR-0003).
 - The laptop has only Modern Standby; a sleep suspends the whole Linux VM.
-- Commands for building, running and testing are added to this file in M0, when they exist. Do not guess them.
+- Docker's disk image is at `D:\Docker\wsl` (setting `CustomWslDistroDir` in `%APPDATA%\Docker\settings-store.json`).
+- Norton Antivirus inspects HTTPS on this laptop. Containers trust its root certificate through `docker/certs/` (ignored by git; see the README there). Never work around a certificate error by disabling verification.
+
+## Commands
+
+Run from `D:\Stratal` in PowerShell. Everything executes in containers.
+
+| Purpose | Command |
+|---|---|
+| Start postgres, redis and the api | `docker compose up -d` |
+| Stop them | `docker compose down` |
+| All quality gates (format, lint, types, tests, integration) | `.\scripts\check.ps1` |
+| Same, without integration tests | `.\scripts\check.ps1 -Fast` |
+| One tool | `docker compose run --rm --no-deps dev ruff check .` (or `ruff format .`, `pyright`, `pytest -q`) |
+| Integration tests | `docker compose run --rm dev pytest -q -m integration` |
+| Anything on the GPU | `docker compose run --rm worker-gpu python <script>` |
+| Re-lock after editing `pyproject.toml` | `docker run --rm -v "D:\Stratal:/app" -w /app stratal-base uv lock`, then `docker compose --profile dev --profile gpu build` |
+| Health check | `http://127.0.0.1:8000/api/v1/health` |
+
+The `stratal-base` image is built with `docker build --target base -t stratal-base -f docker/Dockerfile .`. Rebuild `dev` after changing dependencies; source changes need no rebuild because the repository is bind-mounted into `dev`. The `api` image copies the source, so rebuild it to see code changes there.
 
 ## Learning notes
 

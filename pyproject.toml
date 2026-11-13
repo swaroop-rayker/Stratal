@@ -1,0 +1,59 @@
+[project]
+name = "stratal"
+version = "0.1.0"
+description = "Local, end-to-end ML lifecycle platform for consumer hardware"
+requires-python = ">=3.12,<3.13"
+# Every dependency names the requirement that needs it (SPEC §9.1).
+dependencies = [
+    "alembic>=1.13",            # SPEC §7.2 STORE: migrations (ADR-0002)
+    "fastapi>=0.115",           # SPEC §7.3 API
+    "psycopg[binary]>=3.2",     # SPEC §7.2 STORE: PostgreSQL driver (ADR-0002)
+    "pydantic>=2.9",            # SPEC §7.1 Config
+    "pydantic-settings>=2.5",   # SPEC §7.1 Config from environment
+    "redis>=5.1",               # SPEC §7.2 STORE: broker, event stream, flags
+    "sqlalchemy>=2.0.36",       # SPEC §7.2 STORE (ADR-0002)
+    "structlog>=24.4",          # NFR-10 structured JSON logs
+    "uvicorn>=0.30",            # SPEC §7.3 API server
+]
+
+[project.optional-dependencies]
+# Installed only in the GPU worker image. The API image stays free of ML libraries.
+gpu = [
+    "torch>=2.5",               # LABEL-1.1, RUN-1.4; spikes S-01 and S-02
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16",             # FastAPI's TestClient needs it (httpx is deprecated there)
+    "pyright[nodejs]>=1.1.380", # SPEC §7.1 Quality: strict type checking
+    "pytest>=8.3",              # SPEC §7.1 Tests
+    "ruff>=0.7",                # SPEC §7.1 Quality: lint and format
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stratal"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers -m 'not integration and not gpu'"
+markers = [
+    "integration: needs real postgres and redis (run inside Compose)",
+    "gpu: needs the GPU; run locally in the worker-gpu image",
+]
