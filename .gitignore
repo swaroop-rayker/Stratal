@@ -1,0 +1,41 @@
+# Local-only learning notes. Owner's rule: never committed, never pushed.
+docs/learning/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Data, models and job output live in Docker volumes, never in git
+/data/
+/models/
+*.parquet
+*.safetensors
+*.ckpt
+*.pt
+*.gguf
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Claude Code local settings
+.claude/settings.local.json

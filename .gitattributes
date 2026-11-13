@@ -1,0 +1,11 @@
+# Everything is checked out with LF so files bind-mounted into Linux containers
+# (shell scripts, Dockerfiles, configs) never break on CRLF.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.woff2 binary
