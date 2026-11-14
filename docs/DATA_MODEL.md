@@ -51,7 +51,16 @@ erDiagram
 3. Row order, Parquet writer version and file compression do not affect the ID. It is computed over logical content, not file bytes.
 4. The full 64-hex digests are stored in `content_hash` and `config_hash`; the ID is a readable prefix.
 
-The spec's examples show six hex characters. Six collide too easily (about a 3% chance among a thousand versions), so the stored ID uses twelve and the UI may show fewer. This is open clarification OC-4 and is the owner's call.
+The spec's examples show six hex characters. Six collide too easily (about a 3% chance among a thousand versions), so the ID uses twelve and the UI may show fewer (OC-4, resolved 2026-11-14).
+
+**As implemented** (`stratal.data.versioning`):
+
+- A row is encoded as its non-null columns in name order. Each name and value is length-prefixed, and each value carries a type tag, so `1`, `1.0`, `True` and `"1"` differ and a value cannot slide between columns or rows.
+- Each encoded row is hashed with SHA-256. The digests are added modulo 2^256. `content_hash` is the SHA-256 of the row count and that sum.
+- `config_hash` is the SHA-256 of the config as canonical JSON (sorted keys, no whitespace).
+- `version_id` is `ds_` plus the first twelve hex characters of the SHA-256 of both hashes.
+- A null and an absent column are the same, so a new empty column does not change existing IDs.
+- A known-answer test pins the algorithm. Changing it changes every stored version ID, so that needs an ADR and a migration plan.
 
 ## 4. PostgreSQL schema (phase 1)
 
@@ -87,7 +96,7 @@ Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 | `new_blob_bytes` | bigint | no | bytes of files first written for this version (makes DATA-3.4.AC1 measurable) |
 | `schema_version` | integer | no | manifest schema version |
 | `code_version` | text | yes | git commit that produced it |
-| `created_by_job_id` | text | yes | FK → `jobs.id`; null when created from the CLI |
+| `created_by_job_id` | text | yes | null when created from the CLI. A plain column in the M1 migration; it becomes a foreign key to `jobs.id` when the `jobs` table is added in M2 |
 | `created_at` | timestamptz | no | |
 
 Indexes: `(dataset_id, created_at desc)`; `(stage, parent_version_id, config_hash)` for the memo lookup; `(parent_version_id)` for walking lineage downward.

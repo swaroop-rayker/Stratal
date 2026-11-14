@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 completed and merged 2026-11-14. M1 is next |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 is next |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -18,7 +18,7 @@
 | | Milestone | Phase | Size | Status |
 |---|---|---|---|---|
 | M0 | Environment proof, skeleton, docs | 1 | M | Done 2026-11-14 |
-| M1 | Ingestion, manifests, versions, lineage | 1 | M | Not started |
+| M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
 | M2 | Job and event spine | 1 | L | Not started |
 | M3 | Cleaning and preprocessing | 1 | M | Not started |
 | M4 | Labeling | 1 | L | Not started |
@@ -107,18 +107,20 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Done when**
 
-- [ ] `test_DATA_1_1_*`: a 10k-file folder gives a stage-0 manifest with 10k rows
-- [ ] `test_DATA_1_2_*`: 5 planted corrupt files give 5 rejected rows, each with a reason
-- [ ] `test_DATA_1_3_*`: the minimum size comes from config; undersized images are flagged
-- [ ] `test_DATA_3_1_*`: the stage writes a manifest with a status and content hash per row
-- [ ] 👤 `test_DATA_3_2_*`: same input and config give the same ID; any change gives a new one
-- [ ] `test_DATA_3_3_*`: lineage can be walked from any version back to raw
-- [ ] `test_DATA_3_4_*`: a second version adds only manifest bytes plus new files
-- [ ] `test_DATA_5_1_*`: rows missing a caption or a file are rejected with a report
-- [ ] Invariants INV-01 to INV-04, INV-06 and INV-07 covered by tests
-- [ ] Demo: ingest from the CLI; rerun gives the same version ID; lineage printed
-- [ ] Docs updated (DATA_MODEL, API, DECISIONS, learning notes)
-- [ ] Owner's OK to merge
+- [x] `test_DATA_1_1_*`: a 10k-file folder gives a stage-0 manifest with 10k rows
+- [x] `test_DATA_1_2_*`: 5 planted corrupt files give 5 rejected rows, each with a reason
+- [x] `test_DATA_1_3_*`: the minimum size comes from config; undersized images are flagged
+- [x] `test_DATA_3_1_*`: the stage writes a manifest with a status and content hash per row
+- [x] `test_DATA_3_2_*`: same input and config give the same ID; any change gives a new one — implemented by the agent at the owner's request on 2026-11-14 (24 tests)
+- [x] `test_DATA_3_3_*`: lineage can be walked from any version back to raw
+- [x] `test_DATA_3_4_*`: a second version adds only manifest bytes plus new files
+- [x] `test_DATA_5_1_*`: rows missing a caption or a file are rejected with a report
+- [x] Invariants INV-01 to INV-04 and INV-07 covered by tests. INV-06 (a stage keeps its parent's row count) is first exercised by a real second stage in M3
+- [x] Demo: ingest from the CLI; rerun gives the same version ID; lineage printed (76-file folder: `ds_252406f6f2a9` twice, then `ds_dc71db1c8a78` with a different minimum size)
+- [x] Docs updated (DATA_MODEL, API, DECISIONS, learning notes)
+- [x] Owner's OK to merge (2026-11-14)
+
+**Note on DATA-3.1, DATA-3.3 and DATA-3.4.** Their unit tests still use a stand-in for the version identity, so they prove the plumbing in isolation. The end-to-end path with the real identity is covered by the CLI demo above, not yet by an automated test.
 
 ## M2 — Job and event spine
 

@@ -7,6 +7,8 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "alembic>=1.13",            # SPEC §7.2 STORE: migrations (ADR-0002)
     "fastapi>=0.115",           # SPEC §7.3 API
+    "pillow>=11.0",             # DATA-1.1 image format and dimensions; DATA-1.2 corrupt detection
+    "pyarrow>=18.0",            # DATA-3.1 Parquet manifests
     "psycopg[binary]>=3.2",     # SPEC §7.2 STORE: PostgreSQL driver (ADR-0002)
     "pydantic>=2.9",            # SPEC §7.1 Config
     "pydantic-settings>=2.5",   # SPEC §7.1 Config from environment
@@ -44,6 +46,8 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+# The spec's own wording uses en dashes and arrows ("image–caption", "→"); they are intended.
+ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.pyright]
 include = ["src", "tests"]

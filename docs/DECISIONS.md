@@ -73,6 +73,38 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Computed in the same pass that copies the file into the blob store.
 - **Why:** "Same hash means same file" must be safe to rely on, and SHA-256 is fast enough at this scale. The input's alternative, xxhash, would add a dependency for speed that is not needed.
 
+**Ingest decodes every image** (M1)
+- **What:** Ingest fully decodes each file to decide whether it is corrupt, not just its header.
+- **How:** Pillow opens the file, asks for a reduced-size decode where the format allows it (JPEG), and loads it; any decoder error rejects the row with the error text as the reason.
+- **Why:** A truncated JPEG has a valid header. Only reading the whole stream catches it (DATA-1.2), and the reduced-size decode keeps that cheap.
+
+**Every file gets a row** (M1)
+- **What:** Non-image files, unreadable files and undersized images are rejected with a reason, never skipped.
+- **How:** Reason codes `unsupported_format`, `unreadable`, `corrupt_image`, `below_min_size`; "size" for DATA-1.3 is the shorter side.
+- **Why:** DATA-1.1 asks for a row per file, and a file that silently vanishes is the kind of loss BUG1 describes.
+
+**The version identity is injected** (M1)
+- **What:** The commit step takes the identity function as an argument.
+- **How:** Production passes the owner's `derive_version_identity`; tests of the plumbing pass a deliberately wrong stand-in from `stratal.testing.fakes`.
+- **Why:** The plumbing can be built and tested before the owner's unit exists, without the agent writing that unit.
+
+**Version identity** (M1, DATA-3.2)
+- **What:** `content_hash` from the rows, `config_hash` from the config, and `version_id` = `ds_` + 12 hex characters from both.
+- **How:** Each row's non-null columns are encoded in name order with type tags and length prefixes, hashed with SHA-256, and the row digests are added modulo 2^256 together with the row count. The config is hashed as canonical JSON with sorted keys.
+- **Why:** Addition makes the result independent of row order and needs only one running total, so any manifest size streams. Skipping nulls means adding an empty column to the schema later does not change existing IDs. Twelve hex characters settle OC-4.
+- **Who:** This unit was reserved for the owner (ADR-0012). The owner asked the agent to write it on 2026-11-14.
+- **Limit:** Summing digests resists accidents, not a deliberate attacker. Acceptable for a single-user local tool.
+
+**Manifest is written before it is named** (M1)
+- **What:** A stage writes its manifest to a temporary file, derives the identity from that file, then renames it to `<version_id>.parquet`.
+- **How:** One streaming pass to write, one to hash, one rename. If that version already exists, the temporary file is discarded.
+- **Why:** The name depends on the content, and neither pass needs the dataset in memory (NFR-2).
+
+**PyArrow type checks relaxed in one file** (M1)
+- **What:** Three "unknown type" checks are off in `stratal/storage/manifest.py` only.
+- **How:** A file-level pyright comment; the module's own functions are fully typed and PyArrow objects do not leave it.
+- **Why:** PyArrow ships no type information. The alternative, a third-party stubs package, is a dependency no requirement asks for.
+
 ## Job runtime
 
 **Job execution** — [ADR-0003](decisions/ADR-0003-job-execution-model.md)

@@ -241,7 +241,26 @@ What the plumbing gives each unit: a `JobContext` (emit an event, report progres
 
 ## 6. Command line
 
-The CLI calls the same domain functions as the workers. Commands are added as their milestone lands and are listed in the README at that point. Planned for phase 1: ingest a folder, run a pipeline, list versions, show lineage, pull models.
+The CLI calls the same domain functions as the workers. It prints its result as JSON on standard output and logs to standard error. Exit code 0 means success, 1 a typed error (printed as `{"error": {code, detail, suggested_action}}`), 2 an owner unit that is not implemented yet.
+
+| Command | Does | Since |
+|---|---|---|
+| `python -m stratal.cli ingest --dataset NAME --source PATH [--min-size N]` | Ingests a folder as a raw version and registers it | M1 |
+| `python -m stratal.cli versions --dataset NAME` | Lists a dataset's versions, newest first | M1 |
+| `python -m stratal.cli lineage VERSION_ID` | Shows a version's ancestry back to raw | M1 |
+
+Still planned for phase 1: run a pipeline, pull models.
+
+### Internal interfaces added in M1
+
+| Interface | Where | Shape |
+|---|---|---|
+| `VersionDeriver` (owner implements `derive_version_identity`) | `stratal.data.versioning` | `(rows: Iterator[Row], config: Mapping) -> VersionIdentity(content_hash, config_hash, version_id)` |
+| `EventSink` | `stratal.mon.sink` | `emit(*, stage, message, level, substage, step, total, metrics)` |
+| `BlobStore` | `stratal.storage.blobs` | `put_file(path) -> StoredBlob(sha256, size_bytes, created)`, `path_for`, `exists` |
+| Manifest I/O | `stratal.storage.manifest` | `write_manifest(path, rows, metadata=)`, `iter_rows(path)`, `read_metadata(path)` |
+| Commit step | `stratal.data.commit` | `commit_version(...) -> VersionRecord` |
+| Version registry | `stratal.data.registry` | `ensure_dataset`, `register_version`, `lineage`, `list_versions` |
 
 ## 7. Later phases
 

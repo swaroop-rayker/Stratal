@@ -40,6 +40,16 @@ The agent reviews what the owner writes and does not rewrite it without being as
 - `docs/learning/` is ignored by git and never committed.
 - The CI workflow file is kept in the repository and starts running when a GitHub remote exists.
 
+## Exceptions made by the owner
+
+The split above is the default. The owner can hand any unit to the agent, and each time that happens it is recorded here.
+
+| Date | Unit | What happened |
+|---|---|---|
+| 2026-11-14 | Version-ID derivation (DATA-3.2) | After the stub and tests were delivered, the owner asked the agent to implement it. The agent did, and explained the algorithm in `docs/learning/`. |
+
+The remaining owner units are unchanged unless the owner says otherwise.
+
 ## Alternatives
 
 | Option | Why not |

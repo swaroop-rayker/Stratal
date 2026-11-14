@@ -4,6 +4,7 @@ from alembic import context
 
 from stratal.core.logging import configure_logging
 from stratal.core.settings import get_settings
+from stratal.db import models as _models  # noqa: F401 - registers the tables on Base.metadata
 from stratal.db.base import Base
 from stratal.db.engine import get_engine
 
