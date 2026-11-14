@@ -87,7 +87,7 @@ Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 | `new_blob_bytes` | bigint | no | bytes of files first written for this version (makes DATA-3.4.AC1 measurable) |
 | `schema_version` | integer | no | manifest schema version |
 | `code_version` | text | yes | git commit that produced it |
-| `created_by_job_id` | text | yes | FK → `jobs.id`; null when created from the CLI |
+| `created_by_job_id` | text | yes | null when created from the CLI. A plain column in the M1 migration; it becomes a foreign key to `jobs.id` when the `jobs` table is added in M2 |
 | `created_at` | timestamptz | no | |
 
 Indexes: `(dataset_id, created_at desc)`; `(stage, parent_version_id, config_hash)` for the memo lookup; `(parent_version_id)` for walking lineage downward.

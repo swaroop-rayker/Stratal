@@ -93,6 +93,9 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 | Anything on the GPU | `docker compose run --rm worker-gpu python <script>` |
 | Re-lock after editing `pyproject.toml` | `docker run --rm -v "D:\Stratal:/app" -w /app stratal-base uv lock`, then `docker compose --profile dev --profile gpu build` |
 | Health check | `http://127.0.0.1:8000/api/v1/health` |
+| Apply database migrations | `docker compose run --rm dev alembic upgrade head` |
+| Create a migration after changing `src/stratal/db/models.py` | `docker compose run --rm dev alembic revision --autogenerate -m "what changed"`, then read the generated file |
+| Command line | `docker compose run --rm dev python -m stratal.cli ingest --dataset NAME --source PATH` (also `versions`, `lineage`) |
 
 The `stratal-base` image is built with `docker build --target base -t stratal-base -f docker/Dockerfile .`. Rebuild `dev` after changing dependencies; source changes need no rebuild because the repository is bind-mounted into `dev`. The `api` image copies the source, so rebuild it to see code changes there.
 
