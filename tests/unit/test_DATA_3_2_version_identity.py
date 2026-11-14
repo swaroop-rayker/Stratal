@@ -1,10 +1,4 @@
-"""DATA-3.2: version ID derived from content hash and config hash. OWNER'S UNIT.
-
-Every test here is a strict expected-failure until
-``stratal.data.versioning.derive_version_identity`` is implemented. When your
-implementation makes one pass, pytest reports it as an unexpected pass and
-fails the run: that is the signal to delete the ``xfail`` line below, and
-then DATA-3.2 can be ticked in docs/MILESTONES.md.
+"""DATA-3.2: version ID derived from content hash and config hash.
 
 The contract is in the function's docstring and in docs/DATA_MODEL.md §3.
 """
@@ -19,11 +13,8 @@ import pytest
 from stratal.data.versioning import VersionIdentity, derive_version_identity
 from stratal.storage.manifest import COLUMNS, Row
 
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="DATA-3.2 is not implemented yet (owner)"
-)
-
 HEX64 = re.compile(r"[0-9a-f]{64}")
+KNOWN_VERSION_ID = "ds_804a1a43ff19"
 CONFIG: dict[str, Any] = {"min_size": 256, "nested": {"b": 2, "a": 1}}
 
 
@@ -136,3 +127,55 @@ def test_DATA_3_2_rows_are_consumed_as_a_stream() -> None:
     identity = derive_version_identity(many, CONFIG)
 
     assert HEX64.fullmatch(identity.content_hash)
+
+
+def test_DATA_3_2_version_id_is_ds_plus_twelve_hex() -> None:
+    assert re.fullmatch(r"ds_[0-9a-f]{12}", _identity(_rows()).version_id)
+
+
+def test_DATA_3_2_known_answer_pins_the_algorithm() -> None:
+    """If this changes, every stored version ID changes. Do not update it casually."""
+    identity = _identity(
+        [{"row_key": "a.png", "status": "accepted", "width": 640}], {"min_size": 256}
+    )
+
+    assert identity.version_id == KNOWN_VERSION_ID
+
+
+def test_DATA_3_2_null_and_absent_columns_are_the_same() -> None:
+    with_nulls = _rows()
+    without = [{k: v for k, v in row.items() if v is not None} for row in _rows()]
+
+    assert _identity(with_nulls) == _identity(without)
+
+
+def test_DATA_3_2_values_of_different_types_do_not_collide() -> None:
+    hashes = {
+        _identity([_row("a.png", reason_detail=value)]).content_hash
+        for value in (1, 1.0, True, "1")
+    }
+
+    assert len(hashes) == 4
+
+
+def test_DATA_3_2_duplicate_rows_do_not_cancel_out() -> None:
+    one, two = [_row("a.png")], [_row("a.png"), _row("a.png")]
+
+    assert (
+        len({_identity([]).content_hash, _identity(one).content_hash, _identity(two).content_hash})
+        == 3
+    )
+
+
+def test_DATA_3_2_positive_and_negative_zero_are_equal() -> None:
+    assert _identity([_row("a.png", clip_score=0.0)]) == _identity([_row("a.png", clip_score=-0.0)])
+
+
+def test_DATA_3_2_unsupported_value_types_are_refused() -> None:
+    with pytest.raises(TypeError, match="cannot hash"):
+        _identity([_row("a.png", caption=["a", "list"])])
+
+
+def test_DATA_3_2_config_with_nan_is_refused() -> None:
+    with pytest.raises(ValueError):
+        _identity(_rows(), {"threshold": float("nan")})

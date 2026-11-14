@@ -88,6 +88,13 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Production passes the owner's `derive_version_identity`; tests of the plumbing pass a deliberately wrong stand-in from `stratal.testing.fakes`.
 - **Why:** The plumbing can be built and tested before the owner's unit exists, without the agent writing that unit.
 
+**Version identity** (M1, DATA-3.2)
+- **What:** `content_hash` from the rows, `config_hash` from the config, and `version_id` = `ds_` + 12 hex characters from both.
+- **How:** Each row's non-null columns are encoded in name order with type tags and length prefixes, hashed with SHA-256, and the row digests are added modulo 2^256 together with the row count. The config is hashed as canonical JSON with sorted keys.
+- **Why:** Addition makes the result independent of row order and needs only one running total, so any manifest size streams. Skipping nulls means adding an empty column to the schema later does not change existing IDs. Twelve hex characters settle OC-4.
+- **Who:** This unit was reserved for the owner (ADR-0012). The owner asked the agent to write it on 2026-11-14.
+- **Limit:** Summing digests resists accidents, not a deliberate attacker. Acceptable for a single-user local tool.
+
 **Manifest is written before it is named** (M1)
 - **What:** A stage writes its manifest to a temporary file, derives the identity from that file, then renames it to `<version_id>.parquet`.
 - **How:** One streaming pass to write, one to hash, one rename. If that version already exists, the temporary file is discarded.
