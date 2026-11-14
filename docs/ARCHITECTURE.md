@@ -95,7 +95,7 @@ A pipeline run is one **job**. It has one **stage** per step, and each stage run
 
 Manual review (LABEL-1.5) is not a stage. It is a human activity attached to a version, and its result feeds the report.
 
-**Every stage ends with a commit step**: write the manifest, compute the version ID, record lineage. This is where the "Staging" messages in MON-3 come from (open clarification OC-1).
+**Every stage ends with a commit step**: write the manifest, compute the version ID, record lineage. This is where the "Staging" messages in MON-3 come from (OC-1, accepted by the owner on 2026-11-14).
 
 **Stages are memoized.** Before running, a stage looks for an existing version with the same stage name, parent version and config hash. If one exists it is reused and the stage is marked skipped. Two consequences:
 
@@ -325,7 +325,6 @@ Domain code in `data/`, `label/` and `eval/` does not import Celery, Redis or Fa
 
 ## 13. Not decided yet
 
-- Whether job streams use SSE only or also WebSocket (OC-2, [ADR-0005](decisions/ADR-0005-event-and-telemetry-pipeline.md) is still Proposed).
 - Exact memory limits per container (spike S-07).
 - What a CUDA job does across sleep on this laptop (spike S-03) and at the VRAM limit under WSL2 (spike S-02).
 - Everything marked as an open clarification in [SPEC.md Appendix B](SPEC.md#appendix-b--open-clarifications-not-yet-approved).

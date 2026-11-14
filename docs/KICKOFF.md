@@ -90,7 +90,7 @@ None of these needs an account, email or key. Model weights and the dataset are 
 
 | Item | Needed by | Notes |
 |---|---|---|
-| Review ADR-0005 and open clarifications OC-1, OC-2 | before M2 | Event transport; SSE vs WebSocket |
+| Review ADR-0005 and open clarifications OC-1, OC-2 | before M2 | Done 2026-11-14: all three accepted as proposed |
 | Settle OC-4 (version ID length) | in M1 | Part of your DATA-3.2 implementation |
 | Settle OC-3 (preprocess size) | before M3 | Proposed 768 px |
 | Choose the phase-1 dataset | before M4 | Recommendation: a 10k subset of COCO 2017 |

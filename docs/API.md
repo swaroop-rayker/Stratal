@@ -202,7 +202,7 @@ Event: the shape in SPEC MON-1, plus `id`, `type`, `reason`, `suggested_action` 
 
 ## 4. Live streams
 
-Server-sent events (open clarification OC-2). Each message carries an `id` so a client that reconnects with `Last-Event-ID` receives what it missed, replayed from Postgres, before the stream switches to live.
+Server-sent events (OC-2, accepted by the owner on 2026-11-14). Each message carries an `id` so a client that reconnects with `Last-Event-ID` receives what it missed, replayed from Postgres, before the stream switches to live.
 
 ```text
 id: 18342

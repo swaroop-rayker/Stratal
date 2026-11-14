@@ -126,7 +126,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** L · **Branch** `m2-job-event-spine` · **Serves** MON-1.1–1.5, MON-2.1–2.5, MON-3.1 (ingestion, staging), NFR-10, NFR-13, the phase-1 slice of RUN-1.1 and RUN-1.2; BUG2, BUG4
 
-**Before starting:** ADR-0005 accepted; open clarifications OC-1 and OC-2 confirmed.
+**Before starting:** ADR-0005 accepted; open clarifications OC-1 and OC-2 confirmed. All three accepted by the owner on 2026-11-14.
 
 **Scope**
 

@@ -541,6 +541,8 @@ Constraints driving choices: local-first, 6 GB VRAM, Windows laptop, resume rele
 
 FastAPI + Uvicorn; WebSockets (job streams), SSE (one-way feeds); Pydantic -> OpenAPI -> auto-generated TypeScript client (openapi-typescript) so frontend types always match backend.
 
+> **OC-2, accepted by the owner 2026-11-14:** job streams are delivered over SSE, not WebSockets. Where §7.2 and §7.7 say "fan-out to WebSockets", read "fan-out to SSE subscribers". See Appendix B and ADR-0005.
+
 ### 7.4 Frontend (React, not Streamlit)
 
 | | |
@@ -782,8 +784,8 @@ These are the agent's interpretations. They do not change any requirement text, 
 
 | ID | Topic | Proposed reading | Needed by |
 |---|---|---|---|
-| OC-1 | MON-3 "Staging" row | Every stage ends with a commit step (write manifest, compute version ID, record lineage) that emits the Staging messages; it is not a separate pipeline stage | M2 |
-| OC-2 | Job streams: WebSocket or SSE | §7.3 lists WebSockets for job streams; MON-1.4 allows either. Proposal: SSE, because the feed is one-way and SSE resumes after a disconnect | M2 |
+| OC-1 | MON-3 "Staging" row | **Resolved 2026-11-14, accepted by the owner:** every stage ends with a commit step (write manifest, compute version ID, record lineage) that emits the Staging messages; it is not a separate pipeline stage | done |
+| OC-2 | Job streams: WebSocket or SSE | **Resolved 2026-11-14, accepted by the owner:** job streams use SSE, not the WebSockets listed in §7.3 (MON-1.4 allows either). The feed is one-way and SSE resumes after a disconnect. [ADR-0005](decisions/ADR-0005-event-and-telemetry-pipeline.md) | done |
 | OC-3 | Unspecified parameter defaults | NFR-5 N = 10 minutes; RUN-1.7 T = 300 s; DATA-6.1 maximum side = 768 px (MON-3's "384px" is an example message) | M3 / phase 2 |
 | OC-4 | Version ID length | **Resolved 2026-11-14:** twelve hex characters, set when DATA-3.2 was implemented at the owner's request. The examples' six (`ds_7f3a9c`) collide too easily | done |
 | OC-5 | Thresholds owned by the owner | pHash distance (DATA-2.2) and CLIP cut-off (LABEL-1.4) are chosen by the owner from measured distributions | M3 / M4 |
