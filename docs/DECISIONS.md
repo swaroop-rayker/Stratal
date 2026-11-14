@@ -129,7 +129,7 @@ Newest entries go at the bottom of their section. All entries below date from th
 
 ## Monitoring
 
-**Event pipeline** — [ADR-0005](decisions/ADR-0005-event-and-telemetry-pipeline.md) (Proposed)
+**Event pipeline** — [ADR-0005](decisions/ADR-0005-event-and-telemetry-pipeline.md) (accepted 2026-11-14)
 - **What:** Jobs emit events to a Redis Stream; a collector writes them to Postgres and fans them out live.
 - **How:** Non-blocking emitter with a local spool file; idempotent inserts; SSE with replay to the browser.
 - **Why:** Events must survive a crash of any one component (MON-1.4), and monitoring must never block or crash a job (NFR-13).
@@ -139,8 +139,64 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** psutil and NVML in `monitor`; a reporter thread in the job's runtime wrapper.
 - **Why:** PyTorch's allocator can only be read from inside the process that owns it.
 
-## GPU
+## M2: job and event spine
 
+**State machine** (M2, RUN-1.1)
+- **What:** One function, `transition`, is the only code that changes `jobs.state`.
+- **How:** It checks the move against a table of allowed transitions, then writes the `job_transitions` row and a `job_state` event in the caller's transaction. A check constraint rejects unknown states.
+- **Why:** A state can then never change without both records, and the timeline can be rebuilt from events alone (MON-1.1).
+
+**Claiming a stage** (M2, ADR-0003)
+- **What:** A supervisor takes a stage with a conditional update under a row lock; the job's `attempt` counts claims.
+- **How:** A stage is taken only if its status is `queued`. Heartbeats and the final write carry the attempt number and do nothing if it no longer matches.
+- **Why:** A task delivered twice starts the stage once, and a supervisor that was frozen and then replaced finds out and stands down instead of writing over its successor.
+
+**Exit status as a report** (M2, BUG2)
+- **What:** The supervisor turns the child's exit status into a typed error when the child could not report one.
+- **How:** A negative status is a signal. SIGKILL together with a rise in the container's cgroup `oom_kill` counter is reported as `host_oom_killed` with the peak memory; any other signal as `stage_failed` naming the signal.
+- **Why:** A kernel kill cannot be caught inside the process, so only the parent can say what happened.
+
+**Stream entries carry a kind** (M2, ADR-0005)
+- **What:** The Redis stream carries events and the job's own memory samples.
+- **How:** Each entry has a `kind` (`event` or `process_sample`) and a JSON payload; the collector routes by kind.
+- **Why:** The job child then needs no database writes of its own for monitoring, so a database or monitor problem cannot slow or stop it (NFR-13).
+
+**SSE reads PostgreSQL; Redis only rings the bell** (M2, MON-1.4, OC-2)
+- **What:** A live stream sends events by querying PostgreSQL for rows after the client's cursor.
+- **How:** It subscribes to the job's pub/sub channel first, then queries; every later message on the channel triggers the same query. Samples are the exception and are forwarded directly.
+- **Why:** Replay and live are one code path, so a reconnecting client cannot miss an event or see one twice, and order is always the stored order.
+
+**ETA** (M2, MON-1.5)
+- **What:** Throughput over the last 20 progress reports, and the remaining items divided by it.
+- **How:** Computed in the job on the monotonic clock and sent inside the progress event's metrics (`items_per_s`, `eta_s`); the collector copies it to the stage row.
+- **Why:** A window follows a change of pace without jumping on every slow batch, and the monotonic clock is not moved by a laptop sleep (ADR-0008).
+
+**Sampler scheduling** (M2, MON-2.2)
+- **What:** Samples are due at fixed deadlines on the monotonic clock.
+- **How:** Each deadline is the previous one plus the interval, not "now" plus the interval. The active-job registry is checked once per active interval even while idle.
+- **Why:** The spacing does not drift, and per-second sampling starts within a second of a job starting.
+
+**Watchdog v1 and sleep** (M2, BUG4, ADR-0008)
+- **What:** A running job with a stale heartbeat is requeued, up to `max_attempts`, then failed with `worker_lost`.
+- **How:** Before judging, the watchdog compares the wall clock with the monotonic clock; a jump means the machine slept, and every job gets a grace period to send a fresh heartbeat.
+- **Why:** After a sleep every heartbeat is stale by the length of the sleep, which is not a dead worker.
+
+**Redis and untyped libraries behind one module each** (M2)
+- **What:** `core/bus.py` (redis), `mon/probes.py` (psutil, NVML) and `runtime/celery_app.py` (Celery) are checked in pyright's basic mode.
+- **How:** Each exposes typed functions or dataclasses; everything else stays strict.
+- **Why:** These libraries ship incomplete or no type hints. Confining them keeps "strict everywhere" true for the code that holds logic.
+
+**Tests use their own database** (M2)
+- **What:** Integration tests run against database `stratal_test`, Redis database 15 and a temporary data folder.
+- **How:** `tests/integration/conftest.py` sets the environment before anything reads settings and creates the database if needed.
+- **Why:** Job tests commit rows and start processes. In the development database a running monitor would consume their events and its watchdog would act on their jobs.
+
+**Dependencies added** (M2)
+- **What:** `celery[redis]` (SPEC §7.7), `psutil` and `nvidia-ml-py` (SPEC MON tooling). `pytest` moved to its own `test` group, installed in the GPU image too.
+- **How:** The `redis` extra brings what Celery's Redis transport imports. GPU-marked tests run with `.\scripts\check.ps1 -Gpu`.
+- **Why:** Each is named by the spec for this purpose; GPU tests need a test runner where the GPU is.
+
+## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
 - **How:** A PostgreSQL advisory lock held by the user of the GPU; PyTorch's per-process memory fraction.

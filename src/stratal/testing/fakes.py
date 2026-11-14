@@ -44,6 +44,8 @@ class ListSink:
         step: int | None = None,
         total: int | None = None,
         metrics: Metrics | None = None,
+        reason: str | None = None,
+        suggested_action: str | None = None,
     ) -> None:
         self.events.append(
             {
@@ -54,6 +56,8 @@ class ListSink:
                 "step": step,
                 "total": total,
                 "metrics": dict(metrics) if metrics else {},
+                "reason": reason,
+                "suggested_action": suggested_action,
             }
         )
 

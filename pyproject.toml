@@ -6,7 +6,10 @@ requires-python = ">=3.12,<3.13"
 # Every dependency names the requirement that needs it (SPEC §9.1).
 dependencies = [
     "alembic>=1.13",            # SPEC §7.2 STORE: migrations (ADR-0002)
+    "celery[redis]>=5.4",       # SPEC §7.7 job queue; RUN-1.1 slice (ADR-0003)
     "fastapi>=0.115",           # SPEC §7.3 API
+    "nvidia-ml-py>=12.560",     # MON-2.1 GPU utilization, VRAM, temperature, power (NVML)
+    "psutil>=6.0",              # MON-2.1 CPU, RAM, disk I/O, process RSS
     "pillow>=11.0",             # DATA-1.1 image format and dimensions; DATA-1.2 corrupt detection
     "pyarrow>=18.0",            # DATA-3.1 Parquet manifests
     "psycopg[binary]>=3.2",     # SPEC §7.2 STORE: PostgreSQL driver (ADR-0002)
@@ -25,10 +28,14 @@ gpu = [
 ]
 
 [dependency-groups]
+# Also installed in the GPU worker image, so GPU-marked tests can run there.
+test = [
+    "pytest>=8.3",              # SPEC §7.1 Tests
+]
 dev = [
+    { include-group = "test" },
     "httpx2>=2.16",             # FastAPI's TestClient needs it (httpx is deprecated there)
     "pyright[nodejs]>=1.1.380", # SPEC §7.1 Quality: strict type checking
-    "pytest>=8.3",              # SPEC §7.1 Tests
     "ruff>=0.7",                # SPEC §7.1 Quality: lint and format
 ]
 
@@ -48,6 +55,10 @@ src = ["src", "tests"]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
 # The spec's own wording uses en dashes and arrows ("image–caption", "→"); they are intended.
 ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# Generated migrations carry long constraint strings that are clearer left whole.
+"migrations/versions/*" = ["E501"]
 
 [tool.pyright]
 include = ["src", "tests"]

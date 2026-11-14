@@ -9,7 +9,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from stratal import __version__
 from stratal.api.health import router as health_router
+from stratal.api.jobs import router as jobs_router
 from stratal.api.problem import install_error_handlers
+from stratal.api.streams import router as streams_router
 
 API_PREFIX = "/api/v1"
 
@@ -42,4 +44,6 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     install_error_handlers(app)
     app.include_router(health_router, prefix=API_PREFIX)
+    app.include_router(streams_router, prefix=API_PREFIX)  # before jobs: /jobs/{id}/stream
+    app.include_router(jobs_router, prefix=API_PREFIX)
     return app

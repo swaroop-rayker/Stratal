@@ -35,6 +35,25 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-007 — A unit test leaked a bound version ID into another test
+
+- **Date:** 2026-11-14
+- **Seen:** `test_NFR_10_every_line_is_json_with_job_and_version_id` failed in the full run with `assert 'ds_7f3a9c21b04e' is None`, though it passed alone.
+- **Where:** `tests/unit/test_MON_1_events.py`; `JobContext.set_version`
+- **Cause:** `set_version` binds the version ID to the logging context for the rest of the process, which is right for a job's child (one job per process) and wrong in a test process that runs many tests. A new M2 test called it and did not unbind.
+- **Fix:** The test clears the logging context in a `finally`.
+- **Guard:** The NFR-10 test itself: it asserts the IDs are null before any job binds them.
+- **Status:** verified
+
+### E-006 — The CPU worker would not start: `No module named 'packaging'`
+
+- **Date:** 2026-11-14
+- **Seen:** `worker-cpu` restarted in a loop on its first start; the traceback ended in `kombu/transport/redis.py: from packaging.version import Version`.
+- **Where:** `pyproject.toml`; the `api` image, which `worker-cpu` and `monitor` share
+- **Cause:** Celery was declared as plain `celery`. Its Redis transport needs extra packages that only the `celery[redis]` extra declares. The dev image happened to contain `packaging` through a test tool, so every test passed and only the production image failed.
+- **Fix:** Depend on `celery[redis]`.
+- **Guard:** None automated yet. The integration tests run in the dev image, not the image the workers use; the M2 demo on the real stack is what caught it. A smoke test that starts the stack belongs in M7's acceptance.
+- **Status:** verified on the running stack
 ### E-005 — Exceeding VRAM does not fail; it silently spills and crawls
 
 - **Date:** 2026-11-13

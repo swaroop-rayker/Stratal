@@ -1,6 +1,7 @@
 # Stratal development stack.
 #
-#   docker compose up -d                      postgres, redis, api
+#   docker compose up -d                      postgres, redis, api, worker-cpu, monitor
+#   docker compose --profile gpu up -d        the same plus the GPU worker
 #   docker compose run --rm dev <command>     lint, type-check, tests
 #   docker compose run --rm worker-gpu <cmd>  anything that needs the GPU
 #
@@ -12,6 +13,16 @@ x-stratal-env: &stratal-env
   STRATAL_DATABASE_URL: postgresql+psycopg://stratal:stratal@postgres:5432/stratal
   STRATAL_REDIS_URL: redis://redis:6379/0
   STRATAL_DATA_DIR: /data
+
+# The api, worker-cpu and monitor services run the same image.
+x-stratal-build: &stratal-build
+  context: .
+  dockerfile: docker/Dockerfile
+  target: api
+
+# Source folders for ingestion, read-only. Set STRATAL_SOURCES_DIR to a Windows folder,
+# or put data under .\sources. Jobs refer to it as /sources/<name>.
+x-sources: &sources "${STRATAL_SOURCES_DIR:-./sources}:/sources:ro"
 
 services:
   postgres:
@@ -45,14 +56,13 @@ services:
     restart: unless-stopped
 
   api:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: api
+    build: *stratal-build
+    image: stratal-api
     environment:
       <<: *stratal-env
     volumes:
       - stratal-data:/data
+      - *sources
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -72,6 +82,48 @@ services:
     mem_limit: 400m
     restart: unless-stopped
 
+  # CPU stages: ingest now; clean, preprocess, filter, split and evaluate later.
+  # Each task is a supervisor that runs the stage in a child process (ADR-0003).
+  worker-cpu:
+    build: *stratal-build
+    image: stratal-api
+    command: ["celery", "-A", "stratal.runtime.celery_app", "worker", "-Q", "cpu", "-c", "2", "-n", "cpu@%h"]
+    environment:
+      <<: *stratal-env
+    volumes:
+      - stratal-data:/data
+      - *sources
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 2500m
+    restart: unless-stopped
+
+  # Collector, sampler and watchdog in one process (ADR-0005). It needs the GPU
+  # only to read NVML; it never runs CUDA.
+  monitor:
+    build: *stratal-build
+    image: stratal-api
+    command: ["python", "-m", "stratal.mon"]
+    environment:
+      <<: *stratal-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility]
+    mem_limit: 256m
+    restart: unless-stopped
+
   dev:
     profiles: ["dev"]
     build:
@@ -83,6 +135,7 @@ services:
     volumes:
       - .:/app
       - stratal-data:/data
+      - *sources
     depends_on:
       postgres:
         condition: service_healthy
@@ -96,10 +149,17 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: worker-gpu
+    # GPU stages, one at a time. 'docker compose run --rm worker-gpu python <script>'
+    # still replaces this command for one-off GPU work.
+    command: ["celery", "-A", "stratal.runtime.celery_app", "worker", "-Q", "gpu", "-c", "1", "-n", "gpu@%h"]
     environment:
       <<: *stratal-env
     volumes:
       - ./scripts:/app/scripts:ro
+      # For GPU-marked tests: docker compose run --rm --no-deps worker-gpu pytest -m gpu tests/gpu
+      - ./tests:/app/tests:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - *sources
       - stratal-data:/data
     deploy:
       resources:

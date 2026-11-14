@@ -50,10 +50,10 @@ CMD ["pytest"]
 FROM base AS worker-gpu
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --extra gpu --no-install-project
+    uv sync --frozen --no-dev --group test --extra gpu --no-install-project
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --extra gpu
+    uv sync --frozen --no-dev --group test --extra gpu
 CMD ["python", "-c", "import torch; print(torch.cuda.is_available())"]

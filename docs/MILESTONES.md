@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 is next |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 built on its branch 2026-11-14, waiting for the owner's OK to merge. G0 delivered for review |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | M0 | Environment proof, skeleton, docs | 1 | M | Done 2026-11-14 |
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
-| M2 | Job and event spine | 1 | L | Not started |
+| M2 | Job and event spine | 1 | L | Built 2026-11-14; awaiting OK to merge |
 | M3 | Cleaning and preprocessing | 1 | M | Not started |
 | M4 | Labeling | 1 | L | Not started |
 | M5 | Splits, review, eval report | 1 | M | Not started |
@@ -141,24 +141,27 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Done when**
 
-- [ ] `test_MON_1_1_*`: a job's full timeline is rebuilt from the event log alone
-- [ ] `test_MON_1_2_*`: activity messages with key parameters appear live
-- [ ] `test_MON_1_3_*`: a WARN or ERROR without reason and action is rejected; an OOM-style event carries its suggested action
-- [ ] `test_MON_1_4_*`: events survive a restart of api and monitor; SSE delivers within 1 s
-- [ ] `test_MON_1_5_*`: ETA within ±20% once 10% is complete, on a steady synthetic stage
-- [ ] `test_MON_2_1_*`: every listed metric is recorded (GPU fields under the gpu marker)
-- [ ] `test_MON_2_2_*`: sample timestamps match the configured interval, active and idle
-- [ ] `test_MON_2_3_*`: samples are tagged with job and stage
-- [ ] `test_MON_2_4_*` (gpu): NVML and PyTorch figures recorded side by side
-- [ ] `test_MON_2_5_*`: the job summary lists peaks for every stage
-- [ ] `test_MON_3_1_*`: ingestion and staging emit their listed messages and metrics
-- [ ] `test_RUN_1_1_*` (slice): transitions logged; invalid transitions rejected
-- [ ] `test_NFR_10_*`: job logs carry job ID and version ID on every line
-- [ ] `test_NFR_13_*`: kill the monitor mid-job and the job continues; kill the job and the monitor continues
-- [ ] `test_BUG2_*`: a child killed by a signal leaves the job failed with a reason and the worker healthy
-- [ ] `test_BUG4_*`: a frozen worker container resumes or recovers when unfrozen
-- [ ] Demo: start an ingest job through the API, watch events and samples arrive, kill things
-- [ ] Docs updated; ADR-0003 and ADR-0005 confirmed or amended
+- [x] `test_MON_1_1_*`: a job's full timeline is rebuilt from the event log alone
+- [x] `test_MON_1_2_*`: activity messages with key parameters appear live
+- [x] `test_MON_1_3_*`: a WARN or ERROR without reason and action is rejected; an OOM-style event carries its suggested action
+- [x] `test_MON_1_4_*`: events survive a restart of api and monitor; SSE delivers within 1 s
+- [x] `test_MON_1_5_*`: ETA within ±20% once 10% is complete, on a steady synthetic stage
+- [x] `test_MON_2_1_*`: every listed metric is recorded (GPU fields under the gpu marker)
+- [x] `test_MON_2_2_*`: sample timestamps match the configured interval, active and idle
+- [x] `test_MON_2_3_*`: samples are tagged with job and stage
+- [x] `test_MON_2_4_*` (gpu): NVML and PyTorch figures recorded side by side
+- [x] `test_MON_2_5_*`: the job summary lists peaks for every stage
+- [x] `test_MON_3_1_*`: ingestion and staging emit their listed messages and metrics
+- [x] `test_RUN_1_1_*` (slice): transitions logged; invalid transitions rejected
+- [x] `test_NFR_10_*`: job logs carry job ID and version ID on every line
+- [x] `test_NFR_13_*`: kill the monitor mid-job and the job continues; kill the job and the monitor continues
+- [x] `test_BUG2_*`: a child killed by a signal leaves the job failed with a reason and the worker healthy
+- [x] `test_BUG4_*`: a frozen worker container resumes or recovers when unfrozen
+- [x] Demo: start an ingest job through the API, watch events and samples arrive, kill things (2026-11-14: 1,535 files to `ds_389dd9b94119`; monitor killed mid-job; child killed then retried; worker frozen 45 s and recovered on attempt 2)
+- [x] Docs updated; ADR-0003 and ADR-0005 confirmed or amended
+
+**Not built in M2, carried forward:** `GET /system` (API.md §3.1); `from_version` in the pipeline request (no stage consumes a version until M3); the host script is v1 and its sleep detection has not been tried against a real sleep.
+
 - [ ] Owner's OK to merge
 
 ## M3 — Cleaning and preprocessing

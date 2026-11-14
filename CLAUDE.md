@@ -84,10 +84,12 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 
 | Purpose | Command |
 |---|---|
-| Start postgres, redis and the api | `docker compose up -d` |
+| Start postgres, redis, api, worker-cpu and monitor | `docker compose up -d` (add `--profile gpu` for the GPU worker) |
 | Stop them | `docker compose down` |
 | All quality gates (format, lint, types, tests, integration) | `.\scripts\check.ps1` |
 | Same, without integration tests | `.\scripts\check.ps1 -Fast` |
+| Same, plus GPU-marked tests | `.\scripts\check.ps1 -Gpu` |
+| Keep Windows awake while jobs run; report sleeps | `.\host\stratal-host.ps1` |
 | One tool | `docker compose run --rm --no-deps dev ruff check .` (or `ruff format .`, `pyright`, `pytest -q`) |
 | Integration tests | `docker compose run --rm dev pytest -q -m integration` |
 | Anything on the GPU | `docker compose run --rm worker-gpu python <script>` |
@@ -97,7 +99,7 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 | Create a migration after changing `src/stratal/db/models.py` | `docker compose run --rm dev alembic revision --autogenerate -m "what changed"`, then read the generated file |
 | Command line | `docker compose run --rm dev python -m stratal.cli ingest --dataset NAME --source PATH` (also `versions`, `lineage`) |
 
-The `stratal-base` image is built with `docker build --target base -t stratal-base -f docker/Dockerfile .`. Rebuild `dev` after changing dependencies; source changes need no rebuild because the repository is bind-mounted into `dev`. The `api` image copies the source, so rebuild it to see code changes there.
+The `stratal-base` image is built with `docker build --target base -t stratal-base -f docker/Dockerfile .`. Rebuild `dev` after changing dependencies; source changes need no rebuild because the repository is bind-mounted into `dev`. The `api`, `worker-cpu` and `monitor` services share one image that copies the source, so run `docker compose build api` and `docker compose up -d` to see code changes there. Integration tests use their own database (`stratal_test`), Redis database 15 and a temporary data folder. Source folders for ingestion go under `.\sources` (or `STRATAL_SOURCES_DIR`) and are seen as `/sources/<name>`.
 
 ## Learning notes
 

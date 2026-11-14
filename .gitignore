@@ -45,3 +45,6 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Source folders mounted into the containers at /sources
+/sources/

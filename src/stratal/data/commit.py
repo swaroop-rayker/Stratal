@@ -79,7 +79,11 @@ def commit_version(
         stage=stage,
         substage="staging",
         message=f"Recording lineage → {identity.version_id}",
-        metrics={"rows": stats.row_count, "bytes_written": 0 if reused else stats.bytes_written},
+        metrics={
+            "rows": stats.row_count,
+            "version_id": identity.version_id,
+            "bytes_written": 0 if reused else stats.bytes_written,
+        },
     )
     return VersionRecord(
         version_id=identity.version_id,

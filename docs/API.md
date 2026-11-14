@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Kickoff baseline, 2026-11-13. No endpoint exists yet |
+| Status | Built: health (M0); jobs, events, telemetry, live streams and host endpoints (M2, 2026-11-14). Datasets, versions, review, evaluation, configuration and `GET /system` are still planned |
 | Detail level | Phase-1 HTTP interface and the internal contracts for owner-implemented logic. Later phases are listed in [§7](#7-later-phases) |
 | Authority | This file states the intended contract. Once code exists, the generated OpenAPI document at `/api/v1/openapi.json` gives field-level detail. If the two disagree, stop and ask |
 
@@ -129,7 +129,7 @@ Pipeline request:
 }
 ```
 
-Every key under `stages` is optional and overrides the defaults in `configs/`. `source` may be replaced by `"from_version": "ds_…"` to continue from an existing version.
+Every key under `stages` is optional and overrides the stage's defaults. A key that names a stage not yet available is rejected with `validation_error`; as of M2 only `ingest` exists. `source` may be replaced by `"from_version": "ds_…"` to continue from an existing version (planned for M3, when a stage first consumes a version).
 
 Job (abridged):
 
@@ -163,10 +163,10 @@ Job (abridged):
 | Method and path | Purpose | Success |
 |---|---|---|
 | `GET /events` | Events across all jobs (MON-4.3). Filters: `level`, `stage`, `job_id`, `after` | `200` list of Event |
-| `GET /telemetry/latest` | The most recent resource sample | `200` Sample |
+| `GET /telemetry/latest` | The most recent resource sample | `200` Sample; `204` before the first sample exists |
 | `GET /stream` | Global live feed: job state changes, alerts, idle telemetry (SSE) | `200 text/event-stream` |
 
-Event: the shape in SPEC MON-1, plus `id`, `type`, `reason`, `suggested_action` and `attempt`.
+Event: the shape in SPEC MON-1, plus `id`, `event_uid`, `type`, `reason`, `suggested_action` and `attempt`. Progress events carry `items_per_s` and `eta_s` in `metrics` (MON-1.5). Event lists are oldest first; `next_cursor` is the last event ID of a full page.
 
 ### 3.5 Review (LABEL-1.5)
 
@@ -202,7 +202,7 @@ Event: the shape in SPEC MON-1, plus `id`, `type`, `reason`, `suggested_action` 
 
 ## 4. Live streams
 
-Server-sent events (OC-2, accepted by the owner on 2026-11-14). Each message carries an `id` so a client that reconnects with `Last-Event-ID` receives what it missed, replayed from Postgres, before the stream switches to live.
+Server-sent events (OC-2, accepted by the owner on 2026-11-14). Each message carries an `id` so a client that reconnects with `Last-Event-ID` receives what it missed, replayed from Postgres, before the stream switches to live. `?after=<event id>` does the same for clients that cannot set the header. A job stream opened without a cursor starts with the job's whole history and a `job` snapshot; the global stream starts at "now".
 
 ```text
 id: 18342
@@ -262,6 +262,21 @@ Still planned for phase 1: run a pipeline, pull models.
 | Commit step | `stratal.data.commit` | `commit_version(...) -> VersionRecord` |
 | Version registry | `stratal.data.registry` | `ensure_dataset`, `register_version`, `lineage`, `list_versions` |
 
+### Internal interfaces added in M2
+
+| Interface | Where | Shape |
+|---|---|---|
+| `Event` | `stratal.mon.events` | The validated event model; a WARN or ERROR without `reason` and `suggested_action` cannot be constructed (MON-1.3). `oom_event(...)` builds the out-of-memory event with a smaller batch size |
+| `EventSink.emit` | `stratal.mon.sink` | Gained optional `reason` and `suggested_action` |
+| `JobContext` | `stratal.runtime.context` | An `EventSink` plus `should_stop()`, `raise_if_cancelled()`, `set_version(version_id)` and `event(type, message, ...)` |
+| Stage registry | `stratal.runtime.stages` | `register(StageDef(name, queue, config_model, run))`; `run(StageRun) -> StageResult(output_version_id, cache_hit, metrics)` |
+| State machine | `stratal.runtime.states` | `transition(session, job, to_state, reason=, actor=)`; `TRANSITIONS` |
+| Supervisor | `stratal.runtime.supervisor` | `run_stage(job_id, idx, enqueue=) -> "completed" \| "failed" \| "cancelled" \| "not_claimed" \| "superseded"` |
+| Child | `python -m stratal.runtime.child --job --stage --attempt` | Exit code 0 completed, 1 failed (error written to `job_stages.error`), 3 stopped on request |
+| `Bus` | `stratal.core.bus` | Every Redis operation: stream, pub/sub, control flags, active-job registry |
+| `EtaEstimator` | `stratal.mon.eta` | `update(monotonic_seconds, step, total) -> Estimate(throughput, eta_seconds) \| None` |
+| Monitor | `python -m stratal.mon` | Collector, sampler and watchdog threads |
+| Host script | `host\stratal-host.ps1` | Polls `/host/keep-awake`; reports suspend and resume |
 ## 7. Later phases
 
 Listed so the phase-1 design leaves room. Each is specified at its phase kickoff.

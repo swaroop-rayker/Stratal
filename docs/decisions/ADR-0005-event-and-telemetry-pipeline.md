@@ -40,3 +40,11 @@
 - There are two copies of each event for a short time (stream and Postgres) and a third in the spool file.
 - Ordering in the UI follows insertion order in Postgres, which can differ slightly from emit order across processes. Events carry their own timestamps.
 - The NFR-11 overhead benchmark in M7 decides whether the sampling and emit costs are acceptable.
+
+## As built in M2 (2026-11-14)
+
+- Stream entries have a `kind` (`event` or `process_sample`). The job's reporter thread sends its memory samples on the same stream, so the job writes nothing to PostgreSQL for monitoring.
+- Job state changes are written to `events` directly by whoever makes the transition, in the same transaction, not through the stream. The state and its event cannot disagree.
+- Pub/sub messages are notifications, not payloads. The SSE endpoint reads events from PostgreSQL when notified, so replay and live delivery are the same query. Samples are the exception: they are forwarded as published.
+- An entry that can never be valid (bad JSON, a WARN without a reason) is logged, acknowledged and dropped, so it cannot block the entries behind it.
+- Measured on the real stack: the monitor killed mid-job, the job completed, and the events that had waited in the stream were stored when the monitor came back (4 stored before, 14 after).
