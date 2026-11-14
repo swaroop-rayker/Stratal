@@ -76,7 +76,26 @@ Likelihood and impact are High, Medium or Low.
 - **Method:** Run a loop that does a small GPU operation every second and logs wall-clock and monotonic time. Sleep the laptop for 2 minutes and for 20 minutes, by lid and from the Start menu, on mains power. Repeat once with hibernate.
 - **Record:** whether the loop continues; any error text; whether the clocks jump; whether a fresh container sees the GPU; whether `wsl --shutdown` is needed.
 - **Decides:** the recovery details in ADR-0008.
-- **Result:** not run yet. It needs the owner to put the laptop to sleep. The probe is ready: `docker compose run --rm worker-gpu python scripts/spikes/s03_sleep_probe.py`.
+- **Result (2026-11-14): a running GPU job survived sleep.** Run once: Modern Standby entered through the Windows API, on mains power, asleep for 705 seconds, with `scripts/spikes/s03_sleep_probe.py` doing a GPU operation every second.
+
+  | Observation | Result |
+  |---|---|
+  | The running process after wake | Continued on its next tick. No error; GPU operations still correct |
+  | Wall clock across the sleep | Jumped by 704.6 s |
+  | Monotonic clock across the sleep | Advanced by 1.0 s: it does not count the time asleep |
+  | A new process after wake | CUDA available and working |
+  | `nvidia-smi` in a new container | Working |
+  | `wsl --shutdown` needed | No |
+  | A wake timer set for 120 s | Did not wake the laptop. It stayed asleep until woken by hand |
+
+  **Conclusions:**
+
+  1. The feared failure (a dead CUDA context after resume) did not happen in this run. The job simply paused and resumed.
+  2. **A sleep is detectable from inside the job** as wall-clock time jumping while monotonic time does not. That gap is the detection rule for [ADR-0008](decisions/ADR-0008-sleep-and-suspend-handling.md).
+  3. Anything timed with the wall clock (step time, throughput, ETA, heartbeat age) would be badly wrong across a sleep. Durations must use the monotonic clock, and the watchdog must not treat a stale heartbeat as a dead job when the whole VM was asleep.
+  4. Wake timers cannot be relied on, so nothing in Stratal may assume the machine wakes itself.
+
+  **Not covered:** hibernate, battery power, lid-close, a sleep of hours, and a sleep during a real training step with large allocations. One clean run does not prove it always survives, so the recovery path in ADR-0008 stays. Risk R-03 is reduced from "likely fatal" to "survivable in the tested case".
 
 ### S-04 — How slow is the Windows mount? (M0)
 

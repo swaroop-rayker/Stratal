@@ -19,6 +19,21 @@ Four layers, because no single one is sufficient.
 3. **Recover.** After a resume the job's next GPU operation either works or raises. If it raises, the child reports `interrupted` and exits. The job is requeued and continues from its last committed work in a fresh process. If a fresh process cannot reach the GPU either, GPU jobs are held and an ERROR event tells the user to restart WSL.
 4. **Limit the loss.** Pipeline stages commit per batch. Training (phase 2) checkpoints by elapsed time as well as by step count, so NFR-5's bound holds however slow a step is.
 
+## Measured on 2026-11-14 (spike S-03)
+
+One run: Modern Standby for 705 seconds on mains power with a GPU loop running.
+
+- The running process resumed with no error and the GPU still worked. A new process could use the GPU. WSL did not need restarting.
+- The wall clock jumped by the full 705 seconds; the monotonic clock advanced by one.
+- A wake timer did not wake the laptop.
+
+Additions to the decision:
+
+5. **Detect a sleep inside the runtime** as a wall-clock jump that the monotonic clock does not share, and emit it as an event. This works without the host script, which becomes a second source, not the only one.
+6. **Measure every duration with the monotonic clock**: step time, throughput, ETA. Wall-clock time is for timestamps only.
+7. **The watchdog must recognise a sleep** before declaring a job dead: a heartbeat that is stale by exactly the length of a detected sleep is not a failure.
+8. The recovery layer stays as designed. One clean run does not cover hibernate, battery, or a sleep in the middle of a large allocation.
+
 ## Alternatives
 
 | Option | Why not |

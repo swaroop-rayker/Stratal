@@ -49,6 +49,10 @@ The owner told the agent to do the four setup steps itself and approved the down
 - **Norton's HTTPS scanning.** Containers now trust Norton's root certificate so installs work. Whether to exclude developer sites from that scanning instead is the owner's choice.
 - The OK to merge M0 into `main`.
 
+## Update, 2026-11-14
+
+M0 is complete and merged into `main`. The sleep spike ran (a GPU job survived a 705-second sleep; see [RISKS.md](RISKS.md) S-03), the old Docker image on C: was deleted, and the D: image was compacted. Still open from the list above: the owner's choice about Norton's HTTPS scanning. Next are M1 and Gate 0.
+
 ## What the owner does next
 
 These four steps unblock M0. They were originally reserved for the owner because they change system settings or need a download approval.

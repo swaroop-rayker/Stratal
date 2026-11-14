@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Kickoff baseline, 2026-11-13. M0 is in progress |
+| Status | M0 completed and merged 2026-11-14. M1 is next |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -17,7 +17,7 @@
 
 | | Milestone | Phase | Size | Status |
 |---|---|---|---|---|
-| M0 | Environment proof, skeleton, docs | 1 | M | In progress |
+| M0 | Environment proof, skeleton, docs | 1 | M | Done 2026-11-14 |
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Not started |
 | M2 | Job and event spine | 1 | L | Not started |
 | M3 | Cleaning and preprocessing | 1 | M | Not started |
@@ -75,7 +75,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] Docker Desktop running, disk image on D:, `.wslconfig` in place, downloads approved (done by the agent on the owner's instruction, 2026-11-13)
 - [x] S-01: the GPU is visible in a container and PyTorch reports CUDA available
 - [x] S-02: behaviour at the VRAM limit recorded; cap fraction chosen (0.85)
-- [ ] S-03: sleep and wake behaviour recorded — needs the owner at the laptop; the probe script is ready
+- [x] S-03: sleep and wake behaviour recorded (one run; a GPU job survived a 705 s sleep)
 - [x] S-04: file I/O speed recorded
 - [x] S-05: metric availability inside containers recorded
 - [x] `docker compose up` brings postgres, redis and api to healthy
@@ -85,9 +85,11 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] ruff, pyright (strict) and pytest pass locally; CI workflow file present (the workflow itself has never run: there is no remote)
 - [x] README has real setup and run steps
 - [x] RISKS.md, ERRORS.md and affected ADRs updated with spike results
-- [ ] The old 84.6 GB Docker disk image on C: deleted, after the owner confirms
-- [ ] Demo: stack up, health endpoint, GPU check output
-- [ ] Owner's OK to merge into `main`
+- [x] The old 84.6 GB Docker disk image on C: deleted on the owner's instruction; the D: image compacted from 89.7 GB to 40.9 GB
+- [x] Demo: stack up, health endpoint, GPU check output (shown in the session of 2026-11-13)
+- [x] Owner's OK to merge into `main` ("go ahead and finish M0", 2026-11-14)
+
+**Carried forward, not blocking:** the Mermaid diagrams in ARCHITECTURE.md and DATA_MODEL.md have not been rendered, and the CI workflow has never run because there is no remote.
 
 ## M1 — Ingestion, manifests, versions, lineage
 
