@@ -1,0 +1,46 @@
+# CI for Stratal (SPEC §7.5): ruff, pyright, pytest on CPU.
+# This file has never run: the repository has no GitHub remote yet (ADR-0012).
+# It mirrors scripts/check.ps1 and must be verified on the first push.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: stratal
+          POSTGRES_PASSWORD: stratal
+          POSTGRES_DB: stratal
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U stratal -d stratal"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:8
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      STRATAL_DATABASE_URL: postgresql+psycopg://stratal:stratal@localhost:5432/stratal
+      STRATAL_REDIS_URL: redis://localhost:6379/0
+      STRATAL_DATA_DIR: ${{ runner.temp }}/stratal-data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.9.30"
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run pyright
+      - run: uv run pytest -q
+      - run: mkdir -p "$STRATAL_DATA_DIR" && uv run pytest -q -m integration

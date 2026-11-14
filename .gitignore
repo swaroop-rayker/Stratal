@@ -31,6 +31,12 @@ frontend/dist/
 *.pt
 *.gguf
 
+# Machine-specific trusted certificates (see docker/certs/README.md)
+docker/certs/*.crt
+
+# Spike scratch files
+.spike-tmp/
+
 # OS / editors
 .DS_Store
 Thumbs.db
