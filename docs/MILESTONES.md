@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 in progress: everything built and demonstrated; DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8 chosen 2026-11-15; the owner's OK to merge is left. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 waits on the phase-1 dataset and the model-weight downloads. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -20,7 +20,7 @@
 | M0 | Environment proof, skeleton, docs | 1 | M | Done 2026-11-14 |
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
-| M3 | Cleaning and preprocessing | 1 | M | In progress: everything built 2026-11-15 (DATA-2.1 and DATA-2.2 by the agent at the owner's request); threshold 8 chosen (OC-5); waiting on the owner's OK to merge |
+| M3 | Cleaning and preprocessing | 1 | M | Done 2026-11-15 |
 | M4 | Labeling | 1 | L | Not started |
 | M5 | Splits, review, eval report | 1 | M | Not started |
 | M6 | Phase-1 screens | 1 | L | Not started |
@@ -193,7 +193,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] Invariant INV-05 holds after clean: the stage refuses to commit a version that breaks it (`test_INV_05_*`)
 - [x] Demo: ingest → clean → preprocess as one pipeline job (2026-11-15, `job_0005` on the live stack). 595 planted files in `sources/demo-m3`: 580 ingested; 20 exact and 20 near duplicates marked, with every JPEG 90 kept over its JPEG 70; 540 copies at ≤ 768 px. Final version `ds_ad9a39e33ab5`
 - [x] Docs updated (2026-11-15, including the OC-5 choice; learning notes §5e and §20)
-- [ ] Owner's OK to merge
+- [x] Owner's OK to merge (2026-11-15, "Yes, merge and push")
 
 ## M4 — Labeling
 
