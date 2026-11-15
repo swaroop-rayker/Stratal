@@ -17,3 +17,4 @@ Only an explicit "approved" from the owner passes a gate (SPEC §9.2). Silence o
 | 2026-11-15 | SCR-04 live job view, low-fi wireframe (`screens/SCR-04-lofi_v1.html`) | v1 | owner | "Approved". Next: the hi-fi mockup |
 | 2026-11-15 | SCR-04 live job view, hi-fi mockup (`screens/SCR-04_v1.html`) | v1 | owner | "Approved". Gate 2 passed for SCR-04 |
 | 2026-11-15 | SCR-05 labeling review, low-fi wireframe (`screens/SCR-05-lofi_v1.html`) | v1 | owner | "Approved". Next: the hi-fi mockup |
+| 2026-11-15 | SCR-05 labeling review, hi-fi mockup (`screens/SCR-05_v1.html`) | v1 | owner | "Approved". Gate 2 passed for SCR-05. Its note icon joins the set |
