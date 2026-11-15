@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-04 live job view — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton, .spinner { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover, .btn.danger.is-hover { background: var(--danger); color: var(--on-danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.select { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--fs-12); color: var(--text-primary); }
+.select svg.i { width: 12px; height: 12px; color: var(--text-secondary); }
+.spinner { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: var(--r-pill); animation: spin .7s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 36px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.t tr.total td { background: var(--surface-raised); font-weight: var(--fw-semibold); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); }
+.pill.lg { height: 24px; font-size: var(--fs-12); padding: 0 var(--sp-3) 0 var(--sp-2); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; } .badge.info { color: var(--info); background: var(--info-soft); border-color: transparent; }
+.progress { height: 8px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.tile { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); min-width: 0; border-top: 2px solid var(--res, var(--border)); }
+.tile .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.tile .k i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); }
+.tile .v { font: var(--fw-medium) var(--fs-20)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.tile .v small { font-size: var(--fs-12); color: var(--text-muted); font-weight: var(--fw-regular); }
+.tile .d { font: var(--fs-11) var(--font-mono); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tile svg.ch { display: block; width: 100%; height: 46px; margin-top: var(--sp-2); }
+.tile.unavailable .v { color: var(--text-muted); font-family: var(--font-ui); font-size: var(--fs-14); }
+.ch .grid { stroke: var(--border); stroke-width: 1; }
+.timeline { display: flex; gap: 2px; height: 40px; }
+.seg { flex: var(--w, 1); min-width: 112px; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--sp-2); border-radius: var(--r-sm); background: color-mix(in srgb, var(--c) 18%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 45%, transparent); color: var(--text-primary); font-size: var(--fs-11); line-height: 1.3; cursor: pointer; overflow: hidden; }
+.seg b { display: flex; gap: var(--sp-1); align-items: center; font-weight: var(--fw-medium); color: var(--c); font-size: var(--fs-12); } .seg span { font-family: var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.seg svg.i { width: 12px; height: 12px; }
+.seg.pending { --c: var(--border-strong); border-style: dashed; background: transparent; } .seg[aria-current=true] { box-shadow: 0 0 0 2px var(--focus); }
+.seg.completed { --c: var(--state-completed); } .seg.running { --c: var(--state-running); } .seg.failed { --c: var(--state-failed); }
+.log { background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); font: var(--fs-12)/1.7 var(--font-mono); overflow: hidden; }
+.log > div { display: grid; grid-template-columns: 72px 52px 84px 1fr; gap: var(--sp-3); padding: 0 var(--sp-3); white-space: nowrap; }
+.log > div:hover { background: var(--accent-soft); }
+.log .ts, .log .st { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.log .lv-INFO { color: var(--info); } .log .lv-WARN { color: var(--warning); } .log .lv-ERROR { color: var(--danger); } .log .lv-DEBUG { color: var(--text-muted); }
+.log .why { grid-column: 4; color: var(--text-secondary); white-space: normal; font-family: var(--font-ui); padding-bottom: var(--sp-1); }
+.log .why b { color: var(--text-primary); }
+.log .warn { background: var(--warning-soft); } .log .error { background: var(--danger-soft); }
+.log.jobs > div { grid-template-columns: 72px 72px 52px 84px 1fr; } .log.jobs .why { grid-column: 5; }
+.log.narrow > div { grid-template-columns: 64px 48px 1fr; white-space: normal; } .log.narrow .why { grid-column: 3; }
+.modal { width: 460px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; }
+.modal > header svg.i { color: var(--danger); }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); font-size: var(--fs-13); }
+.modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 520px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.tip { position: absolute; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); box-shadow: var(--shadow-2); z-index: var(--z-tooltip); max-width: 280px; }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; } .crumbs .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); } .jobind .progress { height: 6px; width: 80px; }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-04 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.jhead { display: flex; align-items: center; gap: var(--sp-3); }
+.jhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); }
+.jhead .sub { color: var(--text-muted); font-size: var(--fs-12); white-space: nowrap; } .jhead .sub .mono { color: var(--text-secondary); }
+.activity { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--state-running)); border-radius: var(--r-md); }
+.activity .msg { font: var(--fw-medium) var(--fs-14) var(--font-mono); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activity .msg svg.i { color: var(--state-running); vertical-align: -2px; margin-right: var(--sp-1); }
+.stage-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); flex: none; }
+.prog { display: grid; grid-template-columns: 1fr 48px 220px 140px; gap: var(--sp-4); align-items: center; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.prog b { color: var(--text-primary); font-weight: var(--fw-medium); } .prog .r { text-align: right; }
+.res { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--sp-2); }
+.logbox { display: flex; flex-direction: column; min-height: 0; flex: 1; border: var(--bw) solid var(--border); border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
+.loghead { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); }
+.loghead h2 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); }
+.logbox .log { border: 0; border-radius: 0; flex: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.failure { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--danger-soft); border: var(--bw) solid color-mix(in srgb, var(--danger) 50%, transparent); border-left: 3px solid var(--danger); border-radius: var(--r-md); }
+.failure > svg.i { color: var(--danger); width: 18px; height: 18px; margin-top: 2px; }
+.failure h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.failure p { margin: var(--sp-1) 0 0; font-size: var(--fs-13); color: var(--text-secondary); } .failure p b { color: var(--text-primary); }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); } .kv > span:nth-child(odd) { color: var(--text-muted); } .kv .mono { color: var(--text-primary); }
+.dhead { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); } .dhead h2 { margin: 0; font: var(--fw-semibold) var(--fs-16) var(--font-mono); }
+.dbody { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); overflow: hidden; }
+.chartbox { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); }
+.chartbox svg { display: block; width: 100%; height: 100px; }
+.legend-s { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); margin-bottom: var(--sp-1); } .legend-s i { display: inline-block; width: 10px; height: 2px; margin-right: var(--sp-1); vertical-align: middle; background: var(--c); } .legend-s i.dash { background: repeating-linear-gradient(to right, var(--c) 0 4px, transparent 4px 7px); }
+.note { font-size: var(--fs-12); color: var(--text-muted); margin: 0; }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M3.5 10.5h-1v-8h8v1"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9" stroke-width="2.2"/></symbol>
+</svg>
+
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-04 — Live job view · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-04-lofi_v1.html</span>, approved 2026-11-15) inside the approved SCR-01 shell, using only design system v1 tokens and components. Charts are drawn as static SVG here; the real screen uses ECharts with the same tokens (design system c, live chart). Open as <span class="mono">SCR-04_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>The activity line</b> is a card with a left edge in the job-state colour, so it reads as part of the state: blue while running, red on failure, green on completion.</li>
+<li><b>Resource tiles</b> are the design system's metric tile, each with a 46-px chart of the last 5 minutes in its resource colour. In the VRAM chart, NVML is the solid line and PyTorch's reserved memory the dashed one, the convention the design system set for MON-2.4.</li>
+<li><b>Timeline segments</b> are the design system's timeline bar; their colours are job-state colours, with an icon and the stage name in each, so state never rests on colour alone.</li>
+<li><b>The failure panel</b> reuses the error-state treatment (danger-soft background, danger edge) at the top of the page, where the activity line was.</li>
+<li><b>No new icons</b>; everything here is in the set.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Running: label stage, 13% (dark)</h2>
+<div class="frame" style="height:800px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="group">Data</div><a class="nav"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="group">Jobs</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+    </nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0142</span></div><span class="spacer"></span>
+      <span class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="stage">label</span><span class="progress"><i style="--p:13%"></i></span><span class="num">13%</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0142</h1><span class="pill running lg" role="status"><i class="pulse"></i>Running</span><span class="sub">pipeline · coco10k · from <span class="mono">ds_0b1f9e77a3c4</span> · attempt 1 · started 13:54:20 · <span class="mono">15m 43s</span></span><span class="spacer"></span><button class="btn sm ghost"><svg class="i"><use href="#i-copy"/></svg>Copy ID</button><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></div>
+      <div class="activity" aria-live="polite"><span class="stage-tag">label</span><span class="msg"><svg class="i"><use href="#i-play"/></svg>Captioning batch 77/595 · Florence-2-base · bs=16 · fp16</span></div>
+      <div class="prog"><span class="progress"><i style="--p:13%"></i></span><b class="r">13%</b><span>1,232 / 9,512 img · <b>2.4</b> img/s</span><span class="r">ETA <b>57m 33s</b></span></div>
+      <div class="timeline" role="list" aria-label="Stages">
+        <div class="seg completed" style="--w:3.7" role="listitem"><b><svg class="i"><use href="#i-check"/></svg>clean</b><span>3m 40s</span></div>
+        <div class="seg completed" style="--w:2.9" role="listitem"><b><svg class="i"><use href="#i-check"/></svg>preprocess</b><span>2m 55s</span></div>
+        <div class="seg running" style="--w:8.6" role="listitem"><b><svg class="i"><use href="#i-play"/></svg>label</b><span>8m 33s · 13%</span></div>
+        <div class="seg pending" style="--w:2" role="listitem"><b><svg class="i"><use href="#i-clock"/></svg>filter</b><span>pending</span></div>
+      </div>
+      <div class="res">
+        <div class="tile" style="--res:var(--res-cpu)"><div class="k"><i></i>CPU</div><div class="v">38<small>%</small></div><div class="d">16 cores · max 71%</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-cpu)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,30 8,28 16,32 24,24 32,27 40,20 48,26 56,22 64,29 72,21 80,25 88,24 100,27"/></svg></div>
+        <div class="tile" style="--res:var(--res-ram)"><div class="k"><i></i>RAM</div><div class="v">7.2<small> / 10.0 GB</small></div><div class="d">job RSS 3.1 GB</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-ram)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,26 20,25 40,22 60,20 80,19 100,18"/></svg></div>
+        <div class="tile" style="--res:var(--res-gpu)"><div class="k"><i></i>GPU <svg class="i" style="width:12px;height:12px" aria-label="What GPU utilisation means"><use href="#i-info"/></svg></div><div class="v">94<small>%</small></div><div class="d">memory controller 61%</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-gpu)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,42 8,42 12,8 20,6 30,9 40,5 50,7 60,4 70,6 80,5 90,7 100,5"/></svg></div>
+        <div class="tile" style="--res:var(--res-vram)"><div class="k"><i></i>VRAM</div><div class="v">3.9<small> / 6.0 GB</small></div><div class="d">torch alloc 3.1 · rsv 3.6</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-vram)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,43 10,43 14,21 20,20 100,20"/><polyline fill="none" stroke="var(--res-vram)" stroke-width="1.4" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" points="0,45 10,45 14,24 20,23 100,23"/></svg></div>
+        <div class="tile" style="--res:var(--res-temp)"><div class="k"><i></i>GPU temp · power</div><div class="v">71<small> °C</small></div><div class="d">48 W · max 74 °C</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-temp)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,36 10,35 14,26 30,20 50,17 70,16 100,15"/></svg></div>
+      </div>
+      <section class="logbox" aria-label="Activity log">
+        <div class="loghead"><h2>Activity</h2><span class="group-btns"><button class="btn sm" aria-pressed="true">This job</button><button class="btn sm">All jobs</button></span><span class="select">Level: INFO and above<svg class="i"><use href="#i-down"/></svg></span><span class="select">Stage: all<svg class="i"><use href="#i-down"/></svg></span><span class="spacer"></span><kbd>/</kbd><span class="note">filter</span><button class="btn sm ghost"><svg class="i"><use href="#i-pause"/></svg>Auto-scroll on</button></div>
+        <div class="log" role="log" aria-live="polite">
+          <div><span class="ts">14:10:03</span><span class="lv-INFO">INFO</span><span class="st">label</span><span>Captioning batch 77/595 · Florence-2-base · bs=16 · fp16</span></div>
+          <div><span class="ts">14:09:56</span><span class="lv-INFO">INFO</span><span class="st">label</span><span>Captioning batch 76/595 · Florence-2-base · bs=16 · fp16</span></div>
+          <div><span class="ts">14:01:33</span><span class="lv-INFO">INFO</span><span class="st">label</span><span>Loaded Florence-2-base to GPU (0.9 GB, 2.1 s) · VRAM 0.3 → 1.2 GB</span></div>
+          <div><span class="ts">14:01:00</span><span class="lv-INFO">INFO</span><span class="st">preprocess</span><span>Recording lineage → ds_c8e21d0f6a3b</span></div>
+          <div><span class="ts">14:00:57</span><span class="lv-INFO">INFO</span><span class="st">preprocess</span><span>Resizing to 768px · normalizing 9,512/9,512</span></div>
+          <div class="warn"><span class="ts">13:57:12</span><span class="lv-WARN">WARN</span><span class="st">clean</span><span>212 exact duplicates marked (2.1% of accepted rows)</span><span class="why"><b>Why</b> more than the 1% usually seen in a curated source. <b>Do</b> check the source for copied folders.</span></div>
+          <div><span class="ts">13:56:40</span><span class="lv-INFO">INFO</span><span class="st">clean</span><span>Comparing hashes: 128 near-duplicate groups found</span></div>
+          <div><span class="ts">13:56:38</span><span class="lv-INFO">INFO</span><span class="st">clean</span><span>Hashing images (pHash) 9,852/9,852</span></div>
+        </div>
+      </section>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>7.2</b><small>/ 10.0 GB</small></span><span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>94%</b></span><span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>3.9</b><small>/ 6.0 GB</small></span><span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>71 °C</b></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+  <span class="tip" style="left:668px;top:404px">GPU utilisation is the share of time at least one kernel was running. 100% does not mean the GPU is used efficiently.</span>
+  <span class="n" style="left:226px;top:66px">1</span>
+  <span class="n" style="left:1166px;top:42px">2</span>
+  <span class="n" style="left:226px;top:118px">3</span>
+  <span class="n" style="left:226px;top:156px">4</span>
+  <span class="n" style="left:226px;top:192px">5</span>
+  <span class="n" style="left:226px;top:250px">6</span>
+  <span class="n" style="left:226px;top:398px">7</span>
+  <span class="n" style="left:226px;top:440px">8</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Header</td><td>Job ID, state pill (large), kind, dataset, input version, attempt, start, elapsed. While a cancel is pending the pill reads "Cancelling…" (frame F)</td><td><span class="mono">GET /jobs/{id}</span>, then <span class="mono">job</span> messages on <span class="mono">GET /jobs/{id}/stream</span></td><td>live</td></tr>
+<tr><td><span class="n">2</span></td><td>Primary action</td><td>Cancel job (danger, outlined until hover) while queued or running; Retry when failed; Open output version when completed</td><td><span class="mono">POST /jobs/{id}/cancel</span>, <span class="mono">/retry</span></td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Activity line</td><td>Stage and its latest message (MON-1.2), left edge in the job-state colour</td><td><span class="mono">event</span> messages</td><td>live</td></tr>
+<tr><td><span class="n">4</span></td><td>Progress</td><td>Bar, percent, items, rate, ETA; fixed columns, tabular numbers (MON-1.5)</td><td>stage <span class="mono">step</span>, <span class="mono">total</span>, <span class="mono">throughput</span>, <span class="mono">eta_seconds</span></td><td>live</td></tr>
+<tr><td><span class="n">5</span></td><td>Timeline</td><td>Stages sized by duration, state colour, icon, name, duration; click opens the stage drawer (frame B) (MON-4.2)</td><td><span class="mono">GET /jobs/{id}</span> stages</td><td>live</td></tr>
+<tr><td><span class="n">6</span></td><td>Resources</td><td>Five metric tiles with 5-minute charts; VRAM solid = NVML, dashed = PyTorch reserved (MON-2.4); GPU info tooltip shown</td><td><span class="mono">sample</span> messages; <span class="mono">GET /jobs/{id}/telemetry</span> for history</td><td>live, 1 s</td></tr>
+<tr><td><span class="n">7</span></td><td>Log controls</td><td>This job / All jobs, level, stage, text filter (<kbd>/</kbd>), auto-scroll (MON-4.3)</td><td><span class="mono">GET /jobs/{id}/events</span> or <span class="mono">GET /events</span></td><td>–</td></tr>
+<tr><td><span class="n">8</span></td><td>Activity log</td><td>Newest first; WARN and ERROR tinted with <b>Why</b> and <b>Do</b> (MON-1.3)</td><td>same, then <span class="mono">event</span> messages</td><td>live</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:420px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="group">Jobs</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0142</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0142</h1><span class="pill running lg"><i class="pulse"></i>Running</span><span class="sub">pipeline · coco10k · <span class="mono">15m 43s</span></span><span class="spacer"></span><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></div>
+      <div class="activity"><span class="stage-tag">label</span><span class="msg"><svg class="i"><use href="#i-play"/></svg>Captioning batch 77/595 · Florence-2-base · bs=16 · fp16</span></div>
+      <div class="prog"><span class="progress"><i style="--p:13%"></i></span><b class="r">13%</b><span>1,232 / 9,512 img · <b>2.4</b> img/s</span><span class="r">ETA <b>57m 33s</b></span></div>
+      <div class="timeline"><div class="seg completed" style="--w:3.7"><b><svg class="i"><use href="#i-check"/></svg>clean</b><span>3m 40s</span></div><div class="seg completed" style="--w:2.9"><b><svg class="i"><use href="#i-check"/></svg>preprocess</b><span>2m 55s</span></div><div class="seg running" style="--w:8.6"><b><svg class="i"><use href="#i-play"/></svg>label</b><span>8m 33s · 13%</span></div><div class="seg pending" style="--w:2"><b><svg class="i"><use href="#i-clock"/></svg>filter</b><span>pending</span></div></div>
+      <div class="res">
+        <div class="tile" style="--res:var(--res-cpu)"><div class="k"><i></i>CPU</div><div class="v">38<small>%</small></div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-cpu)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,30 8,28 16,32 24,24 32,27 40,20 48,26 56,22 64,29 72,21 80,25 88,24 100,27"/></svg></div>
+        <div class="tile" style="--res:var(--res-ram)"><div class="k"><i></i>RAM</div><div class="v">7.2<small> / 10.0 GB</small></div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-ram)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,26 20,25 40,22 60,20 80,19 100,18"/></svg></div>
+        <div class="tile" style="--res:var(--res-gpu)"><div class="k"><i></i>GPU</div><div class="v">94<small>%</small></div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-gpu)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,42 8,42 12,8 20,6 30,9 40,5 50,7 60,4 70,6 80,5 90,7 100,5"/></svg></div>
+        <div class="tile" style="--res:var(--res-vram)"><div class="k"><i></i>VRAM</div><div class="v">3.9<small> / 6.0 GB</small></div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-vram)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,43 10,43 14,21 20,20 100,20"/><polyline fill="none" stroke="var(--res-vram)" stroke-width="1.4" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" points="0,45 10,45 14,24 20,23 100,23"/></svg></div>
+        <div class="tile" style="--res:var(--res-temp)"><div class="k"><i></i>GPU temp</div><div class="v">71<small> °C</small></div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-temp)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,36 10,35 14,26 30,20 50,17 70,16 100,15"/></svg></div>
+      </div>
+    </main>
+    <footer class="status"><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+</div></div>
+
+<!-- ===================================================================== B -->
+<h2>B · A stage selected: its drawer</h2>
+<div class="frame" style="height:640px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0142</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0142</h1><span class="pill running lg"><i class="pulse"></i>Running</span></div>
+      <div class="timeline" style="width:640px"><div class="seg completed" style="--w:3.7" aria-current="true"><b><svg class="i"><use href="#i-check"/></svg>clean</b><span>3m 40s</span></div><div class="seg completed" style="--w:2.9"><b><svg class="i"><use href="#i-check"/></svg>preprocess</b><span>2m 55s</span></div><div class="seg running" style="--w:8.6"><b><svg class="i"><use href="#i-play"/></svg>label</b><span>13%</span></div></div>
+      <p class="note">Charts and log on this page now show <b style="color:var(--text-primary)">clean</b> only. <button class="btn sm ghost"><svg class="i"><use href="#i-x"/></svg>Show all stages</button></p>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <aside class="drawer" role="dialog" aria-label="Stage clean">
+    <div class="dhead"><h2>clean</h2><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="dbody">
+      <div class="kv"><span>Ran</span><span class="mono">13:54:20 – 13:58:00 · 3m 40s · cpu worker</span><span>Versions</span><span class="mono">ds_0b1f9e77a3c4 → ds_e1aa7c52d940</span><span>Work</span><span class="mono">9,852 hashed · 44.8 img/s · 0 from cache</span><span>Decided</span><span class="mono">212 exact + 128 near duplicates</span></div>
+      <div class="table-wrap"><table class="t"><thead><tr><th>Peaks</th><th class="r">RAM</th><th class="r">VRAM</th><th class="r">GPU temp</th><th class="r">CPU</th></tr></thead><tbody><tr><td>clean</td><td class="r">1.9 GB</td><td class="r">—</td><td class="r">52 °C</td><td class="r">96%</td></tr></tbody></table></div>
+      <div class="chartbox"><div class="legend-s"><span><i style="--c:var(--res-cpu)"></i>CPU %</span><span><i style="--c:var(--res-ram)"></i>RAM GB</span></div><svg viewBox="0 0 100 100" preserveAspectRatio="none"><line x1="0" y1="50" x2="100" y2="50" stroke="var(--border)"/><polyline fill="none" stroke="var(--res-cpu)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,30 10,10 20,8 30,12 40,7 50,9 60,8 70,11 80,40 90,62 100,64"/><polyline fill="none" stroke="var(--res-ram)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,80 20,72 40,66 60,62 80,60 100,70"/></svg></div>
+      <p class="note">Expected bottleneck for cleaning (MON-3): CPU for hashing, RAM for the hash index. GPU lines are hidden: this stage did not use the GPU.</p>
+      <div class="log narrow">
+        <div><span class="ts">13:58:00</span><span class="lv-INFO">INFO</span><span>Recording lineage → ds_e1aa7c52d940</span></div>
+        <div class="warn"><span class="ts">13:57:12</span><span class="lv-WARN">WARN</span><span>212 exact duplicates marked (2.1%)</span></div>
+        <div><span class="ts">13:56:40</span><span class="lv-INFO">INFO</span><span>Comparing hashes: 128 near-duplicate groups found</span></div>
+        <div><span class="ts">13:56:38</span><span class="lv-INFO">INFO</span><span>Hashing images (pHash) 9,852/9,852</span></div>
+      </div>
+    </div>
+  </aside>
+  <span class="n" style="left:748px;top:12px">9</span>
+</div>
+<p class="cap"><b>9</b> · Stage drawer (MON-4.2, MON-2.5, MON-3): times, versions, the stage's own metrics, peaks, its resource curves and events. Fed by <span class="mono">GET /jobs/{id}</span>, <span class="mono">GET /jobs/{id}/telemetry?stage=clean</span>, <span class="mono">GET /jobs/{id}/events?stage=clean</span>. The selected segment carries the focus ring.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Failed: out of GPU memory</h2>
+<div class="frame" style="height:520px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0145</span></div><span class="spacer"></span><span class="jobind idle"><span class="pill" style="--c:var(--text-muted)"><svg class="i"><use href="#i-clock"/></svg>Idle</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0145</h1><span class="pill failed lg" role="alert"><svg class="i"><use href="#i-x"/></svg>Failed</span><span class="sub">pipeline · coco10k · from <span class="mono">ds_c8e21d0f6a3b</span> · attempt 1 · ran <span class="mono">4m 51s</span></span><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-db"/></svg>Open input version</button><button class="btn primary"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></div>
+      <div class="failure"><svg class="i"><use href="#i-alert"/></svg><div style="flex:1"><h2>label failed: CUDA out of memory at batch 43/298 <span class="badge err">gpu_oom</span></h2>
+        <p>Tried to allocate 1.1 GB with 5.4 of 6.0 GB in use, at batch size 32.</p>
+        <p><b>Do</b> reduce batch size from 32 → 16, then retry. <b>Kept</b> 1,344 captions (42 batches) are cached and will not be redone.</p>
+        <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-2)"><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry with batch size 16</button><button class="btn sm ghost">Open the failed stage<svg class="i"><use href="#i-chevron"/></svg></button></div></div></div>
+      <div class="timeline"><div class="seg failed" style="--w:5"><b><svg class="i"><use href="#i-x"/></svg>label</b><span>4m 51s · batch 43/298</span></div><div class="seg pending" style="--w:1"><b><svg class="i"><use href="#i-clock"/></svg>filter</b><span>not run</span></div></div>
+      <section class="logbox"><div class="loghead"><h2>Activity</h2><span class="select">Level: WARN and above<svg class="i"><use href="#i-down"/></svg></span></div>
+        <div class="log">
+          <div class="error"><span class="ts">14:31:05</span><span class="lv-ERROR">ERROR</span><span class="st">label</span><span>CUDA out of memory at batch 43/298 · bs=32</span><span class="why"><b>Why</b> tried to allocate 1.1 GB; 5.4 of 6.0 GB in use. <b>Do</b> reduce batch size from 32 → 16.</span></div>
+          <div class="warn"><span class="ts">14:30:58</span><span class="lv-WARN">WARN</span><span class="st">label</span><span>VRAM at 91% (5.5 of 6.0 GB)</span><span class="why"><b>Why</b> above the 90% threshold. <b>Do</b> nothing yet; the next batch may not fit.</span></div>
+        </div></section>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>4%</b></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s idle</span></footer>
+  </div>
+  <span class="n" style="left:226px;top:110px">10</span>
+</div>
+<p class="cap"><b>10</b> · Failure panel: stage, error <span class="mono">code</span>, reason, action and what was kept, from <span class="mono">job.error</span> and the ERROR event (ADR-0011, MON-1.3). "Retry with batch size 16" only when the action names a concrete setting; plain Retry reuses the config. The label stage and its OOM handling arrive in M4.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Completed: the summary</h2>
+<div class="frame" style="height:440px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0142</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0142</h1><span class="pill completed lg"><svg class="i"><use href="#i-check"/></svg>Completed</span><span class="sub">pipeline · coco10k · <span class="mono">1h 14m 06s</span> · finished 15:08:26</span><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-list"/></svg>Events</button><button class="btn primary"><svg class="i"><use href="#i-db"/></svg>Open ds_b0c3e5a8d217</button></div>
+      <div class="timeline"><div class="seg completed" style="--w:3.7"><b><svg class="i"><use href="#i-check"/></svg>clean</b><span>3m 40s</span></div><div class="seg completed" style="--w:2.9"><b><svg class="i"><use href="#i-check"/></svg>preprocess</b><span>2m 55s</span></div><div class="seg completed" style="--w:66"><b><svg class="i"><use href="#i-check"/></svg>label</b><span>1h 06m 03s</span></div><div class="seg completed" style="--w:1"><b><svg class="i"><use href="#i-check"/></svg>filter</b><span>21 s</span></div></div>
+      <div class="table-wrap"><table class="t">
+        <thead><tr><th>Stage</th><th class="r">Duration</th><th class="r">Items</th><th class="r">Rate</th><th class="r">Peak RAM</th><th class="r">Peak VRAM</th><th class="r">Max temp</th><th>Output</th></tr></thead>
+        <tbody>
+        <tr><td>clean</td><td class="r">3m 40s</td><td class="r">9,852</td><td class="r">44.8/s</td><td class="r">1.9 GB</td><td class="r">—</td><td class="r">52 °C</td><td class="id">ds_e1aa7c52d940</td></tr>
+        <tr><td>preprocess</td><td class="r">2m 55s</td><td class="r">9,512</td><td class="r">54.4/s</td><td class="r">1.4 GB</td><td class="r">—</td><td class="r">55 °C</td><td class="id">ds_c8e21d0f6a3b</td></tr>
+        <tr><td>label</td><td class="r">1h 06m 03s</td><td class="r">9,512</td><td class="r">2.4/s</td><td class="r">3.1 GB</td><td class="r">4.1 GB</td><td class="r">74 °C</td><td class="id">ds_a41f07be92c6</td></tr>
+        <tr><td>filter</td><td class="r">21 s</td><td class="r">9,512</td><td class="r">453/s</td><td class="r">0.9 GB</td><td class="r">—</td><td class="r">58 °C</td><td class="id">ds_b0c3e5a8d217</td></tr>
+        <tr class="total"><td>job</td><td class="r">1h 14m 06s</td><td class="r"></td><td class="r"></td><td class="r">3.1 GB</td><td class="r">4.1 GB</td><td class="r">74 °C</td><td></td></tr>
+        </tbody></table></div>
+      <p class="note">Below: the run's resource charts and its log, as in frame A, no longer live.</p>
+    </main>
+    <footer class="status"><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s idle</span></footer>
+  </div>
+  <span class="n" style="left:226px;top:172px">11</span>
+</div>
+<p class="cap"><b>11</b> · Summary (MON-2.5): per stage and for the job, from <span class="mono">GET /jobs/{id}</span> (<span class="mono">summary</span>, stage <span class="mono">peaks</span>).</p>
+
+<!-- ===================================================================== E + F -->
+<h2>E · Queued, and F · Cancel</h2>
+<div class="frame" style="height:250px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0146</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0146</h1><span class="pill queued lg"><svg class="i"><use href="#i-clock"/></svg>Queued</span><span class="sub">pipeline · birds2k · created 14:40:02 · waiting <span class="mono">1m 12s</span></span><span class="spacer"></span><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></div>
+      <div class="activity" style="--c:var(--state-queued)"><span class="msg" style="font-weight:var(--fw-regular);color:var(--text-secondary)">Waiting for the gpu worker · <span class="mono" style="color:var(--text-primary)">job_0142</span> holds the GPU (label, 13%)</span></div>
+      <div class="timeline"><div class="seg pending"><b><svg class="i"><use href="#i-clock"/></svg>label</b><span>queued</span></div><div class="seg pending"><b><svg class="i"><use href="#i-clock"/></svg>filter</b><span>pending</span></div></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+<div style="display:flex;gap:var(--sp-4);margin-top:var(--sp-4)">
+<div class="frame" style="height:300px;width:632px">
+  <div class="scrim"><div class="modal" role="alertdialog" aria-label="Cancel job_0142?"><header><svg class="i"><use href="#i-alert"/></svg>Cancel job_0142?</header><div>The <b>label</b> stage stops at its next safe point, after the current batch. <b>Kept</b> the versions made by clean and preprocess, and the 1,232 captions already cached. <b>Lost</b> the rest of this run; a new run continues from the cache.</div><footer><button class="btn is-focus">Keep running</button><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></footer></div></div>
+</div>
+<div class="frame" style="height:300px;width:632px">
+  <div style="padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)"><div class="jhead"><h1>job_0142</h1><span class="pill cancelled lg" style="text-decoration:none"><span class="spinner"></span>Cancelling…</span></div>
+  <div class="activity" style="--c:var(--state-cancelled)"><span class="msg" style="font-size:var(--fs-13)">Stopping after batch 78/595…</span></div>
+  <p class="note">The pill reads "Cancelling…" until the job has stopped (<span class="mono">desired_state</span>), then becomes Cancelled (struck through, as the design system defines it). If the stage does not stop in time, the supervisor ends it and the log says so.</p></div>
+</div>
+</div>
+<p class="cap">Queued: the activity line says what the job waits for and names the job holding the GPU (ADR-0003). Cancel: the safe choice first and focused; the destructive button names its verb and object; Kept and Lost are stated (design system d, destructive actions).</p>
+
+<!-- ===================================================================== G -->
+<h2>G · Activity across all jobs</h2>
+<div class="frame" style="height:260px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0142</span></div></header>
+    <main class="content">
+      <section class="logbox"><div class="loghead"><h2>Activity</h2><span class="group-btns"><button class="btn sm">This job</button><button class="btn sm" aria-pressed="true">All jobs</button></span><span class="select">Job: any<svg class="i"><use href="#i-down"/></svg></span><span class="select">Level: WARN and above<svg class="i"><use href="#i-down"/></svg></span><span class="select">Stage: all<svg class="i"><use href="#i-down"/></svg></span><span class="spacer"></span><button class="btn sm ghost"><svg class="i"><use href="#i-down"/></svg>Jump to latest</button></div>
+        <div class="log jobs">
+          <div class="error"><span class="ts">14:31:05</span><span class="mono" style="color:var(--text-primary)">job_0145</span><span class="lv-ERROR">ERROR</span><span class="st">label</span><span>CUDA out of memory at batch 43/298 · bs=32</span></div>
+          <div class="warn"><span class="ts">13:57:12</span><span class="mono" style="color:var(--text-primary)">job_0142</span><span class="lv-WARN">WARN</span><span class="st">clean</span><span>212 exact duplicates marked (2.1% of accepted rows)</span></div>
+          <div class="warn"><span class="ts">09:12:40</span><span class="mono" style="color:var(--text-primary)">job_0139</span><span class="lv-WARN">WARN</span><span class="st">ingest</span><span>214 of 214 files below the minimum size</span></div>
+        </div></section>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+<p class="cap">MON-4.3: "All jobs" adds the job column and filter and switches to the global feed (<span class="mono">GET /events</span>, then <span class="mono">GET /stream</span>). Scrolling up pauses auto-scroll; "Jump to latest" resumes it.</p>
+
+<!-- ===================================================================== H -->
+<h2>H · Loading, unknown job, and an unreadable metric</h2>
+<div class="frame" style="height:270px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg>…</div></header>
+    <main class="content" style="display:grid;grid-template-columns:1fr 1fr 220px;gap:var(--sp-4);align-content:start">
+      <div style="display:flex;flex-direction:column;gap:var(--sp-3)" aria-busy="true"><span class="skeleton" style="width:220px;height:22px"></span><span class="skeleton" style="width:100%;height:46px"></span><span class="skeleton" style="width:100%;height:8px"></span><span class="skeleton" style="width:100%;height:40px"></span></div>
+      <div class="state err" role="alert"><svg class="i"><use href="#i-alert"/></svg><b>Job job_9999 not found</b><span class="badge err">not_found</span><p>No job 'job_9999'. <b style="color:var(--text-primary)">Do</b> open it from the jobs list.</p><button class="btn sm"><svg class="i"><use href="#i-list"/></svg>Go to jobs</button></div>
+      <div class="tile unavailable" style="--res:var(--res-gpu)"><div class="k"><i></i>GPU</div><div class="v">— unavailable</div><div class="d">NVML not reachable · cuda_unavailable</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/></svg></div>
+    </main>
+    <footer class="status"><span class="m conn">connecting…</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== I -->
+<h2>I · 1024 px</h2>
+<div class="frame compact" style="height:400px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center"><div class="brand" style="padding:0"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav"><svg class="i"><use href="#i-db"/></svg></a><a class="nav" aria-current="page"><svg class="i"><use href="#i-list"/></svg></a></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0142</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1 style="font-size:var(--fs-16)">job_0142</h1><span class="pill running lg"><i class="pulse"></i>Running</span><span class="spacer"></span><button class="btn sm danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></div>
+      <div class="activity"><span class="msg" style="font-size:var(--fs-13)"><svg class="i"><use href="#i-play"/></svg>Captioning batch 77/595 · Florence-2-base · bs=16</span></div>
+      <div class="prog" style="grid-template-columns:1fr 48px 90px 120px"><span class="progress"><i style="--p:13%"></i></span><b class="r">13%</b><span><b>2.4</b> img/s</span><span class="r">ETA <b>57m 33s</b></span></div>
+      <div class="res" style="grid-template-columns:repeat(3,1fr)">
+        <div class="tile" style="--res:var(--res-cpu)"><div class="k"><i></i>CPU</div><div class="v">38<small>%</small></div></div>
+        <div class="tile" style="--res:var(--res-ram)"><div class="k"><i></i>RAM</div><div class="v">7.2<small> / 10.0</small></div></div>
+        <div class="tile" style="--res:var(--res-gpu)"><div class="k"><i></i>GPU</div><div class="v">94<small>%</small></div></div>
+        <div class="tile" style="--res:var(--res-vram)"><div class="k"><i></i>VRAM</div><div class="v">3.9<small> / 6.0</small></div></div>
+        <div class="tile" style="--res:var(--res-temp)"><div class="k"><i></i>Temp</div><div class="v">71<small> °C</small></div></div>
+      </div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+<p class="cap">Tiles wrap to three a row and keep their charts at full width (hidden here for space); the items count drops from the progress line; the log follows below at full width.</p>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>The state pill is a <span class="mono">role="status"</span> region, announced once per change; a failure is <span class="mono">role="alert"</span>. The activity line is polite and throttled to one announcement every 10 seconds; the log is <span class="mono">role="log"</span>.</li>
+<li>Resource numbers are not announced as they change. Each tile's accessible name gives its value, unit and 5-minute maximum, and each chart has a text alternative.</li>
+<li>Timeline segments are buttons in a list; the selected one has <span class="mono">aria-current</span> and the focus ring.</li>
+<li>The cancel dialog is an <span class="mono">alertdialog</span>; focus starts on "Keep running" and returns to "Cancel job" when it closes.</li>
+</ul>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>
