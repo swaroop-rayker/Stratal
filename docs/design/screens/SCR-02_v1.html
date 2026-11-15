@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-02 datasets and versions — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.spinner { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: var(--r-pill); animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.field.error > small { color: var(--danger); display: flex; gap: var(--sp-1); align-items: center; }
+.input, .select { height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-13) var(--font-ui); width: 100%; display: flex; align-items: center; }
+.input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.field.error .input { border-color: var(--danger); }
+.select { justify-content: space-between; }
+.tabs { display: flex; gap: var(--sp-1); border-bottom: var(--bw) solid var(--border); }
+.tab { padding: var(--sp-2) var(--sp-3); border: 0; background: none; color: var(--text-secondary); font: var(--fw-medium) var(--fs-13) var(--font-ui); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: var(--sp-2); align-items: center; }
+.tab[aria-selected=true] { color: var(--text-primary); border-bottom-color: var(--accent); }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-2); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: 0 var(--sp-2); border-bottom: var(--bw) solid var(--border); height: 36px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-4); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-8) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); max-width: 46ch; color: var(--text-secondary); }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; display: inline-block; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.tip { position: absolute; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); box-shadow: var(--shadow-2); z-index: var(--z-tooltip); white-space: nowrap; }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); }
+.brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); }
+.nav kbd { margin-left: auto; }
+.side .foot { margin-top: auto; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.health { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); } .health svg.i { color: var(--success); }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); color: var(--text-primary); font: var(--fs-12) var(--font-ui); }
+.jobind .stage { color: var(--text-secondary); } .jobind .eta { color: var(--text-muted); } .jobind .progress { width: 80px; } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; }
+.m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); font-size: var(--fs-11); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-02 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; display: grid; grid-template-columns: 248px 1fr; background: var(--bg); }
+.content.single { display: block; padding: var(--sp-6); }
+.list { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border-right: var(--bw) solid var(--border); }
+.list-head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-4) var(--sp-3) var(--sp-3); }
+.list-head h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.filter { margin: 0 var(--sp-3) var(--sp-3); position: relative; }
+.filter .input { padding-left: 28px; color: var(--text-muted); } .filter svg.i { position: absolute; left: var(--sp-2); top: 9px; color: var(--text-muted); } .filter kbd { position: absolute; right: var(--sp-2); top: 6px; }
+.ds { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-2); padding: var(--sp-2) var(--sp-3); border-top: var(--bw) solid var(--border); cursor: pointer; }
+.ds:hover, .ds.is-hover { background: var(--accent-soft); }
+.ds[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.ds .slug { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .ds .r { text-align: right; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.ds .sub { font-size: var(--fs-12); color: var(--text-muted); display: flex; gap: var(--sp-1); align-items: center; flex-wrap: wrap; } .ds .sub .mono { color: var(--text-secondary); font-size: var(--fs-11); }
+.ds .pill { height: 16px; font-size: 10px; padding: 0 6px 0 5px; }
+.detail { padding: var(--sp-4) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; overflow: hidden; }
+.dhead { display: flex; align-items: baseline; gap: var(--sp-3); }
+.dhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); }
+.dhead .sub { color: var(--text-muted); font-size: var(--fs-12); } .dhead .sub .mono { color: var(--text-secondary); }
+.facts { display: flex; gap: var(--sp-6); }
+.facts > div { display: flex; flex-direction: column; gap: 2px; }
+.facts .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.facts .v { font: var(--fw-medium) var(--fs-14) var(--font-mono); font-variant-numeric: tabular-nums; }
+.stage-tag { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.counts { display: flex; align-items: center; gap: var(--sp-1); font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.counts .n-acc { color: var(--text-primary); }
+.stack { display: flex; width: 48px; height: 6px; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-sunken); flex: none; }
+.stack i { display: block; height: 100%; }
+.stack .acc { background: var(--success); } .stack .rej { background: var(--danger); } .stack .dup { background: var(--text-muted); } .stack .fil { background: var(--warning); }
+.keyrow { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-muted); }
+.keyrow span { display: inline-flex; gap: var(--sp-1); align-items: center; } .keyrow i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); display: inline-block; }
+.made { display: inline-flex; gap: var(--sp-1); align-items: center; color: var(--text-secondary); font-size: var(--fs-12); } .made .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.made svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.parent { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); } .parent.raw { color: var(--text-muted); font-family: var(--font-ui); }
+.pending td { background: color-mix(in srgb, var(--state-running) 6%, transparent); }
+.pending .progress { width: 56px; } .pending .what { font-size: var(--fs-12); color: var(--text-secondary); }
+.t td.menu { color: var(--text-muted); text-align: center; width: 28px; padding: 0 var(--sp-1); }
+.foot-note { margin: 0; font-size: var(--fs-12); color: var(--text-muted); }
+/* drawer */
+.scrim { position: absolute; inset: 0; background: var(--scrim); z-index: var(--z-drawer); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 440px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); display: flex; flex-direction: column; z-index: var(--z-drawer); }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.drawer > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); overflow: hidden; flex: 1; }
+.drawer > footer { display: flex; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-top: var(--bw) solid var(--border); }
+.stages { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.st { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); height: 36px; border-top: var(--bw) solid var(--border); font-size: var(--fs-13); }
+.st:first-child { border-top: 0; }
+.st input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; }
+.st .name { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .st .key { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted); } .st svg.i { color: var(--text-muted); }
+.st.off { color: var(--text-muted); } .st.off .name { color: var(--text-muted); font-weight: var(--fw-regular); }
+.st-form { padding: var(--sp-3); border-top: var(--bw) solid var(--border); background: var(--surface-sunken); display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.type { font: var(--fs-11) var(--font-mono); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); }
+.summary { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--danger-soft); border: var(--bw) solid color-mix(in srgb, var(--danger) 50%, transparent); font-size: var(--fs-12); }
+.summary svg.i { color: var(--danger); margin-top: 2px; }
+.menu-pop { position: absolute; width: 270px; padding: var(--sp-1); background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-2); z-index: var(--z-drawer); }
+.menu-pop div { display: flex; align-items: center; gap: var(--sp-2); height: 32px; padding: 0 var(--sp-2); border-radius: var(--r-sm); font-size: var(--fs-13); }
+.menu-pop div.is-hover { background: var(--accent-soft); } .menu-pop kbd { margin-left: auto; } .menu-pop svg.i { color: var(--text-muted); }
+
+/* ============================================================================ document chrome (review page, not UI) */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; }
+.changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M2 8h3l1.5-3 3 6L11 8h3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <!-- New in this mockup, same style -->
+  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><path d="M3.5 8h.3M8 8h.3M12.5 8h.3" stroke-width="2.4"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 16 16"><path d="M2 4.5h4l1.5 1.5H14v6.5H2z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M3.5 10.5h-1v-8h8v1"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+</svg>
+
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-02 — Datasets and versions · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-02-lofi_v1.html</span>, approved 2026-11-15) inside the approved SCR-01 shell, using only design system v1 tokens and components. Data is realistic. The buttons at the top switch the page between dark and light and hide the annotations; frame A is also shown in light below it. Open as <span class="mono">SCR-02_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>Row-status colours</b> in the stacked bar: accepted <i>success</i>, rejected <i>danger</i>, duplicate <i>text-muted</i>, filtered <i>warning</i>. They are semantic colours, not job-state colours, which stay reserved for jobs. A key sits above the table, and the four numbers are always printed beside the bar, so colour is never the only carrier.</li>
+<li><b>Source choice in the drawer uses Tabs</b> ("A folder" / "An existing version"). The low-fi drew a segmented control, which the design system does not have; Tabs are its nearest component.</li>
+<li><b>Stage checkboxes</b> are native checkboxes in the accent colour (the design system says forms that are submitted use checkboxes, not toggles).</li>
+<li><b>Five icons are new</b> (plus, more, folder, copy, branch), on the same grid and stroke.</li>
+<li>Layout, columns and widths are as approved.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Populated: coco10k selected, a job running on it (dark)</h2>
+<div class="frame" style="height:720px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="group">Data</div>
+      <a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="group">Jobs</div>
+      <a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+      <div class="foot"><div class="health"><svg class="i"><use href="#i-heart"/></svg>All systems ok</div></div>
+    </nav>
+    <header class="top">
+      <div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k</div>
+      <span class="spacer"></span>
+      <span class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="stage">label</span><span class="progress"><i style="--p:13%"></i></span><span class="num">13%</span><span class="eta num">ETA 14m 32s</span><svg class="i"><use href="#i-chevron"/></svg></span>
+    </header>
+    <main class="content">
+      <section class="list" aria-label="Datasets">
+        <div class="list-head"><h2>Datasets</h2><span class="count">4</span><span class="spacer"></span><button class="btn sm primary"><svg class="i"><use href="#i-plus"/></svg>Ingest a folder</button></div>
+        <div class="filter"><svg class="i"><use href="#i-search"/></svg><div class="input">Filter datasets</div><kbd>/</kbd></div>
+        <div class="ds" aria-selected="true"><span class="slug">coco10k</span><span class="r">10,000</span><span class="sub">6 versions · latest <span class="mono">preprocess</span></span><span class="r">95.1%</span><span class="sub">14:21 · <span class="pill running"><i class="pulse"></i>Running</span></span></div>
+        <div class="ds is-hover"><span class="slug">demo</span><span class="r">1,535</span><span class="sub">1 version · latest <span class="mono">ingest</span></span><span class="r">98.0%</span><span class="sub">yesterday</span></div>
+        <div class="ds"><span class="slug">birds2k</span><span class="r">2,048</span><span class="sub">3 versions · latest <span class="mono">clean</span></span><span class="r">91.4%</span><span class="sub">Nov 13</span></div>
+        <div class="ds"><span class="slug">m3demo</span><span class="r">13</span><span class="sub">3 versions · latest <span class="mono">preprocess</span></span><span class="r">92.3%</span><span class="sub">Nov 12</span></div>
+      </section>
+      <section class="detail" aria-label="coco10k versions">
+        <div class="dhead"><h1>coco10k</h1><span class="sub">image · from <span class="mono">/sources/coco10k</span> · created Nov 14</span><span class="spacer"></span><button class="btn sm ghost"><svg class="i"><use href="#i-copy"/></svg>Copy slug</button></div>
+        <div class="facts">
+          <div><span class="k">Versions</span><span class="v">6</span></div>
+          <div><span class="k">Latest</span><span class="v">ds_c8e21d0f6a3b</span></div>
+          <div><span class="k">Rows in every version</span><span class="v">10,000</span></div>
+          <div><span class="k">Accepted in latest</span><span class="v">9,512</span></div>
+          <div><span class="k">Stored</span><span class="v">6.1 GB</span></div>
+        </div>
+        <div class="keyrow"><span>Rows by status, in this order:</span><span><i style="--c:var(--success)"></i>accepted</span><span><i style="--c:var(--danger)"></i>rejected</span><span><i style="--c:var(--text-muted)"></i>duplicate</span><span><i style="--c:var(--warning)"></i>filtered</span></div>
+        <div class="table-wrap">
+          <table class="t">
+            <thead><tr><th aria-sort="descending">Version <svg class="i" style="width:10px;height:10px"><use href="#i-sort"/></svg></th><th>Stage</th><th>Parent</th><th>Rows by status</th><th class="r">New files</th><th>Made</th><th></th></tr></thead>
+            <tbody>
+            <tr class="pending"><td><span class="pill running"><i class="pulse"></i>Pending</span></td><td><span class="stage-tag">label</span></td><td class="parent">ds_c8e21d0f6a3b</td><td><span class="counts"><span class="progress"><i style="--p:13%"></i></span><span class="what">1,300 / 9,512</span></span></td><td class="r" style="color:var(--text-muted)">–</td><td><span class="made"><span class="mono">job_0142</span></span></td><td></td></tr>
+            <tr aria-selected="true"><td class="id">ds_c8e21d0f6a3b</td><td><span class="stage-tag">preprocess</span></td><td class="parent">ds_e1aa7c52d940</td><td><span class="counts"><span class="stack"><i class="acc" style="width:95.1%"></i><i class="rej" style="width:1.5%"></i><i class="dup" style="width:3.4%"></i></span><span class="n-acc">9,512</span>· 148 · 340 · 0</span></td><td class="r">+1.1 GB</td><td><span class="made">14:01 · <span class="mono">job_0142</span><svg class="i" aria-label="completed"><use href="#i-check"/></svg></span></td><td class="menu"><svg class="i"><use href="#i-more"/></svg></td></tr>
+            <tr><td class="id">ds_e1aa7c52d940</td><td><span class="stage-tag">clean</span></td><td class="parent">ds_0b1f9e77a3c4</td><td><span class="counts"><span class="stack"><i class="acc" style="width:95.1%"></i><i class="rej" style="width:1.5%"></i><i class="dup" style="width:3.4%"></i></span><span class="n-acc">9,512</span>· 148 · 340 · 0</span></td><td class="r">0 B</td><td><span class="made">13:58 · <span class="mono">job_0142</span><svg class="i"><use href="#i-check"/></svg></span></td><td class="menu"><svg class="i"><use href="#i-more"/></svg></td></tr>
+            <tr><td class="id">ds_7f3a9c21b04e</td><td><span class="stage-tag">preprocess</span></td><td class="parent">ds_9d02f1c4be77</td><td><span class="counts"><span class="stack"><i class="acc" style="width:96%"></i><i class="rej" style="width:1.5%"></i><i class="dup" style="width:2.5%"></i></span><span class="n-acc">9,601</span>· 148 · 251 · 0</span></td><td class="r">+0.7 GB</td><td><span class="made">Nov 14 · <span class="mono">job_0131</span><svg class="i"><use href="#i-check"/></svg></span></td><td class="menu"><svg class="i"><use href="#i-more"/></svg></td></tr>
+            <tr><td class="id">ds_9d02f1c4be77</td><td><span class="stage-tag">clean</span></td><td class="parent">ds_0b1f9e77a3c4</td><td><span class="counts"><span class="stack"><i class="acc" style="width:96%"></i><i class="rej" style="width:1.5%"></i><i class="dup" style="width:2.5%"></i></span><span class="n-acc">9,601</span>· 148 · 251 · 0</span></td><td class="r">0 B</td><td><span class="made">Nov 14 · <span class="mono">job_0131</span><svg class="i"><use href="#i-check"/></svg></span></td><td class="menu"><svg class="i"><use href="#i-more"/></svg></td></tr>
+            <tr><td class="id">ds_0b1f9e77a3c4</td><td><span class="stage-tag">ingest</span></td><td class="parent raw">raw</td><td><span class="counts"><span class="stack"><i class="acc" style="width:98.5%"></i><i class="rej" style="width:1.5%"></i></span><span class="n-acc">9,852</span>· 148 · 0 · 0</span></td><td class="r">+4.3 GB</td><td><span class="made">Nov 14 · <span class="mono">job_0127</span><svg class="i"><use href="#i-check"/></svg></span></td><td class="menu"><svg class="i"><use href="#i-more"/></svg></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <footer class="status">
+      <span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b></span>
+      <span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>7.2</b><small>/ 10.0 GB</small></span>
+      <span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>94%</b></span>
+      <span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>3.9</b><small>/ 6.0 GB</small></span>
+      <span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>71 °C</b><small>· 48 W</small></span>
+      <span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span>
+    </footer>
+  </div>
+  <div class="menu-pop" style="right:20px;top:266px">
+    <div class="is-hover"><svg class="i"><use href="#i-chevron"/></svg>Open version<kbd>Enter</kbd></div>
+    <div><svg class="i"><use href="#i-branch"/></svg>Continue the pipeline from here</div>
+    <div><svg class="i"><use href="#i-copy"/></svg>Copy version ID</div>
+    <div><svg class="i"><use href="#i-list"/></svg>Open creating job</div>
+  </div>
+  <span class="n" style="left:206px;top:150px">1</span>
+  <span class="n" style="left:322px;top:66px">2</span>
+  <span class="n" style="left:206px;top:104px">3</span>
+  <span class="n" style="left:454px;top:66px">4</span>
+  <span class="n" style="left:454px;top:116px">5</span>
+  <span class="n" style="left:454px;top:232px">6</span>
+  <span class="n" style="left:454px;top:268px">7</span>
+  <span class="n" style="left:1038px;top:262px">8</span>
+</div>
+
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Dataset list</td><td>Slug, rows, version count, latest stage, accepted share of the latest version, last update, and a Running pill while a job works on it. Sorted by last update</td><td><span class="mono">GET /datasets</span> (planned)</td><td>on a <span class="mono">job</span> message for one of its datasets</td></tr>
+<tr><td><span class="n">2</span></td><td>Ingest a folder</td><td>The view's one primary button; opens the drawer (frame F)</td><td>–</td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Filter</td><td>By slug, as you type; <kbd>/</kbd> focuses it; <kbd>j</kbd> <kbd>k</kbd> move; <kbd>Enter</kbd> selects</td><td>client side</td><td>–</td></tr>
+<tr><td><span class="n">4</span></td><td>Dataset header</td><td>Slug, modality, source folder, created</td><td><span class="mono">GET /datasets/{slug}</span></td><td>–</td></tr>
+<tr><td><span class="n">5</span></td><td>Facts</td><td>Version count, latest version, rows (the same in every version, INV-06), accepted in the latest, stored bytes</td><td>same, plus the versions</td><td>on job completion</td></tr>
+<tr><td><span class="n">6</span></td><td>Pending row</td><td>A running job that will add a version: stage, progress in the stage's words, job and start time. Becomes a real row when the stage commits</td><td><span class="mono">GET /jobs?state=running</span>, then <span class="mono">job</span> messages on <span class="mono">GET /stream</span></td><td>live</td></tr>
+<tr><td><span class="n">7</span></td><td>Versions</td><td>ID, stage, parent, counts by status with the stacked bar, new files (DATA-3.4), when and by which job (its state as an icon). Selected row: accent edge. Row click or <kbd>Enter</kbd> opens SCR-03</td><td><span class="mono">GET /datasets/{slug}/versions</span> (planned)</td><td>a row appears when a stage commits</td></tr>
+<tr><td><span class="n">8</span></td><td>Row menu</td><td>Open, continue from this version (frame G), copy ID, open the creating job</td><td>–</td><td>–</td></tr>
+</table>
+
+<h2>A · the same frame in light</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:340px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="group">Data</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a><div class="group">Jobs</div><a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k</div><span class="spacer"></span><span class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="stage">label</span><span class="progress"><i style="--p:13%"></i></span><span class="num">13%</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content">
+      <section class="list"><div class="list-head"><h2>Datasets</h2><span class="count">4</span><span class="spacer"></span><button class="btn sm primary"><svg class="i"><use href="#i-plus"/></svg>Ingest a folder</button></div>
+        <div class="ds" aria-selected="true"><span class="slug">coco10k</span><span class="r">10,000</span><span class="sub">6 versions · latest <span class="mono">preprocess</span></span><span class="r">95.1%</span></div>
+        <div class="ds"><span class="slug">demo</span><span class="r">1,535</span><span class="sub">1 version · latest <span class="mono">ingest</span></span><span class="r">98.0%</span></div></section>
+      <section class="detail">
+        <div class="keyrow"><span><i style="--c:var(--success)"></i>accepted</span><span><i style="--c:var(--danger)"></i>rejected</span><span><i style="--c:var(--text-muted)"></i>duplicate</span><span><i style="--c:var(--warning)"></i>filtered</span></div>
+        <div class="table-wrap"><table class="t">
+          <thead><tr><th>Version</th><th>Stage</th><th>Parent</th><th>Rows by status</th><th class="r">New files</th><th>Made</th><th></th></tr></thead>
+          <tbody>
+          <tr class="pending"><td><span class="pill running"><i class="pulse"></i>Pending</span></td><td><span class="stage-tag">label</span></td><td class="parent">ds_c8e21d0f6a3b</td><td><span class="counts"><span class="progress"><i style="--p:13%"></i></span><span class="what">1,300 / 9,512</span></span></td><td class="r">–</td><td><span class="made"><span class="mono">job_0142</span></span></td><td></td></tr>
+          <tr aria-selected="true"><td class="id">ds_c8e21d0f6a3b</td><td><span class="stage-tag">preprocess</span></td><td class="parent">ds_e1aa7c52d940</td><td><span class="counts"><span class="stack"><i class="acc" style="width:95.1%"></i><i class="rej" style="width:1.5%"></i><i class="dup" style="width:3.4%"></i></span><span class="n-acc">9,512</span>· 148 · 340 · 0</span></td><td class="r">+1.1 GB</td><td><span class="made">14:01 · <span class="mono">job_0142</span><svg class="i"><use href="#i-check"/></svg></span></td><td class="menu"><svg class="i"><use href="#i-more"/></svg></td></tr>
+          <tr><td class="id">ds_0b1f9e77a3c4</td><td><span class="stage-tag">ingest</span></td><td class="parent raw">raw</td><td><span class="counts"><span class="stack"><i class="acc" style="width:98.5%"></i><i class="rej" style="width:1.5%"></i></span><span class="n-acc">9,852</span>· 148 · 0 · 0</span></td><td class="r">+4.3 GB</td><td><span class="made">Nov 14 · <span class="mono">job_0127</span><svg class="i"><use href="#i-check"/></svg></span></td><td class="menu"><svg class="i"><use href="#i-more"/></svg></td></tr>
+          </tbody></table></div>
+      </section>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>7.2</b><small>/ 10.0 GB</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+</div>
+</div>
+
+<!-- ===================================================================== B -->
+<h2>B · Empty: no datasets yet</h2>
+<div class="frame" style="height:400px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="group">Data</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div><span class="spacer"></span><span class="jobind idle"><span class="pill" style="--c:var(--text-muted)"><svg class="i"><use href="#i-clock"/></svg>Idle</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content single"><div class="state" style="max-width:520px;margin:var(--sp-10) auto 0"><svg class="i"><use href="#i-folder"/></svg><b>No datasets yet</b><p>Put a folder of images under <span class="mono">.\sources</span> on Windows (it is <span class="mono">/sources</span> inside the containers), then ingest it. Ingesting copies the files into Stratal's store and makes the first version.</p><button class="btn primary" style="margin-top:var(--sp-2)"><svg class="i"><use href="#i-plus"/></svg>Ingest a folder</button></div></main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>4%</b></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s idle</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== C -->
+<h2>C · A first ingest still running: no versions yet</h2>
+<div class="frame" style="height:250px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>flowers5k</div></header>
+    <main class="content">
+      <section class="list"><div class="list-head"><h2>Datasets</h2><span class="count">5</span></div>
+        <div class="ds" aria-selected="true"><span class="slug">flowers5k</span><span class="r">–</span><span class="sub">no versions yet · <span class="pill running"><i class="pulse"></i>Running</span></span></div>
+        <div class="ds"><span class="slug">coco10k</span><span class="r">10,000</span><span class="sub">6 versions</span></div></section>
+      <section class="detail">
+        <div class="dhead"><h1>flowers5k</h1><span class="sub">image · from <span class="mono">/sources/flowers5k</span> · created just now</span></div>
+        <div class="table-wrap"><table class="t"><thead><tr><th>Version</th><th>Stage</th><th>Parent</th><th>Rows by status</th><th class="r">New files</th><th>Made</th></tr></thead>
+        <tbody><tr class="pending"><td><span class="pill running"><i class="pulse"></i>Pending</span></td><td><span class="stage-tag">ingest</span></td><td class="parent raw">raw</td><td><span class="counts"><span class="progress"><i style="--p:41%"></i></span><span class="what">2,100 / 5,120</span></span></td><td class="r">–</td><td><span class="made"><span class="mono">job_0144</span></span></td></tr></tbody></table></div>
+        <p class="foot-note">If the job fails, this row turns into a Failed pill with the error code and a link to the job.</p>
+      </section>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>61%</b></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== D -->
+<h2>D · Loading</h2>
+<div class="frame" style="height:250px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div></header>
+    <main class="content" aria-busy="true">
+      <section class="list"><div class="list-head"><h2>Datasets</h2></div>
+        <div class="ds"><span class="skeleton" style="width:90px"></span><span></span><span class="skeleton" style="width:150px;height:10px"></span></div>
+        <div class="ds"><span class="skeleton" style="width:70px"></span><span></span><span class="skeleton" style="width:130px;height:10px"></span></div>
+        <div class="ds"><span class="skeleton" style="width:110px"></span><span></span><span class="skeleton" style="width:140px;height:10px"></span></div></section>
+      <section class="detail"><span class="skeleton" style="width:160px;height:20px"></span>
+        <div class="table-wrap"><table class="t"><thead><tr><th>Version</th><th>Stage</th><th>Parent</th><th>Rows by status</th><th class="r">New files</th><th>Made</th></tr></thead>
+        <tbody><tr><td><span class="skeleton" style="width:110px"></span></td><td><span class="skeleton" style="width:60px"></span></td><td><span class="skeleton" style="width:110px"></span></td><td><span class="skeleton" style="width:200px"></span></td><td class="r"><span class="skeleton" style="width:50px"></span></td><td><span class="skeleton" style="width:120px"></span></td></tr>
+        <tr><td><span class="skeleton" style="width:110px"></span></td><td><span class="skeleton" style="width:60px"></span></td><td><span class="skeleton" style="width:110px"></span></td><td><span class="skeleton" style="width:200px"></span></td><td class="r"><span class="skeleton" style="width:50px"></span></td><td><span class="skeleton" style="width:120px"></span></td></tr></tbody></table></div></section>
+    </main>
+    <footer class="status"><span class="m conn">connecting…</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== E -->
+<h2>E · Error: versions cannot be loaded</h2>
+<div class="frame" style="height:330px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k</div></header>
+    <main class="content">
+      <section class="list"><div class="list-head"><h2>Datasets</h2><span class="count">4</span></div><div class="ds" aria-selected="true"><span class="slug">coco10k</span><span class="r">10,000</span><span class="sub">6 versions</span></div><div class="ds"><span class="slug">demo</span><span class="r">1,535</span><span class="sub">1 version</span></div></section>
+      <section class="detail"><div class="state err" role="alert"><svg class="i"><use href="#i-alert"/></svg><b>Versions of coco10k could not be loaded</b><span class="badge err">dependency_unavailable</span><p>The data volume is not reachable from the API.<br><b style="color:var(--text-primary)">Do:</b> check that the <span class="mono">stratal-data</span> volume is mounted (<span class="mono">docker compose ps</span>), then retry.</p><div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-2)"><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button><button class="btn sm ghost"><svg class="i"><use href="#i-copy"/></svg>req_0a282af102db</button></div></div></section>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>6%</b></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span></span></footer>
+  </div>
+</div>
+<p class="cap">The error fills the region whose data failed, with the problem's code, explanation, action and request ID (ADR-0011); the list stays usable.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · Start pipeline: from a folder</h2>
+<div class="frame" style="height:720px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k</div></header>
+    <main class="content"><section class="list"></section><section class="detail"></section></main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer" role="dialog" aria-label="Start pipeline">
+    <header><h2>Start pipeline</h2><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="body">
+      <div class="tabs" role="tablist"><span class="tab" role="tab" aria-selected="true"><svg class="i"><use href="#i-folder"/></svg>A folder</span><span class="tab" role="tab"><svg class="i"><use href="#i-branch"/></svg>An existing version</span></div>
+      <div class="field"><label>Source folder <span class="type">source.path</span></label><div class="select input mono is-focus">/sources/flowers5k<svg class="i"><use href="#i-down"/></svg></div><small>5,120 files · from <span class="mono">GET /sources</span>. Put new folders under <span class="mono">.\sources</span>.</small></div>
+      <div class="field"><label>Dataset <span class="type">dataset</span></label><div class="input mono">flowers5k</div><small>New: it will be created. 2–63 lowercase letters, digits, - or _.</small></div>
+      <div class="field"><label>Stages</label>
+        <div class="stages">
+          <div class="st"><input type="checkbox" checked><span class="name">ingest</span><span class="key">min_size 256</span><svg class="i"><use href="#i-chevron"/></svg></div>
+          <div class="st"><input type="checkbox" checked><span class="name">clean</span><span class="key">max distance 8</span><svg class="i"><use href="#i-chevron"/></svg></div>
+          <div class="st"><input type="checkbox" checked><span class="name">preprocess</span><span class="key">max_side 768</span><svg class="i"><use href="#i-down"/></svg></div>
+          <div class="st-form">
+            <div class="field"><label><span class="mono">max_side</span><span class="type">int</span></label><div class="input mono">768</div><small>32–8192 · default 768. Longer side of the copy, in pixels.</small></div>
+            <div class="field"><label><span class="mono">jpeg_quality</span><span class="type">int</span></label><div class="input mono">95</div><small>50–100 · default 95.</small></div>
+          </div>
+          <div class="st off"><input type="checkbox" disabled><span class="name">label · filter · split · evaluate</span><span class="key">not built yet</span></div>
+        </div>
+        <small>Untick the later stages to stop early. Fields come from each stage's config schema; only changed values are sent.</small></div>
+    </div>
+    <footer><button class="btn ghost">Cancel</button><button class="btn primary">Start job</button></footer>
+  </aside>
+  <span class="n" style="left:830px;top:116px">9</span>
+  <span class="n" style="left:830px;top:166px">10</span>
+  <span class="n" style="left:830px;top:316px">11</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">9</span></td><td>Source</td><td>A folder or an existing version (tabs; exactly one is sent)</td><td>–</td><td>–</td></tr>
+<tr><td><span class="n">10</span></td><td>Source folder</td><td>Folders under <span class="mono">/sources</span> with their file counts</td><td><span class="mono">GET /sources</span> (planned; accepted with the low-fi)</td><td>on open</td></tr>
+<tr><td><span class="n">11</span></td><td>Stages and settings</td><td>The stages the request would run; each expands to its schema-generated fields with defaults, ranges and descriptions. "Start job" sends <span class="mono">POST /jobs</span> and opens SCR-04 for the new job</td><td><span class="mono">GET /config/schemas/{name}</span>, <span class="mono">GET /config/defaults</span> (planned)</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== G -->
+<h2>G · Start pipeline: from a version, with a field error and while submitting</h2>
+<div class="frame" style="height:600px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k</div></header>
+    <main class="content"><section class="list"></section><section class="detail"></section></main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer" role="dialog" aria-label="Start pipeline">
+    <header><h2>Start pipeline</h2><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="body">
+      <div class="tabs" role="tablist"><span class="tab" role="tab"><svg class="i"><use href="#i-folder"/></svg>A folder</span><span class="tab" role="tab" aria-selected="true"><svg class="i"><use href="#i-branch"/></svg>An existing version</span></div>
+      <div class="field"><label>Version <span class="type">from_version</span></label><div class="select input mono">ds_e1aa7c52d940 · clean · coco10k<svg class="i"><use href="#i-down"/></svg></div><small>The stages after <span class="mono">clean</span> run. The dataset is the version's own.</small></div>
+      <div class="field"><label>Stages</label>
+        <div class="stages">
+          <div class="st off"><input type="checkbox" disabled checked><span class="name">ingest · clean</span><span class="key">already in this version</span></div>
+          <div class="st"><input type="checkbox" checked><span class="name">preprocess</span><span class="key">max_side 20</span><svg class="i"><use href="#i-down"/></svg></div>
+          <div class="st-form">
+            <div class="field error"><label><span class="mono">max_side</span><span class="type">int</span></label><div class="input mono">20</div><small><svg class="i" style="width:12px;height:12px"><use href="#i-x"/></svg>must be at least 32</small></div>
+            <div class="field"><label><span class="mono">jpeg_quality</span><span class="type">int</span></label><div class="input mono">95</div><small>50–100 · default 95.</small></div>
+          </div>
+        </div></div>
+      <div class="summary" role="alert"><svg class="i"><use href="#i-alert"/></svg><div><b>A stage config did not pass validation.</b> Fix the field marked above. <span class="badge err" style="margin-left:var(--sp-1)">validation_error</span></div></div>
+    </div>
+    <footer><button class="btn ghost">Cancel</button><button class="btn primary is-disabled" disabled>Start job</button></footer>
+  </aside>
+</div>
+<div style="display:flex;gap:var(--sp-4);align-items:center;margin-top:var(--sp-3)"><span class="cap" style="margin:0">Submitting (button keeps its width):</span><button class="btn primary"><span class="spinner"></span>Starting…</button><span class="cap" style="margin:0">A reused stage is not an error: the job completes at once and its stages show "cached".</span></div>
+
+<!-- ===================================================================== H -->
+<h2>H · 1024 px</h2>
+<div class="frame compact" style="height:280px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center"><div class="brand" style="padding:0"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg></a><a class="nav"><svg class="i"><use href="#i-list"/></svg></a></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k</div><span class="spacer"></span><span class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="num">13%</span></span></header>
+    <main class="content" style="grid-template-columns:240px 1fr">
+      <section class="list"><div class="list-head"><h2>Datasets</h2><span class="spacer"></span><button class="btn sm primary"><svg class="i"><use href="#i-plus"/></svg>Ingest</button></div><div class="ds" aria-selected="true"><span class="slug">coco10k</span><span class="r">10,000</span><span class="sub">6 versions · <span class="mono">preprocess</span></span></div><div class="ds"><span class="slug">demo</span><span class="r">1,535</span><span class="sub">1 version · <span class="mono">ingest</span></span></div></section>
+      <section class="detail"><div class="dhead"><h1>coco10k</h1></div>
+        <div class="table-wrap"><table class="t"><thead><tr><th>Version</th><th>Stage</th><th>Rows by status</th><th class="r">New files</th><th>Made</th><th></th></tr></thead>
+        <tbody><tr aria-selected="true"><td class="id">ds_c8e21d0f6a3b</td><td><span class="stage-tag">preprocess</span></td><td><span class="counts"><span class="stack"><i class="acc" style="width:95.1%"></i><i class="rej" style="width:1.5%"></i><i class="dup" style="width:3.4%"></i></span><span class="n-acc">9,512</span>· 148 · 340 · 0</span></td><td class="r">+1.1 GB</td><td><span class="made">14:01<svg class="i"><use href="#i-check"/></svg></span></td><td class="menu"><svg class="i"><use href="#i-more"/></svg></td></tr>
+        <tr><td class="id">ds_e1aa7c52d940</td><td><span class="stage-tag">clean</span></td><td><span class="counts"><span class="stack"><i class="acc" style="width:95.1%"></i><i class="rej" style="width:1.5%"></i><i class="dup" style="width:3.4%"></i></span><span class="n-acc">9,512</span>· 148 · 340 · 0</span></td><td class="r">0 B</td><td><span class="made">13:58<svg class="i"><use href="#i-check"/></svg></span></td><td class="menu"><svg class="i"><use href="#i-more"/></svg></td></tr></tbody></table></div></section>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span></span></footer>
+  </div>
+</div>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>The dataset list is a <span class="mono">listbox</span> with one selected option; the versions table is a grid where the row is the unit of focus and <kbd>Enter</kbd> opens it. Tab moves list → filter → table → row menu.</li>
+<li>The stacked bar has a text alternative: "9,512 accepted, 148 rejected, 340 duplicate, 0 filtered". The pending row announces its progress politely at most every 10 seconds.</li>
+<li>The drawer is a modal dialog: focus moves to its first field, is trapped inside, and returns to the button that opened it. Field errors are linked with <span class="mono">aria-describedby</span>; the summary is <span class="mono">role="alert"</span>.</li>
+</ul>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>

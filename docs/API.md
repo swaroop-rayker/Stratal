@@ -77,6 +77,7 @@ Jobs that fail carry the same idea in `job.error`. These codes appear there and 
 | `GET /versions/{version_id}/rows` | Page through manifest rows. Filters: `status`, `reason_code`, `split` | `200` list of Row |
 | `GET /versions/{version_id}/stats` | Counts by status, reason and deciding stage; size and CLIP-score distributions | `200` Stats |
 | `GET /blobs/{sha256}` | The file's bytes. `?w=` returns a thumbnail of that width | `200` image |
+| `GET /sources` | Folders directly under the sources mount (`/sources`), each with its file count, so the Start pipeline drawer (SCR-02) can offer them. Accepted with the SCR-02 wireframe on 2026-11-15 | `200 {"items": [{"name": "coco10k", "path": "/sources/coco10k", "files": 10000}]}` |
 
 Version (abridged):
 
