@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-01 app shell — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose; colour,
+   type and components come in the hi-fi mockup, from the approved design system. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.h720 { height: 720px; } .frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; }
+/* shell regions */
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--line); background: var(--fill); display: flex; flex-direction: column; padding: 12px 10px; gap: 4px; }
+.brand { height: 24px; display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 14px; }
+.logo { width: 20px; height: 20px; border: 1.5px solid var(--ink-2); border-radius: 4px; }
+.group { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin: 10px 6px 2px; }
+.nav { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 4px; color: var(--ink-2); }
+.nav .ico { width: 14px; height: 14px; border: 1.5px solid var(--ink-3); border-radius: 3px; flex: none; }
+.nav.on { background: var(--soft); color: var(--ink); font-weight: 600; } .nav.on .ico { border-color: var(--ink); }
+.nav kbd { margin-left: auto; font: 10px var(--mono); color: var(--ink-3); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; }
+.later { margin: 8px 6px 0; padding: 8px; border: 1px dashed var(--soft); border-radius: 4px; color: var(--ink-3); font-size: 11px; }
+.side .foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+.top { grid-column: 2; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; padding: 0 16px; }
+.crumbs { color: var(--ink-3); } .crumbs b { color: var(--ink); font-weight: 600; } .crumbs .mono { color: var(--ink); }
+.spacer { flex: 1; }
+.job { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 15px; background: var(--fill); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 9px; font-size: 11px; font-weight: 600; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-2); display: inline-block; }
+.bar { width: 80px; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; position: relative; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); }
+.content { grid-column: 2; padding: 20px; overflow: hidden; background: var(--frame); }
+.placeholder { height: 100%; border: 1.5px dashed var(--soft); border-radius: 6px; display: grid; place-items: center; color: var(--ink-3); text-align: center; }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--line); background: var(--fill); display: flex; align-items: center; gap: 0; padding: 0 12px; font: 11px var(--mono); color: var(--ink-2); }
+.status .m { display: flex; gap: 6px; align-items: center; padding: 0 12px; border-right: 1px solid var(--soft); height: 100%; }
+.status .m i { font-style: normal; color: var(--ink-3); }
+.spark { width: 40px; height: 12px; border-bottom: 1px solid var(--ink-3); background: repeating-linear-gradient(90deg, transparent 0 3px, var(--soft) 3px 5px); }
+.stale { opacity: .45; }
+.banner { position: absolute; left: 216px; right: 0; top: 48px; height: 40px; border-bottom: 1px solid var(--line); background: #f6f6f6; display: flex; align-items: center; gap: 12px; padding: 0 16px; }
+.banner .x { width: 16px; height: 16px; border: 1.5px solid var(--ink); border-radius: 50%; }
+.btn { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; }
+.toasts { position: absolute; right: 16px; bottom: 40px; display: flex; flex-direction: column; gap: 8px; width: 340px; }
+.toast { border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.toast .t { display: flex; gap: 8px; align-items: center; font-weight: 600; } .toast p { margin: 4px 0 0; font-size: 12px; }
+.pop { position: absolute; right: 16px; top: 44px; width: 460px; border: 1px solid var(--line); border-radius: 6px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.1); padding: 6px; }
+.pop .row { white-space: nowrap; display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 4px; }
+.pop .row + .row { border-top: 1px solid var(--soft); }
+.overlay { position: absolute; inset: 0; background: rgba(40,40,40,.35); display: grid; place-items: center; }
+.modal { width: 520px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.keys { display: grid; grid-template-columns: 90px 1fr 90px 1fr; gap: 6px 10px; font-size: 12px; margin-top: 8px; }
+.keys kbd { font: 11px var(--mono); border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; justify-self: start; }
+.skel { display: inline-block; height: 10px; width: 60px; background: var(--soft); border-radius: 3px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 100%; max-width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend td:first-child { width: 28px; } .legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; }
+.choices li { margin: 4px 0; color: var(--ink); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1280px; }
+.mini { position: relative; height: 150px; border: 1px solid var(--line); background: #fff; overflow: hidden; }
+</style>
+</head>
+<body>
+<main>
+<h1>SCR-01 — App shell and navigation · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2 (low-fi, then hi-fi)</span><span>Serves: all screens; UI-2.1 slice, MON-1.4, MON-2.1</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §3 SCR-01 (approved v1)</span><span>2026-11-15</span></div>
+<p>Layout and hierarchy only. Greys are deliberate: colour, type, icons and component styling come in the hi-fi mockup and use only the approved design system. Data is realistic so sizes are honest. Blue numbers are annotations, not UI.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Three bands.</b> Sidebar for navigation; a top bar for <em>where am I and is a job running</em>; a thin status bar at the bottom for <em>machine vitals and connection</em>. The active job is at the top because it is what you act on; the resources are at the bottom because they are glanced at, like an editor's status bar.</li>
+<li><b>Active-job indicator</b> sits at the right of the top bar, in the same place on every screen (design principle 3). One job: its pill, stage, progress and percent. Several: a count that opens a short list.</li>
+<li><b>Resource strip</b> shows the five fixed resources with a 40-px sparkline each, plus the stream state. It never changes layout as numbers change (principle 4).</li>
+<li><b>Health</b> is a dot and a word in the sidebar footer; a failed check turns into a full-width banner under the top bar.</li>
+<li><b>Toasts</b> stack bottom right, above the status bar. Failures stay until dismissed and carry the suggested action.</li>
+<li><b>At 1024 px</b> the sidebar becomes a 56-px icon rail (labels in tooltips and in the shortcut help), and the strip drops sparklines but keeps every value.</li>
+<li><b>Hidden until built:</b> Models, Chat, System and Settings do not appear in phase 1. The dashed box only marks where they will go.</li>
+</ol>
+</div>
+
+<h2>A · Populated: one job running (on the Datasets screen)</h2>
+<div class="frame h720">
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="logo"></span>Stratal</div>
+      <div class="group">Data</div>
+      <div class="nav on"><span class="ico"></span>Datasets<kbd>g d</kbd></div>
+      <div class="group">Jobs</div>
+      <div class="nav"><span class="ico"></span>Jobs<kbd>g j</kbd></div>
+      <div class="later">Phase 2+: Models, Chat, System, Settings appear here as they are built</div>
+      <div class="foot">
+        <div class="nav"><span class="dot"></span>All systems ok</div>
+        <div class="nav"><span class="ico"></span>Theme: dark</div>
+        <div class="nav"><span class="ico"></span>Shortcuts<kbd>?</kbd></div>
+      </div>
+    </aside>
+    <header class="top">
+      <div class="crumbs"><b>Datasets</b> / coco10k / <span class="mono">ds_7f3a9c21b04e</span></div>
+      <div class="spacer"></div>
+      <div class="job"><span class="pill"><span class="dot"></span>Running</span><span class="mono">job_0142</span><span>label</span><span class="bar" style="--p:13%"></span><span class="mono">13%</span><span class="mono" style="color:var(--ink-3)">ETA 14m 32s</span><span>›</span></div>
+    </header>
+    <section class="content"><div class="placeholder">Screen content<br>SCR-02 Datasets and versions, SCR-03, SCR-04 … SCR-07<br><span class="mono" style="font-size:11px">the shell never scrolls; only this region does</span></div></section>
+    <footer class="status">
+      <span class="m">CPU <b>38%</b><span class="spark"></span></span>
+      <span class="m">RAM <b>7.2 / 10.0 GB</b><span class="spark"></span></span>
+      <span class="m">GPU <b>94%</b><span class="spark"></span></span>
+      <span class="m">VRAM <b>3.9 / 6.0 GB</b><span class="spark"></span></span>
+      <span class="m">GPU <b>71 °C</b> · <b>48 W</b></span>
+      <span class="spacer"></span>
+      <span class="m" style="border:0">● live · 1 s <i>· last sample 14:03:12</i></span>
+    </footer>
+  </div>
+  <span class="n" style="left:186px;top:14px">1</span>
+  <span class="n" style="left:520px;top:14px">2</span>
+  <span class="n" style="left:812px;top:14px">3</span>
+  <span class="n" style="left:226px;top:72px">4</span>
+  <span class="n" style="left:186px;top:584px">5</span>
+  <span class="n" style="left:736px;top:695px">6</span>
+  <span class="n" style="left:1000px;top:695px">7</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Source</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Sidebar navigation</td><td>Phase-1 groups Data (Datasets) and Jobs (SCR-07 slice); shortcut hints</td><td>static</td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Location</td><td>Screen name and the object path; IDs are mono, copyable, and each segment links back</td><td>the route</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Active-job indicator</td><td>State pill, job ID, current stage, progress, percent, ETA; click opens SCR-04 for that job</td><td><span class="mono">GET /jobs?state=running</span>, then <span class="mono">job</span> messages on <span class="mono">GET /stream</span></td><td>yes</td></tr>
+<tr><td><span class="num">4</span></td><td>Content region</td><td>The current screen; the only part that scrolls</td><td>per screen</td><td>per screen</td></tr>
+<tr><td><span class="num">5</span></td><td>Health</td><td>Postgres, Redis and data volume as one word; a failed check names itself</td><td><span class="mono">GET /health</span>, every 30 s</td><td>polled</td></tr>
+<tr><td><span class="num">6</span></td><td>Resource strip</td><td>CPU, RAM used/total, GPU util, VRAM used/total (NVML), temperature and power, each with the last 60 samples</td><td><span class="mono">GET /telemetry/latest</span>, then <span class="mono">sample</span> messages on <span class="mono">GET /stream</span>; totals from <span class="mono">GET /system</span> (to be built in M3)</td><td>yes</td></tr>
+<tr><td><span class="num">7</span></td><td>Stream state</td><td>"live" with the sampling interval (1 s with a job, 10 s idle) and the last sample time; "Reconnecting…" when the SSE stream drops</td><td>the SSE connection itself</td><td>yes</td></tr>
+</table>
+
+<h2>B · Empty: nothing running</h2>
+<div class="frame" style="height:96px">
+  <div class="shell" style="grid-template-rows:48px 1fr 28px;height:100%">
+    <aside class="side" style="padding-top:12px"><div class="brand"><span class="logo"></span>Stratal</div></aside>
+    <header class="top"><div class="crumbs"><b>Jobs</b></div><div class="spacer"></div><div class="job" style="background:#fff"><span class="pill" style="border-style:dashed;color:var(--ink-3);border-color:var(--ink-3)">Idle</span><span style="color:var(--ink-3)">no job running · last: <span class="mono">job_0141</span> completed 2h ago ›</span></div></header>
+    <section class="content" style="padding:0"></section>
+    <footer class="status"><span class="m">CPU <b>4%</b></span><span class="m">RAM <b>3.1 / 10.0 GB</b></span><span class="m">GPU <b>0%</b></span><span class="m">VRAM <b>0.2 / 6.0 GB</b></span><span class="m">GPU <b>41 °C</b> · <b>3 W</b></span><span class="spacer"></span><span class="m" style="border:0">● live · 10 s (idle)</span></footer>
+  </div>
+</div>
+<p class="caption">Idle is a state, not an absence: the indicator keeps its place and links to the last job. Idle telemetry is sampled every 10 s, and the strip says so.</p>
+
+<h2>C · Several jobs running</h2>
+<div class="frame" style="height:220px">
+  <div class="shell" style="grid-template-rows:48px 1fr 28px;height:100%">
+    <aside class="side"><div class="brand"><span class="logo"></span>Stratal</div></aside>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div><div class="spacer"></div><div class="job"><span class="pill"><span class="dot"></span>2 running</span><span>label 13% · ingest 61%</span><span>▾</span></div></header>
+    <section class="content"></section>
+    <footer class="status"><span class="m">CPU <b>71%</b></span><span class="m">RAM <b>8.1 / 10.0 GB</b></span><span class="spacer"></span></footer>
+  </div>
+  <div class="pop">
+    <div class="row"><span><span class="pill"><span class="dot"></span>Running</span> <span class="mono">job_0142</span> · label · coco10k</span><span class="bar" style="--p:13%"></span><span class="mono">13%</span></div>
+    <div class="row"><span><span class="pill"><span class="dot"></span>Running</span> <span class="mono">job_0143</span> · ingest · birds2k</span><span class="bar" style="--p:61%"></span><span class="mono">61%</span></div>
+    <div class="row" style="color:var(--ink-3)"><span>All jobs → SCR-07</span><span></span><span>g j</span></div>
+  </div>
+</div>
+<p class="caption">At most one GPU job runs at a time (ADR-0003), so "several" means one GPU job plus CPU jobs. The GPU job is listed first, as the sampler tags it as primary.</p>
+
+<h2>D · Error: the API is unreachable or a dependency is down</h2>
+<div class="frame" style="height:150px">
+  <div class="shell" style="grid-template-rows:48px 1fr 28px;height:100%">
+    <aside class="side"><div class="brand"><span class="logo"></span>Stratal</div><div class="foot"><div class="nav"><span class="dot" style="background:none;border:1.5px solid var(--ink)"></span><b>postgres down</b></div></div></aside>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div><div class="spacer"></div><div class="job stale"><span class="pill">Running</span><span class="mono">job_0142</span><span>label</span><span class="mono">13%</span></div></header>
+    <section class="content"></section>
+    <footer class="status stale"><span class="m">CPU <b>38%</b></span><span class="m">RAM <b>7.2 / 10.0 GB</b></span><span class="m">GPU <b>94%</b></span><span class="spacer"></span><span class="m" style="border:0;opacity:1">○ Reconnecting… · values from 14:03:12</span></footer>
+  </div>
+  <div class="banner"><span class="x"></span><b>Postgres is unreachable</b><span class="mono" style="color:var(--ink-3)">dependency_unavailable</span><span style="color:var(--ink-2)">Do: check that the postgres container is running (<span class="mono">docker compose ps</span>), then retry.</span><span class="spacer"></span><span class="btn">Retry</span></div>
+</div>
+<p class="caption">The banner shows the problem's <span class="mono">code</span> and its suggested action (ADR-0011). The screen underneath stays as last loaded; everything that may be out of date is dimmed, and the strip says since when. A running job keeps running: the shell only lost its view of it (NFR-13).</p>
+
+<h2>E · Loading: first paint</h2>
+<div class="frame" style="height:76px">
+  <div class="shell" style="grid-template-rows:48px 1fr 28px;height:100%">
+    <aside class="side"><div class="brand"><span class="logo"></span>Stratal</div></aside>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div><div class="spacer"></div><div class="job"><span class="skel" style="width:70px"></span><span class="skel" style="width:120px"></span></div></header>
+    <section class="content" style="padding:0"></section>
+    <footer class="status"><span class="m">CPU <span class="skel" style="width:30px"></span></span><span class="m">RAM <span class="skel"></span></span><span class="m">GPU <span class="skel" style="width:30px"></span></span><span class="m">VRAM <span class="skel"></span></span><span class="spacer"></span><span class="m" style="border:0">connecting…</span></footer>
+  </div>
+</div>
+<p class="caption">Skeletons hold the final sizes, so nothing moves when the first sample arrives. "Unavailable" (a metric that cannot be read) is different from loading and shows a dash and the word, never zero (principle 6).</p>
+
+<h2>F · Toasts (job outcomes arriving on the global stream)</h2>
+<div class="frame" style="height:300px">
+  <div class="shell" style="grid-template-rows:48px 1fr 28px;height:100%">
+    <aside class="side"><div class="brand"><span class="logo"></span>Stratal</div></aside>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div></header>
+    <section class="content"></section>
+    <footer class="status"><span class="m">CPU <b>12%</b></span><span class="spacer"></span></footer>
+  </div>
+  <div class="toasts">
+    <div class="toast"><div class="t"><span class="pill">Failed</span><span class="mono">job_0142</span> failed in label</div><p><span class="mono">gpu_oom</span> · CUDA out of memory at batch 43/313.<br><b>Do:</b> reduce batch size from 32 → 16, then retry.</p><p><span class="btn">Open job</span> <span class="btn">Dismiss</span></p></div>
+    <div class="toast"><div class="t"><span class="pill">Completed</span><span class="mono">job_0141</span> completed · 4m 12s</div><p>Output <span class="mono">ds_389dd9b94119</span> ›</p></div>
+  </div>
+</div>
+<p class="caption">Completed toasts fade after 6 s; failed and stalled stay until dismissed. Toasts are a shortcut, never the only place: the same outcome is in the job's screen and the jobs list. Announced with <span class="mono">role="status"</span>, failures with <span class="mono">role="alert"</span>.</p>
+
+<h2>G · Shortcut help (<span class="mono">?</span>)</h2>
+<div class="frame" style="height:330px">
+  <div class="shell" style="grid-template-rows:48px 1fr 28px;height:100%"><aside class="side"></aside><header class="top"></header><section class="content"></section><footer class="status"></footer></div>
+  <div class="overlay"><div class="modal">
+    <h3>Keyboard shortcuts</h3>
+    <div class="keys">
+      <kbd>g d</kbd><span>Datasets</span><kbd>/</kbd><span>Filter this list</span>
+      <kbd>g j</kbd><span>Jobs</span><kbd>j / k</kbd><span>Next / previous row</span>
+      <kbd>g a</kbd><span>Active job</span><kbd>Enter</kbd><span>Open the row</span>
+      <kbd>t</kbd><span>Toggle theme</span><kbd>Esc</kbd><span>Close a dialog or drawer</span>
+      <kbd>?</kbd><span>This help</span><kbd>a / r</kbd><span>Accept / reject (review)</span>
+    </div>
+    <p style="font-size:12px">Shortcuts add to Tab navigation; everything works without them. <span class="mono">g a</span> and <span class="mono">t</span> are new here and are proposed additions to the design system's list.</p>
+  </div></div>
+</div>
+
+<h2>H · 1024 px: sidebar becomes an icon rail</h2>
+<div class="frame w1024" style="height:150px">
+  <div class="shell rail" style="height:100%">
+    <aside class="side" style="align-items:center;padding:12px 0"><span class="logo" style="margin-bottom:14px"></span><span class="nav on" style="padding:0 7px"><span class="ico"></span></span><span class="nav" style="padding:0 7px"><span class="ico"></span></span><div class="foot"><span class="dot"></span></div></aside>
+    <header class="top"><div class="crumbs"><b>Datasets</b> / coco10k</div><div class="spacer"></div><div class="job"><span class="pill"><span class="dot"></span>Running</span><span class="mono">job_0142</span><span>label</span><span class="mono">13%</span></div></header>
+    <section class="content"></section>
+    <footer class="status"><span class="m">CPU <b>38%</b></span><span class="m">RAM <b>7.2/10.0</b></span><span class="m">GPU <b>94%</b></span><span class="m">VRAM <b>3.9/6.0</b></span><span class="m">71 °C · 48 W</span><span class="spacer"></span><span class="m" style="border:0">● live</span></footer>
+  </div>
+</div>
+<p class="caption">Below 1280 px: icon rail with labels as tooltips; the job indicator drops its bar and ETA; the strip drops sparklines and units but keeps every value. Nothing is hidden that has no other place to be seen.</p>
+
+<h2>Not decided here</h2>
+<ul>
+<li>Colours, icons, type sizes and exact spacing: the hi-fi mockup, from the approved tokens.</li>
+<li>What each screen puts in the content region: its own Gate 2 wireframe (SCR-02 next).</li>
+</ul>
+</main>
+</body>
+</html>

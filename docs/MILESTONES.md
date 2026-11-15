@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 in progress: agent's part built, owner's DATA-2.1 and DATA-2.2 next. G0 approved 2026-11-15; G1 in review |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 in progress: agent's part built, owner's DATA-2.1 and DATA-2.2 next. G0 and G1 approved 2026-11-15; G2 started with SCR-01 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -48,13 +48,14 @@ No UI is implemented before its design is approved (SPEC §9.2). The gates wait 
 Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" passes a gate.
 
 - [x] G0 approved (v1, 2026-11-15)
-- [ ] G1 approved
+- [x] G1 approved (v1, 2026-11-15)
 - [ ] G2 approved: SCR-01
 - [ ] G2 approved: SCR-02
 - [ ] G2 approved: SCR-03
 - [ ] G2 approved: SCR-04
 - [ ] G2 approved: SCR-05
 - [ ] G2 approved: SCR-06
+- [ ] G2 approved: SCR-07 phase-1 slice (added by the owner's choice on SCREENS.md open point 1, 2026-11-15)
 
 ---
 
@@ -255,12 +256,13 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** L · **Branch** `m6-phase1-ui` · **Serves** MON-4.1, MON-4.2, MON-4.3, the phase-1 slice of UI-2.1; screens for DATA-3, LABEL-1.5, EVAL-1.1
 
-**Before starting:** G0, G1 and G2 approved for SCR-01 to SCR-06.
+**Before starting:** G0, G1 and G2 approved for SCR-01 to SCR-06 and the SCR-07 slice.
 
 **Scope**
 
 - Frontend scaffold with the stack in SPEC §7.4; tokens from the approved design system; generated TypeScript client.
 - SCR-01 app shell, SCR-02 datasets and versions, SCR-03 version detail and lineage, SCR-04 live job view, SCR-05 labeling review, SCR-06 eval report.
+- SCR-07 phase-1 slice: jobs list with state and kind filters, open, cancel, retry (owner's choice, 2026-11-15; uses the phase-1 slice of RUN-1.1 and RUN-1.2 already built in M2).
 
 **Done when**
 

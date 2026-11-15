@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **v1, for Gate 1 review** (SPEC §9.4). Not approved |
+| Status | **v1, approved by the owner on 2026-11-15** (Gate 1, SPEC §9.4). Changes from here on are new versions and need approval |
 | Builds on | [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) v1 (Gate 0, approved 2026-11-15) |
 | Data sources | Endpoints are from [API.md](API.md). Phase-2 to phase-5 interfaces are not specified yet, so those screens are outlines and are detailed at their phase kickoff |
 | Approvals | Logged in [design/APPROVALS.md](design/APPROVALS.md) |
@@ -28,7 +28,7 @@ This file lists every screen with its purpose, the requirements it serves, the d
 | SCR-04 | Live job view | `/jobs/:job_id` | 1 | MON-4.1, MON-4.2, MON-4.3, MON-1.1–1.5, MON-2.1, 2.3, 2.4, 2.5, MON-3.1; RUN-1.1/1.2 slice | M6 |
 | SCR-05 | Labeling review | `/reviews/:review_id` | 1 | LABEL-1.5 | M6 |
 | SCR-06 | Eval report | `/versions/:version_id/report` | 1 (EVAL-1.2 in 2) | EVAL-1.1, EVAL-1.2 | M6 |
-| SCR-07 | Jobs list and queue control | `/jobs` | 2 (see [open point 1](#6-open-points-for-the-owner)) | RUN-1.1, RUN-1.2 | M8 |
+| SCR-07 | Jobs list and queue control | `/jobs` | phase-1 slice, completed in 2 ([open point 1](#6-open-points-for-the-owner)) | RUN-1.1, RUN-1.2 | slice in M6; pause, resume and queue control in M8 |
 | SCR-08 | Model builder canvas | `/models/build` | 2 | BUILD-1.1–1.9, UI-2.3, DATA-5.5 | M9 |
 | SCR-09 | Training config and HPO setup | `/runs/new` | 2 | BUILD-1.2, BUILD-1.3, HPO-1.1–1.4, RUN-1.9, UI-2.3 | M9–M10 |
 | SCR-10 | HPO results | `/studies/:study_id` | 2 | HPO-1.3, HPO-1.4, HPO-1.5 | M10 |
@@ -37,7 +37,7 @@ This file lists every screen with its purpose, the requirements it serves, the d
 | SCR-13 | System monitor | `/system` | 2 | MON-2.1–2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, RUN-1.6 | M11 |
 | SCR-14 | Settings | `/settings` | 2 | UI-2.3; thresholds for MON-2.2, MON-2.6, RUN-1.6, RUN-1.7; REG-2.3, REG-2.4 | M8–M11 |
 
-Gate 2 order follows SPEC §9.5: SCR-01, 02, 03, 04, 05, 06 first.
+Gate 2 order follows SPEC §9.5: SCR-01, 02, 03, 04, 05, 06 first, then the SCR-07 slice.
 
 ### Navigation map
 
@@ -56,7 +56,7 @@ Gate 2 order follows SPEC §9.5: SCR-01, 02, 03, 04, 05, 06 first.
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-Phase-1 navigation shows Data and Jobs only.
+Phase-1 navigation shows Data and Jobs only. Jobs opens the SCR-07 slice.
 
 ## 3. Phase-1 screens in detail
 
@@ -233,6 +233,8 @@ SCR-12: the person types a request in Auto mode → the router classifies it and
 1. **Finding jobs in phase 1.** SCR-07 is tagged phase 2 (RUN-1.1, RUN-1.2), but phase 1 already has job states, cancel and retry (CL-04). Without SCR-07 a past job is reached only from a version's "creating job" link or the shell's active-job indicator. Two options:
    - **(a)** Build a phase-1 slice of SCR-07 in M6 (list, filters, open, cancel, retry). This adds one screen to M6 and to Gate 2. *Recommended.*
    - **(b)** Keep M6 at six screens and add a "recent jobs" list to the shell's job indicator.
+
+   **Decided 2026-11-15 by the owner: (a).** The slice shows the list with state and kind filters, opens a job in SCR-04, and offers cancel and retry. The cross-job activity log stays in SCR-04 (point 2), as approved.
 2. **Where the cross-job activity log lives.** MON-4.3 needs a job filter. I put it in SCR-04 as a *This job / All jobs* switch, so it is covered by a phase-1 screen. If you choose 1(a), it could move to SCR-07 instead.
 3. **`GET /system` becomes needed.** The shell's "VRAM 3.9 / 6 GB" needs the totals. It is an M2 loose end; I propose building it in M3 as plumbing so M6 is not blocked.
 4. **The *Start pipeline* drawer** is the only way to start work in phase 1 and is not in SPEC's inventory. I placed it as a shared drawer of SCR-02 and SCR-03, mocked up with SCR-02 in Gate 2. Say if you want it as its own screen.
@@ -241,4 +243,4 @@ SCR-12: the person types a request in Auto mode → the router classifies it and
 
 | Version | Date | Changes |
 |---|---|---|
-| v1 | 2026-11-15 | First version, for Gate 1 review |
+| v1 | 2026-11-15 | First version, for Gate 1 review. Approved the same day; open point 1 then decided by the owner as option (a), recorded in place |
