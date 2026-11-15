@@ -1,6 +1,6 @@
 # CI for Stratal (SPEC §7.5): ruff, pyright, pytest on CPU.
-# This file has never run: the repository has no GitHub remote yet (ADR-0012).
-# It mirrors scripts/check.ps1 and must be verified on the first push.
+# It mirrors scripts/check.ps1. First push 2026-11-15 failed before any step ran:
+# job-level env cannot use the runner context, so the data folder is a fixed path.
 name: ci
 
 on:
@@ -31,7 +31,7 @@ jobs:
     env:
       STRATAL_DATABASE_URL: postgresql+psycopg://stratal:stratal@localhost:5432/stratal
       STRATAL_REDIS_URL: redis://localhost:6379/0
-      STRATAL_DATA_DIR: ${{ runner.temp }}/stratal-data
+      STRATAL_DATA_DIR: /tmp/stratal-data
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

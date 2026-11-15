@@ -14,14 +14,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from stratal.core.bus import LIVE_GLOBAL, Bus, live_channel
 from stratal.core.errors import FieldProblem, NotFound, SourceNotFound, ValidationFailed
 from stratal.data import registry
-from stratal.db.models import Job, JobStage
+from stratal.db.models import Dataset, Job, JobStage
 from stratal.mon.events import utc_now
 from stratal.runtime import stages as stage_registry
 from stratal.runtime.states import TERMINAL, check_transition, record_creation, transition
@@ -42,13 +42,32 @@ class PipelineRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["pipeline"]
-    dataset: str = Field(description="Dataset slug; created if it does not exist.")
-    source: FolderSource
+    dataset: str | None = Field(
+        default=None,
+        description="Dataset slug; created if it does not exist. Required with 'source'; "
+        "with 'from_version' it defaults to that version's dataset and must match it.",
+    )
+    source: FolderSource | None = Field(
+        default=None, description="Start from a folder: the pipeline begins with ingest."
+    )
+    from_version: str | None = Field(
+        default=None,
+        description="Start from an existing version: the pipeline runs the stages after "
+        "the one that made it.",
+    )
     stages: dict[str, dict[str, Any]] = Field(
         default_factory=lambda: dict[str, dict[str, Any]](),
         description="Per-stage overrides of the default config.",
     )
     until_stage: str | None = Field(default=None, description="Stop after this stage.")
+
+    @model_validator(mode="after")
+    def _one_start(self) -> "PipelineRequest":
+        if (self.source is None) == (self.from_version is None):
+            raise ValueError("give exactly one of 'source' and 'from_version'")
+        if self.source is not None and self.dataset is None:
+            raise ValueError("'dataset' is required when starting from 'source'")
+        return self
 
 
 @dataclass(frozen=True)
@@ -77,14 +96,19 @@ def create_job_from_plan(
     spec: dict[str, Any],
     plan: list[tuple[str, dict[str, Any]]],
     dataset_id: int | None = None,
+    input_version_id: str | None = None,
 ) -> tuple[Job, Enqueue]:
-    """Insert a queued job with one stage per ``(name, config)`` in ``plan``."""
+    """Insert a queued job with one stage per ``(name, config)`` in ``plan``.
+
+    ``input_version_id`` is the version the first stage consumes, if any.
+    """
     job = Job(
         id=next_job_id(session),
         kind=kind,
         state="queued",
         spec=spec,
         dataset_id=dataset_id,
+        input_version_id=input_version_id,
         attempt=0,
         current_stage_idx=0,
     )
@@ -106,6 +130,7 @@ def create_job_from_plan(
                 status="queued" if idx == 0 else "pending",
                 config=config,
                 config_hash=config_hash(config),
+                input_version_id=input_version_id if idx == 0 else None,
                 cache_hit=False,
             )
         )
@@ -125,29 +150,64 @@ def _field_problems(stage: str, exc: ValidationError) -> list[FieldProblem]:
     ]
 
 
+def _start_from_version(session: Session, request: PipelineRequest) -> tuple[str, str, str]:
+    """For ``from_version``: the version ID, its dataset's slug and the stage that made it."""
+    version_id = str(request.from_version)
+    try:
+        version = registry.get_version(session, version_id)
+    except NotFound as exc:
+        raise ValidationFailed(
+            f"from_version {version_id!r} is not a known dataset version.",
+            suggested_action="List versions with GET /datasets/{slug}/versions and use one.",
+            errors=[FieldProblem(loc=["from_version"], msg="unknown version", code="not_found")],
+        ) from exc
+    dataset = session.get(Dataset, version.dataset_id)
+    slug = dataset.slug if dataset is not None else ""
+    if request.dataset is not None and request.dataset != slug:
+        raise ValidationFailed(
+            f"Version {version_id} belongs to dataset {slug!r}, not {request.dataset!r}.",
+            suggested_action="Leave 'dataset' out, or name the version's own dataset.",
+        )
+    return version_id, slug, version.stage
+
+
 def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job, Enqueue]:
     """Validate a pipeline request, resolve every stage's config and queue the job."""
-    if not _SLUG.match(request.dataset):
-        raise ValidationFailed(
-            f"Dataset name {request.dataset!r} is not a valid slug.",
-            suggested_action="Use 2 to 63 lowercase letters, digits, '-' or '_'.",
-        )
     available = stage_registry.registered()
     names = [name for name in stage_registry.PIPELINE_ORDER if name in available]
+    all_names = list(names)
+    input_version_id: str | None = None
+    if request.from_version is not None:
+        input_version_id, slug, made_by = _start_from_version(session, request)
+        order = stage_registry.PIPELINE_ORDER
+        names = [n for n in names if order.index(n) > order.index(made_by)]
+        if not names:
+            raise ValidationFailed(
+                f"Version {input_version_id} was made by {made_by!r}, the last stage available; "
+                "there is nothing after it to run.",
+                suggested_action=f"Stages available now: {', '.join(all_names)}.",
+            )
+    else:
+        slug = str(request.dataset)
+    if not _SLUG.match(slug):
+        raise ValidationFailed(
+            f"Dataset name {slug!r} is not a valid slug.",
+            suggested_action="Use 2 to 63 lowercase letters, digits, '-' or '_'.",
+        )
     unknown = sorted(set(request.stages) - set(names))
     if unknown:
         raise ValidationFailed(
-            f"Unknown or not yet available stage(s): {', '.join(unknown)}.",
-            suggested_action=f"Stages available now: {', '.join(names)}.",
+            f"Unknown, not yet available or not run here: stage(s) {', '.join(unknown)}.",
+            suggested_action=f"Stages this request would run: {', '.join(names)}.",
         )
     if request.until_stage is not None:
         if request.until_stage not in names:
             raise ValidationFailed(
-                f"until_stage {request.until_stage!r} is not an available stage.",
-                suggested_action=f"Stages available now: {', '.join(names)}.",
+                f"until_stage {request.until_stage!r} is not one of the stages this request runs.",
+                suggested_action=f"Stages this request would run: {', '.join(names)}.",
             )
         names = names[: names.index(request.until_stage) + 1]
-    if not Path(request.source.path).is_dir():
+    if request.source is not None and not Path(request.source.path).is_dir():
         raise SourceNotFound(
             f"Source folder {request.source.path} does not exist or is not a folder.",
             suggested_action="Put the folder under the mounted sources directory "
@@ -171,12 +231,21 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
         )
 
     dataset = registry.ensure_dataset(
-        session, slug=request.dataset, modality="image", source_uri=request.source.path
+        session,
+        slug=slug,
+        modality="image",
+        source_uri=request.source.path if request.source is not None else None,
     )
     spec = request.model_dump(mode="json")
+    spec["dataset"] = slug
     spec["stages"] = dict(plan)
     return create_job_from_plan(
-        session, kind="pipeline", spec=spec, plan=plan, dataset_id=dataset.id
+        session,
+        kind="pipeline",
+        spec=spec,
+        plan=plan,
+        dataset_id=dataset.id,
+        input_version_id=input_version_id,
     )
 
 

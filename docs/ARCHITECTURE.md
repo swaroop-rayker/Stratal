@@ -86,7 +86,7 @@ A pipeline run is one **job**. It has one **stage** per step, and each stage run
 | # | Stage | Queue | What it does | Requirements | Core logic by |
 |---|---|---|---|---|---|
 | 0 | `ingest` | cpu | Scan the source folder, copy files into the blob store, read metadata, reject corrupt and undersized files | DATA-1.1–1.3 | agent |
-| 1 | `clean` | cpu | Mark exact duplicates and near duplicates (pHash). Semantic duplicates (P2) add a GPU sub-step | DATA-2.1–2.3 | owner |
+| 1 | `clean` | cpu | Mark exact duplicates and near duplicates (pHash). Semantic duplicates (P2) add a GPU sub-step | DATA-2.1–2.3 | agent for 2.1 and 2.2, at the owner's request (ADR-0012); owner for 2.3 and the thresholds (OC-5) |
 | 2 | `preprocess` | cpu | Write resized copies, keep originals | DATA-6.1 | agent |
 | 3 | `label` | gpu | Caption each image, then CLIP-score each pair | LABEL-1.1–1.3 | owner |
 | 4 | `filter` | cpu | Mark pairs below the CLIP threshold; validate the image–caption schema | LABEL-1.4, DATA-5.1 | owner |
@@ -101,6 +101,8 @@ Manual review (LABEL-1.5) is not a stage. It is a human activity attached to a v
 
 - A crashed pipeline resumes from the last finished stage without redoing earlier ones (NFR-5).
 - Changing one setting reruns only what depends on it. A new CLIP threshold reruns `filter` and later stages, and does not caption anything again.
+
+As built in M3, memoization applies to every stage that consumes a version (`run_derived_stage`); ingest has no parent version and always runs, which costs little because its blobs are stored by content. The config hash for the lookup comes from the same function that names versions. Owner code that changes its results bumps `ALGORITHM_VERSION`, which is part of the config, so an old version is not reused for new code.
 
 **Expensive per-item results are cached by content.** Captions, CLIP scores, pHashes and image metadata are stored in a derivation cache keyed by the file's content hash plus the parameters that produced the result. A caption batch is committed to the cache as soon as it finishes. That is how LABEL-1.2 is met: after a kill at 60%, the restarted stage finds 60% of its work in the cache and computes only the rest.
 

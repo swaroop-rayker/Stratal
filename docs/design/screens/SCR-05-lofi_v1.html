@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-05 labeling review — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+/* SCR-05 */
+.sbar { display: flex; align-items: center; gap: 14px; }
+.sbar .id { font: 600 18px var(--mono); } .sbar .sub { font-size: 12px; color: var(--ink-3); } .sbar .sub .mono { color: var(--ink-2); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.big { height: 44px; padding: 0 20px; font-size: 14px; font-weight: 600; } .btn.on { border-width: 2px; border-color: var(--ink); background: var(--fill-2); }
+.prog { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; font: 12px var(--mono); color: var(--ink-2); }
+.bar { height: 10px; border: 1px solid var(--ink-3); border-radius: 5px; display: flex; overflow: hidden; } .bar i { display: block; height: 100%; } .bar .a { background: var(--ink-3); } .bar .r { background: repeating-linear-gradient(45deg, var(--ink-3) 0 2px, transparent 2px 4px); }
+.work { display: grid; grid-template-columns: 1fr 380px; gap: 16px; min-height: 0; flex: 1; }
+.img { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; display: grid; place-items: center; color: var(--ink-3); position: relative; }
+.img .tag { position: absolute; left: 10px; top: 10px; font: 11px var(--mono); background: #fff; border: 1px solid var(--line); padding: 1px 6px; border-radius: 3px; color: var(--ink-2); }
+.img .nav-arrows { position: absolute; inset: auto 10px 10px auto; display: flex; gap: 6px; }
+.side-panel { display: flex; flex-direction: column; gap: 12px; }
+.cap-box { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+.cap-box small { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); } .cap-box p { margin: 4px 0 0; font-size: 16px; line-height: 1.45; color: var(--ink); max-width: none; }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 3px 10px; font-size: 12px; } .kv span:nth-child(odd) { color: var(--ink-3); } .kv .mono { color: var(--ink); }
+.score { display: flex; align-items: center; gap: 8px; } .score .track { flex: 1; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; position: relative; } .score .track i { position: absolute; top: -4px; width: 2px; height: 12px; background: var(--ink); } .score .track b { position: absolute; top: -4px; width: 1px; height: 12px; background: var(--ink-3); }
+.decide { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.note-in { border: 1px solid var(--line); border-radius: 4px; height: 56px; padding: 6px 8px; color: var(--ink-3); font-size: 12px; }
+.strip { display: flex; gap: 4px; overflow: hidden; padding: 6px 0 2px; border-top: 1px solid var(--soft); }
+.cell { width: 20px; height: 26px; flex: none; border: 1px solid var(--line); border-radius: 3px; display: grid; place-items: center; font: 10px var(--mono); color: var(--ink-3); }
+.cell.a { background: var(--fill-2); color: var(--ink); } .cell.r { background: repeating-linear-gradient(45deg, var(--fill-2) 0 3px, #fff 3px 6px); color: var(--ink); } .cell.cur { border: 2px solid var(--ink); }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 480px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; display: flex; flex-direction: column; gap: 10px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.field { display: flex; flex-direction: column; gap: 3px; } .field label { font-size: 11px; font-weight: 600; color: var(--ink-2); } .field small { font-size: 11px; color: var(--ink-3); } .input { height: 30px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font: 12px var(--mono); }
+.big-num { font: 600 32px var(--mono); }
+.empty { display: grid; place-items: center; text-align: center; padding: 30px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-05 — Labeling review · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: LABEL-1.5 (feeds EVAL-1.1)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §3 SCR-05 (approved v1)</span><span>Route: <span class="mono">/reviews/:review_id</span></span><span>2026-11-15</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-01 shell (faint). Blue numbers are annotations. The review is SCREENS.md flow 2: started from a labelled and filtered version on SCR-03, decided item by item here, closed into a summary that leads to the eval report.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>One item at a time, image first.</b> The image takes most of the width; the caption sits beside it in 16-px reading text, so the question "does this caption describe this picture?" can be answered at a glance.</li>
+<li><b>Keyboard first.</b> <kbd class="k">a</kbd> accept and <kbd class="k">r</kbd> reject decide and move to the next undecided item; <kbd class="k">j</kbd>/<kbd class="k">k</kbd> move without deciding; <kbd class="k">n</kbd> opens the note. The two decision buttons are large and show their keys, for mouse use and to teach the keys.</li>
+<li><b>Each decision is saved at once</b> (one request per decision), so closing the tab loses nothing; the item strip shows what is saved.</li>
+<li><b>The CLIP score is shown against the filter threshold</b> as a small scale, so a low-scoring caption that passed the filter is visible. The score informs, it does not decide.</li>
+<li><b>Closing</b> asks for confirmation only when items are undecided, then shows the acceptance summary with the next step, <i>Build the eval report</i>. The confidence interval is computed in the report (EVAL-1.1), not here.</li>
+<li><b>The strip</b> at the bottom shows every sampled item as a numbered cell: accepted, rejected or undecided, the current one outlined. Click jumps to it.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Reviewing: item 24 of 50</h2>
+<div class="frame" style="height:740px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k / <span class="mono">ds_b0c3e5a8d217</span> / review <span class="mono">rev_0007</span></span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="sbar"><span class="id">rev_0007</span><span class="pill">open</span><span class="sub">of <span class="mono">ds_b0c3e5a8d217</span> (filter) · sample 50 of 9,431 accepted rows · seed <span class="mono">1142</span> · started 15:20</span><span class="spacer"></span><span class="btn ghost sm">Keys <span class="k">?</span></span><span class="btn">Close session</span></div>
+      <div class="prog"><div class="bar"><i class="a" style="width:40%"></i><i class="r" style="width:6%"></i></div><span><b>23</b> / 50 decided · 20 accepted · 3 rejected</span></div>
+      <div class="work">
+        <div class="img">image · preprocessed copy, 768 × 512<span class="tag">24 / 50 · train/000000004512.jpg</span><span class="nav-arrows"><span class="btn sm">‹ k</span><span class="btn sm">j ›</span></span></div>
+        <div class="side-panel">
+          <div class="cap-box"><small>Caption</small><p>Two dogs running across a snowy field at sunset.</p></div>
+          <div class="kv">
+            <span>Model</span><span class="mono">Florence-2-base · rev 5ca5edf</span>
+            <span>CLIP score</span><span><span class="score"><b class="mono">0.284</b><span class="track"><b style="left:40%"></b><i style="left:57%"></i></span></span></span>
+            <span></span><span style="color:var(--ink-3);font-size:11px">filter threshold 0.20 ┃ · this item ▮</span>
+            <span>Row</span><span class="mono">train/000000004512.jpg</span>
+            <span>Original</span><span class="mono">640 × 427 · 188 KB</span>
+          </div>
+          <div class="decide"><span class="btn big">✓ Accept <span class="k">a</span></span><span class="btn big">✕ Reject <span class="k">r</span></span></div>
+          <div class="field"><label>Note (optional) <span class="k">n</span></label><div class="note-in">e.g. "two dogs, but it is dusk, not sunset"</div></div>
+          <p style="margin:0;font-size:11px;color:var(--ink-3)">Saved as you decide. Change an earlier decision by going back to it.</p>
+        </div>
+      </div>
+      <div class="strip">
+        <span class="cell a">1</span><span class="cell a">2</span><span class="cell a">3</span><span class="cell r">4</span><span class="cell a">5</span><span class="cell a">6</span><span class="cell a">7</span><span class="cell a">8</span><span class="cell a">9</span><span class="cell a">10</span><span class="cell r">11</span><span class="cell a">12</span><span class="cell a">13</span><span class="cell a">14</span><span class="cell a">15</span><span class="cell a">16</span><span class="cell a">17</span><span class="cell r">18</span><span class="cell a">19</span><span class="cell a">20</span><span class="cell a">21</span><span class="cell a">22</span><span class="cell a">23</span><span class="cell cur">24</span><span class="cell">25</span><span class="cell">26</span><span class="cell">27</span><span class="cell">28</span><span class="cell">29</span><span class="cell">30</span><span class="cell">31</span><span class="cell">32</span><span class="cell">33</span><span class="cell">34</span><span class="cell">35</span><span class="cell">36</span><span class="cell">37</span><span class="cell">38</span><span class="cell">39</span><span class="cell">40</span><span class="cell">41</span><span class="cell">42</span><span class="cell">43</span>
+      </div>
+    </section>
+    <footer class="status">CPU 6% · RAM 3.2 / 10.0 GB<span class="spacer"></span>● live · 10 s idle</footer>
+  </div>
+  <span class="n" style="left:206px;top:66px">1</span>
+  <span class="n" style="left:1240px;top:40px">2</span>
+  <span class="n" style="left:226px;top:96px">3</span>
+  <span class="n" style="left:226px;top:130px">4</span>
+  <span class="n" style="left:852px;top:132px">5</span>
+  <span class="n" style="left:852px;top:236px">6</span>
+  <span class="n" style="left:852px;top:330px">7</span>
+  <span class="n" style="left:226px;top:666px">8</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Session</td><td>Review ID, open or closed, the version reviewed, sample size out of the accepted rows, seed, start time</td><td><span class="mono">GET /reviews/{id}</span> (planned)</td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Close session</td><td>Confirms if items are undecided (frame C), then <span class="mono">POST /reviews/{id}/close</span> and the summary (frame D)</td><td>–</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Progress</td><td>Decided out of the sample, with accepted and rejected shares in the bar and as numbers</td><td>the session's items</td><td>on each decision</td></tr>
+<tr><td><span class="num">4</span></td><td>Image</td><td>The preprocessed copy, as large as fits; position and row key on it; previous and next</td><td><span class="mono">GET /blobs/{derived_sha256}</span></td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Caption</td><td>The caption in reading size, then the model and revision (LABEL-1.1)</td><td>the item's row</td><td>–</td></tr>
+<tr><td><span class="num">6</span></td><td>Scores and facts</td><td>CLIP score on a scale with the filter threshold marked (LABEL-1.3, 1.4), row key, original size</td><td>the item's row; the filter stage's config</td><td>–</td></tr>
+<tr><td><span class="num">7</span></td><td>Decision</td><td>Accept / Reject (keys <kbd class="k">a</kbd> / <kbd class="k">r</kbd>), optional note; saved immediately; then the next undecided item</td><td><span class="mono">PUT /reviews/{id}/items/{position}</span></td><td>–</td></tr>
+<tr><td><span class="num">8</span></td><td>Item strip</td><td>Every position with its saved decision; current outlined; click to jump; scrolls sideways for larger samples</td><td><span class="mono">GET /reviews/{id}</span></td><td>on each decision</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Starting a review (from SCR-03)</h2>
+<div class="frame" style="height:330px">
+  <div class="scrim"><div class="modal"><header>Start a review of ds_b0c3e5a8d217</header><div class="b">
+    <div class="field"><label>Sample size</label><div class="input">50</div><small>Rows drawn at random from the 9,431 accepted rows. 50 gives an interval about ±8 points wide; 200 about ±4.</small></div>
+    <div class="field"><label>Seed (optional)</label><div class="input" style="color:var(--ink-3)">random</div><small>Set it to draw the same sample again.</small></div>
+  </div><footer><span class="btn ghost">Cancel</span><span class="btn primary">Start review</span></footer></div></div>
+</div>
+<p class="caption">The dialog opened by <i>Start a review</i> on SCR-03. <span class="mono">POST /versions/{id}/reviews {sample_size, seed?}</span>, then this screen. The width figures in the helper are approximate and for guidance only; they assume about 90% acceptance.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Closing with items undecided</h2>
+<div class="frame" style="height:300px">
+  <div class="scrim"><div class="modal"><header>Close rev_0007 with 27 items undecided?</header><div class="b">
+    <span>Only the 23 decided items count towards the acceptance rate. The undecided ones are not reviewed and cannot be decided after closing.</span>
+    <span><b>Keep reviewing</b> to finish the sample; a smaller sample gives a wider interval in the report.</span>
+  </div><footer><span class="btn">Keep reviewing</span><span class="btn primary">Close with 23 decided</span></footer></div></div>
+</div>
+
+<!-- ===================================================================== D -->
+<h2>D · Closed: the summary</h2>
+<div class="frame" style="height:420px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k / <span class="mono">ds_b0c3e5a8d217</span> / review <span class="mono">rev_0007</span></span></header>
+    <section class="content">
+      <div class="sbar"><span class="id">rev_0007</span><span class="pill">closed</span><span class="sub">closed 15:41 · 50 of 50 decided</span><span class="spacer"></span><span class="btn">Open version</span><span class="btn primary">Build the eval report</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div class="cap-box"><small>Accepted</small><div class="big-num">46</div><span style="font-size:12px;color:var(--ink-3)">of 50 reviewed · 92.0%</span></div>
+        <div class="cap-box"><small>Rejected</small><div class="big-num">4</div><span style="font-size:12px;color:var(--ink-3)">3 with a note</span></div>
+        <div class="cap-box"><small>Next</small><p style="font-size:13px">The eval report turns this into an acceptance rate with its 95% interval (EVAL-1.1).</p></div>
+      </div>
+      <h3 style="margin:4px 0 0">Rejected items</h3>
+      <div style="display:flex;gap:10px">
+        <div class="img" style="width:150px;height:100px;font-size:11px">#4</div><div class="img" style="width:150px;height:100px;font-size:11px">#11</div><div class="img" style="width:150px;height:100px;font-size:11px">#18</div><div class="img" style="width:150px;height:100px;font-size:11px">#37</div>
+      </div>
+      <p style="margin:0;font-size:12px">#11 · "A man riding a horse on a beach." · <i>note: it is a donkey</i></p>
+    </section>
+    <footer class="status">CPU 6%<span class="spacer"></span>● live · 10 s idle</footer>
+  </div>
+</div>
+<p class="caption">A closed session is read-only: opening it later shows this summary; each item can still be viewed, not changed. The summary comes from <span class="mono">POST /reviews/{id}/close</span> (and <span class="mono">GET /reviews/{id}</span> afterwards).</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Loading, and a review that cannot be loaded</h2>
+<div class="frame" style="height:280px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / …</span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start">
+      <div style="display:grid;grid-template-columns:1fr 160px;gap:10px"><span class="skel" style="height:180px;width:auto"></span><div style="display:flex;flex-direction:column;gap:8px"><span class="skel" style="width:140px"></span><span class="skel" style="width:120px"></span><span class="skel" style="width:150px;height:40px"></span></div></div>
+      <div class="empty err"><div><b>Review rev_0099 not found</b><p style="font-size:12px"><span class="mono">not_found</span> · No review 'rev_0099'.<br><b>Do:</b> open the version and start or pick a review there.</p><span class="btn">Go to datasets</span></div></div>
+    </section>
+    <footer class="status">connecting…</footer>
+  </div>
+</div>
+<p class="caption">If a decision fails to save (the API is down), the item stays where it is, its cell shows "not saved", and a toast offers Retry; the next item is not shown until the decision is stored, so nothing is silently lost.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame w1024" style="height:420px">
+  <div class="shell rail">
+    <aside class="side"></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">…</b> / review <span class="mono">rev_0007</span></span></header>
+    <section class="content">
+      <div class="sbar"><span class="id" style="font-size:15px">rev_0007</span><span class="sub">23 / 50</span><span class="spacer"></span><span class="btn sm">Close session</span></div>
+      <div class="work" style="grid-template-columns:1fr 300px"><div class="img">image</div><div class="side-panel"><div class="cap-box"><p style="font-size:14px">Two dogs running across a snowy field at sunset.</p></div><div class="decide"><span class="btn big" style="height:38px">✓ Accept a</span><span class="btn big" style="height:38px">✕ Reject r</span></div></div></div>
+    </section>
+    <footer class="status">CPU 6%<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<p class="caption">The side panel narrows to 300 px; the facts fold under the caption behind "Details"; the strip keeps its place below.</p>
+
+<h2>Not decided here</h2>
+<ul>
+<li>Colours, icons and exact spacing: the hi-fi.</li>
+<li>Reviewing only rows near the threshold, or several reviewers on one sample: not in LABEL-1.5; not designed.</li>
+</ul>
+</main>
+</body>
+</html>

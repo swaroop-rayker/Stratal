@@ -96,7 +96,7 @@ None of these needs an account, email or key. Model weights and the dataset are 
 | Choose the phase-1 dataset | before M4 | Recommendation: a 10k subset of COCO 2017 |
 | Write DATA-4 | before M5 | Brief below. Sooner helps: it shapes manifest columns |
 | Review the design system (Gate 0) | when delivered, alongside M1 | Only an explicit "approved" passes |
-| GitHub remote | whenever you want CI and PRs | Needs an account, which means an email |
+| GitHub remote | whenever you want CI and PRs | **Done 2026-11-15:** `origin` is the owner's repository; `main` and tags pushed |
 | Translation language pairs | phase 5 | |
 
 ## What the agent does next
@@ -134,8 +134,8 @@ Send the draft in chat. It goes into SPEC.md only after you approve the reviewed
 | [MILESTONES.md](MILESTONES.md) | M0–M15 with checklists; the place to see status |
 | [RISKS.md](RISKS.md) | Risks and spike plans |
 | [ERRORS.md](ERRORS.md) | Bugs seen and fixed |
-| `DESIGN-SYSTEM.md` | Not written yet. Gate 0 deliverable |
-| `SCREENS.md` | Not written yet. Gate 1 deliverable |
+| [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) | Gate 0 deliverable. v1 approved 2026-11-15 |
+| [SCREENS.md](SCREENS.md) | Gate 1 deliverable. v1 written 2026-11-15, awaiting review |
 | `learning/` | Your local notes. Ignored by git, never committed |
 | [../CLAUDE.md](../CLAUDE.md) | Instructions coding agents load automatically |
 

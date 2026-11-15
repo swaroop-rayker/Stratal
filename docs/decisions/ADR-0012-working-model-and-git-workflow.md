@@ -32,13 +32,13 @@ The agent reviews what the owner writes and does not rewrite it without being as
 
 ### Git
 
-- The repository is local. There is no remote and nothing is pushed until the owner sets one up.
+- The remote is `origin`, https://github.com/swaroop-rayker/Stratal.git, set up by the owner on 2026-11-15. Only `main` and the milestone tags are pushed, after the owner's OK to merge. Milestone branches stay local unless the owner asks. Never force-push.
 - `main` holds reviewed milestones only.
 - Each milestone has one branch, e.g. `m0-environment`, `m1-ingest-versioning`.
 - The agent commits its own work on the milestone branch, using conventional commits with requirement IDs.
 - A milestone branch is merged into `main` only with the owner's OK, after its done-checklist passes. This is the local stand-in for "one PR per milestone".
 - `docs/learning/` is ignored by git and never committed.
-- The CI workflow file is kept in the repository and starts running when a GitHub remote exists.
+- The CI workflow (`.github/workflows/ci.yml`) runs on every push to `main` and on pull requests.
 
 ## Exceptions made by the owner
 
@@ -47,6 +47,7 @@ The split above is the default. The owner can hand any unit to the agent, and ea
 | Date | Unit | What happened |
 |---|---|---|
 | 2026-11-14 | Version-ID derivation (DATA-3.2) | After the stub and tests were delivered, the owner asked the agent to implement it. The agent did, and explained the algorithm in `docs/learning/`. |
+| 2026-11-15 | Exact and near duplicate detection (DATA-2.1, DATA-2.2) | After the stubs, strict expected-failure tests and fakes were delivered, the owner asked the agent to write them ("you write it"). The agent did, made the open design choices itself and recorded them in DECISIONS.md, and explained the algorithms in `docs/learning/`. The near-duplicate threshold stays the owner's (OC-5). |
 
 The remaining owner units are unchanged unless the owner says otherwise.
 

@@ -16,11 +16,17 @@ from pydantic import BaseModel
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
+from stratal.core.errors import StratalError
 from stratal.data import registry
+from stratal.data.clean import OWNER_UNITS, CleanConfig, DedupeUnits, run_clean
+from stratal.data.commit import VersionRecord
 from stratal.data.ingest import IngestConfig, run_ingest
+from stratal.data.preprocess import PreprocessConfig, run_preprocess
 from stratal.data.versioning import derive_version_identity
+from stratal.db.models import Dataset
 from stratal.mon.events import MetricValue
 from stratal.runtime.context import JobContext
+from stratal.storage.derivations import PgDerivationCache
 
 Queue = Literal["cpu", "gpu"]
 
@@ -122,3 +128,128 @@ def _run_ingest(run: StageRun) -> StageResult:
 
 
 register(StageDef("ingest", "cpu", IngestConfig, _run_ingest))
+
+
+@dataclass(frozen=True)
+class DerivedInput:
+    """What a stage that consumes a version is given by :func:`run_derived_stage`."""
+
+    version_id: str
+    manifest: Path
+    config: dict[str, Any]
+    """The stage's resolved config, as recorded in the version it makes."""
+
+
+@dataclass(frozen=True)
+class DerivedOutput:
+    record: VersionRecord
+    new_blob_bytes: int
+    metrics: dict[str, MetricValue]
+
+
+def run_derived_stage(
+    run: StageRun,
+    *,
+    stage: str,
+    config_model: type[BaseModel],
+    body: Callable[[DerivedInput], DerivedOutput],
+) -> StageResult:
+    """The frame of every stage that turns one version into the next.
+
+    Finds the input by version ID (BUG1), reuses an existing version made from
+    the same input with the same config (stage memoization, ARCHITECTURE.md §3),
+    otherwise runs ``body`` and registers its version under the parent's dataset.
+    """
+    if run.input_version_id is None:
+        raise StratalError(
+            f"Stage {stage} needs an input version and was given none.",
+            suggested_action="Start the pipeline from a source folder or from an existing "
+            "version (from_version).",
+        )
+    resolved: dict[str, Any] = config_model.model_validate(run.config).model_dump(mode="json")
+    with Session(run.engine) as session:
+        parent, manifest = registry.manifest_for(session, run.data_dir, run.input_version_id)
+        dataset_id = parent.dataset_id
+        memo = registry.find_memoized(
+            session,
+            run.data_dir,
+            stage=stage,
+            parent_version_id=parent.version_id,
+            config=resolved,
+            derive=derive_version_identity,
+        )
+        reused = (memo.version_id, dict(memo.counts)) if memo is not None else None
+    if reused is not None:
+        version_id, counts = reused
+        run.ctx.set_version(version_id)
+        run.ctx.emit(
+            stage=stage,
+            message=f"Reusing {version_id}: made earlier from {parent.version_id} "
+            "with the same config",
+            metrics={"version_id": version_id},
+        )
+        return StageResult(
+            output_version_id=version_id,
+            cache_hit=True,
+            metrics={"accepted": int(counts.get("accepted", 0)), "reused": True},
+        )
+
+    output = body(DerivedInput(parent.version_id, manifest, resolved))
+    record = output.record
+    run.ctx.set_version(record.version_id)
+    with Session(run.engine) as session, session.begin():
+        dataset = session.get(Dataset, dataset_id)
+        if dataset is None:
+            raise StratalError(f"Dataset {dataset_id} of {parent.version_id} has disappeared.")
+        registry.register_version(
+            session,
+            dataset=dataset,
+            record=record,
+            new_blob_bytes=output.new_blob_bytes,
+            created_by_job_id=run.ctx.job_id,
+        )
+    return StageResult(output_version_id=record.version_id, metrics=output.metrics)
+
+
+def make_clean_runner(units: DedupeUnits) -> Callable[[StageRun], StageResult]:
+    """The clean stage's runner, calling ``units``. Tests register one built with fakes."""
+
+    def _run_clean(run: StageRun) -> StageResult:
+        def body(given: DerivedInput) -> DerivedOutput:
+            result = run_clean(
+                parent_manifest=given.manifest,
+                parent_version_id=given.version_id,
+                data_dir=run.data_dir,
+                config=CleanConfig.model_validate(given.config),
+                derive=derive_version_identity,
+                sink=run.ctx,
+                cache=PgDerivationCache(run.engine, job_id=run.ctx.job_id),
+                units=units,
+                checkpoint=run.ctx.raise_if_cancelled,
+            )
+            return DerivedOutput(result.record, 0, result.metrics)
+
+        return run_derived_stage(run, stage="clean", config_model=CleanConfig, body=body)
+
+    return _run_clean
+
+
+def _run_preprocess(run: StageRun) -> StageResult:
+    def body(given: DerivedInput) -> DerivedOutput:
+        result = run_preprocess(
+            parent_manifest=given.manifest,
+            parent_version_id=given.version_id,
+            data_dir=run.data_dir,
+            config=PreprocessConfig.model_validate(given.config),
+            derive=derive_version_identity,
+            sink=run.ctx,
+            cache=PgDerivationCache(run.engine, job_id=run.ctx.job_id),
+            checkpoint=run.ctx.raise_if_cancelled,
+        )
+        return DerivedOutput(result.record, result.new_blob_bytes, result.metrics)
+
+    return run_derived_stage(run, stage="preprocess", config_model=PreprocessConfig, body=body)
+
+
+register(StageDef("clean", "cpu", CleanConfig, make_clean_runner(OWNER_UNITS)))
+register(StageDef("preprocess", "cpu", PreprocessConfig, _run_preprocess))

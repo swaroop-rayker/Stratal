@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-02 datasets and versions — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+/* the approved SCR-01 shell, drawn faintly: it is not under review here */
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; }
+.side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; display: grid; grid-template-columns: 248px 1fr; }
+.content.single { display: block; }
+.spacer { flex: 1; }
+/* SCR-02 */
+.list { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.list-head { display: flex; align-items: center; gap: 8px; padding: 14px 14px 10px; }
+.list-head b { font-size: 15px; }
+.search { margin: 0 14px 10px; height: 30px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; color: var(--ink-3); gap: 6px; }
+.search kbd, .k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.ds { padding: 10px 14px; border-top: 1px solid var(--soft); display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+.ds.on { background: var(--fill-2); box-shadow: inset 3px 0 0 var(--ink-2); }
+.ds b { font-family: var(--mono); font-weight: 600; } .ds .r { text-align: right; font: 12px var(--mono); color: var(--ink-2); }
+.ds .s { font-size: 12px; color: var(--ink-3); } .ds .s .mono { color: var(--ink-2); }
+.detail { padding: 14px 18px; overflow: hidden; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.dhead { display: flex; align-items: center; gap: 10px; }
+.dhead b { font: 600 18px var(--mono); } .dhead .s { color: var(--ink-3); font-size: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; border-color: var(--ink-2); }
+.btn.sm { height: 24px; padding: 0 8px; font-size: 11px; }
+.btn.ghost { border-color: transparent; color: var(--ink-2); }
+.facts { display: flex; gap: 24px; font-size: 12px; color: var(--ink-3); } .facts b { display: block; color: var(--ink); font: 600 14px var(--mono); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 6px; height: 34px; border-bottom: 1px solid var(--soft); white-space: nowrap; }
+.t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); }
+.t tr.running td { background: #f7f7f7; color: var(--ink-2); font-style: italic; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 7px; border: 1px solid var(--ink-2); border-radius: 9px; font-size: 10px; font-weight: 600; font-style: normal; }
+.pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+.stage { display: inline-block; font: 11px var(--mono); padding: 0 5px; border: 1px solid var(--soft); border-radius: 3px; }
+.stack { display: inline-flex; width: 56px; height: 8px; border: 1px solid var(--ink-3); vertical-align: middle; margin-right: 6px; }
+.stack i { display: block; height: 100%; } .stack .a { background: var(--ink-3); } .stack .rj { background: repeating-linear-gradient(45deg, var(--ink-3) 0 2px, transparent 2px 4px); } .stack .d { background: var(--soft); }
+.bar { width: 70px; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; display: inline-block; position: relative; vertical-align: middle; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); }
+.empty { display: grid; place-items: center; height: 100%; text-align: center; }
+.empty .box { max-width: 420px; padding: 28px; border: 1.5px dashed var(--line); border-radius: 8px; }
+.empty .ico { width: 28px; height: 28px; border: 1.5px solid var(--ink-3); border-radius: 6px; margin: 0 auto 10px; }
+.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+/* drawer */
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.25); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 440px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font-size: 15px; }
+.drawer .body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; flex: 1; }
+.drawer footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--soft); }
+.field { display: flex; flex-direction: column; gap: 3px; } .field label { font-size: 11px; font-weight: 600; color: var(--ink-2); } .field label .mono { font-weight: 400; }
+.field small { font-size: 11px; color: var(--ink-3); }
+.input { height: 30px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 12px; } .input.mono { font-family: var(--mono); }
+.field.bad .input { border: 2px solid var(--ink); } .field.bad small { color: var(--ink); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; } .seg span { padding: 4px 12px; font-size: 12px; } .seg .on { background: var(--fill-2); font-weight: 600; }
+.stagebox { border: 1px solid var(--soft); border-radius: 6px; } .stagebox > div { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--soft); font-size: 12px; } .stagebox > div:first-child { border-top: 0; }
+.stagebox .chk { width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 2px; } .stagebox .chk.on { background: var(--ink-2); }
+.stagebox .off { color: var(--ink-3); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; }
+.choices li { margin: 4px 0; color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-02 — Datasets and versions · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2 (low-fi, then hi-fi)</span><span>Serves: DATA-3.1, DATA-3.2, DATA-3.4, UI-2.1</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §3 SCR-02 (approved v1)</span><span>Route: <span class="mono">/datasets</span>, <span class="mono">/datasets/:slug</span></span><span>2026-11-15</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-01 shell (drawn faintly; it is not under review here). Also covers the <b>Start pipeline</b> drawer, which SCREENS.md places here and shares with SCR-03 (open point 4). Blue numbers are annotations.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>List and detail side by side.</b> Datasets on the left (248 px), the selected dataset's versions on the right. Selecting a dataset changes the URL to <span class="mono">/datasets/:slug</span>; the first dataset is selected on arrival.</li>
+<li><b>One row per version, newest first</b>, with its stage, parent, row counts and the space it added. Total rows are not a column: every version of a dataset has the same number (INV-06), so it is stated once above the table. The counts are four numbers plus a small stacked bar, so the share of accepted rows reads at a glance. Lineage as a graph is SCR-03's job; here the parent column is enough.</li>
+<li><b>A running job that will create a version</b> appears as a provisional first row, with its progress, until the version exists. You can see that work is under way for this dataset without leaving the list.</li>
+<li><b>One primary action, <i>Ingest a folder</i></b>, in the list's header: it is the way in for new data. <i>Continue from this version</i> is a row action (also on SCR-03), opening the same drawer with the version filled in.</li>
+<li><b>The drawer</b> keeps the list visible behind it. Source is a choice of folder or version; the stages to run follow from it; each stage's settings are generated from its config schema, collapsed by default.</li>
+<li><b>Proposed, not yet in API.md:</b> a <span class="mono">GET /sources</span> endpoint listing the folders under <span class="mono">/sources</span>, so the source field can offer them instead of asking you to type a path. Without it, the field is plain text and an unknown path is reported by <span class="mono">POST /jobs</span> as <span class="mono">source_not_found</span>.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Populated: a dataset selected, a job running on it</h2>
+<div class="frame" style="height:720px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k</span><span class="spacer"></span><span>[ Running · job_0142 · label · 13% ]</span></header>
+    <section class="content">
+      <div class="list">
+        <div class="list-head"><b>Datasets</b><span class="k">4</span><span class="spacer" style="flex:1"></span><span class="btn primary">+ Ingest a folder</span></div>
+        <div class="search">⌕ Filter datasets<span style="flex:1"></span><kbd>/</kbd></div>
+        <div class="ds on"><b>coco10k</b><span class="r">10,000</span><span class="s">image · 6 versions · latest <span class="mono">preprocess</span></span><span class="r">95.1%</span><span class="s">updated 14:21 · <span class="pill" style="height:15px;font-size:9px">Running</span></span><span></span></div>
+        <div class="ds"><b>demo</b><span class="r">1,535</span><span class="s">image · 1 version · latest <span class="mono">ingest</span></span><span class="r">98.0%</span><span class="s">updated yesterday</span><span></span></div>
+        <div class="ds"><b>birds2k</b><span class="r">2,048</span><span class="s">image · 3 versions · latest <span class="mono">clean</span></span><span class="r">91.4%</span><span class="s">updated 2 days ago</span><span></span></div>
+        <div class="ds"><b>m3demo</b><span class="r">13</span><span class="s">image · 3 versions · latest <span class="mono">preprocess</span></span><span class="r">92.3%</span><span class="s">updated 3 days ago</span><span></span></div>
+      </div>
+      <div class="detail">
+        <div class="dhead"><b>coco10k</b><span class="s">image · from <span class="mono">/sources/coco10k</span> · created 2026-11-14</span><span class="spacer" style="flex:1"></span><span class="btn sm ghost">Copy slug</span></div>
+        <div class="facts"><span>Versions<b>6</b></span><span>Latest<b>ds_c8e21d0f6a3b</b></span><span>Rows in every version<b>10,000</b></span><span>Accepted in latest<b>9,512</b></span><span>Stored<b>6.1 GB</b></span></div>
+        <table class="t">
+          <tr><th>Version</th><th>Stage</th><th>Parent</th><th>Accepted · rejected · duplicate · filtered</th><th class="r">New files</th><th>Made</th><th></th></tr>
+          <tr class="running"><td class="m">— pending</td><td><span class="stage">label</span></td><td class="m">ds_c8e21d0f6a3b</td><td><span class="bar" style="--p:13%"></span> captioning 1,300 / 9,512</td><td class="r">–</td><td><span class="pill">Running</span> <span class="mono">job_0142</span></td><td></td></tr>
+          <tr class="on"><td class="m">ds_c8e21d0f6a3b</td><td><span class="stage">preprocess</span></td><td class="m">ds_e1aa7c52d940</td><td><span class="stack"><i class="a" style="width:95%"></i><i class="rj" style="width:1.5%"></i><i class="d" style="width:3.5%"></i></span><span class="mono">9,512 · 148 · 340 · 0</span></td><td class="r m">+ 1.1 GB</td><td>14:01 · <span class="mono">job_0142</span> ✓</td><td>⋯</td></tr>
+          <tr><td class="m">ds_e1aa7c52d940</td><td><span class="stage">clean</span></td><td class="m">ds_0b1f9e77a3c4</td><td><span class="stack"><i class="a" style="width:95%"></i><i class="rj" style="width:1.5%"></i><i class="d" style="width:3.5%"></i></span><span class="mono">9,512 · 148 · 340 · 0</span></td><td class="r m">0 B</td><td>13:58 · <span class="mono">job_0142</span> ✓</td><td>⋯</td></tr>
+          <tr><td class="m">ds_7f3a9c21b04e</td><td><span class="stage">preprocess</span></td><td class="m">ds_9d02f1c4be77</td><td><span class="stack"><i class="a" style="width:96%"></i><i class="rj" style="width:1.5%"></i><i class="d" style="width:2.5%"></i></span><span class="mono">9,601 · 148 · 251 · 0</span></td><td class="r m">+ 0.7 GB</td><td>yesterday · <span class="mono">job_0131</span> ✓</td><td>⋯</td></tr>
+          <tr><td class="m">ds_9d02f1c4be77</td><td><span class="stage">clean</span></td><td class="m">ds_0b1f9e77a3c4</td><td><span class="stack"><i class="a" style="width:96%"></i><i class="rj" style="width:1.5%"></i><i class="d" style="width:2.5%"></i></span><span class="mono">9,601 · 148 · 251 · 0</span></td><td class="r m">0 B</td><td>yesterday · <span class="mono">job_0131</span> ✓</td><td>⋯</td></tr>
+          <tr><td class="m">ds_0b1f9e77a3c4</td><td><span class="stage">ingest</span></td><td class="m" style="color:var(--ink-3)">— raw</td><td><span class="stack"><i class="a" style="width:98.5%"></i><i class="rj" style="width:1.5%"></i></span><span class="mono">9,852 · 148 · 0 · 0</span></td><td class="r m">+ 4.3 GB</td><td>Nov 14 · <span class="mono">job_0127</span> ✓</td><td>⋯</td></tr>
+        </table>
+        <p style="margin:0;font-size:12px;color:var(--ink-3)">⋯ row menu: Open (Enter) · Continue the pipeline from this version · Copy version ID · Open creating job</p>
+      </div>
+    </section>
+    <footer class="status">CPU 38% · RAM 7.2 / 10.0 GB · GPU 94% · VRAM 3.9 / 6.0 GB · 71 °C<span class="spacer"></span>● live</footer>
+  </div>
+  <span class="n" style="left:206px;top:152px">1</span>
+  <span class="n" style="left:206px;top:66px">2</span>
+  <span class="n" style="left:206px;top:108px">3</span>
+  <span class="n" style="left:454px;top:66px">4</span>
+  <span class="n" style="left:454px;top:108px">5</span>
+  <span class="n" style="left:454px;top:180px">6</span>
+  <span class="n" style="left:454px;top:214px">7</span>
+  <span class="n" style="left:1254px;top:148px">8</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Source</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Dataset list</td><td>Slug, modality, version count, latest stage, rows, accepted share of the latest version, last update, a pill if a job is running on it. Sorted by last update</td><td><span class="mono">GET /datasets</span> (planned, API.md §3.2)</td><td>refreshes on a <span class="mono">job</span> message for one of its datasets</td></tr>
+<tr><td><span class="num">2</span></td><td>Ingest a folder</td><td>The primary action: opens the drawer (frames F and G)</td><td>–</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Filter</td><td>Filters the list by slug as you type; <kbd class="k">/</kbd> focuses it; <kbd class="k">j</kbd>/<kbd class="k">k</kbd> move, <kbd class="k">Enter</kbd> opens</td><td>client side</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Dataset header</td><td>Slug, modality, source folder, created</td><td><span class="mono">GET /datasets/{slug}</span></td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Facts</td><td>Version count, latest version, rows (the same in every version of a dataset, INV-06, so it is stated once here rather than in every row), accepted rows in the latest, stored bytes (sum of new files over its versions)</td><td>same, plus the versions list</td><td>on job completion</td></tr>
+<tr><td><span class="num">6</span></td><td>Pending row</td><td>A running job that will produce a version of this dataset: its stage, progress in the stage's own words, and the job. Replaced by the real row when the stage commits</td><td><span class="mono">GET /jobs?state=running</span> filtered by dataset, then <span class="mono">job</span> messages on <span class="mono">GET /stream</span></td><td>yes</td></tr>
+<tr><td><span class="num">7</span></td><td>Versions</td><td>Version ID, stage, parent, counts by status with a stacked bar, bytes of new files (DATA-3.4), and "made": when and by which job, with that job's final state as an icon. Manifest bytes are on SCR-03. Newest first; click or Enter opens SCR-03</td><td><span class="mono">GET /datasets/{slug}/versions</span> (planned)</td><td>a new row appears when a stage commits</td></tr>
+<tr><td><span class="num">8</span></td><td>Row menu</td><td>Open, continue from this version (drawer, frame G), copy ID, open the creating job (SCR-04)</td><td>–</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Empty: no datasets yet</h2>
+<div class="frame" style="height:380px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b></span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content single"><div class="empty"><div class="box"><div class="ico"></div><b>No datasets yet</b><p>Put a folder of images under <span class="mono">.\sources</span> on Windows (it is <span class="mono">/sources</span> inside the containers), then ingest it. Ingesting copies the files into Stratal's store and makes the first version.</p><span class="btn primary">+ Ingest a folder</span></div></div></section>
+    <footer class="status">CPU 4% · RAM 3.1 / 10.0 GB<span class="spacer"></span>● live · 10 s idle</footer>
+  </div>
+</div>
+
+<!-- ===================================================================== C -->
+<h2>C · A dataset whose first ingest is still running (no versions yet)</h2>
+<div class="frame" style="height:260px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / flowers5k</span></header>
+    <section class="content">
+      <div class="list"><div class="list-head"><b>Datasets</b><span class="k">5</span></div><div class="ds on"><b>flowers5k</b><span class="r">–</span><span class="s">image · no versions yet · <span class="pill" style="height:15px;font-size:9px">Running</span></span><span></span></div><div class="ds"><b>coco10k</b><span class="r">10,000</span><span class="s">image · 6 versions</span><span></span></div></div>
+      <div class="detail">
+        <div class="dhead"><b>flowers5k</b><span class="s">image · from <span class="mono">/sources/flowers5k</span> · created just now</span></div>
+        <table class="t"><tr><th>Version</th><th>Stage</th><th>Parent</th><th>Accepted · rejected · duplicate · filtered</th><th class="r">New files</th><th>Made</th></tr>
+        <tr class="running"><td class="m">— pending</td><td><span class="stage">ingest</span></td><td class="m">— raw</td><td><span class="bar" style="--p:41%"></span> reading metadata 2,100 / 5,120</td><td class="r">–</td><td><span class="pill">Running</span> <span class="mono">job_0144</span></td></tr></table>
+        <p style="margin:0;font-size:12px;color:var(--ink-3)">If the job fails, the row says so with the error code and a link to the job; the dataset stays, with no versions, until you delete it or ingest again.</p>
+      </div>
+    </section>
+    <footer class="status">CPU 61% · RAM 5.0 / 10.0 GB<span class="spacer"></span>● live · 1 s</footer>
+  </div>
+</div>
+
+<!-- ===================================================================== D -->
+<h2>D · Loading</h2>
+<div class="frame" style="height:250px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b></span></header>
+    <section class="content">
+      <div class="list"><div class="list-head"><b>Datasets</b></div>
+        <div class="ds"><span class="skel" style="width:90px"></span><span></span><span class="skel" style="width:170px"></span></div>
+        <div class="ds"><span class="skel" style="width:70px"></span><span></span><span class="skel" style="width:150px"></span></div>
+        <div class="ds"><span class="skel" style="width:110px"></span><span></span><span class="skel" style="width:160px"></span></div></div>
+      <div class="detail"><span class="skel" style="width:180px;height:16px"></span>
+        <table class="t"><tr><th>Version</th><th>Stage</th><th>Parent</th><th>Accepted · rejected · duplicate · filtered</th><th class="r">New files</th><th>Made</th></tr>
+        <tr><td><span class="skel" style="width:110px"></span></td><td><span class="skel" style="width:60px"></span></td><td><span class="skel" style="width:110px"></span></td><td><span class="skel" style="width:200px"></span></td><td class="r"><span class="skel" style="width:50px"></span></td><td><span class="skel" style="width:120px"></span></td></tr>
+        <tr><td><span class="skel" style="width:110px"></span></td><td><span class="skel" style="width:60px"></span></td><td><span class="skel" style="width:110px"></span></td><td><span class="skel" style="width:200px"></span></td><td class="r"><span class="skel" style="width:50px"></span></td><td><span class="skel" style="width:120px"></span></td></tr></table></div>
+    </section>
+    <footer class="status">connecting…</footer>
+  </div>
+</div>
+
+<!-- ===================================================================== E -->
+<h2>E · Error: the list cannot be loaded</h2>
+<div class="frame" style="height:300px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k</span></header>
+    <section class="content">
+      <div class="list"><div class="list-head"><b>Datasets</b><span class="k">4</span></div><div class="ds on"><b>coco10k</b><span class="r">10,000</span><span class="s">image · 6 versions</span><span></span></div><div class="ds"><b>demo</b><span class="r">1,535</span><span class="s">image · 1 version</span><span></span></div></div>
+      <div class="detail"><div class="empty"><div class="box err"><div class="ico"></div><b>Versions of coco10k could not be loaded</b><p><span class="mono">dependency_unavailable</span> · The data volume is not reachable from the API.<br><b>Do:</b> check that the <span class="mono">stratal-data</span> volume is mounted (<span class="mono">docker compose ps</span>), then retry.</p><span class="btn">Retry</span> <span class="btn ghost">Request ID <span class="mono">req_0a282af102db</span></span></div></div></div>
+    </section>
+    <footer class="status">CPU 6% · RAM 3.2 / 10.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<p class="caption">Errors appear where the data would have been, with the problem's code, its explanation, the suggested action and the request ID (ADR-0011). The rest of the screen stays usable. If the whole API is down, the shell's banner (SCR-01 frame D) covers it instead.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · Start pipeline drawer: from a folder (opened by <i>Ingest a folder</i>)</h2>
+<div class="frame" style="height:720px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k</span></header>
+    <section class="content"><div class="list"></div><div class="detail"></div></section>
+    <footer class="status">CPU 6% · RAM 3.2 / 10.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer">
+    <header><b>Start pipeline</b><span class="spacer" style="flex:1"></span><span class="k">Esc</span> ✕</header>
+    <div class="body">
+      <div class="field"><label>Start from</label><span class="seg"><span class="on">A folder</span><span>An existing version</span></span></div>
+      <div class="field"><label>Source folder <span class="mono">source.path</span></label><div class="input mono">/sources/flowers5k ▾</div><small>Folders under <span class="mono">.\sources</span>: flowers5k · coco10k · demo · birds2k (with the proposed <span class="mono">GET /sources</span>)</small></div>
+      <div class="field"><label>Dataset <span class="mono">dataset</span></label><div class="input mono">flowers5k</div><small>New dataset: it will be created. 2–63 lowercase letters, digits, - or _.</small></div>
+      <div class="field"><label>Stages</label>
+        <div class="stagebox">
+          <div><span class="chk on"></span><b>ingest</b><span class="spacer" style="flex:1"></span><span style="color:var(--ink-3)">min_size 256</span> ▸</div>
+          <div><span class="chk on"></span><b>clean</b><span class="spacer" style="flex:1"></span><span style="color:var(--ink-3)">phash max distance 8</span> ▸</div>
+          <div><span class="chk on"></span><b>preprocess</b><span class="spacer" style="flex:1"></span><span style="color:var(--ink-3)">max side 768</span> ▾</div>
+          <div style="display:block;background:var(--fill)"><div class="grid2">
+            <div class="field"><label><span class="mono">max_side</span> int</label><div class="input mono">768</div><small>32–8192. Longer side of the copy, in pixels, at most.</small></div>
+            <div class="field"><label><span class="mono">jpeg_quality</span> int</label><div class="input mono">95</div><small>50–100.</small></div></div></div>
+          <div class="off"><span class="chk"></span>label · filter · split · evaluate <span style="margin-left:auto">not available yet</span></div>
+        </div><small>Run until a stage by unticking the ones after it (<span class="mono">until_stage</span>). Each stage's fields come from its config schema; defaults are shown, and only changed values are sent.</small></div>
+    </div>
+    <footer><span class="btn ghost">Cancel</span><span class="btn primary">Start job</span></footer>
+  </aside>
+  <span class="n" style="left:830px;top:148px">9</span>
+  <span class="n" style="left:830px;top:284px">10</span>
+  <span class="n" style="left:830px;top:390px">11</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Source</th><th>Live</th></tr>
+<tr><td><span class="num">9</span></td><td>Source</td><td>A folder under <span class="mono">/sources</span>, or an existing version (frame G). Exactly one</td><td>proposed <span class="mono">GET /sources</span>; otherwise typed</td><td>–</td></tr>
+<tr><td><span class="num">10</span></td><td>Stages</td><td>The stages this request would run, in order, with their key setting; later stages can be unticked to stop early. Stages not yet built are listed, greyed</td><td>registered stages; <span class="mono">GET /config/schemas</span></td><td>–</td></tr>
+<tr><td><span class="num">11</span></td><td>Stage settings</td><td>Generated from <span class="mono">GET /config/schemas/{name}</span> with defaults from <span class="mono">GET /config/defaults</span> (DESIGN-SYSTEM forms pattern). Submitting sends <span class="mono">POST /jobs</span>, then opens SCR-04 for the new job</td><td>planned, API.md §3.7</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== G -->
+<h2>G · Start pipeline drawer: from a version, with a field error</h2>
+<div class="frame" style="height:560px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k</span></header>
+    <section class="content"><div class="list"></div><div class="detail"></div></section>
+    <footer class="status">CPU 6%<span class="spacer"></span>● live</footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer">
+    <header><b>Start pipeline</b><span class="spacer" style="flex:1"></span><span class="k">Esc</span> ✕</header>
+    <div class="body">
+      <div class="field"><label>Start from</label><span class="seg"><span>A folder</span><span class="on">An existing version</span></span></div>
+      <div class="field"><label>Version <span class="mono">from_version</span></label><div class="input mono">ds_e1aa7c52d940 · clean · coco10k</div><small>The stages after <span class="mono">clean</span> will run. The dataset is the version's: coco10k.</small></div>
+      <div class="field"><label>Stages</label>
+        <div class="stagebox">
+          <div class="off"><span class="chk"></span>ingest · clean <span style="margin-left:auto">already done in this version</span></div>
+          <div><span class="chk on"></span><b>preprocess</b><span class="spacer" style="flex:1"></span>▾</div>
+          <div style="display:block;background:var(--fill)"><div class="grid2">
+            <div class="field bad"><label><span class="mono">max_side</span> int</label><div class="input mono">20</div><small>✕ must be at least 32 (<span class="mono">greater_than_equal</span>)</small></div>
+            <div class="field"><label><span class="mono">jpeg_quality</span> int</label><div class="input mono">95</div><small>50–100.</small></div></div></div>
+        </div></div>
+      <div style="border:2px solid var(--ink);border-radius:6px;padding:8px 10px;font-size:12px"><b>A stage config did not pass validation.</b> Fix the field marked above. <span class="mono" style="color:var(--ink-3)">validation_error</span></div>
+    </div>
+    <footer><span class="btn ghost">Cancel</span><span class="btn primary" style="opacity:.5">Start job</span></footer>
+  </aside>
+</div>
+<p class="caption">Errors from <span class="mono">POST /jobs</span> are placed on the field named by <span class="mono">errors[].loc</span> (here <span class="mono">["stages", "preprocess", "max_side"]</span>), with a summary above the buttons. A reused stage (same input, same config) is not an error: the job completes at once and its stages are marked "cached".</p>
+
+<!-- ===================================================================== H -->
+<h2>H · 1024 px</h2>
+<div class="frame w1024" style="height:300px">
+  <div class="shell rail">
+    <aside class="side"></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k</span></header>
+    <section class="content" style="grid-template-columns:240px 1fr">
+      <div class="list"><div class="list-head"><b>Datasets</b><span class="spacer" style="flex:1"></span><span class="btn primary sm">+ Ingest</span></div><div class="ds on"><b>coco10k</b><span class="r">10,000</span><span class="s">6 versions · preprocess</span><span></span></div><div class="ds"><b>demo</b><span class="r">1,535</span><span class="s">1 version · ingest</span><span></span></div></div>
+      <div class="detail"><div class="dhead"><b>coco10k</b></div>
+        <table class="t"><tr><th>Version</th><th>Stage</th><th>Accepted · rej · dup · filt</th><th class="r">New files</th><th>Made</th><th></th></tr>
+        <tr class="on"><td class="m">ds_c8e21d0f6a3b</td><td><span class="stage">preprocess</span></td><td><span class="stack"><i class="a" style="width:95%"></i><i class="rj" style="width:1.5%"></i><i class="d" style="width:3.5%"></i></span><span class="mono">9,512 · 148 · 340 · 0</span></td><td class="r m">+ 1.1 GB</td><td>14:01 ✓</td><td>⋯</td></tr>
+        <tr><td class="m">ds_e1aa7c52d940</td><td><span class="stage">clean</span></td><td><span class="stack"><i class="a" style="width:95%"></i><i class="rj" style="width:1.5%"></i><i class="d" style="width:3.5%"></i></span><span class="mono">9,512 · 148 · 340 · 0</span></td><td class="r m">0 B</td><td>13:58 ✓</td><td>⋯</td></tr></table>
+      </div>
+    </section>
+    <footer class="status">CPU 38% · RAM 7.2/10.0<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<p class="caption">The list narrows to 240 px; the table drops Parent and the job ID (both still on SCR-03, one click away; the job's state stays as an icon); the drawer overlays the full width of the content.</p>
+
+<h2>Not decided here</h2>
+<ul>
+<li>Colours of the four row statuses in the stacked bar, icons and exact spacing: the hi-fi mockup.</li>
+<li>Deleting a dataset or a version: not in phase 1 (blobs are only removed by the phase-2 garbage collector), so there is no delete action.</li>
+</ul>
+</main>
+</body>
+</html>

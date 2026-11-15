@@ -53,7 +53,7 @@ The full split is in `docs/decisions/ADR-0012-working-model-and-git-workflow.md`
 
 ## Git
 
-- Local repository. No remote. Never push.
+- Remote `origin` is https://github.com/swaroop-rayker/Stratal.git (set up 2026-11-15). Push only `main` and milestone tags, and only after the owner's OK to merge. Milestone branches stay local unless the owner asks. Never force-push.
 - `main` holds reviewed milestones only. Work happens on the milestone's branch (`m0-environment`, `m1-ingest-versioning`, …).
 - Commit your own work on the milestone branch with conventional commits.
 - Merge into `main` only with the owner's explicit OK, after the milestone's done-checklist passes.

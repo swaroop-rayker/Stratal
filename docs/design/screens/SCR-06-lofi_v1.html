@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-06 eval report — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+/* SCR-06 */
+.rhead { display: flex; align-items: center; gap: 12px; }
+.rhead .t { font-size: 18px; font-weight: 600; } .rhead .sub { font-size: 12px; color: var(--ink-3); } .rhead .sub .mono { color: var(--ink-2); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; }
+.heads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.head { border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.head small { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); } .head b { font: 600 26px var(--mono); } .head span { font-size: 12px; color: var(--ink-3); } .head span .mono { color: var(--ink-2); }
+.ci { position: relative; height: 18px; margin-top: 4px; } .ci .axis { position: absolute; left: 0; right: 0; top: 8px; height: 1px; background: var(--soft); } .ci .range { position: absolute; top: 4px; height: 9px; border: 1px solid var(--ink-2); background: var(--fill-2); border-radius: 2px; } .ci .pt { position: absolute; top: 2px; width: 2px; height: 13px; background: var(--ink); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 0; }
+.panel { border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.panel header { display: flex; align-items: center; gap: 8px; } .panel header b { font-size: 13px; } .panel header .sub { font-size: 11px; color: var(--ink-3); }
+.seg2 { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; } .seg2 span { padding: 2px 8px; font-size: 11px; } .seg2 .on { background: var(--fill-2); font-weight: 600; }
+.funnel { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.frow { display: grid; grid-template-columns: 82px 1fr 64px 120px; gap: 8px; align-items: center; }
+.frow .bar { height: 16px; background: var(--fill-2); border: 1px solid var(--line); border-radius: 2px; position: relative; }
+.frow .bar i { position: absolute; top: 0; bottom: 0; right: 0; background: repeating-linear-gradient(45deg, var(--ink-3) 0 2px, transparent 2px 5px); }
+.frow .n2 { font-family: var(--mono); text-align: right; } .frow .lost { font-size: 11px; color: var(--ink-2); }
+.hist { height: 170px; position: relative; border-bottom: 1px solid var(--ink-3); }
+.hist svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hx { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 28px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.note-box { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 12px; background: #f7f7f7; }
+.empty { display: grid; place-items: center; text-align: center; padding: 30px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.barp { height: 10px; border: 1px solid var(--ink-3); border-radius: 5px; position: relative; } .barp::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 40%); background: var(--ink-3); border-radius: 5px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-06 — Eval report · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: EVAL-1.1 (EVAL-1.2 in phase 2)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §3 SCR-06 (approved v1)</span><span>Route: <span class="mono">/versions/:version_id/report</span></span><span>2026-11-15</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-01 shell (faint). Blue numbers are annotations. The four parts are the four EVAL-1.1 asks: rejection counts per stage, the CLIP score distribution, the filter rate, and manual-review acceptance with a 95% Wilson interval. The statistics are computed by the owner's report unit (API.md §5); this screen only shows them.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Three headline figures first</b>: rows kept, filter rate, review acceptance with its interval. They answer "is this dataset usable?" before any chart.</li>
+<li><b>Rejections per stage as a funnel</b>: one row per stage, from 10,000 raw rows to the 9,431 kept, each showing how many it removed and why. It reads in pipeline order, which is how the question is asked.</li>
+<li><b>The CLIP distribution as a histogram</b> with the filter threshold drawn on it and the part below it marked; mean and median as text.</li>
+<li><b>The interval is drawn</b>, not just printed: a range on a 0–100% axis with the point estimate, so a wide interval looks wide.</li>
+<li><b>Every chart has a Chart / Table switch</b> (the accessibility rule: charts have a text alternative); the table holds the exact numbers.</li>
+<li><b>The report is a snapshot</b>: it names the review it used and when it was built. If a newer closed review exists, a note offers to rebuild with it.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · A report with all four parts</h2>
+<div class="frame" style="height:780px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k / <span class="mono">ds_b0c3e5a8d217</span> / report</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="rhead"><span class="t">Eval report · <span class="mono">ds_b0c3e5a8d217</span></span><span class="pill">phase1_dataset</span><span class="sub">report #12 · built 15:44 by <span class="mono">job_0147</span> ✓ · review <span class="mono">rev_0007</span> (50 items)</span><span class="spacer"></span><span class="btn">Open version</span><span class="btn">Rebuild</span></div>
+      <div class="heads">
+        <div class="head"><small>Rows kept</small><b>9,431</b><span>of 10,000 raw · 94.3% · after 5 stages</span></div>
+        <div class="head"><small>Filter rate</small><b>0.85%</b><span>81 of 9,512 captioned rows below CLIP 0.20</span></div>
+        <div class="head"><small>Review acceptance</small><b>92.0%</b><span>46 of 50 · 95% Wilson interval <span class="mono">81.2% – 96.8%</span></span>
+          <div class="ci"><span class="axis"></span><span class="range" style="left:81.2%;width:15.6%"></span><span class="pt" style="left:92%"></span></div>
+          <span class="mono" style="display:flex;justify-content:space-between;font-size:10px"><span>0%</span><span>50%</span><span>100%</span></span></div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <header><b>Rows by stage</b><span class="sub">rejections per stage (EVAL-1.1)</span><span class="spacer"></span><span class="seg2"><span class="on">Chart</span><span>Table</span></span></header>
+          <div class="funnel">
+            <div class="frow"><span>raw</span><span class="bar" style="width:100%"></span><span class="n2">10,000</span><span class="lost"></span></div>
+            <div class="frow"><span>ingest</span><span class="bar" style="width:98.52%"><i style="width:0"></i></span><span class="n2">9,852</span><span class="lost">−148 rejected</span></div>
+            <div class="frow"><span>clean</span><span class="bar" style="width:95.12%"></span><span class="n2">9,512</span><span class="lost">−340 duplicate</span></div>
+            <div class="frow"><span>preprocess</span><span class="bar" style="width:95.12%"></span><span class="n2">9,512</span><span class="lost">−0</span></div>
+            <div class="frow"><span>label</span><span class="bar" style="width:95.12%"></span><span class="n2">9,512</span><span class="lost">−0</span></div>
+            <div class="frow"><span>filter</span><span class="bar" style="width:94.31%"></span><span class="n2">9,431</span><span class="lost">−81 filtered</span></div>
+          </div>
+          <table class="t"><tr><th>Removed at</th><th>Reason</th><th class="r">Rows</th><th class="r">Share of raw</th></tr>
+            <tr><td>ingest</td><td class="m">corrupt_image</td><td class="r m">97</td><td class="r m">0.97%</td></tr>
+            <tr><td>ingest</td><td class="m">below_min_size</td><td class="r m">43</td><td class="r m">0.43%</td></tr>
+            <tr><td>ingest</td><td class="m">unsupported_format</td><td class="r m">8</td><td class="r m">0.08%</td></tr>
+            <tr><td>clean</td><td class="m">exact_duplicate · near_duplicate</td><td class="r m">212 · 128</td><td class="r m">3.40%</td></tr>
+            <tr><td>filter</td><td class="m">clip_below_threshold</td><td class="r m">81</td><td class="r m">0.81%</td></tr>
+          </table>
+        </div>
+        <div class="panel">
+          <header><b>CLIP score distribution</b><span class="sub">9,512 captioned rows · mean 0.293 · median 0.295</span><span class="spacer"></span><span class="seg2"><span class="on">Chart</span><span>Table</span></span></header>
+          <div class="hist"><svg viewBox="0 0 200 100" preserveAspectRatio="none">
+            <g fill="#bbb">
+              <rect x="50" y="99.9" width="9" height="0.1"/><rect x="60" y="99.5" width="9" height="0.5"/><rect x="70" y="97" width="9" height="3"/>
+              <rect x="80" y="87" width="9" height="13"/><rect x="90" y="63" width="9" height="37"/><rect x="100" y="26" width="9" height="74"/>
+              <rect x="110" y="0" width="9" height="100"/><rect x="120" y="6" width="9" height="94"/><rect x="130" y="36" width="9" height="64"/>
+              <rect x="140" y="71" width="9" height="29"/><rect x="150" y="91" width="9" height="9"/><rect x="160" y="98" width="9" height="2"/><rect x="170" y="99.7" width="9" height="0.3"/>
+            </g>
+            <rect x="0" y="0" width="80" height="100" fill="#000" fill-opacity=".05"/>
+            <line x1="80" y1="0" x2="80" y2="100" stroke="#222" stroke-width="1" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>
+          </svg></div>
+          <div class="hx"><span>0.00</span><span>0.10</span><span>0.20 ┃ threshold</span><span>0.30</span><span>0.40</span><span>0.50</span></div>
+          <p style="margin:0;font-size:12px">81 rows (0.85%) fall below the threshold of 0.20 and were filtered (LABEL-1.4). The shaded area is what the filter removed.</p>
+          <div class="note-box">The review drew 50 rows from the 9,431 kept: <b>46 accepted</b>, 4 rejected. <span class="btn sm ghost">Open rev_0007 ›</span></div>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 6%<span class="spacer"></span>● live · 10 s idle</footer>
+  </div>
+  <span class="n" style="left:226px;top:58px">1</span>
+  <span class="n" style="left:206px;top:104px">2</span>
+  <span class="n" style="left:226px;top:250px">3</span>
+  <span class="n" style="left:770px;top:250px">4</span>
+  <span class="n" style="left:1244px;top:96px">5</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Header</td><td>Version, report kind, report number, when and by which job it was built, the review it used. Actions: open the version, rebuild</td><td><span class="mono">GET /versions/{id}/reports/latest?kind=phase1_dataset</span> (planned)</td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Headline figures</td><td>Rows kept out of raw; filter rate; review acceptance with its 95% Wilson interval, drawn on a 0–100% axis</td><td>the report body</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Rows by stage</td><td>A funnel from raw to kept, each stage with the rows it removed, then the reasons as a table (EVAL-1.1 "rejection counts per stage")</td><td>the report body</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>CLIP distribution</td><td>Histogram of scores with the threshold and the filtered area; mean and median; filter rate restated in words</td><td>the report body</td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Acceptance</td><td>Accepted / reviewed, rate, interval; links to the review</td><td>the report body; <span class="mono">GET /reviews/{id}</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · No report yet, and building</h2>
+<div style="display:flex;gap:16px">
+<div class="frame" style="height:300px;width:632px">
+  <div style="padding:20px"><div class="empty" style="height:250px"><div><b>No report for ds_b0c3e5a8d217 yet</b><p style="font-size:12px">The report summarises what each stage removed, the CLIP scores, the filter rate and the review's acceptance rate.</p><p style="font-size:12px">Closed review: <span class="mono">rev_0007</span> (50 items) will be used.</p><span class="btn primary">Build report</span></div></div></div>
+</div>
+<div class="frame" style="height:300px;width:632px">
+  <div style="padding:20px;display:flex;flex-direction:column;gap:10px"><div class="rhead"><span class="t" style="font-size:15px">Eval report</span><span class="pill">● Building</span></div>
+  <div class="note-box"><b>Building with <span class="mono">job_0147</span></b> · Counting rejections per stage 5/5<div class="barp" style="--p:62%;margin-top:8px"></div><div style="margin-top:6px"><span class="btn sm ghost">Watch the job ›</span></div></div>
+  <p style="font-size:12px">The report is a job (API.md §3.6: <span class="mono">POST /versions/{id}/reports</span> returns <span class="mono">202</span> with a job). This page follows it on the stream and shows the report when the job completes.</p></div>
+</div>
+</div>
+
+<!-- ===================================================================== C -->
+<h2>C · Built without a review, and a newer review available</h2>
+<div style="display:flex;gap:16px">
+<div class="frame" style="height:230px;width:632px">
+  <div style="padding:20px"><div class="head" style="height:190px"><small>Review acceptance</small><b style="color:var(--ink-3);font-weight:400;font-size:18px">— not measured</b><span>No closed review existed when this report was built.</span><span><strong style="color:var(--ink)">Do:</strong> start a review of this version, close it, then rebuild.</span><div style="margin-top:8px"><span class="btn sm">Start a review</span></div></div></div>
+</div>
+<div class="frame" style="height:230px;width:632px">
+  <div style="padding:20px"><div class="note-box"><b>A newer review exists.</b> This report used <span class="mono">rev_0007</span> (50 items, closed 15:41). <span class="mono">rev_0009</span> (200 items) was closed at 17:02. <div style="margin-top:8px"><span class="btn sm primary">Rebuild with rev_0009</span> <span class="btn sm ghost">Keep this report</span></div></div>
+  <p style="font-size:12px">Versions never change, so a report only goes out of date when a newer review is closed. Older reports stay readable (<span class="mono">GET /reports/{id}</span>).</p></div>
+</div>
+</div>
+
+<!-- ===================================================================== D -->
+<h2>D · The Table view of the CLIP distribution</h2>
+<div class="frame" style="height:330px;width:632px">
+  <div style="padding:16px"><div class="panel"><header><b>CLIP score distribution</b><span class="spacer"></span><span class="seg2"><span>Chart</span><span class="on">Table</span></span></header>
+  <table class="t"><tr><th>Score from</th><th>to</th><th class="r">Rows</th><th class="r">Share</th><th>Filtered</th></tr>
+    <tr><td class="m">0.150</td><td class="m">0.175</td><td class="r m">12</td><td class="r m">0.13%</td><td>yes</td></tr>
+    <tr><td class="m">0.175</td><td class="m">0.200</td><td class="r m">67</td><td class="r m">0.70%</td><td>yes</td></tr>
+    <tr><td class="m">0.200</td><td class="m">0.225</td><td class="r m">290</td><td class="r m">3.05%</td><td>no</td></tr>
+    <tr><td class="m">…</td><td class="m"></td><td class="r m"></td><td class="r m"></td><td></td></tr>
+    <tr><td class="m">0.425</td><td class="m">0.450</td><td class="r m">6</td><td class="r m">0.06%</td><td>no</td></tr>
+  </table></div></div>
+</div>
+
+<!-- ===================================================================== E -->
+<h2>E · Loading, and a report that cannot be loaded</h2>
+<div class="frame" style="height:250px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / …</span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start">
+      <div style="display:flex;flex-direction:column;gap:10px"><span class="skel" style="width:300px;height:18px"></span><div class="heads"><span class="skel" style="height:70px;width:auto"></span><span class="skel" style="height:70px;width:auto"></span><span class="skel" style="height:70px;width:auto"></span></div><span class="skel" style="height:60px;width:auto"></span></div>
+      <div class="empty err"><div><b>The report could not be loaded</b><p style="font-size:12px"><span class="mono">not_found</span> · No dataset version 'ds_000000000000'.<br><b>Do:</b> open the report from its version.</p><span class="btn">Go to datasets</span></div></div>
+    </section>
+    <footer class="status">connecting…</footer>
+  </div>
+</div>
+<p class="caption">If the report job fails, frame B's building state becomes the job's failure (code, reason, action) with Retry and a link to SCR-04.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame w1024" style="height:330px">
+  <div class="shell rail">
+    <aside class="side"></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">…</b> / report</span></header>
+    <section class="content">
+      <div class="rhead"><span class="t" style="font-size:15px">Eval report</span><span class="spacer"></span><span class="btn sm">Rebuild</span></div>
+      <div class="heads"><div class="head"><small>Rows kept</small><b style="font-size:20px">9,431</b></div><div class="head"><small>Filter rate</small><b style="font-size:20px">0.85%</b></div><div class="head"><small>Acceptance</small><b style="font-size:20px">92.0%</b><span class="mono" style="font-size:11px">81.2 – 96.8%</span></div></div>
+      <div class="panel" style="height:110px"><header><b>Rows by stage</b></header></div>
+    </section>
+    <footer class="status">CPU 6%<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<p class="caption">The two panels stack instead of sitting side by side; headline figures keep their numbers and interval, and drop the interval drawing.</p>
+
+<h2>Not decided here</h2>
+<ul>
+<li>Colours, chart styling (ECharts, sequential palette for the histogram, row-status colours for the funnel) and exact spacing: the hi-fi.</li>
+<li>Exporting the report (JSON or PDF): not in EVAL-1.1; not designed.</li>
+<li>EVAL-1.2 task metrics (phase 2) reuse this layout with their own panels.</li>
+</ul>
+</main>
+</body>
+</html>

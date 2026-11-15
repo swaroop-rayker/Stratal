@@ -60,6 +60,26 @@ class BlobStore:
         finally:
             staging.unlink(missing_ok=True)
 
+    def put_bytes(self, data: bytes) -> StoredBlob:
+        """Store ``data`` under its hash. Writing bytes that are already stored adds nothing."""
+        sha256 = hashlib.sha256(data).hexdigest()
+        final = self.path_for(sha256)
+        if final.exists():
+            return StoredBlob(sha256, len(data), created=False)
+        self._tmp.mkdir(parents=True, exist_ok=True)
+        staging = self._tmp / f"blob-{uuid.uuid4().hex}"
+        try:
+            with staging.open("wb") as writer:
+                writer.write(data)
+                writer.flush()
+                os.fsync(writer.fileno())
+            final.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(staging, final)
+            final.chmod(0o444)
+            return StoredBlob(sha256, len(data), created=True)
+        finally:
+            staging.unlink(missing_ok=True)
+
     def total_bytes(self) -> int:
         """Bytes held by all blobs. Used by tests and disk audits."""
         if not self._root.exists():

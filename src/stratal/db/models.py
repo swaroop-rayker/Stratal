@@ -237,3 +237,17 @@ class ProcessSample(Base):
     torch_allocated_mb: Mapped[float | None] = mapped_column(REAL)
     torch_reserved_mb: Mapped[float | None] = mapped_column(REAL)
     torch_max_allocated_mb: Mapped[float | None] = mapped_column(REAL)
+
+
+class Derivation(Base):
+    """Content-addressed cache of expensive per-item results (ADR-0004, INV-11)."""
+
+    __tablename__ = "derivations"
+
+    kind: Mapped[str] = mapped_column(Text, primary_key=True)
+    input_hash: Mapped[str] = mapped_column(Text, primary_key=True)
+    params_hash: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[Any] = mapped_column(JSONB)
+    # No foreign key: a cached value outlives the job that made it.
+    created_by_job_id: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

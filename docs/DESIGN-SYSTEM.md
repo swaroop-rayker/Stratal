@@ -42,6 +42,7 @@ Rules:
 - **State colours and resource colours are reserved.** Blue-as-running and blue-as-CPU never appear in the same chart; state appears in pills and bars, resources in charts and tiles.
 - Paused shares its hue with warning, and failed with danger, on purpose: they ask for the same kind of attention. Stalled has its own (pink) so it is not mistaken for either.
 - The accent (violet) is not used for any state, severity or resource.
+- **Row statuses** (manifest rows, not jobs) use semantic colours: accepted `success`, rejected `danger`, duplicate `text-muted`, filtered `warning`. Always with the status word or its count beside them, and with a key where they appear as a bar. Approved with the SCR-02 mockup.
 - Soft backgrounds are the same hue at low opacity, so they work on any surface.
 
 **Measured contrast** (WCAG 2.1, against the three surfaces a colour can sit on; computed, not estimated):
@@ -118,7 +119,7 @@ All are in the preview with their variants and states. States shown where they a
 - **Live-updating numbers.** Tabular mono, fixed-width containers, right-aligned in tables. Values update in place with no animation of the digits. A value older than three sample intervals is dimmed to `text-muted`.
 - **Long-running jobs.** Always visible together: state pill, the current activity message in plain language, progress with percentage, rate and ETA, and the stage timeline. A requested cancel shows "Cancelling…" until the job has actually stopped (`desired_state`).
 - **Destructive actions.** A modal that names the object, says what is kept and what is lost, puts the safe choice first, and labels the destructive button with the verb and object ("Cancel job"), never "OK". Deleting data additionally requires typing the name.
-- **Keyboard.** Everything is reachable by Tab in reading order. Shortcuts are additions: `g d` / `g j` navigation, `/` filter, `j` / `k` rows, `Enter` open, `Esc` close, `a` / `r` accept and reject in review, `?` help.
+- **Keyboard.** Everything is reachable by Tab in reading order. Shortcuts are additions: `g d` / `g j` navigation, `g a` the active job, `t` theme, `/` filter, `j` / `k` rows, `Enter` open, `Esc` close, `a` / `r` accept and reject in review, `?` help.
 
 ## e) Accessibility
 
@@ -140,7 +141,7 @@ All are in the preview with their variants and states. States shown where they a
 
 ## Open points for the owner
 
-1. **Fonts.** The preview shows IBM Plex Sans and JetBrains Mono only if they are installed on the machine viewing it; on this laptop it currently falls back to Segoe UI and Cascadia Mono, so the type pairing you see is not the proposed one. To show the real fonts I need your OK to download the two families (about 1 MB, open licence, from their official GitHub releases) into the repository.
+1. **Fonts. Resolved 2026-11-15:** with the owner's OK, IBM Plex Sans (400, 500, 600) and JetBrains Mono (400, 500) are bundled in `assets/fonts/` as WOFF2 with their OFL licences (about 390 KB; sources and hashes in its README). The preview loads them from there; opened from disk in Edge it renders both. Firefox has not been tried and may refuse local font files from a parent folder, in which case the preview falls back and says so.
 2. **Accent colour.** Violet was chosen because it collides with no state, severity or resource colour. If you would rather have another hue, the constraint is the same.
 3. **Density.** 13 px default text and 36 px table rows (28 px dense). Say if you want it looser.
 
@@ -149,3 +150,10 @@ All are in the preview with their variants and states. States shown where they a
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-14 | First version, for Gate 0 review |
+| v1 (SCR-06) | 2026-11-15 | The chart icon joins the set. Approved with the SCR-06 hi-fi mockup |
+| v1 (SCR-05) | 2026-11-15 | The note icon joins the set. Approved with the SCR-05 hi-fi mockup |
+| v1 (SCR-03) | 2026-11-15 | Three icons join the set (eye, report, grid). Filters are a group of small buttons with a pressed state (accent-soft fill, accent border), since there is no chip component. Approved with the SCR-03 hi-fi mockup |
+| v1 (SCR-02) | 2026-11-15 | Row-status colour rule added; five icons join the set (plus, more, folder, copy, branch). Approved with the SCR-02 hi-fi mockup, where their definitions are |
+| v1 (icons) | 2026-11-15 | Seven icons join the set, drawn on its 16-px grid and stroke: datasets, jobs, health, theme, shortcuts, chevron-down, retry. Introduced and approved with the SCR-01 hi-fi mockup, where their definitions are |
+| v1 (shortcuts) | 2026-11-15 | `g a` (active job) and `t` (theme) added to the keyboard pattern; proposed in the SCR-01 low-fi wireframe and approved with it |
+| v1 (fonts) | 2026-11-15 | Not a new version: the approved typefaces are now bundled and the preview loads them. No token, size or component changed; the preview now shows the type the approval named instead of the fallback |

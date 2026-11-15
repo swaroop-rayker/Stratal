@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-07 jobs list (phase-1 slice) — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.select { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--fs-12); color: var(--text-primary); }
+.select svg.i { width: 12px; height: 12px; color: var(--text-secondary); } .select.is-disabled { opacity: .45; }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 40px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); }
+.pill.cancelled { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 400px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; } .toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.modal { width: 460px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; } .modal > header svg.i { color: var(--danger); }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); } .modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); max-width: 40ch; }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.grp { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-07 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.phead { display: flex; align-items: center; gap: var(--sp-3); } .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.t tr.sec td .count { margin-left: var(--sp-1); }
+.now { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.now .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.now .stg { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.now .progress { width: 72px; }
+.now.err .code { color: var(--danger); font-family: var(--font-mono); }
+.now.muted { color: var(--text-muted); }
+.now svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.t td.acts-cell { width: 120px; text-align: right; }
+.toasts { position: absolute; right: var(--sp-4); bottom: calc(28px + var(--sp-4)); z-index: var(--z-toast); }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+</svg>
+
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-07 — Jobs list (phase-1 slice) · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-07-lofi_v1.html</span>, approved 2026-11-15) inside the approved SCR-01 shell, using only design system v1 tokens and components. Open as <span class="mono">SCR-07_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>Everything is a reused component.</b> State pills, the table, the pressed button group with counts (SCR-03), the danger button, the destructive confirm and the toast (SCR-04). No new icons.</li>
+<li><b>Row actions are always visible on actionable rows</b> rather than only on hover, so they are reachable without a mouse and nothing jumps when the pointer moves. Rows with no action show nothing in that column.</li>
+<li><b>The "Now / outcome" column</b> uses the error colour only for the failure's code, the running-state colour only for the progress bar; the rest is secondary text, so the State column stays the one place to read state.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Populated: all jobs (dark)</h2>
+<div class="frame" style="height:720px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="grp">Data</div><a class="nav"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="grp">Jobs</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+    </nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b></div><span class="spacer"></span><span class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="stage">label</span><span class="num">13%</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content">
+      <div class="phead"><h1>Jobs</h1><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-branch"/></svg>Start a pipeline…</button></div>
+      <div class="toolbar">
+        <span class="group-btns" role="group" aria-label="State"><button class="btn sm" aria-pressed="true">All<span class="count">9</span></button><button class="btn sm">Active<span class="count">2</span></button><button class="btn sm">Failed<span class="count">1</span></button><button class="btn sm">Completed<span class="count">5</span></button><button class="btn sm">Cancelled<span class="count">1</span></button></span>
+        <span class="select">Dataset: any<svg class="i"><use href="#i-down"/></svg></span>
+        <span class="select is-disabled" title="Only pipeline jobs exist in phase 1">Kind: pipeline<svg class="i"><use href="#i-down"/></svg></span>
+        <span class="spacer"></span>
+        <span class="search"><svg class="i"><use href="#i-search"/></svg><span class="input">Job ID</span><kbd>/</kbd></span>
+      </div>
+      <div class="table-wrap"><table class="t">
+        <thead><tr><th>Job</th><th>State</th><th>Dataset</th><th>Now / outcome</th><th class="r">Attempt</th><th aria-sort="descending">Created <svg class="i" style="width:10px;height:10px"><use href="#i-sort"/></svg></th><th class="r">Duration</th><th></th></tr></thead>
+        <tbody>
+          <tr class="sec"><td colspan="8">Active<span class="count">2</span></td></tr>
+          <tr class="is-hover"><td class="id">job_0142</td><td><span class="pill running"><i class="pulse"></i>Running</span></td><td class="id">coco10k</td><td><span class="now"><span class="stg">label</span><span class="progress"><i style="--p:13%"></i></span><span class="num">13%</span>· ETA <span class="num">57m 33s</span></span></td><td class="r">1</td><td>13:54</td><td class="r">15m 43s</td><td class="acts-cell"><span class="acts"><button class="btn sm danger"><svg class="i"><use href="#i-ban"/></svg>Cancel</button></span></td></tr>
+          <tr><td class="id">job_0146</td><td><span class="pill queued"><svg class="i"><use href="#i-clock"/></svg>Queued</span></td><td class="id">birds2k</td><td><span class="now muted">waiting for the gpu worker · <span class="mono">job_0142</span> holds the GPU</span></td><td class="r">0</td><td>14:40</td><td class="r">1m 12s</td><td class="acts-cell"><span class="acts"><button class="btn sm danger"><svg class="i"><use href="#i-ban"/></svg>Cancel</button></span></td></tr>
+          <tr class="sec"><td colspan="8">Finished<span class="count">7</span></td></tr>
+          <tr><td class="id">job_0147</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span></td><td class="id">coco10k</td><td><span class="now"><svg class="i"><use href="#i-report"/></svg>report <span class="mono">#12</span> for <span class="mono">ds_b0c3e5a8d217</span></span></td><td class="r">1</td><td>15:43</td><td class="r">38 s</td><td></td></tr>
+          <tr aria-selected="true"><td class="id">job_0145</td><td><span class="pill failed"><svg class="i"><use href="#i-x"/></svg>Failed</span></td><td class="id">coco10k</td><td><span class="now err"><span class="code">gpu_oom</span> in <span class="stg">label</span> · CUDA out of memory at batch 43/298</span></td><td class="r">1</td><td>14:26</td><td class="r">4m 51s</td><td class="acts-cell"><span class="acts"><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></span></td></tr>
+          <tr><td class="id">job_0141</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span></td><td class="id">demo</td><td><span class="now"><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_389dd9b94119</span></span></td><td class="r">2</td><td>13:20</td><td class="r">4m 12s</td><td></td></tr>
+          <tr><td class="id">job_0140</td><td><span class="pill cancelled"><svg class="i"><use href="#i-ban"/></svg>Cancelled</span></td><td class="id">birds2k</td><td><span class="now muted">cancelled by you in <span class="stg">clean</span> · 1 version kept</span></td><td class="r">1</td><td>12:58</td><td class="r">2m 03s</td><td></td></tr>
+          <tr><td class="id">job_0139</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span></td><td class="id">scans</td><td><span class="now"><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_5a90c3e1f27d</span>· 0 of 214 accepted</span></td><td class="r">1</td><td>09:12</td><td class="r">21 s</td><td></td></tr>
+          <tr><td class="id">job_0131</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span></td><td class="id">coco10k</td><td><span class="now"><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_7f3a9c21b04e</span></span></td><td class="r">1</td><td>Nov 14</td><td class="r">7m 02s</td><td></td></tr>
+          <tr><td class="id">job_0127</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span></td><td class="id">coco10k</td><td><span class="now"><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_0b1f9e77a3c4</span></span></td><td class="r">1</td><td>Nov 14</td><td class="r">6m 48s</td><td></td></tr>
+        </tbody></table></div>
+      <p class="cap" style="margin:0">Showing 9 of 9 · older jobs load as you scroll</p>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>7.2</b><small>/ 10.0 GB</small></span><span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>94%</b></span><span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>3.9</b><small>/ 6.0 GB</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+  <span class="n" style="left:1176px;top:42px">1</span>
+  <span class="n" style="left:206px;top:104px">2</span>
+  <span class="n" style="left:206px;top:146px">3</span>
+  <span class="n" style="left:206px;top:178px">4</span>
+  <span class="n" style="left:640px;top:200px">5</span>
+  <span class="n" style="left:1250px;top:200px">6</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Start a pipeline</td><td>Secondary; opens the Start pipeline drawer approved on SCR-02</td><td>–</td><td>–</td></tr>
+<tr><td><span class="n">2</span></td><td>Filters</td><td>State group with counts; dataset; kind (disabled, pipeline only in phase 1); job-ID search (<kbd>/</kbd>). In the URL</td><td><span class="mono">GET /jobs?state=&amp;dataset=&amp;kind=</span>, <span class="mono">counts</span> (planned additions)</td><td>counts live</td></tr>
+<tr><td><span class="n">3</span></td><td>Columns</td><td>Job, State, Dataset, Now / outcome, Attempt, Created (sorted), Duration, actions</td><td>–</td><td>–</td></tr>
+<tr><td><span class="n">4</span></td><td>Active</td><td>Running and queued pinned above Finished</td><td><span class="mono">GET /jobs?state=running,queued</span></td><td>live</td></tr>
+<tr><td><span class="n">5</span></td><td>Now / outcome</td><td>Running: stage, progress, ETA. Queued: what it waits for. Failed: code, stage, reason. Completed: output version or report. Cancelled: where and what was kept</td><td>job view fields</td><td>live</td></tr>
+<tr><td><span class="n">6</span></td><td>Row actions</td><td>Cancel (frame C), Retry; row click or <kbd>Enter</kbd> opens SCR-04; <kbd>j</kbd> <kbd>k</kbd> move</td><td><span class="mono">POST /jobs/{id}/cancel</span>, <span class="mono">/retry</span></td><td>–</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:330px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Jobs</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b></div></header>
+    <main class="content">
+      <div class="toolbar"><span class="group-btns"><button class="btn sm" aria-pressed="true">All<span class="count">9</span></button><button class="btn sm">Active<span class="count">2</span></button><button class="btn sm">Failed<span class="count">1</span></button></span></div>
+      <div class="table-wrap"><table class="t"><thead><tr><th>Job</th><th>State</th><th>Now / outcome</th><th class="r">Duration</th><th></th></tr></thead><tbody>
+        <tr><td class="id">job_0142</td><td><span class="pill running"><i class="pulse"></i>Running</span></td><td><span class="now"><span class="stg">label</span><span class="progress"><i style="--p:13%"></i></span><span class="num">13%</span></span></td><td class="r">15m 43s</td><td class="acts-cell"><span class="acts"><button class="btn sm danger"><svg class="i"><use href="#i-ban"/></svg>Cancel</button></span></td></tr>
+        <tr><td class="id">job_0145</td><td><span class="pill failed"><svg class="i"><use href="#i-x"/></svg>Failed</span></td><td><span class="now err"><span class="code">gpu_oom</span> in <span class="stg">label</span></span></td><td class="r">4m 51s</td><td class="acts-cell"><span class="acts"><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></span></td></tr>
+        <tr><td class="id">job_0140</td><td><span class="pill cancelled"><svg class="i"><use href="#i-ban"/></svg>Cancelled</span></td><td><span class="now muted">cancelled in <span class="stg">clean</span></span></td><td class="r">2m 03s</td><td></td></tr>
+      </tbody></table></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div></div>
+
+<!-- ===================================================================== B -->
+<h2>B · Filtered to Failed, and a filter with no matches</h2>
+<div style="display:flex;gap:var(--sp-4)">
+<div class="frame" style="height:220px;width:632px"><div style="padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+  <span class="group-btns"><button class="btn sm">All<span class="count">9</span></button><button class="btn sm">Active<span class="count">2</span></button><button class="btn sm" aria-pressed="true">Failed<span class="count">1</span></button><button class="btn sm">Completed<span class="count">5</span></button></span>
+  <div class="table-wrap"><table class="t"><tbody><tr><td class="id">job_0145</td><td><span class="pill failed"><svg class="i"><use href="#i-x"/></svg>Failed</span></td><td><span class="now err"><span class="code">gpu_oom</span> in <span class="stg">label</span></span></td><td class="acts-cell"><span class="acts"><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></span></td></tr></tbody></table></div></div></div>
+<div class="frame" style="height:220px;width:632px"><div style="padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+  <div class="toolbar"><span class="group-btns"><button class="btn sm">All<span class="count">9</span></button><button class="btn sm" aria-pressed="true">Cancelled<span class="count">1</span></button></span><span class="select">Dataset: demo<svg class="i"><use href="#i-down"/></svg></span></div>
+  <div class="state" style="padding:var(--sp-4)"><b>No cancelled jobs for demo</b><p>1 cancelled job in other datasets.</p><button class="btn sm"><svg class="i"><use href="#i-x"/></svg>Clear filters</button></div></div></div>
+</div>
+
+<!-- ===================================================================== C -->
+<h2>C · Cancel a queued job, and a retry that started</h2>
+<div class="frame" style="height:320px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b></div></header>
+    <main class="content"></main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <div class="scrim"><div class="modal" role="alertdialog" aria-label="Cancel job_0146?"><header><svg class="i"><use href="#i-alert"/></svg>Cancel job_0146?</header><div>It has not started: <b>nothing is lost</b> and nothing was made. A running job would instead stop at its next safe point and keep its finished stages, as on SCR-04.</div><footer><button class="btn is-focus">Keep it queued</button><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></footer></div></div>
+  <div class="toasts"><div class="toast" role="status" style="--c:var(--info)"><svg class="i"><use href="#i-refresh"/></svg><div><b><span class="mono">job_0145</span> queued again · attempt 2</b><span>The 1,344 captions already made are reused.</span><div style="margin-top:var(--sp-2)"><button class="btn sm ghost">Open<svg class="i"><use href="#i-chevron"/></svg></button></div></div></div></div>
+</div>
+<p class="cap">The dialog's wording follows the job's state. After Retry the row moves to Active as Queued, attempt 2, and the toast links to it.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Empty, loading and error</h2>
+<div class="frame" style="height:310px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b></div><span class="spacer"></span><span class="jobind idle"><span class="pill" style="--c:var(--text-muted)"><svg class="i"><use href="#i-clock"/></svg>Idle</span></span></header>
+    <main class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-4);align-content:start">
+      <div class="state" style="height:190px"><svg class="i"><use href="#i-list"/></svg><b>No jobs yet</b><p>Jobs appear here when you ingest a folder or continue from a version.</p><button class="btn sm primary"><svg class="i"><use href="#i-db"/></svg>Go to datasets</button></div>
+      <div style="display:flex;flex-direction:column;gap:var(--sp-3);padding-top:var(--sp-2)" aria-busy="true"><span class="skeleton" style="width:220px;height:22px"></span><span class="skeleton" style="height:28px"></span><span class="skeleton" style="height:28px"></span><span class="skeleton" style="height:28px"></span></div>
+      <div class="state err" role="alert" style="height:190px"><svg class="i"><use href="#i-alert"/></svg><b>Jobs could not be loaded</b><span class="badge err">dependency_unavailable</span><p>Postgres is unreachable. <b style="color:var(--text-primary)">Do</b> check the postgres container, then retry.</p><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></div>
+    </main>
+    <footer class="status"><span class="m conn">connecting…</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== E -->
+<h2>E · 1024 px</h2>
+<div class="frame compact" style="height:300px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center"><div class="brand" style="padding:0"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav"><svg class="i"><use href="#i-db"/></svg></a><a class="nav" aria-current="page"><svg class="i"><use href="#i-list"/></svg></a></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b></div></header>
+    <main class="content">
+      <div class="toolbar"><span class="group-btns"><button class="btn sm" aria-pressed="true">All<span class="count">9</span></button><button class="btn sm">Active<span class="count">2</span></button><button class="btn sm">Failed<span class="count">1</span></button><button class="btn sm">More<svg class="i"><use href="#i-down"/></svg></button></span></div>
+      <div class="table-wrap"><table class="t"><thead><tr><th>Job</th><th>State</th><th>Now / outcome</th><th class="r">Duration</th><th></th></tr></thead><tbody>
+        <tr><td class="id">job_0142</td><td><span class="pill running"><i class="pulse"></i>Running</span></td><td><span class="now"><span class="stg">label</span><span class="num">13%</span>· ETA 57m</span></td><td class="r">15m 43s</td><td class="acts-cell"><span class="acts"><button class="btn sm danger"><svg class="i"><use href="#i-ban"/></svg>Cancel</button></span></td></tr>
+        <tr><td class="id">job_0145</td><td><span class="pill failed"><svg class="i"><use href="#i-x"/></svg>Failed</span></td><td><span class="now err"><span class="code">gpu_oom</span> in <span class="stg">label</span></span></td><td class="r">4m 51s</td><td class="acts-cell"><span class="acts"><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></span></td></tr>
+      </tbody></table></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>The table is a grid; each row is one focusable unit (<kbd>j</kbd>/<kbd>k</kbd>, <kbd>Enter</kbd> opens). Row actions are real buttons inside the row, reached with Tab.</li>
+<li>State changes in the list are announced politely once ("job_0145 failed"); the list itself is not a live region, so updating progress is not read out.</li>
+<li>The state filter is a toggle group; each button's name includes its count ("Failed, 1 job").</li>
+</ul>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>

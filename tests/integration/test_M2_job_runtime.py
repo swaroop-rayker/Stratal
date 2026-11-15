@@ -131,6 +131,7 @@ def test_MON_3_1_ingestion_and_staging_emit_their_messages_and_metrics(
             "dataset": "mon31",
             "source": {"kind": "folder", "path": str(folder.root)},
             "stages": {"ingest": {"min_size": 32}},
+            "until_stage": "ingest",
         },
     )
     assert response.status_code == 202, response.text

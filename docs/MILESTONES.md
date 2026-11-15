@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 next, waiting on OC-3. G0 approved 2026-11-15; G1 in review |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 waits on the phase-1 dataset and the model-weight downloads. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -20,7 +20,7 @@
 | M0 | Environment proof, skeleton, docs | 1 | M | Done 2026-11-14 |
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
-| M3 | Cleaning and preprocessing | 1 | M | Not started |
+| M3 | Cleaning and preprocessing | 1 | M | Done 2026-11-15 |
 | M4 | Labeling | 1 | L | Not started |
 | M5 | Splits, review, eval report | 1 | M | Not started |
 | M6 | Phase-1 screens | 1 | L | Not started |
@@ -48,13 +48,14 @@ No UI is implemented before its design is approved (SPEC §9.2). The gates wait 
 Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" passes a gate.
 
 - [x] G0 approved (v1, 2026-11-15)
-- [ ] G1 approved
-- [ ] G2 approved: SCR-01
-- [ ] G2 approved: SCR-02
-- [ ] G2 approved: SCR-03
-- [ ] G2 approved: SCR-04
-- [ ] G2 approved: SCR-05
-- [ ] G2 approved: SCR-06
+- [x] G1 approved (v1, 2026-11-15)
+- [x] G2 approved: SCR-01 (low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-01_v1.html`)
+- [x] G2 approved: SCR-02 (low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-02_v1.html`)
+- [x] G2 approved: SCR-03 (low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-03_v1.html`)
+- [x] G2 approved: SCR-04 (low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-04_v1.html`)
+- [x] G2 approved: SCR-05 (low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-05_v1.html`)
+- [x] G2 approved: SCR-06 (low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-06_v1.html`)
+- [x] G2 approved: SCR-07 phase-1 slice (added by the owner's choice on SCREENS.md open point 1; low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-07_v1.html`)
 
 ---
 
@@ -89,7 +90,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] Demo: stack up, health endpoint, GPU check output (shown in the session of 2026-11-13)
 - [x] Owner's OK to merge into `main` ("go ahead and finish M0", 2026-11-14)
 
-**Carried forward, not blocking:** the Mermaid diagrams in ARCHITECTURE.md and DATA_MODEL.md have not been rendered, and the CI workflow has never run because there is no remote.
+**Carried forward, not blocking:** the Mermaid diagrams in ARCHITECTURE.md and DATA_MODEL.md have not been rendered. The CI workflow first ran on 2026-11-15, when `main` was pushed to GitHub, and was rejected for a workflow-file error (`runner.temp` in job-level `env`); the fix is on `m3-clean-preprocess` and is verified when M3 reaches `main`.
 
 ## M1 — Ingestion, manifests, versions, lineage
 
@@ -168,25 +169,31 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** M · **Branch** `m3-clean-preprocess` · **Serves** DATA-2.1, DATA-2.2, DATA-6.1, MON-3.1 (cleaning, preprocessing); BUG1
 
-**Before starting:** open clarification OC-3 (preprocess size) confirmed.
+**Before starting:** open clarification OC-3 (preprocess size) confirmed. **Done 2026-11-15:** 768 px, accepted by the owner.
 
 **Scope**
 
 - Clean stage shell; pHash values kept in the derivation cache.
-- 👤 Exact-duplicate grouping (DATA-2.1) and near-duplicate detection with a chosen threshold (DATA-2.2, OC-5).
+- Exact-duplicate grouping (DATA-2.1) and near-duplicate detection (DATA-2.2). Owner units, written by the agent at the owner's request on 2026-11-15 (ADR-0012). 👤 The threshold is the owner's: 8, chosen 2026-11-15 (OC-5).
 - Preprocess stage: resize, apply EXIF orientation, convert to RGB, store the copy.
+- Carried from M2: `from_version` in the pipeline request.
+
+**Agent's part built 2026-11-15:** stubs, strict expected-failure tests and fakes for DATA-2.1 and DATA-2.2 (`src/stratal/data/dedupe.py`; 16 tests in `tests/unit/test_DATA_2_1_*.py` and `test_DATA_2_2_*.py`); the clean shell; the preprocess stage; the derivation cache; stage memoization; `from_version`.
+
+**DATA-2.1 and DATA-2.2 written 2026-11-15** by the agent, at the owner's request ("you write it"). The expected-failure markers are removed and the 16 contract tests pass. Twelve more tests (`test_DATA_2_dedupe_decisions.py`) pin the choices the contract left open: the keepers, transitive grouping, unusual image modes, the threshold's edges. An integration test runs the real units in a pipeline job. The owner accepted the threshold of 8 on 2026-11-15 from the measured distances in DECISIONS.md.
 
 **Done when**
 
-- [ ] 👤 `test_DATA_2_1_*`: 20 planted exact copies are marked, one kept per group
-- [ ] 👤 `test_DATA_2_2_*`: the same image at JPEG 90 and 70 leaves one kept
-- [ ] `test_DATA_6_1_*`: copies exist and respect the maximum; originals kept; a rerun adds nothing; a new maximum gives a new version ID
-- [ ] `test_MON_3_1_*`: cleaning and preprocessing emit their listed messages and metrics
-- [ ] `test_BUG1_*`: every stage's output reloads by version ID and equals what was written
-- [ ] Invariant INV-05 holds after clean
-- [ ] Demo: ingest → clean → preprocess as one pipeline job
-- [ ] Docs updated
-- [ ] Owner's OK to merge
+- [x] `test_DATA_2_1_*`: 20 planted exact copies are marked, one kept per group (units written by the agent at the owner's request)
+- [x] `test_DATA_2_2_*`: the same image at JPEG 90 and 70 leaves one kept (same; at the chosen threshold of 8)
+- [x] 👤 Near-duplicate threshold chosen from the measured distances (OC-5): 8, accepted by the owner 2026-11-15 (`test_DATA_2_2_default_threshold_is_the_owners_choice`)
+- [x] `test_DATA_6_1_*`: copies exist and respect the maximum; originals kept; a rerun adds nothing; a new maximum gives a new version ID
+- [x] `test_MON_3_1_*`: cleaning and preprocessing emit their listed messages and metrics (the clean stage's with fakes for the owner's units)
+- [x] `test_BUG1_*`: every stage's output reloads by version ID and equals what was written
+- [x] Invariant INV-05 holds after clean: the stage refuses to commit a version that breaks it (`test_INV_05_*`)
+- [x] Demo: ingest → clean → preprocess as one pipeline job (2026-11-15, `job_0005` on the live stack). 595 planted files in `sources/demo-m3`: 580 ingested; 20 exact and 20 near duplicates marked, with every JPEG 90 kept over its JPEG 70; 540 copies at ≤ 768 px. Final version `ds_ad9a39e33ab5`
+- [x] Docs updated (2026-11-15, including the OC-5 choice; learning notes §5e and §20)
+- [x] Owner's OK to merge (2026-11-15, "Yes, merge and push")
 
 ## M4 — Labeling
 
@@ -252,12 +259,13 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** L · **Branch** `m6-phase1-ui` · **Serves** MON-4.1, MON-4.2, MON-4.3, the phase-1 slice of UI-2.1; screens for DATA-3, LABEL-1.5, EVAL-1.1
 
-**Before starting:** G0, G1 and G2 approved for SCR-01 to SCR-06.
+**Before starting:** G0, G1 and G2 approved for SCR-01 to SCR-06 and the SCR-07 slice.
 
 **Scope**
 
 - Frontend scaffold with the stack in SPEC §7.4; tokens from the approved design system; generated TypeScript client.
 - SCR-01 app shell, SCR-02 datasets and versions, SCR-03 version detail and lineage, SCR-04 live job view, SCR-05 labeling review, SCR-06 eval report.
+- SCR-07 phase-1 slice: jobs list with state and kind filters, open, cancel, retry (owner's choice, 2026-11-15; uses the phase-1 slice of RUN-1.1 and RUN-1.2 already built in M2).
 
 **Done when**
 

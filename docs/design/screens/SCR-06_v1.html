@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-06 eval report — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --seq-1: #1b2440; --seq-2: #27356a; --seq-3: #374a96; --seq-4: #4d64c0; --seq-5: #6f86e0; --seq-6: #9fb0f2; --seq-7: #d3dcfb;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px; --fs-32: 32px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --seq-1: #e4e9fb; --seq-2: #c2cdf5; --seq-3: #9aabec; --seq-4: #7087de; --seq-5: #4d64c8; --seq-6: #3548a3; --seq-7: #222f72;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton, .spinner { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 32px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.panel .t th, .panel .t td { padding-left: var(--sp-2); padding-right: var(--sp-2); }
+.t td.code { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-secondary); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.running { --c: var(--state-running); } .pill.failed { --c: var(--state-failed); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 8px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); max-width: 52ch; }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; } .crumbs .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); font: var(--fs-12) var(--font-ui); background: transparent; color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-06 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.rhead { display: flex; align-items: center; gap: var(--sp-3); }
+.rhead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); line-height: var(--lh-tight); } .rhead h1 .mono { font-size: var(--fs-16); color: var(--text-secondary); }
+.rhead .sub { color: var(--text-muted); font-size: var(--fs-12); display: inline-flex; gap: var(--sp-1); align-items: center; } .rhead .sub .mono { color: var(--text-secondary); } .rhead .sub svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.heads { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+.head { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--border)); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: 2px; }
+.head .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.head .v { font: var(--fw-medium) var(--fs-32)/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.head .v small { font-size: var(--fs-14); color: var(--text-muted); font-weight: var(--fw-regular); }
+.head .d { font-size: var(--fs-12); color: var(--text-muted); } .head .d .mono { color: var(--text-secondary); }
+.head.none .v { font-family: var(--font-ui); font-size: var(--fs-20); color: var(--text-muted); }
+.ci { position: relative; height: 22px; margin-top: var(--sp-1); }
+.ci .axis { position: absolute; left: 0; right: 0; top: 10px; height: 1px; background: var(--border-strong); }
+.ci .tick { position: absolute; top: 6px; width: 1px; height: 9px; background: var(--border-strong); }
+.ci .range { position: absolute; top: 5px; height: 11px; border-radius: var(--r-xs); background: color-mix(in srgb, var(--success) 30%, transparent); border: var(--bw) solid var(--success); }
+.ci .pt { position: absolute; top: 2px; width: 3px; height: 17px; margin-left: -1px; border-radius: var(--r-xs); background: var(--text-primary); }
+.ci-scale { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); min-height: 0; }
+.panel { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.panel > header { display: flex; align-items: center; gap: var(--sp-2); }
+.panel > header h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); } .panel > header .sub { font-size: var(--fs-11); color: var(--text-muted); }
+.funnel { display: flex; flex-direction: column; gap: var(--sp-1); }
+.fhead, .frow { display: grid; grid-template-columns: 78px 1fr 56px 96px 92px; gap: var(--sp-2); align-items: center; }
+.fhead { font-size: var(--fs-11); letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.frow { font-size: var(--fs-12); height: 24px; }
+.frow .st { color: var(--text-secondary); font-family: var(--font-mono); }
+.frow .kept { height: 14px; border-radius: var(--r-xs); background: color-mix(in srgb, var(--success) 35%, transparent); border: var(--bw) solid color-mix(in srgb, var(--success) 60%, transparent); }
+.frow .kept.raw { background: var(--surface-raised); border-color: var(--border-strong); }
+.frow .num { text-align: right; color: var(--text-primary); }
+.frow .rm { height: 10px; border-radius: var(--r-xs); background: var(--c); }
+.frow .rmtxt { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); white-space: nowrap; } .frow .rmtxt.zero { color: var(--text-muted); }
+.fkey { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-muted); } .fkey i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); margin-right: var(--sp-1); vertical-align: middle; }
+.hist svg { display: block; width: 100%; height: 170px; }
+.hx { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.ptext { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); } .ptext b { color: var(--text-primary); }
+.callout { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface-raised); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-secondary); }
+.callout b { color: var(--text-primary); } .callout svg.i { color: var(--accent); }
+.callout.warn { background: var(--warning-soft); border-color: color-mix(in srgb, var(--warning) 45%, transparent); } .callout.warn svg.i { color: var(--warning); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 16 16"><path d="M2.5 13.5h11M4.5 11V8M8 11V4.5M11.5 11V6.5"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+</svg>
+
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-06 — Eval report · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-06-lofi_v1.html</span>, approved 2026-11-15) inside the approved SCR-01 shell, using only design system v1 tokens and components. Charts are static SVG here; the real screen uses ECharts with the same tokens. The figures are computed by the owner's report unit (API.md §5); this screen only shows them. Open as <span class="mono">SCR-06_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>Losses made visible without bending the axis.</b> Each funnel row keeps its kept-rows bar on a true 0–10,000 scale, and adds a second bar for what that stage removed, on its own scale (largest loss = full width), in the row-status colour: rejected red, duplicate grey, filtered amber. This answers the weakness noted in the low-fi.</li>
+<li><b>Histogram</b>: one colour from the sequential palette for the kept bins; bins below the threshold in danger, over a danger-soft band; the threshold itself a dashed warning line, as on SCR-05.</li>
+<li><b>Interval</b>: a success-tinted range on a 0–100% axis with ticks at 0, 50 and 100, the point estimate as a solid bar.</li>
+<li><b>Headline cards</b> carry a left edge only where colour means something: kept (success), filter rate (warning). Acceptance stays neutral; its interval carries the colour.</li>
+<li><b>One new icon</b> (chart), for the Chart/Table switch with the existing grid icon.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · A report with all four parts (dark)</h2>
+<div class="frame" style="height:880px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="group">Data</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="group">Jobs</div><a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+    </nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_b0c3e5a8d217</span><svg class="i"><use href="#i-chevron"/></svg>report</div><span class="spacer"></span><span class="jobind"><span class="pill" style="--c:var(--text-muted)"><svg class="i"><use href="#i-clock"/></svg>Idle</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content">
+      <div class="rhead"><h1>Eval report <span class="mono">ds_b0c3e5a8d217</span></h1><span class="badge">phase1_dataset</span><span class="sub">#12 · built 15:44 by <span class="mono">job_0147</span><svg class="i" aria-label="completed"><use href="#i-check"/></svg>· review <span class="mono">rev_0007</span></span><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-db"/></svg>Open version</button><button class="btn"><svg class="i"><use href="#i-refresh"/></svg>Rebuild</button></div>
+      <div class="heads">
+        <div class="head" style="--c:var(--success)"><span class="k">Rows kept</span><span class="v">9,431</span><span class="d">of 10,000 raw · 94.3% · after 5 stages</span></div>
+        <div class="head" style="--c:var(--warning)"><span class="k">Filter rate</span><span class="v">0.85<small>%</small></span><span class="d">81 of 9,512 captioned rows below CLIP <span class="mono">0.20</span></span></div>
+        <div class="head"><span class="k">Review acceptance</span><span class="v">92.0<small>%</small></span><span class="d">46 of 50 · 95% Wilson interval <span class="mono">81.2% – 96.8%</span></span>
+          <div class="ci" role="img" aria-label="Interval 81.2 to 96.8 percent, estimate 92.0 percent"><span class="axis"></span><span class="tick" style="left:0"></span><span class="tick" style="left:50%"></span><span class="tick" style="left:calc(100% - 1px)"></span><span class="range" style="left:81.2%;width:15.6%"></span><span class="pt" style="left:92%"></span></div>
+          <div class="ci-scale"><span>0%</span><span>50%</span><span>100%</span></div></div>
+      </div>
+      <div class="grid2">
+        <section class="panel" aria-label="Rows by stage">
+          <header><h2>Rows by stage</h2><span class="sub">rejections per stage</span><span class="spacer"></span><span class="group-btns"><button class="btn sm" aria-pressed="true"><svg class="i"><use href="#i-chart"/></svg>Chart</button><button class="btn sm"><svg class="i"><use href="#i-grid"/></svg>Table</button></span></header>
+          <div class="funnel">
+            <div class="fhead"><span>Stage</span><span>Kept rows</span><span style="text-align:right">Kept</span><span>Removed</span><span></span></div>
+            <div class="frow"><span class="st">raw</span><span class="kept raw" style="width:100%"></span><span class="num">10,000</span><span></span><span></span></div>
+            <div class="frow"><span class="st">ingest</span><span class="kept" style="width:98.52%"></span><span class="num">9,852</span><span class="rm" style="--c:var(--danger);width:43.5%"></span><span class="rmtxt">−148 rejected</span></div>
+            <div class="frow"><span class="st">clean</span><span class="kept" style="width:95.12%"></span><span class="num">9,512</span><span class="rm" style="--c:var(--text-muted);width:100%"></span><span class="rmtxt">−340 duplicate</span></div>
+            <div class="frow"><span class="st">preprocess</span><span class="kept" style="width:95.12%"></span><span class="num">9,512</span><span></span><span class="rmtxt zero">−0</span></div>
+            <div class="frow"><span class="st">label</span><span class="kept" style="width:95.12%"></span><span class="num">9,512</span><span></span><span class="rmtxt zero">−0</span></div>
+            <div class="frow"><span class="st">filter</span><span class="kept" style="width:94.31%"></span><span class="num">9,431</span><span class="rm" style="--c:var(--warning);width:23.8%"></span><span class="rmtxt">−81 filtered</span></div>
+          </div>
+          <div class="fkey"><span><i style="--c:var(--success)"></i>kept</span><span><i style="--c:var(--danger)"></i>rejected</span><span><i style="--c:var(--text-muted)"></i>duplicate</span><span><i style="--c:var(--warning)"></i>filtered</span><span>removed: own scale, max 340</span></div>
+          <div class="table-wrap"><table class="t"><thead><tr><th>Removed at</th><th>Reason</th><th class="r">Rows</th><th class="r">Share</th></tr></thead><tbody>
+            <tr><td>ingest</td><td class="code">corrupt_image</td><td class="r">97</td><td class="r">0.97%</td></tr>
+            <tr><td>ingest</td><td class="code">below_min_size</td><td class="r">43</td><td class="r">0.43%</td></tr>
+            <tr><td>ingest</td><td class="code">unsupported_format</td><td class="r">8</td><td class="r">0.08%</td></tr>
+            <tr><td>clean</td><td class="code">exact_duplicate · near_duplicate</td><td class="r">212 · 128</td><td class="r">3.40%</td></tr>
+            <tr><td>filter</td><td class="code">clip_below_threshold</td><td class="r">81</td><td class="r">0.81%</td></tr>
+          </tbody></table></div>
+        </section>
+        <section class="panel" aria-label="CLIP score distribution">
+          <header><h2>CLIP score distribution</h2><span class="sub">9,512 captioned rows</span><span class="spacer"></span><span class="group-btns"><button class="btn sm" aria-pressed="true"><svg class="i"><use href="#i-chart"/></svg>Chart</button><button class="btn sm"><svg class="i"><use href="#i-grid"/></svg>Table</button></span></header>
+          <div class="hist" role="img" aria-label="Histogram of CLIP scores; 81 rows below the threshold 0.20; mean 0.293"><svg viewBox="0 0 200 100" preserveAspectRatio="none">
+            <rect x="0" y="0" width="80" height="100" fill="var(--danger-soft)"/>
+            <line x1="0" y1="50" x2="200" y2="50" stroke="var(--border)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+            <g fill="var(--danger)"><rect x="50.5" y="99.6" width="9" height="0.4"/><rect x="60.5" y="99.4" width="9" height="0.6"/><rect x="70.5" y="97" width="9" height="3"/></g>
+            <g fill="var(--seq-5)"><rect x="80.5" y="87" width="9" height="13"/><rect x="90.5" y="63" width="9" height="37"/><rect x="100.5" y="26" width="9" height="74"/><rect x="110.5" y="0" width="9" height="100"/><rect x="120.5" y="6" width="9" height="94"/><rect x="130.5" y="36" width="9" height="64"/><rect x="140.5" y="71" width="9" height="29"/><rect x="150.5" y="91" width="9" height="9"/><rect x="160.5" y="98" width="9" height="2"/><rect x="170.5" y="99.6" width="9" height="0.4"/></g>
+            <line x1="80" y1="0" x2="80" y2="100" stroke="var(--warning)" stroke-width="2" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"/>
+            <line x1="117.2" y1="0" x2="117.2" y2="100" stroke="var(--text-secondary)" stroke-width="1" stroke-dasharray="2 3" vector-effect="non-scaling-stroke"/>
+          </svg></div>
+          <div class="hx"><span>0.00</span><span>0.10</span><span style="color:var(--warning)">0.20 threshold</span><span>0.30</span><span>0.40</span><span>0.50</span></div>
+          <div class="fkey"><span><i style="--c:var(--seq-5)"></i>kept</span><span><i style="--c:var(--danger)"></i>filtered (below 0.20)</span><span>dotted line: mean 0.293 · median 0.295</span></div>
+          <p class="ptext"><b>81 rows (0.85%)</b> fell below the threshold of 0.20 and were filtered (LABEL-1.4). The red band is what the filter removed.</p>
+          <div class="callout"><svg class="i"><use href="#i-eye"/></svg><span>The review drew 50 rows from the 9,431 kept: <b>46 accepted</b>, 4 rejected.</span><span class="spacer"></span><button class="btn sm ghost">Open rev_0007<svg class="i"><use href="#i-chevron"/></svg></button></div>
+        </section>
+      </div>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>6%</b></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s idle</span></footer>
+  </div>
+  <span class="n" style="left:206px;top:60px">1</span>
+  <span class="n" style="left:206px;top:110px">2</span>
+  <span class="n" style="left:226px;top:250px">3</span>
+  <span class="n" style="left:770px;top:250px">4</span>
+  <span class="n" style="left:1244px;top:100px">5</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Header</td><td>Version, kind, report number, build time and job, review used; Open version, Rebuild</td><td><span class="mono">GET /versions/{id}/reports/latest?kind=phase1_dataset</span> (planned)</td><td>–</td></tr>
+<tr><td><span class="n">2</span></td><td>Headline figures</td><td>Rows kept; filter rate; acceptance with the 95% Wilson interval drawn</td><td>report body</td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Rows by stage</td><td>Kept rows on a true scale; removed rows per stage on their own scale in row-status colours; reasons table</td><td>report body</td><td>–</td></tr>
+<tr><td><span class="n">4</span></td><td>CLIP distribution</td><td>Histogram, threshold, filtered band, mean and median; filter rate in words</td><td>report body</td><td>–</td></tr>
+<tr><td><span class="n">5</span></td><td>Acceptance</td><td>Rate, counts, interval; link to the review</td><td>report body; <span class="mono">GET /reviews/{id}</span></td><td>–</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:520px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>…<svg class="i"><use href="#i-chevron"/></svg>report</div></header>
+    <main class="content">
+      <div class="heads">
+        <div class="head" style="--c:var(--success)"><span class="k">Rows kept</span><span class="v">9,431</span><span class="d">of 10,000 raw · 94.3%</span></div>
+        <div class="head" style="--c:var(--warning)"><span class="k">Filter rate</span><span class="v">0.85<small>%</small></span><span class="d">81 of 9,512 below 0.20</span></div>
+        <div class="head"><span class="k">Review acceptance</span><span class="v">92.0<small>%</small></span><div class="ci"><span class="axis"></span><span class="tick" style="left:0"></span><span class="tick" style="left:50%"></span><span class="tick" style="left:calc(100% - 1px)"></span><span class="range" style="left:81.2%;width:15.6%"></span><span class="pt" style="left:92%"></span></div><div class="ci-scale"><span>0%</span><span>50%</span><span>100%</span></div></div>
+      </div>
+      <div class="grid2">
+        <section class="panel"><header><h2>Rows by stage</h2></header><div class="funnel">
+          <div class="frow"><span class="st">ingest</span><span class="kept" style="width:98.52%"></span><span class="num">9,852</span><span class="rm" style="--c:var(--danger);width:43.5%"></span><span class="rmtxt">−148 rejected</span></div>
+          <div class="frow"><span class="st">clean</span><span class="kept" style="width:95.12%"></span><span class="num">9,512</span><span class="rm" style="--c:var(--text-muted);width:100%"></span><span class="rmtxt">−340 duplicate</span></div>
+          <div class="frow"><span class="st">filter</span><span class="kept" style="width:94.31%"></span><span class="num">9,431</span><span class="rm" style="--c:var(--warning);width:23.8%"></span><span class="rmtxt">−81 filtered</span></div></div></section>
+        <section class="panel"><header><h2>CLIP score distribution</h2></header><div class="hist"><svg viewBox="0 0 200 100" preserveAspectRatio="none" style="height:150px">
+          <rect x="0" y="0" width="80" height="100" fill="var(--danger-soft)"/>
+          <g fill="var(--danger)"><rect x="60.5" y="99.4" width="9" height="0.6"/><rect x="70.5" y="97" width="9" height="3"/></g>
+          <g fill="var(--seq-5)"><rect x="80.5" y="87" width="9" height="13"/><rect x="90.5" y="63" width="9" height="37"/><rect x="100.5" y="26" width="9" height="74"/><rect x="110.5" y="0" width="9" height="100"/><rect x="120.5" y="6" width="9" height="94"/><rect x="130.5" y="36" width="9" height="64"/><rect x="140.5" y="71" width="9" height="29"/><rect x="150.5" y="91" width="9" height="9"/><rect x="160.5" y="98" width="9" height="2"/></g>
+          <line x1="80" y1="0" x2="80" y2="100" stroke="var(--warning)" stroke-width="2" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"/></svg></div></section>
+      </div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div></div>
+
+<!-- ===================================================================== B -->
+<h2>B · No report yet, and building</h2>
+<div style="display:flex;gap:var(--sp-4)">
+<div class="frame" style="height:300px;width:632px"><div style="padding:var(--sp-5)"><div class="state" style="height:258px"><svg class="i"><use href="#i-report"/></svg><b>No report for ds_b0c3e5a8d217 yet</b><p>The report summarises what each stage removed, the CLIP scores, the filter rate and the review's acceptance rate. It will use the closed review <span class="mono">rev_0007</span> (50 items).</p><button class="btn primary" style="margin-top:var(--sp-2)"><svg class="i"><use href="#i-report"/></svg>Build report</button></div></div></div>
+<div class="frame" style="height:300px;width:632px"><div style="padding:var(--sp-5);display:flex;flex-direction:column;gap:var(--sp-3)">
+  <div class="rhead"><h1 style="font-size:var(--fs-16)">Eval report</h1><span class="pill running" role="status"><i class="pulse"></i>Building</span></div>
+  <div class="panel"><div style="display:flex;gap:var(--sp-2);align-items:center"><b class="mono">job_0147</b><span class="ptext">Counting rejections per stage 5/5</span></div><span class="progress"><i style="--p:62%"></i></span><button class="btn sm ghost" style="align-self:flex-start">Watch the job<svg class="i"><use href="#i-chevron"/></svg></button></div>
+  <p class="cap" style="margin:0">A report is built by a job (<span class="mono">POST /versions/{id}/reports</span> → 202). This page follows it on the stream and shows the report when it completes.</p></div></div>
+</div>
+
+<!-- ===================================================================== C -->
+<h2>C · Built without a review, and a newer review available</h2>
+<div style="display:flex;gap:var(--sp-4)">
+<div class="frame" style="height:230px;width:632px"><div style="padding:var(--sp-5)"><div class="head none"><span class="k">Review acceptance</span><span class="v">— not measured</span><span class="d">No closed review existed when this report was built.</span><span class="d"><b style="color:var(--text-primary)">Do</b> start a review of this version, close it, then rebuild.</span><button class="btn sm" style="align-self:flex-start;margin-top:var(--sp-2)"><svg class="i"><use href="#i-eye"/></svg>Start a review</button></div></div></div>
+<div class="frame" style="height:230px;width:632px"><div style="padding:var(--sp-5);display:flex;flex-direction:column;gap:var(--sp-3)"><div class="callout warn"><svg class="i"><use href="#i-info"/></svg><span><b>A newer review exists.</b> This report used <span class="mono">rev_0007</span> (50 items, closed 15:41); <span class="mono">rev_0009</span> (200 items) closed at 17:02.</span></div><div style="display:flex;gap:var(--sp-2)"><button class="btn sm primary"><svg class="i"><use href="#i-refresh"/></svg>Rebuild with rev_0009</button><button class="btn sm ghost">Keep this report</button></div><p class="cap" style="margin:0">Versions never change; a report only goes out of date when a newer review is closed. Older reports stay readable (<span class="mono">GET /reports/{id}</span>).</p></div></div>
+</div>
+
+<!-- ===================================================================== D -->
+<h2>D · Table view of the CLIP distribution</h2>
+<div class="frame" style="height:330px;width:632px"><div style="padding:var(--sp-4)"><section class="panel"><header><h2>CLIP score distribution</h2><span class="spacer"></span><span class="group-btns"><button class="btn sm"><svg class="i"><use href="#i-chart"/></svg>Chart</button><button class="btn sm" aria-pressed="true"><svg class="i"><use href="#i-grid"/></svg>Table</button></span></header>
+  <div class="table-wrap"><table class="t"><thead><tr><th>From</th><th>To</th><th class="r">Rows</th><th class="r">Share</th><th>Filtered</th></tr></thead><tbody>
+    <tr><td class="code">0.150</td><td class="code">0.175</td><td class="r">12</td><td class="r">0.13%</td><td>yes</td></tr>
+    <tr><td class="code">0.175</td><td class="code">0.200</td><td class="r">67</td><td class="r">0.70%</td><td>yes</td></tr>
+    <tr><td class="code">0.200</td><td class="code">0.225</td><td class="r">290</td><td class="r">3.05%</td><td>no</td></tr>
+    <tr><td class="code">…</td><td></td><td></td><td></td><td></td></tr>
+    <tr><td class="code">0.425</td><td class="code">0.450</td><td class="r">6</td><td class="r">0.06%</td><td>no</td></tr>
+  </tbody></table></div></section></div></div>
+
+<!-- ===================================================================== E -->
+<h2>E · Loading, a report that cannot be loaded, and a failed build</h2>
+<div class="frame" style="height:280px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>…</div></header>
+    <main class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-4);align-content:start">
+      <div style="display:flex;flex-direction:column;gap:var(--sp-3)" aria-busy="true"><span class="skeleton" style="width:240px;height:22px"></span><span class="skeleton" style="height:84px"></span><span class="skeleton" style="height:84px"></span></div>
+      <div class="state err" role="alert"><svg class="i"><use href="#i-alert"/></svg><b>The report could not be loaded</b><span class="badge err">not_found</span><p>No dataset version 'ds_000000000000'. <b style="color:var(--text-primary)">Do</b> open the report from its version.</p><button class="btn sm"><svg class="i"><use href="#i-db"/></svg>Go to datasets</button></div>
+      <div class="state err" role="alert"><svg class="i"><use href="#i-x"/></svg><b>Building the report failed</b><span class="badge err">stage_failed</span><p>evaluate: ValueError: review has 0 decided items. <b style="color:var(--text-primary)">Do</b> close a review with decisions, then retry.</p><div style="display:flex;gap:var(--sp-2)"><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button><button class="btn sm ghost">Open job_0148<svg class="i"><use href="#i-chevron"/></svg></button></div></div>
+    </main>
+    <footer class="status"><span class="m conn">connecting…</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame compact" style="height:380px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center"><div class="brand" style="padding:0"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg></a></nav>
+    <header class="top"><div class="crumbs"><b>…</b><svg class="i"><use href="#i-chevron"/></svg>report</div></header>
+    <main class="content">
+      <div class="rhead"><h1 style="font-size:var(--fs-16)">Eval report</h1><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Rebuild</button></div>
+      <div class="heads"><div class="head" style="--c:var(--success)"><span class="k">Rows kept</span><span class="v" style="font-size:var(--fs-24)">9,431</span></div><div class="head" style="--c:var(--warning)"><span class="k">Filter rate</span><span class="v" style="font-size:var(--fs-24)">0.85<small>%</small></span></div><div class="head"><span class="k">Acceptance</span><span class="v" style="font-size:var(--fs-24)">92.0<small>%</small></span><span class="d mono">81.2 – 96.8%</span></div></div>
+      <section class="panel"><header><h2>Rows by stage</h2></header><div class="funnel"><div class="frow"><span class="st">clean</span><span class="kept" style="width:95.12%"></span><span class="num">9,512</span><span class="rm" style="--c:var(--text-muted);width:100%"></span><span class="rmtxt">−340</span></div></div></section>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+<p class="cap">Panels stack; headline figures keep their numbers and the interval as text, without the drawing.</p>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>Every chart has a text alternative: the Table view (the same numbers), plus a short <span class="mono">aria-label</span> summary on the chart itself.</li>
+<li>The interval is also stated in words beside the drawing; the drawing is decorative for screen readers.</li>
+<li>Colour is never alone: funnel rows are labelled ("−148 rejected"), histogram bins below the threshold are also named in the key and the sentence below the chart.</li>
+<li>The building state is a <span class="mono">role="status"</span>; a failed build is an alert.</li>
+</ul>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>
