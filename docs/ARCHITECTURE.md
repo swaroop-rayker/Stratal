@@ -77,7 +77,7 @@ flowchart LR
 | `ollama` | Local LLM serving (LLM-1.1) | Phase 3 | yes | to be set |
 | Host script | PowerShell on Windows: keeps the laptop awake while jobs run, reports sleep and resume | M2 | – | – |
 
-The limits sum to 9.0 GB, which is how NFR-2 is enforced. They are starting values, tuned from measurements in spike S-07 ([RISKS.md](RISKS.md)).
+The limits sum to 9.0 GB, which is how NFR-2 is enforced. Spike S-07 ([RISKS.md](RISKS.md)) measured them while labelling 2,000 images on 2026-11-15: every container stayed under half its limit (worker-gpu 2.2 of 4.5 GB, worker-cpu 0.9 of 2.5 GB), so they are kept, with worker-gpu's headroom left for training in phase 2.
 
 ## 3. The phase-1 pipeline
 

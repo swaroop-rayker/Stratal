@@ -168,4 +168,20 @@ Likelihood and impact are High, Medium or Low.
 - **Question:** Do the container limits in ARCHITECTURE.md §2 leave the label stage enough room?
 - **Method:** Label 2,000 images under the budgeted limits. Record each container's peak.
 - **Decides:** the final limits; whether NFR-2's 9 GB stands.
-- **Result:** not run yet. **Early evidence (2026-11-15, M4 demo, 1,000 images):** the label process peaked at 2.5 GB RSS, under the GPU worker's 4.5 GB limit, and the WSL VM's used RAM at 3.3 GB. The 2,000-image run with every container's peak is still to do.
+- **Result (2026-11-15):** 2,000 COCO images (numbers 1,001 to 3,000 of the 10k subset, none seen before, so nothing came from the cache) through all five stages as one job, `job_0007`, in 4 minutes 56 seconds. Each container's peak, from the kernel's `memory.peak` (page cache included) and from `docker stats` sampled every 4 seconds (inactive cache left out):
+
+  | Container | Limit | `memory.peak` | `docker stats` peak |
+  |---|---|---|---|
+  | worker-gpu | 4,500 MiB | 2,171 MiB (48 %) | 2,126 MiB |
+  | worker-cpu | 2,500 MiB | 895 MiB (36 %), of which 581 MiB file cache | 756 MiB |
+  | postgres | 512 MiB | 130 MiB | 100 MiB |
+  | api | 400 MiB | 102 MiB | 101 MiB |
+  | monitor | 256 MiB | 102 MiB | 98 MiB |
+  | redis | 256 MiB | 30 MiB | 15 MiB |
+  | **Sum** | 8,424 MiB | 3,430 MiB | 3,196 MiB |
+
+  - **No container reached its limit.** `memory.events` showed `max 0`, `oom 0` and `oom_kill 0` for both workers.
+  - **The WSL VM's used RAM peaked at 3.3 GB,** against its 10 GB cap.
+  - **The label process's resident memory was 2.55 GB, the same as at 1,000 images.** It does not grow with the dataset: the stage keeps one batch of images and one small record per image. Most of it is PyTorch's and CUDA's libraries.
+
+  **Conclusion:** the limits in ARCHITECTURE.md §2 hold with wide margins, and NFR-2's 9 GB stands. They are kept as they are: worker-gpu's headroom is for training in phase 2, which needs far more host memory than inference.

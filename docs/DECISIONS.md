@@ -228,6 +228,7 @@ Newest entries go at the bottom of their section. All entries below date from th
   - Unrelated pictures: the nearest other picture was 12 to 22 bits away. Nothing in the demo folder groups at 8 or 10; one pair groups at 12.
   - Distances are always even: each hash has exactly 32 one-bits, because each bit says above or below the median of 64 values. A threshold of 9 therefore behaves exactly like 8.
 - **Why:** OC-5 gives the owner the choice from measured distances. The owner accepted 8 on 2026-11-15: it sits between re-encodings (≤ 4) and the nearest unrelated generated pictures (≥ 12). Generated pictures are not photographs, so the same two measurements are worth repeating on the phase-1 dataset; a change is a config change and gives new version IDs.
+- **On real photographs (S-07 run, 2,000 COCO images):** one near-duplicate, at exactly 8 bits: two burst shots of the same table seconds apart (Flickr 9853575984 and 9853704863), the larger file kept. A correct catch, and the kind that would leak between train and test splits in M5.
 
 **Exact duplicates keep the smallest row key** (M3, DATA-2.1)
 - **What:** Files with the same SHA-256 form one group; the copy with the smallest `row_key` stays accepted.
