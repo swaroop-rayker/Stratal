@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 built on its branch 2026-11-14, waiting for the owner's OK to merge. G0 approved 2026-11-15; G1 is next |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 next, waiting on OC-3. G0 approved 2026-11-15; G1 in review |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | M0 | Environment proof, skeleton, docs | 1 | M | Done 2026-11-14 |
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
-| M2 | Job and event spine | 1 | L | Built 2026-11-14; awaiting OK to merge |
+| M2 | Job and event spine | 1 | L | Done 2026-11-15 |
 | M3 | Cleaning and preprocessing | 1 | M | Not started |
 | M4 | Labeling | 1 | L | Not started |
 | M5 | Splits, review, eval report | 1 | M | Not started |
@@ -162,7 +162,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Not built in M2, carried forward:** `GET /system` (API.md §3.1); `from_version` in the pipeline request (no stage consumes a version until M3); the host script is v1 and its sleep detection has not been tried against a real sleep.
 
-- [ ] Owner's OK to merge
+- [x] Owner's OK to merge (2026-11-15, after the MON-2.4 GPU test was fixed for E-008)
 
 ## M3 — Cleaning and preprocessing
 
