@@ -326,6 +326,21 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Re-locked with uv; the API, CPU worker and dev images are unchanged.
 - **Why:** Only GPU stages load models, and the API image must stay free of ML libraries.
 
+**Label stage: the GPU only for what is missing** (M4, LABEL-1.1 to 1.3, ADR-0006)
+- **What:** The label stage looks every image up in the derivation cache first and takes the GPU lease, sets the VRAM cap and loads a model only if something is missing: once for captions, once for CLIP scores, one model at a time.
+- **How:** Captions are keyed by the preprocessed copy's hash and every setting that can change the text, including library versions; scores by image and caption together. The caption loop commits per batch; the shell commits CLIP scores per batch. A second pass writes the manifest from the cache.
+- **Why:** A killed or repeated run resumes from the cache without reloading models (LABEL-1.2), identical copies are captioned once, and the lease is never held while nothing uses the GPU (BUG6).
+
+**VRAM estimates from S-06** (M4, ADR-0006 rule 4)
+- **What:** The captioner may load only with 4.3 GB free, CLIP with 1.2 GB, plus the weights at the chosen precision.
+- **How:** `caption_vram_estimate_mb` and `clip_vram_estimate_mb` in the label config; the owner's VRAM manager compares them with the card's free memory.
+- **Why:** S-06 measured 4.05 GB reserved for Florence-2 at batch 16, almost all of it activations, so the weights' size alone would underestimate by ten times.
+
+**CLIP threshold provisional at 0.2** (M4, LABEL-1.4, OC-5)
+- **What:** `FilterConfig.clip_threshold = 0.2` by default.
+- **How:** A config field; a new value reruns only `filter` and later stages.
+- **Why:** OC-5 gives the owner the choice from the measured score distribution, on the scale their `clip_similarity` produces. With plain cosine on LAION's CLIP, S-06 measured about 0.30 for good captions.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

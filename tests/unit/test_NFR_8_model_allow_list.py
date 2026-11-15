@@ -43,6 +43,7 @@ def _fake_model(files: dict[str, bytes]) -> PretrainedModel:
         repo_id="org/fake",
         revision="0" * 40,
         role="clip",
+        display="Fake",
         licence="MIT",
         purpose="test",
         files=tuple(pinned),

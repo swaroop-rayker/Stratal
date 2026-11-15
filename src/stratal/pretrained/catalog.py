@@ -41,6 +41,8 @@ class PretrainedModel:
     revision: str
     """Full commit hash on the Hugging Face hub."""
     role: Role
+    display: str
+    """How messages name it, e.g. ``Florence-2-base``."""
     licence: str
     purpose: str
     files: tuple[ModelFile, ...]
@@ -48,6 +50,10 @@ class PretrainedModel:
     @property
     def total_bytes(self) -> int:
         return sum(f.size for f in self.files)
+
+    @property
+    def weights_bytes(self) -> int:
+        return sum(f.size for f in self.files if f.path.endswith(".safetensors"))
 
 
 def _catalog(*models: PretrainedModel) -> dict[str, PretrainedModel]:
@@ -60,6 +66,7 @@ CATALOG = _catalog(
         repo_id="florence-community/Florence-2-base",
         revision="00921df66db728a9ceb750f5eca43e5c203a2051",
         role="captioner",
+        display="Florence-2-base",
         licence="MIT",
         purpose="Default captioner (LABEL-1.1, ADR-0009): native transformers class",
         files=(
@@ -101,6 +108,7 @@ CATALOG = _catalog(
         repo_id="laion/CLIP-ViT-B-32-laion2B-s34B-b79K",
         revision="1a25a446712ba5ee05982a381eed697ef9b435cf",
         role="clip",
+        display="CLIP ViT-B/32",
         licence="MIT",
         purpose=(
             "Image-caption similarity (LABEL-1.3). OpenAI's own ViT-B/32 has safetensors only"
@@ -134,6 +142,7 @@ CATALOG = _catalog(
         repo_id="Salesforce/blip-image-captioning-large",
         revision="353689b859fcf0523410b1806dace5fb46ecdf41",
         role="captioner",
+        display="BLIP-large",
         licence="BSD-3-Clause",
         purpose=(
             "Comparison captioner for spike S-06. BLIP-base has safetensors only in unreviewed"

@@ -217,7 +217,7 @@ Index: `(job_id, ts)`.
 
 | Column | Type | Notes |
 |---|---|---|
-| `kind` | text | PK part: `phash` and `preprocess` (built in M3); `image_meta`, `caption`, `clip_score` planned |
+| `kind` | text | PK part: `phash` and `preprocess` (built in M3), `caption` and `clip_score` (M4); `image_meta` planned |
 | `input_hash` | text | PK part: content hash of the input(s) |
 | `params_hash` | text | PK part: hash of everything else that affects the result (model, revision, task, settings) |
 | `value` | jsonb | the result |
@@ -230,6 +230,8 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 |---|---|---|---|
 | `phash` | original file's `sha256` | `hash_size`, `algorithm_version` and the Pillow version | the hash, lowercase hex text |
 | `preprocess` | original file's `sha256` | the whole `PreprocessConfig` and the Pillow version | `{"sha256", "width", "height"}` of the copy; reused only if that blob still exists (INV-04) |
+| `caption` | preprocessed copy's `sha256` | captioner name and revision, task, `max_new_tokens`, `num_beams`, dtype, the caption loop's `ALGORITHM_VERSION`, torch, transformers and Pillow versions | the caption text |
+| `clip_score` | SHA-256 of the copy's `sha256`, a newline and the caption | CLIP model and revision, dtype, the similarity's `ALGORITHM_VERSION`, library versions | the score, a number |
 
 ### 4.10 `review_sessions` and `review_items` (LABEL-1.5)
 

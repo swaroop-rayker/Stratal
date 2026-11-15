@@ -12,12 +12,15 @@
 
 import hashlib
 import weakref
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 
 from PIL import Image, ImageStat
 
-from stratal.label.models import CudaOutOfMemory, ModelInfo, Vector
+from stratal.label.captioning import CaptionItem, CaptionReport
+from stratal.label.models import Captioner, CudaOutOfMemory, GpuModel, ModelInfo, Vector
+from stratal.label.vram import UnloadReport, VramReading
+from stratal.mon.sink import EventSink
 
 _COLOURS = ("red", "green", "blue", "grey")
 DIMENSIONS = 8
@@ -179,3 +182,44 @@ class ScriptedFilter:
 
     def __call__(self, items: Sequence[object], *, threshold: float) -> dict[str, str]:
         return dict(self.marks)
+
+
+class PassthroughVram:
+    """Stand-in for the owner's VRAM manager: loads, closes, checks nothing."""
+
+    def __init__(self, gpu: object = None, sink: object = None) -> None:
+        self.model: GpuModel | None = None
+        self.loads: list[str] = []
+
+    def load[M: GpuModel](self, loader: Callable[[], M], *, name: str, estimate_mb: float) -> M:
+        model = loader()
+        self.model = model
+        self.loads.append(name)
+        return model
+
+    def unload(self) -> UnloadReport:
+        if self.model is not None:
+            self.model.close()
+        self.model = None
+        reading = VramReading(0.0, 0.0, 0.0)
+        return UnloadReport(self.loads[-1] if self.loads else "", reading, reading, 0.0, True)
+
+
+def caption_all_at_once(
+    items: Sequence[CaptionItem],
+    *,
+    captioner: Captioner,
+    batch_size: int,
+    open_image: Callable[[CaptionItem], Image.Image],
+    commit: Callable[[Mapping[str, str]], None],
+    sink: EventSink,
+    checkpoint: Callable[[], None],
+    stage: str = "label",
+) -> CaptionReport:
+    """Stand-in for the owner's caption loop: one call, one commit, no batching or retry."""
+    if not items:
+        return CaptionReport(0, 0, batch_size, 0)
+    checkpoint()
+    captions = captioner.caption([open_image(item) for item in items])
+    commit({item.key: caption for item, caption in zip(items, captions, strict=True)})
+    return CaptionReport(len(items), 1, batch_size, 0)

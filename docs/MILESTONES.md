@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 in progress: COCO 2017 10k subset in `sources/coco10k` and the three allowed models pulled and verified (2026-11-15); model allow-list and pull command built (NFR-8). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 in progress: agent's part built 2026-11-15 (allow-list and pull, adapters, S-06 with Florence-2 `<CAPTION>` chosen, GPU lease, label and filter stages); the owner's caption loop, VRAM manager, CLIP similarity and filter rule next. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -204,6 +204,8 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 **Scope**
 
 - Model allow-list and an explicit pull command; the hub is offline at run time.
+
+**Agent's part built 2026-11-15:** allow-list and pull command; captioner and CLIP adapters (`stratal.label.hf`) with fakes; spike S-06; the GPU lease; label and filter stage shells, run end to end as one job with fakes (`test_M4_pipeline.py`); stubs, strict expected-failure tests and fakes for the four owner units. Until they are written, a pipeline job fails at `label` with a reason naming the missing unit; `"until_stage": "preprocess"` stops before it.
 - Captioner interface with Florence-2 and BLIP adapters and a deterministic fake for CPU tests.
 - Spike S-06: Florence-2 vs BLIP on 50 images, quality and speed.
 - GPU lease primitive; label and filter stage shells.
@@ -219,7 +221,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [ ] 👤 `test_LABEL_1_2_*`: kill at 60%, restart, completes; no finished image is captioned twice
 - [ ] 👤 `test_LABEL_1_3_*`: a score is present for every pair
 - [ ] 👤 `test_LABEL_1_4_*`: rows below the threshold are marked with a reason, not deleted
-- [ ] `test_MON_3_1_*`: labeling emits its listed messages and metrics
+- [x] `test_MON_3_1_*`: labeling emits its listed messages and metrics (the shell's, with fakes; the caption loop's and VRAM manager's are in the owner's tests)
 - [ ] 👤 `test_BUG5_*` (gpu): VRAM returns to baseline after unload and after the stage's process exits
 - [x] `test_BUG6_*`: a second process cannot take the GPU lease (also: a dead holder releases it)
 - [ ] 👤 `test_BUG2_*` (gpu): an oversized batch produces a WARN with a smaller batch and the stage completes

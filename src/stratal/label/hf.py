@@ -30,11 +30,18 @@ from stratal.pretrained.catalog import get_model, local_path
 
 DType = Literal["fp16", "fp32"]
 _TORCH_DTYPES = {"fp16": torch.float16, "fp32": torch.float32}
-_DISPLAY = {
-    "florence-2-base": "Florence-2-base",
-    "blip-large": "BLIP-large",
-    "clip-vit-b-32-laion2b": "CLIP ViT-B/32 (LAION-2B)",
-}
+
+
+def library_versions() -> dict[str, str]:
+    """Versions that can change a caption or a score; part of the label cache keys."""
+    import PIL
+    import transformers
+
+    return {
+        "torch": torch.__version__,
+        "transformers": transformers.__version__,
+        "pillow": PIL.__version__,
+    }
 
 
 def require_cuda() -> None:
@@ -93,7 +100,7 @@ def _guarded[T](batch_size: int, call: Callable[[], T]) -> T:
 
 def _info(name: str, dtype: DType) -> ModelInfo:
     model = get_model(name)
-    return ModelInfo(name, model.revision, _DISPLAY.get(name, name), dtype)
+    return ModelInfo(name, model.revision, model.display, dtype)
 
 
 def _rgb(images: Sequence[Image.Image]) -> list[Image.Image]:
