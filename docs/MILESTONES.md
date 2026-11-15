@@ -90,7 +90,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] Demo: stack up, health endpoint, GPU check output (shown in the session of 2026-11-13)
 - [x] Owner's OK to merge into `main` ("go ahead and finish M0", 2026-11-14)
 
-**Carried forward, not blocking:** the Mermaid diagrams in ARCHITECTURE.md and DATA_MODEL.md have not been rendered, and the CI workflow has never run because there is no remote.
+**Carried forward, not blocking:** the Mermaid diagrams in ARCHITECTURE.md and DATA_MODEL.md have not been rendered. The CI workflow first ran on 2026-11-15, when `main` was pushed to GitHub, and was rejected for a workflow-file error (`runner.temp` in job-level `env`); the fix is on `m3-clean-preprocess` and is verified when M3 reaches `main`.
 
 ## M1 — Ingestion, manifests, versions, lineage
 
