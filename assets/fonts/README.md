@@ -12,6 +12,8 @@ The two typefaces of the design system ([docs/DESIGN-SYSTEM.md](../../docs/DESIG
 | `JetBrainsMono-Medium.woff2` | 500 | same | 93,824 | `086C48DFBEA9DDAF` |
 | `JetBrainsMono-OFL.txt` | – | same tag, `OFL.txt` | 4,399 | `30F0C136E3C88E42` |
 
+Hashes are of the files as downloaded. Git stores the two `.txt` licences with LF line endings, so a checked-out copy of those two hashes differently; the `.woff2` files are binary and unchanged.
+
 **Licence.** Both families are under the SIL Open Font License 1.1 (the two `.txt` files). It allows bundling and redistribution with software; the fonts may not be sold on their own, and a modified version may not use the reserved names. Keep the licence files next to the fonts.
 
 **Only the weights the design system uses** are here: Plex Sans 400, 500 and 600; JetBrains Mono 400 and 500. Add others from the same tags if a later design version needs them.
