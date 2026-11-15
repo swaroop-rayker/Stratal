@@ -24,6 +24,10 @@ class ImageFolder:
     """(quality 90, quality 70) pairs of the same picture."""
     undersized: list[str] = field(default_factory=lambda: list[str]())
     not_images: list[str] = field(default_factory=lambda: list[str]())
+    exif_rotated: list[str] = field(default_factory=lambda: list[str]())
+    """JPEGs stored landscape (size x size*2/3) with EXIF orientation 6, so portrait upright."""
+    odd_modes: list[str] = field(default_factory=lambda: list[str]())
+    """PNGs in modes other than RGB: RGBA with transparency, L (grey) and P (palette), in turn."""
 
     @property
     def total_files(self) -> int:
@@ -34,6 +38,8 @@ class ImageFolder:
             + 2 * len(self.jpeg_pairs)
             + len(self.undersized)
             + len(self.not_images)
+            + len(self.exif_rotated)
+            + len(self.odd_modes)
         )
 
 
@@ -64,10 +70,16 @@ def make_image_folder(
     jpeg_pairs: int = 0,
     undersized: int = 0,
     not_images: int = 0,
+    exif_rotated: int = 0,
+    odd_modes: int = 0,
     size: int = 256,
     seed: int = 0,
 ) -> ImageFolder:
-    """Create the folder and return a record of what was planted where."""
+    """Create the folder and return a record of what was planted where.
+
+    Plantings are made in the order of the arguments, so adding a later kind
+    never changes the bytes of an earlier one.
+    """
     if exact_copies > valid:
         raise ValueError("exact_copies cannot exceed valid: each copy needs an original")
     rng = random.Random(seed)
@@ -116,5 +128,29 @@ def make_image_folder(
         (root / name).parent.mkdir(exist_ok=True)
         (root / name).write_text(f"not an image {i}\n", encoding="utf-8")
         folder.not_images.append(name)
+
+    for i in range(exif_rotated):
+        name = f"rotated/rot_{i:03d}.jpg"
+        (root / name).parent.mkdir(exist_ok=True)
+        picture = _smooth(rng, size).resize((size, size * 2 // 3))  # pyright: ignore[reportUnknownMemberType]
+        exif = Image.Exif()
+        exif[0x0112] = 6  # Orientation: rotate 90° clockwise to display
+        picture.save(root / name, format="JPEG", quality=90, exif=exif)
+        folder.exif_rotated.append(name)
+
+    for i in range(odd_modes):
+        name = f"modes/mode_{i:03d}.png"
+        (root / name).parent.mkdir(exist_ok=True)
+        picture = _blocky(rng, size)
+        kind = i % 3
+        if kind == 0:
+            rgba = picture.convert("RGBA")
+            rgba.putalpha(Image.new("L", picture.size, 128))
+            rgba.save(root / name, format="PNG")
+        elif kind == 1:
+            picture.convert("L").save(root / name, format="PNG")
+        else:
+            picture.convert("P", palette=Image.Palette.ADAPTIVE).save(root / name, format="PNG")
+        folder.odd_modes.append(name)
 
     return folder

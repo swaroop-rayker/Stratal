@@ -196,6 +196,58 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The `redis` extra brings what Celery's Redis transport imports. GPU-marked tests run with `.\scripts\check.ps1 -Gpu`.
 - **Why:** Each is named by the spec for this purpose; GPU tests need a test runner where the GPU is.
 
+## M3: cleaning and preprocessing
+
+**Clean stage is a shell around three owner functions** (M3, DATA-2.1, DATA-2.2, ADR-0012)
+- **What:** `stratal.data.clean` feeds, caches, checks and records; `stratal.data.dedupe` (owner) decides which rows are copies and which is kept.
+- **How:** The functions are injected as `DedupeUnits`; the owner's three are the default, tests pass fakes or scripted groups. Rows are marked `duplicate` with `dup_kind`, `dup_group_id` (`dg_` + 12 hex of the kind and sorted members) and `dup_of`.
+- **Why:** The owner writes only the decisions, in plain functions with no database or events, and can test them alone; the plumbing can be built and tested before they exist.
+
+**The shell checks the owner's output** (M3, INV-05)
+- **What:** Groups that break their contract (single members, unsorted, a keeper outside its group, unknown or repeated rows, exact groups of different content, a hash that is not fixed-length hex) fail the stage with `ContractBroken`. After exact marking, two accepted rows with the same content fail it too (INV-05).
+- **How:** `_check_groups` and the INV-05 pass run before anything is written; the message names the function and the rule.
+- **Why:** A wrong grouping would silently corrupt every later version. Failing loudly, with the rule that was broken, is a review aid as much as a guard.
+
+**Owner code version is part of the config** (M3)
+- **What:** `CleanConfig.algorithm_version` defaults to `dedupe.ALGORITHM_VERSION`.
+- **How:** It goes into the version's config hash and the pHash cache key.
+- **Why:** Without it, stage memoization would keep reusing versions made by an older implementation while the owner iterates on DATA-2.1 and DATA-2.2.
+
+**Near-duplicate threshold is provisional** (M3, OC-5)
+- **What:** `phash_hash_size = 8`, `phash_max_distance = 8` by default.
+- **How:** Plain config fields; the DATA-2.2 tests read the default, so they follow it when the owner changes it.
+- **Why:** OC-5 gives the owner the choice from measured distances; the stage needs some value to run.
+
+**A missing blob fails the stage** (M3, BUG1)
+- **What:** If a file a row points at is not in the blob store, clean and preprocess stop with an error instead of marking the row rejected.
+- **How:** An existence check before decoding; only decode errors mark a row `corrupt_image`.
+- **Why:** A lost blob is data loss, not a bad image. Recording it as a rejection would hide exactly the failure BUG1 describes.
+
+**Preprocess writes one normalised JPEG per accepted image** (M3, DATA-6.1, OC-3)
+- **What:** EXIF orientation applied, RGB with transparency flattened onto white, longer side at most 768 px (never enlarged), JPEG quality 95, Lanczos.
+- **How:** Every one of those settings is a field of `PreprocessConfig`, so all are in the version's config. JPEG decoding uses Pillow's draft mode to skip work. Copies go into the blob store by content.
+- **Why:** One fixed format for every later stage; JPEG keeps 10k copies near 1 GB where PNG would be about ten times that; identical input gives identical bytes, so a rerun adds no files.
+
+**Stages do the work first, then commit** (M3, MON-3.1)
+- **What:** Clean and preprocess read the parent manifest twice: once to do the work, once to write the new manifest.
+- **How:** Pass 1 stores results (decisions in memory, copies through the cache); pass 2 streams the parent's rows with the results applied into the commit step.
+- **Why:** Progress messages come before "Writing manifest" (the M1 ingest still shows them the other way round), and only one small record per row is held in memory (NFR-2).
+
+**Derivation cache built** (M3, ADR-0004, INV-11)
+- **What:** The `derivations` table with kinds `phash` and `preprocess`, behind a `DerivationCache` protocol (PostgreSQL in jobs, a dict in unit tests).
+- **How:** `get_many` and `put_many` per batch; inserts use `ON CONFLICT DO NOTHING`. The preprocess key includes the Pillow version, which changes the encoded bytes.
+- **Why:** A killed stage resumes without redoing finished items, and a rerun with the same parameters is cheap.
+
+**Stage memoization built** (M3, ARCHITECTURE §3)
+- **What:** Before running, a derived stage looks for a version with the same stage, parent and config hash, and reuses it (`cache_hit`).
+- **How:** `registry.find_memoized` derives the config hash through the same function that names versions (it depends only on the config), and skips versions whose manifest is missing.
+- **Why:** Reruns cost nothing, and a changed setting reruns only the stages after it.
+
+**`from_version` starts a pipeline from an existing version** (M3, API.md §3.3)
+- **What:** A pipeline request gives exactly one of `source` and `from_version`. With `from_version`, the stages after the one that made the version run, and the dataset comes from the version.
+- **How:** Validated in `create_pipeline_job`; the first stage's `input_version_id` is the given version. Overrides or `until_stage` naming a stage that would not run are rejected.
+- **Why:** Changing one setting without re-ingesting, and the "continue from this version" action planned for SCR-03.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

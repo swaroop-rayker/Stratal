@@ -217,12 +217,19 @@ Index: `(job_id, ts)`.
 
 | Column | Type | Notes |
 |---|---|---|
-| `kind` | text | PK part: `image_meta`, `phash`, `caption`, `clip_score` |
+| `kind` | text | PK part: `phash` and `preprocess` (built in M3); `image_meta`, `caption`, `clip_score` planned |
 | `input_hash` | text | PK part: content hash of the input(s) |
 | `params_hash` | text | PK part: hash of everything else that affects the result (model, revision, task, settings) |
 | `value` | jsonb | the result |
-| `created_by_job_id` | text, nullable | |
+| `created_by_job_id` | text, nullable | not a foreign key: a cached value outlives its job |
 | `created_at` | timestamptz | |
+
+Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the parameters):
+
+| Kind | `input_hash` | Parameters hashed | `value` |
+|---|---|---|---|
+| `phash` | original file's `sha256` | `hash_size`, the owner's `algorithm_version` | the hash, lowercase hex text |
+| `preprocess` | original file's `sha256` | the whole `PreprocessConfig` and the Pillow version | `{"sha256", "width", "height"}` of the copy; reused only if that blob still exists (INV-04) |
 
 ### 4.10 `review_sessions` and `review_items` (LABEL-1.5)
 
@@ -249,12 +256,12 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 | `decided_at_stage` | string | ingest onward | the stage that set a non-accepted status |
 | `reason_code` | string | ingest onward | see below |
 | `reason_detail` | string | ingest onward | free text, e.g. the decoder's error |
-| `phash` | string | clean | perceptual hash, hex |
-| `dup_kind` | string | clean | `exact`, `near`, `semantic` |
-| `dup_group_id` | string | clean | shared by all members of a duplicate group, including the kept one |
-| `dup_of` | string | clean | `row_key` of the kept item |
-| `derived_sha256` | string | preprocess | content hash of the preprocessed copy |
-| `derived_width`, `derived_height` | int32 | preprocess | |
+| `phash` | string | clean | perceptual hash, hex; set on every row that was accepted when clean started (exact copies share their keeper's) |
+| `dup_kind` | string | clean | `exact`, `near`, `semantic`; set on every member of a group, the kept one included |
+| `dup_group_id` | string | clean | shared by all members of a duplicate group, including the kept one: `dg_` + the first 12 hex of SHA-256 over the kind and the sorted member keys. A kept exact copy that also falls in a near group carries the near group's ID |
+| `dup_of` | string | clean | `row_key` of the kept item; null on the kept item |
+| `derived_sha256` | string | preprocess | content hash of the preprocessed copy (DATA-6.1): RGB JPEG, upright, longer side ≤ `max_side` |
+| `derived_width`, `derived_height` | int32 | preprocess | size of the copy, after EXIF rotation |
 | `caption` | string | label | |
 | `caption_model`, `caption_model_revision` | string | label | LABEL-1.1.AC1 |
 | `clip_score` | float32 | label | |
@@ -262,6 +269,8 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 | `split` | string | split | defined by DATA-4 when the owner writes it |
 
 Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`.
+
+`corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. A file missing from the blob store is not a reason code: it fails the stage (BUG1).
 
 File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.parent_version_id`, `stratal.config_hash`. Rows are written sorted by `row_key`.
 
@@ -292,7 +301,7 @@ Each of these is to be enforced by a constraint or covered by a test.
 | INV-02 | A `dataset_versions` row exists only if its manifest file exists |
 | INV-03 | Following `parent_version_id` from any version reaches an `ingest` version in a finite number of steps (DATA-3.3.AC1) |
 | INV-04 | Every `sha256` and `derived_sha256` in a manifest with status `accepted` has a blob on disk |
-| INV-05 | From the `clean` stage onward, `sha256` is unique among `accepted` rows |
+| INV-05 | From the `clean` stage onward, `sha256` is unique among `accepted` rows. The clean stage checks it after exact-duplicate marking and fails rather than commit a version that breaks it (`test_INV_05_*`) |
 | INV-06 | A manifest has exactly as many rows as its parent's manifest. Stages change status and add columns; they never drop rows |
 | INV-07 | Every non-accepted row has `decided_at_stage` and `reason_code` |
 | INV-08 | Job state changes only along the transitions in [ARCHITECTURE.md §4.2](ARCHITECTURE.md#42-job-states), and every change has a `job_transitions` row |

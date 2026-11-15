@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Built: health (M0); jobs, events, telemetry, live streams and host endpoints (M2, 2026-11-14). Datasets, versions, review, evaluation, configuration and `GET /system` are still planned |
+| Status | Built: health (M0); jobs, events, telemetry, live streams and host endpoints (M2, 2026-11-14); the clean and preprocess stages and `from_version` (M3, 2026-11-15). Datasets, versions, review, evaluation, configuration and `GET /system` are still planned |
 | Detail level | Phase-1 HTTP interface and the internal contracts for owner-implemented logic. Later phases are listed in [§7](#7-later-phases) |
 | Authority | This file states the intended contract. Once code exists, the generated OpenAPI document at `/api/v1/openapi.json` gives field-level detail. If the two disagree, stop and ask |
 
@@ -129,7 +129,16 @@ Pipeline request:
 }
 ```
 
-Every key under `stages` is optional and overrides the stage's defaults. A key that names a stage not yet available is rejected with `validation_error`; as of M2 only `ingest` exists. `source` may be replaced by `"from_version": "ds_…"` to continue from an existing version (planned for M3, when a stage first consumes a version).
+Every key under `stages` is optional and overrides the stage's defaults. As of M3 the stages are `ingest`, `clean` and `preprocess`; a key that names any other stage is rejected with `validation_error`.
+
+Give exactly one of `source` and `from_version`:
+
+- **`source`**: start from a folder. The pipeline begins with `ingest`, and `dataset` is required.
+- **`"from_version": "ds_…"`**: continue from an existing version. The stages after the one that made it run, and its output is the first stage's input. `dataset` may be left out; if given it must be the version's dataset. A version made by the last available stage has nothing after it and is rejected. An unknown version is a `validation_error` with `loc: ["from_version"]`.
+
+With either, a key under `stages` or an `until_stage` that names a stage the request would not run is rejected. A stage whose input and config match an existing version reuses it (`cache_hit: true`) instead of running again.
+
+Until the owner's DATA-2.1 and DATA-2.2 functions exist, the `clean` stage fails with `stage_failed` and a reason naming them; `"until_stage": "ingest"` runs ingestion alone.
 
 Job (abridged):
 
@@ -227,8 +236,8 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 | Unit | Requirement | Contract in one line | Milestone |
 |---|---|---|---|
 | Version ID derivation | DATA-3.2 | Manifest rows + resolved config → content hash, config hash, version ID, per [DATA_MODEL.md §3](DATA_MODEL.md#3-identifiers) | M1 |
-| Exact-duplicate grouping | DATA-2.1 | Rows with content hashes → duplicate groups and one deterministic keeper per group | M3 |
-| Perceptual hash and near-duplicate grouping | DATA-2.2 | Images → hashes; hashes + distance threshold → groups and keepers | M3 |
+| Exact-duplicate grouping | DATA-2.1 | `group_exact_duplicates(items: Sequence[ExactItem]) -> list[DuplicateGroup]`: rows with content hashes → groups of identical files, one deterministic keeper each | M3, stub delivered |
+| Perceptual hash and near-duplicate grouping | DATA-2.2 | `perceptual_hash(image, *, hash_size) -> str` (lowercase hex of the hash's bits); `group_near_duplicates(items: Sequence[HashedItem], *, max_distance) -> list[DuplicateGroup]` by Hamming distance | M3, stub delivered |
 | Caption batching loop | LABEL-1.1, LABEL-1.2 | Uncached items + captioner → cached captions, committed per batch, surviving OOM by shrinking the batch | M4 |
 | VRAM manager | RUN-1.4, RUN-1.5 | Load one model under the cap; unload and prove VRAM returned to baseline | M4 |
 | CLIP scoring | LABEL-1.3 | Image + caption → similarity score | M4 |
@@ -277,6 +286,21 @@ Still planned for phase 1: run a pipeline, pull models.
 | `EtaEstimator` | `stratal.mon.eta` | `update(monotonic_seconds, step, total) -> Estimate(throughput, eta_seconds) \| None` |
 | Monitor | `python -m stratal.mon` | Collector, sampler and watchdog threads |
 | Host script | `host\stratal-host.ps1` | Polls `/host/keep-awake`; reports suspend and resume |
+
+### Internal interfaces added in M3
+
+| Interface | Where | Shape |
+|---|---|---|
+| Owner's dedupe units (stubs) | `stratal.data.dedupe` | `ExactItem(row_key, sha256)`, `HashedItem(row_key, phash, width, height, size_bytes)`, `DuplicateGroup(keeper, members)`, the three functions above, and `ALGORITHM_VERSION` |
+| Clean stage | `stratal.data.clean` | `run_clean(*, parent_manifest, parent_version_id, data_dir, config: CleanConfig, derive, sink, cache, units: DedupeUnits = OWNER_UNITS, checkpoint) -> CleanResult(record, metrics, seconds)`; raises `ContractBroken` when an owner unit breaks its contract |
+| Preprocess stage | `stratal.data.preprocess` | `run_preprocess(*, parent_manifest, parent_version_id, data_dir, config: PreprocessConfig, derive, sink, cache, checkpoint) -> PreprocessResult`; `transform(path, config) -> (jpeg_bytes, width, height)`; `target_size(w, h, max_side)` |
+| Derivation cache | `stratal.storage.derivations` | `DerivationCache` protocol: `get_many(kind, params_hash, input_hashes) -> {input_hash: value}`, `put_many(kind, params_hash, {input_hash: value})`; `PgDerivationCache(engine, job_id=)`, `MemoryDerivationCache()`, `params_hash(params)` |
+| Blob store | `stratal.storage.blobs` | gained `put_bytes(data) -> StoredBlob` |
+| Version loading | `stratal.data.registry` | `manifest_for(session, data_dir, version_id) -> (DatasetVersion, Path)`, checked against the registration (`VersionDataMissing`); `load_version(...) -> Iterator[Row]`; `find_memoized(session, data_dir, *, stage, parent_version_id, config, derive)` |
+| Derived-stage frame | `stratal.runtime.stages` | `run_derived_stage(run, *, stage, config_model, body)`: resolve the input by ID, reuse a memoized version, otherwise run `body` and register; `make_clean_runner(units)` |
+| Job creation | `stratal.runtime.jobs` | `create_job_from_plan(..., input_version_id=None)` |
+| Test helpers | `stratal.testing` | `fakes`: `no_exact_duplicates`, `fake_perceptual_hash`, `no_near_duplicates`, `ScriptedGroups`; `fake_clean` (registers clean with fakes when named in `STRATAL_EXTRA_STAGES`); `stagekit` (stages as library calls); `synthetic` gained `exif_rotated` and `odd_modes` |
+
 ## 7. Later phases
 
 Listed so the phase-1 design leaves room. Each is specified at its phase kickoff.

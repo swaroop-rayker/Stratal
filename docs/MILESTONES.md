@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 next, waiting on OC-3. G0 approved 2026-11-15; G1 in review |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 in progress: agent's part built, owner's DATA-2.1 and DATA-2.2 next. G0 approved 2026-11-15; G1 in review |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -20,7 +20,7 @@
 | M0 | Environment proof, skeleton, docs | 1 | M | Done 2026-11-14 |
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
-| M3 | Cleaning and preprocessing | 1 | M | Not started |
+| M3 | Cleaning and preprocessing | 1 | M | In progress: agent's part built 2026-11-15; waiting on DATA-2.1, DATA-2.2 |
 | M4 | Labeling | 1 | L | Not started |
 | M5 | Splits, review, eval report | 1 | M | Not started |
 | M6 | Phase-1 screens | 1 | L | Not started |
@@ -168,24 +168,27 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** M · **Branch** `m3-clean-preprocess` · **Serves** DATA-2.1, DATA-2.2, DATA-6.1, MON-3.1 (cleaning, preprocessing); BUG1
 
-**Before starting:** open clarification OC-3 (preprocess size) confirmed.
+**Before starting:** open clarification OC-3 (preprocess size) confirmed. **Done 2026-11-15:** 768 px, accepted by the owner.
 
 **Scope**
 
 - Clean stage shell; pHash values kept in the derivation cache.
 - 👤 Exact-duplicate grouping (DATA-2.1) and near-duplicate detection with a chosen threshold (DATA-2.2, OC-5).
 - Preprocess stage: resize, apply EXIF orientation, convert to RGB, store the copy.
+- Carried from M2: `from_version` in the pipeline request.
+
+**Agent's part built 2026-11-15:** stubs, strict expected-failure tests and fakes for DATA-2.1 and DATA-2.2 (`src/stratal/data/dedupe.py`; 16 tests in `tests/unit/test_DATA_2_1_*.py` and `test_DATA_2_2_*.py`); the clean shell; the preprocess stage; the derivation cache; stage memoization; `from_version`. Until DATA-2.1 and DATA-2.2 are written, a default pipeline job fails at `clean` with a reason naming them.
 
 **Done when**
 
 - [ ] 👤 `test_DATA_2_1_*`: 20 planted exact copies are marked, one kept per group
 - [ ] 👤 `test_DATA_2_2_*`: the same image at JPEG 90 and 70 leaves one kept
-- [ ] `test_DATA_6_1_*`: copies exist and respect the maximum; originals kept; a rerun adds nothing; a new maximum gives a new version ID
-- [ ] `test_MON_3_1_*`: cleaning and preprocessing emit their listed messages and metrics
-- [ ] `test_BUG1_*`: every stage's output reloads by version ID and equals what was written
-- [ ] Invariant INV-05 holds after clean
-- [ ] Demo: ingest → clean → preprocess as one pipeline job
-- [ ] Docs updated
+- [x] `test_DATA_6_1_*`: copies exist and respect the maximum; originals kept; a rerun adds nothing; a new maximum gives a new version ID
+- [x] `test_MON_3_1_*`: cleaning and preprocessing emit their listed messages and metrics (the clean stage's with fakes for the owner's units)
+- [x] `test_BUG1_*`: every stage's output reloads by version ID and equals what was written
+- [x] Invariant INV-05 holds after clean: the stage refuses to commit a version that breaks it (`test_INV_05_*`)
+- [ ] Demo: ingest → clean → preprocess as one pipeline job (runs end to end with fakes in `test_DATA_6_1_pipeline_*`; the demo waits for the owner's units)
+- [ ] Docs updated (done for the agent's part; the owner's units and the threshold chosen under OC-5 still to be recorded)
 - [ ] Owner's OK to merge
 
 ## M4 — Labeling
