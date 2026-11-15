@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-01 app shell — hi-fi mockup v1</title>
+<style>
+/* Bundled fonts (assets/fonts/, SIL OFL 1.1). */
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   Nothing below this block uses a raw colour, size or duration.
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; }
+  .pulse, .skeleton { animation: none !important; }
+}
+
+/* ============================================================================ design-system components used (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.stalled { --c: var(--state-stalled); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; } .badge.ok { color: var(--success); background: var(--success-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 420px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; }
+.toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.modal { width: 520px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.skeleton { height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ============================================================================ SCR-01 shell (tokens only) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); }
+.brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav:hover { background: var(--accent-soft); color: var(--text-primary); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); }
+.nav kbd { margin-left: auto; }
+.side .foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.health { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.health svg.i { color: var(--success); } .health.down svg.i { color: var(--danger); } .health.down { color: var(--danger); font-weight: var(--fw-medium); }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); min-width: 0; }
+.crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.crumbs svg.i { width: 12px; height: 12px; }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); color: var(--text-primary); font: var(--fs-12) var(--font-ui); cursor: pointer; }
+.jobind:hover { border-color: var(--border-strong); }
+.jobind .stage { color: var(--text-secondary); } .jobind .eta { color: var(--text-muted); }
+.jobind .progress { width: 80px; } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.content { grid-column: 2; position: relative; overflow: hidden; background: var(--bg); padding: var(--sp-6); }
+.slot { height: 100%; border: var(--bw) dashed var(--border); border-radius: var(--r-md); display: grid; place-items: center; text-align: center; color: var(--text-muted); font-size: var(--fs-12); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; }
+.m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); }
+.m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); font-size: var(--fs-11); }
+.m svg.sp { width: 40px; height: 12px; display: block; }
+.m.unavail b { color: var(--text-muted); font-weight: var(--fw-regular); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); }
+.conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+.conn .lost { color: var(--warning); display: inline-flex; gap: var(--sp-1); align-items: center; }
+.stale { opacity: .5; }
+.banner { position: absolute; left: 216px; right: 0; top: 48px; display: flex; align-items: center; gap: var(--sp-3); min-height: 44px; padding: var(--sp-2) var(--sp-4); background: var(--danger-soft); border-bottom: var(--bw) solid color-mix(in srgb, var(--danger) 50%, transparent); }
+.banner > svg.i { color: var(--danger); width: 16px; height: 16px; } .banner .why { color: var(--text-secondary); font-size: var(--fs-12); }
+.toasts { position: absolute; right: var(--sp-4); bottom: calc(28px + var(--sp-4)); display: flex; flex-direction: column; gap: var(--sp-2); width: 400px; z-index: var(--z-toast); }
+.toast .acts { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
+.toast .x { margin-left: auto; color: var(--text-muted); }
+.pop { position: absolute; right: var(--sp-4); top: 44px; width: 460px; padding: var(--sp-1); background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-2); z-index: var(--z-drawer); }
+.pop .row { display: grid; grid-template-columns: auto 1fr 80px 40px; gap: var(--sp-2); align-items: center; height: 36px; padding: 0 var(--sp-2); border-radius: var(--r-sm); white-space: nowrap; }
+.pop .row:hover, .pop .row.is-hover { background: var(--accent-soft); }
+.pop .row .s { color: var(--text-secondary); font-size: var(--fs-12); overflow: hidden; text-overflow: ellipsis; }
+.pop .all { display: flex; align-items: center; gap: var(--sp-2); height: 32px; padding: 0 var(--sp-2); margin-top: var(--sp-1); border-top: var(--bw) solid var(--border); color: var(--text-secondary); font-size: var(--fs-12); }
+.pop .all kbd { margin-left: auto; }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+.keys { display: grid; grid-template-columns: 64px 1fr 64px 1fr; gap: var(--sp-2) var(--sp-3); align-items: center; font-size: var(--fs-12); color: var(--text-primary); }
+.keys kbd { justify-self: start; }
+.tip { position: absolute; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); box-shadow: var(--shadow-2); z-index: var(--z-tooltip); white-space: nowrap; }
+
+/* ============================================================================ document chrome (this review page, not the UI) */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.light-pane { width: max-content; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; }
+.changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- From the design system's set -->
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <!-- New in this mockup, drawn in the same style (16 px grid, 1.6 stroke, round ends) -->
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M2 8h3l1.5-3 3 6L11 8h3"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/></symbol>
+  <symbol id="i-keys" viewBox="0 0 16 16"><rect x="1.8" y="4" width="12.4" height="8" rx="1.5"/><path d="M4.5 6.7h.3M7 6.7h.3M9.5 6.7h.3M5 9.4h6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+</svg>
+
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-01 — App shell · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-01-lofi_v1.html</span>, approved 2026-11-15), using only the design system v1 tokens and components (<span class="mono">system-preview.html</span>): every colour, size, radius and duration on this page is a token, copied unchanged. The data is realistic, taken from the M2 demo and the spec's examples. The buttons at the top switch the whole page between dark and light, and hide the numbered annotations. Frame A is also shown in light below it, so both themes can be seen together.</p>
+
+<div class="changes">
+<b>What changed since the low-fi, for review</b>
+<ul>
+<li>Nothing in the layout. The three bands, positions and sizes are as approved (sidebar 216 px, top bar 48 px, status bar 28 px).</li>
+<li>Seven icons are new (datasets, jobs, health, theme, shortcuts, chevron-down, retry). They are drawn on the design system's 16-px grid with its stroke, and would join its set.</li>
+<li>The selected navigation item uses the table's "selected row" treatment (accent-soft fill and a 2-px accent edge), so selection looks the same everywhere.</li>
+<li>Each resource in the status bar carries its fixed resource colour as an 8-px square and a sparkline; the numbers stay in text colour so they remain readable at 11 px.</li>
+</ul>
+</div>
+
+<!-- ======================================================================= A -->
+<h2>A · Populated: one job running, on the Datasets screen (dark, the default)</h2>
+<div class="frame" style="height:720px" id="frameA">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="group">Data</div>
+      <a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="group">Jobs</div>
+      <a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+      <div class="foot">
+        <div class="health" role="status"><svg class="i"><use href="#i-heart"/></svg>All systems ok</div>
+        <a class="nav"><svg class="i"><use href="#i-theme"/></svg>Theme<kbd>t</kbd></a>
+        <a class="nav"><svg class="i"><use href="#i-keys"/></svg>Shortcuts<kbd>?</kbd></a>
+      </div>
+    </nav>
+    <header class="top">
+      <div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_7f3a9c21b04e</span></div>
+      <span class="spacer"></span>
+      <button class="jobind" aria-label="Active job job_0142, running, label stage, 13 percent, opens the job"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="stage">label</span><span class="progress"><i style="--p:13%"></i></span><span class="num">13%</span><span class="eta num">ETA 14m 32s</span><svg class="i"><use href="#i-chevron"/></svg></button>
+    </header>
+    <main class="content"><div class="slot">SCR-02 Datasets and versions goes here (its own mockup)<br>Only this region scrolls.</div></main>
+    <footer class="status" aria-label="Machine resources">
+      <span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b><svg class="sp" viewBox="0 0 40 12" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-cpu)" stroke-width="1.2" points="0,8 4,7 8,9 12,6 16,7 20,5 24,7 28,6 32,8 36,5 40,6"/></svg></span>
+      <span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>7.2</b><small>/ 10.0 GB</small><svg class="sp" viewBox="0 0 40 12" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-ram)" stroke-width="1.2" points="0,7 6,7 12,6 18,6 24,5 30,5 36,4 40,4"/></svg></span>
+      <span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>94%</b><svg class="sp" viewBox="0 0 40 12" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-gpu)" stroke-width="1.2" points="0,3 4,2 8,3 12,2 16,4 20,2 24,3 28,1 32,2 36,2 40,2"/></svg></span>
+      <span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>3.9</b><small>/ 6.0 GB</small><svg class="sp" viewBox="0 0 40 12" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-vram)" stroke-width="1.2" points="0,10 4,9 8,5 12,4 16,4 20,4 24,4 28,4 32,4 36,4 40,4"/></svg></span>
+      <span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>71 °C</b><small>· 48 W</small></span>
+      <span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s · last 14:03:12</span>
+    </footer>
+  </div>
+  <span class="n" style="left:150px;top:62px">1</span>
+  <span class="n" style="left:492px;top:14px">2</span>
+  <span class="n" style="left:812px;top:14px">3</span>
+  <span class="n" style="left:236px;top:68px">4</span>
+  <span class="n" style="left:186px;top:592px">5</span>
+  <span class="n" style="left:836px;top:695px">6</span>
+  <span class="n" style="left:1036px;top:695px">7</span>
+</div>
+
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Navigation</td><td>Phase-1 groups: Datasets (SCR-02) and Jobs (SCR-07 slice); later groups appear only when built</td><td>static</td><td>–</td></tr>
+<tr><td><span class="n">2</span></td><td>Location</td><td>Screen and object path; each part links back; IDs are mono and copy on click</td><td>the route</td><td>on navigation</td></tr>
+<tr><td><span class="n">3</span></td><td>Active-job indicator</td><td>State pill, job ID, stage, progress, percent, ETA; opens SCR-04 (<kbd>g a</kbd>)</td><td><span class="mono">GET /jobs?state=running</span>, then <span class="mono">job</span> messages on <span class="mono">GET /stream</span></td><td>live (SSE)</td></tr>
+<tr><td><span class="n">4</span></td><td>Content</td><td>The current screen; the only region that scrolls</td><td>per screen</td><td>per screen</td></tr>
+<tr><td><span class="n">5</span></td><td>Health</td><td>Postgres, Redis and the data volume summarised; a failed check names itself (frame D)</td><td><span class="mono">GET /health</span></td><td>every 30 s</td></tr>
+<tr><td><span class="n">6</span></td><td>Resource strip</td><td>CPU; RAM used / total (WSL VM); GPU utilisation; VRAM used / total (NVML); GPU temperature and power; last 60 samples each</td><td><span class="mono">GET /telemetry/latest</span>, then <span class="mono">sample</span> messages on <span class="mono">GET /stream</span>; totals from <span class="mono">GET /system</span> (planned for M3)</td><td>live, 1 s with a job, 10 s idle</td></tr>
+<tr><td><span class="n">7</span></td><td>Connection</td><td>"live", the sampling interval and the last sample's time; "Reconnecting…" when the stream drops</td><td>the SSE connection</td><td>live</td></tr>
+</table>
+
+<h2>A · the same frame in light</h2>
+<div class="light-pane" data-theme="light">
+<div class="frame" style="height:300px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="group">Data</div>
+      <a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="group">Jobs</div>
+      <a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+      <div class="foot"><div class="health"><svg class="i"><use href="#i-heart"/></svg>All systems ok</div></div>
+    </nav>
+    <header class="top">
+      <div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_7f3a9c21b04e</span></div>
+      <span class="spacer"></span>
+      <button class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="stage">label</span><span class="progress"><i style="--p:13%"></i></span><span class="num">13%</span><span class="eta num">ETA 14m 32s</span><svg class="i"><use href="#i-chevron"/></svg></button>
+    </header>
+    <main class="content"><div class="slot">SCR-02 content</div></main>
+    <footer class="status">
+      <span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b><svg class="sp" viewBox="0 0 40 12" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-cpu)" stroke-width="1.2" points="0,8 4,7 8,9 12,6 16,7 20,5 24,7 28,6 32,8 36,5 40,6"/></svg></span>
+      <span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>7.2</b><small>/ 10.0 GB</small><svg class="sp" viewBox="0 0 40 12" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-ram)" stroke-width="1.2" points="0,7 6,7 12,6 18,6 24,5 30,5 36,4 40,4"/></svg></span>
+      <span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>94%</b><svg class="sp" viewBox="0 0 40 12" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-gpu)" stroke-width="1.2" points="0,3 4,2 8,3 12,2 16,4 20,2 24,3 28,1 32,2 36,2 40,2"/></svg></span>
+      <span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>3.9</b><small>/ 6.0 GB</small><svg class="sp" viewBox="0 0 40 12" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-vram)" stroke-width="1.2" points="0,10 4,9 8,5 12,4 16,4 20,4 24,4 28,4 32,4 36,4 40,4"/></svg></span>
+      <span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>71 °C</b><small>· 48 W</small></span>
+      <span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s · last 14:03:12</span>
+    </footer>
+  </div>
+</div>
+</div>
+<p class="cap">Light redefines colour and shadow tokens only (design system b). Every text and icon colour here was measured for AA contrast in G0.</p>
+
+<!-- ======================================================================= B -->
+<h2>B · Empty: nothing running (idle)</h2>
+<div class="frame" style="height:110px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b></div><span class="spacer"></span>
+      <button class="jobind idle"><span class="pill queued" style="--c:var(--text-muted)"><svg class="i"><use href="#i-clock"/></svg>Idle</span>No job running · last <span class="mono">job_0141</span> completed 2h ago<svg class="i"><use href="#i-chevron"/></svg></button></header>
+    <main class="content" style="padding:0"></main>
+    <footer class="status">
+      <span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>4%</b></span>
+      <span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>3.1</b><small>/ 10.0 GB</small></span>
+      <span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>0%</b></span>
+      <span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>0.2</b><small>/ 6.0 GB</small></span>
+      <span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>41 °C</b><small>· 3 W</small></span>
+      <span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s idle · last 16:21:40</span>
+    </footer>
+  </div>
+</div>
+<p class="cap">"Idle" uses the queued pill's shape in the muted text colour: a state word with an icon, not a job state, so it borrows no state colour. The link opens the last job.</p>
+
+<!-- ======================================================================= C -->
+<h2>C · Several jobs running, list open</h2>
+<div class="frame" style="height:230px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div><span class="spacer"></span>
+      <button class="jobind is-focus" aria-expanded="true"><span class="pill running"><i class="pulse"></i>2 running</span><span class="stage">label 13% · ingest 61%</span><svg class="i"><use href="#i-down"/></svg></button></header>
+    <main class="content"></main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>71%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>8.1</b><small>/ 10.0 GB</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+  <div class="pop" role="menu">
+    <div class="row is-hover"><span class="pill running"><i class="pulse"></i>Running</span><span class="s"><span class="mono" style="color:var(--text-primary)">job_0142</span> · label · coco10k · gpu</span><span class="progress"><i style="--p:13%"></i></span><span class="num">13%</span></div>
+    <div class="row"><span class="pill running"><i class="pulse"></i>Running</span><span class="s"><span class="mono" style="color:var(--text-primary)">job_0143</span> · ingest · birds2k · cpu</span><span class="progress"><i style="--p:61%"></i></span><span class="num">61%</span></div>
+    <div class="all">All jobs<svg class="i"><use href="#i-chevron"/></svg><kbd>g j</kbd></div>
+  </div>
+</div>
+<p class="cap">The GPU job is listed first (the sampler tags it as primary). At most one GPU job runs at a time (ADR-0003).</p>
+
+<!-- ======================================================================= D -->
+<h2>D · Error: a dependency is down, stream reconnecting</h2>
+<div class="frame" style="height:170px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="foot"><div class="health down" role="alert"><svg class="i"><use href="#i-x"/></svg>Postgres down</div></div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div><span class="spacer"></span>
+      <button class="jobind stale"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="stage">label</span><span class="num">13%</span></button></header>
+    <main class="content"></main>
+    <footer class="status">
+      <span class="m stale" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b></span>
+      <span class="m stale" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>7.2</b><small>/ 10.0 GB</small></span>
+      <span class="m stale" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>94%</b></span>
+      <span class="m conn"><span class="lost"><svg class="i" style="width:12px;height:12px"><use href="#i-refresh"/></svg>Reconnecting…</span>· values from 14:03:12</span>
+    </footer>
+  </div>
+  <div class="banner" role="alert"><svg class="i"><use href="#i-alert"/></svg><b>Postgres is unreachable</b><span class="badge err">dependency_unavailable</span><span class="why"><b style="display:inline;color:var(--text-primary)">Do:</b> check that the postgres container is running (<span class="mono">docker compose ps</span>), then retry.</span><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></div>
+</div>
+<p class="cap">The banner carries the problem's <span class="mono">code</span> and suggested action (ADR-0011). Values that may be out of date are dimmed and dated. The job keeps running; the shell has only lost its view of it (NFR-13).</p>
+
+<!-- ======================================================================= E -->
+<h2>E · Loading: first paint</h2>
+<div class="frame" style="height:76px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div><span class="spacer"></span><span class="jobind" aria-busy="true"><span class="skeleton" style="width:72px"></span><span class="skeleton" style="width:150px"></span></span></header>
+    <main class="content" style="padding:0"></main>
+    <footer class="status" aria-busy="true">
+      <span class="m">CPU <span class="skeleton" style="width:28px;height:8px"></span></span>
+      <span class="m">RAM <span class="skeleton" style="width:72px;height:8px"></span></span>
+      <span class="m">GPU <span class="skeleton" style="width:28px;height:8px"></span></span>
+      <span class="m">VRAM <span class="skeleton" style="width:72px;height:8px"></span></span>
+      <span class="m conn">connecting…</span>
+    </footer>
+  </div>
+</div>
+<p class="cap">Skeletons hold the final sizes, so nothing moves when the first sample arrives.</p>
+
+<!-- ======================================================================= F -->
+<h2>F · Unavailable: GPU metrics cannot be read (e.g. after the laptop slept)</h2>
+<div class="frame" style="height:76px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b></div></header>
+    <main class="content" style="padding:0"></main>
+    <footer class="status">
+      <span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>6%</b></span>
+      <span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>3.4</b><small>/ 10.0 GB</small></span>
+      <span class="m unavail" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>— unavailable</b></span>
+      <span class="m unavail" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>— unavailable</b></span>
+      <span class="m unavail" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>— unavailable</b></span>
+      <span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s idle</span>
+    </footer>
+  </div>
+  <span class="tip" style="left:440px;top:8px">NVML not reachable (cuda_unavailable). Restart WSL, then retry.</span>
+</div>
+<p class="cap">"Unavailable" is not zero (design principle 6): a dash and the word, in the muted colour, with the reason on hover or focus.</p>
+
+<!-- ======================================================================= G -->
+<h2>G · Toasts from the global stream</h2>
+<div class="frame" style="height:310px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div><span class="spacer"></span><button class="jobind idle"><span class="pill queued" style="--c:var(--text-muted)"><svg class="i"><use href="#i-clock"/></svg>Idle</span><svg class="i"><use href="#i-chevron"/></svg></button></header>
+    <main class="content"></main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>12%</b></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s idle</span></footer>
+  </div>
+  <div class="toasts">
+    <div class="toast" role="alert" style="--c:var(--danger)"><svg class="i"><use href="#i-x"/></svg><div style="flex:1"><b><span class="mono">job_0142</span> failed in label</b><span><span class="mono">gpu_oom</span> · CUDA out of memory at batch 43/313.</span><br><span><b style="display:inline;color:var(--text-primary)">Do:</b> reduce batch size from 32 → 16, then retry.</span><div class="acts"><button class="btn sm primary">Open job</button><button class="btn sm ghost">Dismiss</button></div></div></div>
+    <div class="toast" role="status" style="--c:var(--success)"><svg class="i"><use href="#i-check"/></svg><div><b><span class="mono">job_0141</span> completed · 4m 12s</b><span>Output <span class="mono">ds_389dd9b94119</span></span></div><svg class="i x"><use href="#i-x"/></svg></div>
+  </div>
+</div>
+<p class="cap">Completed toasts close after 6 s; failed and stalled stay until dismissed. Each outcome is also on the job's own screen and in the jobs list.</p>
+
+<!-- ======================================================================= H -->
+<h2>H · Shortcut help (<kbd>?</kbd>)</h2>
+<div class="frame" style="height:340px">
+  <div class="shell"><nav class="side"></nav><header class="top"></header><main class="content"></main><footer class="status"></footer></div>
+  <div class="scrim"><div class="modal" role="dialog" aria-label="Keyboard shortcuts">
+    <header><svg class="i"><use href="#i-keys"/></svg>Keyboard shortcuts</header>
+    <div><div class="keys">
+      <kbd>g d</kbd><span>Datasets</span><kbd>/</kbd><span>Filter this list</span>
+      <kbd>g j</kbd><span>Jobs</span><kbd>j</kbd><span>Next row (<kbd>k</kbd> previous)</span>
+      <kbd>g a</kbd><span>Active job</span><kbd>Enter</kbd><span>Open the row</span>
+      <kbd>t</kbd><span>Switch theme</span><kbd>Esc</kbd><span>Close a dialog or drawer</span>
+      <kbd>?</kbd><span>This help</span><kbd>a</kbd><span>Accept in review (<kbd>r</kbd> reject)</span>
+    </div><p style="margin:var(--sp-3) 0 0;font-size:var(--fs-12)">Everything also works with Tab and Enter. Focus returns to where you were when this closes.</p></div>
+    <footer><button class="btn sm">Close <kbd>Esc</kbd></button></footer>
+  </div></div>
+</div>
+
+<!-- ======================================================================= I -->
+<h2>I · 1024 px: icon rail</h2>
+<div class="frame compact" style="height:150px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center;padding:var(--sp-3) var(--sp-1)">
+      <div class="brand" style="padding:0;margin-bottom:var(--sp-4)"><svg class="i"><use href="#i-layers"/></svg></div>
+      <a class="nav" aria-current="page" aria-label="Datasets"><svg class="i"><use href="#i-db"/></svg></a>
+      <a class="nav is-focus" aria-label="Jobs"><svg class="i"><use href="#i-list"/></svg></a>
+    </nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k</div><span class="spacer"></span>
+      <button class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="stage">label</span><span class="num">13%</span><svg class="i"><use href="#i-chevron"/></svg></button></header>
+    <main class="content"></main>
+    <footer class="status">
+      <span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b></span>
+      <span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>7.2/10.0</b></span>
+      <span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>94%</b></span>
+      <span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>3.9/6.0</b></span>
+      <span class="m" style="--res:var(--res-temp)"><i class="sq"></i><b>71 °C</b><small>· 48 W</small></span>
+      <span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span></span>
+    </footer>
+  </div>
+  <span class="tip" style="left:62px;top:76px">Jobs · g j</span>
+</div>
+<p class="cap">The rail item with keyboard focus shows its label as a tooltip. The job indicator drops its bar and ETA; the strip drops sparklines and units, and keeps every value.</p>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>Landmarks: <span class="mono">nav</span> (main navigation), <span class="mono">header</span>, <span class="mono">main</span>, <span class="mono">footer</span> (machine resources). The resource strip is one <span class="mono">aria-live="off"</span> region: numbers change every second and must not be read out; its full values are in its accessible name.</li>
+<li>The job indicator is a button whose name states the job, state, stage and percent. State changes are announced once through <span class="mono">role="status"</span>; failures through <span class="mono">role="alert"</span>.</li>
+<li>Every state carries an icon and a word; resource colours are always beside their label.</li>
+<li>Tab order: navigation, location, job indicator, content, status bar.</li>
+</ul>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) {
+    root.setAttribute('data-theme', light ? 'light' : 'dark');
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+    btn.setAttribute('aria-pressed', String(light));
+  }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);  // open as SCR-01_v1.html#light to start in light
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () {
+    var off = document.body.classList.toggle('no-notes');
+    notes.textContent = off ? 'Show annotations' : 'Hide annotations';
+    notes.setAttribute('aria-pressed', String(!off));
+  });
+})();
+</script>
+</body>
+</html>

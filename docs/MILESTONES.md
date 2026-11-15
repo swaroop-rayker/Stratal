@@ -49,7 +49,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 - [x] G0 approved (v1, 2026-11-15)
 - [x] G1 approved (v1, 2026-11-15)
-- [ ] G2 approved: SCR-01
+- [ ] G2 approved: SCR-01 (low-fi v1 approved 2026-11-15; hi-fi in progress)
 - [ ] G2 approved: SCR-02
 - [ ] G2 approved: SCR-03
 - [ ] G2 approved: SCR-04

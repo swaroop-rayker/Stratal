@@ -118,7 +118,7 @@ All are in the preview with their variants and states. States shown where they a
 - **Live-updating numbers.** Tabular mono, fixed-width containers, right-aligned in tables. Values update in place with no animation of the digits. A value older than three sample intervals is dimmed to `text-muted`.
 - **Long-running jobs.** Always visible together: state pill, the current activity message in plain language, progress with percentage, rate and ETA, and the stage timeline. A requested cancel shows "Cancelling…" until the job has actually stopped (`desired_state`).
 - **Destructive actions.** A modal that names the object, says what is kept and what is lost, puts the safe choice first, and labels the destructive button with the verb and object ("Cancel job"), never "OK". Deleting data additionally requires typing the name.
-- **Keyboard.** Everything is reachable by Tab in reading order. Shortcuts are additions: `g d` / `g j` navigation, `/` filter, `j` / `k` rows, `Enter` open, `Esc` close, `a` / `r` accept and reject in review, `?` help.
+- **Keyboard.** Everything is reachable by Tab in reading order. Shortcuts are additions: `g d` / `g j` navigation, `g a` the active job, `t` theme, `/` filter, `j` / `k` rows, `Enter` open, `Esc` close, `a` / `r` accept and reject in review, `?` help.
 
 ## e) Accessibility
 
@@ -149,4 +149,5 @@ All are in the preview with their variants and states. States shown where they a
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-14 | First version, for Gate 0 review |
+| v1 (shortcuts) | 2026-11-15 | `g a` (active job) and `t` (theme) added to the keyboard pattern; proposed in the SCR-01 low-fi wireframe and approved with it |
 | v1 (fonts) | 2026-11-15 | Not a new version: the approved typefaces are now bundled and the preview loads them. No token, size or component changed; the preview now shows the type the approval named instead of the fallback |
