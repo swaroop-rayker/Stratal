@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 in progress: agent's part built 2026-11-15 (allow-list and pull, adapters, S-06 with Florence-2 `<CAPTION>` chosen, GPU lease, label and filter stages); the four owner units written by the agent at the owner's request; demo run; CLIP threshold 0.2 chosen (OC-5); spike S-07 run (limits hold); the owner's OK to merge is left. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 waits on the owner's DATA-4 section. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -21,7 +21,7 @@
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
 | M3 | Cleaning and preprocessing | 1 | M | Done 2026-11-15 |
-| M4 | Labeling | 1 | L | In progress: everything built, demonstrated and measured 2026-11-15; waiting on the owner's OK to merge |
+| M4 | Labeling | 1 | L | Done 2026-11-15 |
 | M5 | Splits, review, eval report | 1 | M | Not started |
 | M6 | Phase-1 screens | 1 | L | Not started |
 | M7 | Phase-1 acceptance | 1 | M | Not started |
@@ -232,7 +232,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] `test_NFR_8_*`: no `trust_remote_code` in source; a model outside the allow-list is refused (also: every file pinned by hash, a mismatched file is not kept)
 - [x] Demo: label 1,000 images and watch it live through the API (2026-11-15, `job_0006`: 1,000 COCO images through all five stages in about 2 min 20 s; 994 labelled, 9 filtered at 0.2; final version `ds_ef5728d21725`)
 - [x] Docs updated (2026-11-15; learning notes §5f and §21)
-- [ ] Owner's OK to merge
+- [x] Owner's OK to merge (2026-11-15, "Yes, merge and push")
 
 ## M5 — Splits, review, eval report
 
