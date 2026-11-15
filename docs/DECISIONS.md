@@ -316,6 +316,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Each pinned in the catalog; 605 MB and 1.88 GB.
 - **Why:** OpenAI's ViT-B/32 and BLIP-base carry safetensors only in unreviewed community pull requests, which anyone can upload; their main branches have pickle weights only. These two publish safetensors on their main branch. LAION's model is the same architecture, so scores are comparable in kind but not in value with published OpenAI-CLIP scores.
 
+**Default captioner: Florence-2-base, `<CAPTION>`** (M4, LABEL-1.1, spike S-06; chosen by the owner 2026-11-15)
+- **What:** The label stage captions with Florence-2-base's `<CAPTION>` task, fp16, three beams, at most 40 new tokens.
+- **How:** The defaults of the label stage's config; BLIP-large stays on the allow-list as the alternative.
+- **Why:** In S-06 its captions scored level with COCO's human captions on CLIP (0.300 against 0.302) at 10 img/s. The detailed task runs past CLIP's 77 tokens and takes twice as long; BLIP-large showed a fixed "there is a ..." opening and more mistakes.
+
 **transformers in the GPU worker only** (M4, LABEL-1.1, LABEL-1.3)
 - **What:** `transformers` (SPEC §7.2) is in the `gpu` extra, with the 13 packages it brings, numpy among them.
 - **How:** Re-locked with uv; the API, CPU worker and dev images are unchanged.

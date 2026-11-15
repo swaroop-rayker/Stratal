@@ -214,7 +214,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Done when**
 
-- [ ] S-06 report delivered; owner decides Florence-2 vs BLIP (report delivered 2026-11-15 in RISKS.md; decision pending)
+- [x] S-06 report delivered; owner decides Florence-2 vs BLIP (2026-11-15: Florence-2-base, `<CAPTION>`)
 - [ ] 👤 `test_LABEL_1_1_*`: every accepted row has a caption and a model version
 - [ ] 👤 `test_LABEL_1_2_*`: kill at 60%, restart, completes; no finished image is captioned twice
 - [ ] 👤 `test_LABEL_1_3_*`: a score is present for every pair

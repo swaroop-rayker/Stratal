@@ -161,7 +161,7 @@ Likelihood and impact are High, Medium or Low.
   - **The detailed captions score a little higher, but they run past CLIP's 77-token limit** (R-09): CLIP sees only their beginning. They also take twice as long.
   - **BLIP-large is a little faster, with a steady "there is a ..." opening and some visible mistakes** (image 4: "in the snow" for a rainy street).
 
-  **Recommendation:** keep Florence-2-base with `<CAPTION>` as the default (SPEC LABEL-1.1, ADR-0009). Use `<DETAILED_CAPTION>` only where long captions are wanted and are scored some other way than CLIP. **Decision:** the owner's.
+  **Recommendation:** keep Florence-2-base with `<CAPTION>` as the default (SPEC LABEL-1.1, ADR-0009). Use `<DETAILED_CAPTION>` only where long captions are wanted and are scored some other way than CLIP. **Decision (owner, 2026-11-15):** Florence-2-base with `<CAPTION>`.
 
 ### S-07 — Does the memory budget hold? (M4)
 
