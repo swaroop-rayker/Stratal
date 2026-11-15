@@ -35,6 +35,16 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-009 — The collector and the supervisor could deadlock on a failing stage
+
+- **Date:** 2026-11-15
+- **Seen:** The first CI run on GitHub failed `test_NFR_13_kill_the_job_and_the_monitor_continues` with `psycopg.errors.DeadlockDetected: deadlock detected … while updating tuple (0,2) in relation "job_stages"`. The test passes on the laptop; only the timing differed.
+- **Where:** M2 job and event spine; `mon/collector.py`, `runtime/supervisor.py` `finalize`; NFR-13, MON-1.4
+- **Cause:** Opposite lock order. `finalize` locks the `jobs` row and then updates the `job_stages` row. The collector, storing a `stage_failed` event, updated the `job_stages` row first (its metrics) and then the job's summary in the `jobs` row. When both ran at the moment a stage ended, each waited for the other, and PostgreSQL killed one: the job's outcome or a batch of events would be rolled back.
+- **Fix:** `write_batch` in the collector locks the rows of every job in the batch, in ID order, with `FOR NO KEY UPDATE`, before touching a stage row. Every writer of stage rows now takes the job row first, as the supervisor, the watchdog and the job service already did. The child's `_record` holds only one stage row and cannot close a cycle.
+- **Guard:** `test_NFR_13_collector_and_supervisor_lock_job_rows_in_one_order` forces the interleaving: it holds the job lock as `finalize` does, waits until the collector is blocked, then updates the stage. It failed with `DeadlockDetected` before the fix and passed five runs in a row after.
+- **Status:** fixed; verified locally, and on GitHub when this reaches `main`
+
 ### E-008 — The MON-2.4 GPU test was flaky: NVML counts new VRAM late on WSL
 
 - **Date:** 2026-11-15

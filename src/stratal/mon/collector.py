@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from stratal.core.bus import LIVE_GLOBAL, Bus, StreamEntry, live_channel
 from stratal.core.logging import get_logger
-from stratal.db.models import JobStage, ProcessSample
+from stratal.db.models import Job, JobStage, ProcessSample
 from stratal.mon.emitter import KIND_EVENT, KIND_PROCESS_SAMPLE
 from stratal.mon.events import Event
 from stratal.mon.store import insert_events, refresh_summary
@@ -65,6 +65,30 @@ def apply_to_stage(session: Session, event: Event) -> None:
         refresh_summary(session, event.job_id, now=event.ts)
 
 
+def write_batch(session: Session, events: list[Event], samples: list[dict[str, Any]]) -> None:
+    """Store one batch and bring the stage rows up to date, inside the caller's transaction.
+
+    Lock order (E-009): every writer that changes a job's stages takes the job row
+    first, as the supervisor, the watchdog and the job service do. So the rows of
+    the jobs this batch touches are locked here, in ID order, before any stage row.
+    ``FOR NO KEY UPDATE`` is the lock an ``UPDATE`` of the row takes anyway; it does
+    not block inserts that only reference the job.
+    """
+    job_ids = sorted({e.job_id for e in events if e.job_id is not None and e.stage is not None})
+    if job_ids:
+        session.execute(
+            select(Job.id)
+            .where(Job.id.in_(job_ids))
+            .order_by(Job.id)
+            .with_for_update(key_share=True)
+        ).all()
+    insert_events(session, events)
+    if samples:
+        session.execute(insert(ProcessSample), samples)
+    for event in events:
+        apply_to_stage(session, event)
+
+
 class Collector:
     def __init__(self, bus: Bus, engine: Engine, *, consumer: str = "collector-1") -> None:
         self._bus = bus
@@ -106,11 +130,7 @@ class Collector:
                 log.error("stream_entry_rejected", entry_id=entry.entry_id, reason=str(exc)[:300])
 
         with Session(self._engine) as session, session.begin():
-            insert_events(session, events)
-            if samples:
-                session.execute(insert(ProcessSample), samples)
-            for event in events:
-                apply_to_stage(session, event)
+            write_batch(session, events, samples)
         self._bus.ack([entry.entry_id for entry in entries])
 
         with contextlib.suppress(Exception):  # live viewers are best-effort (NFR-13)
