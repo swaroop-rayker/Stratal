@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-04 live job view — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px; }
+.spacer { flex: 1; }
+/* SCR-04 */
+.jhead { display: flex; align-items: center; gap: 10px; }
+.jhead .id { font: 600 20px var(--mono); }
+.jhead .sub { color: var(--ink-3); font-size: 12px; } .jhead .sub .mono { color: var(--ink-2); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; }
+.pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.danger { border-color: var(--ink); color: var(--ink); border-width: 2px; } .btn.off { opacity: .45; }
+.activity { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; }
+.activity .msg { font: 600 14px var(--mono); }
+.prog { display: grid; grid-template-columns: 1fr auto auto auto; gap: 16px; align-items: center; font: 12px var(--mono); color: var(--ink-2); }
+.bar { height: 10px; border: 1px solid var(--ink-3); border-radius: 5px; position: relative; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); border-radius: 5px; }
+.timeline { display: flex; gap: 3px; height: 44px; }
+.seg { flex: var(--w, 1); min-width: 112px; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; display: flex; flex-direction: column; justify-content: center; font-size: 11px; background: var(--fill); }
+.seg b { font-size: 12px; } .seg span { font-family: var(--mono); color: var(--ink-2); }
+.seg.run { border: 2px solid var(--ink); background: #fff; } .seg.pend { border-style: dashed; background: transparent; color: var(--ink-3); } .seg.sel { outline: 2px solid var(--ink); outline-offset: 2px; } .seg.fail { border: 2px solid var(--ink); background: repeating-linear-gradient(45deg, #fff 0 4px, var(--fill-2) 4px 8px); }
+.res { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.tile { border: 1px solid var(--line); border-top: 3px solid var(--ink-3); border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; gap: 1px; }
+.tile small { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); } .tile b { font: 600 18px var(--mono); } .tile span { font: 11px var(--mono); color: var(--ink-3); }
+.chart { height: 46px; margin-top: 4px; border-bottom: 1px solid var(--soft); position: relative; background: repeating-linear-gradient(0deg, transparent 0 14px, #f4f4f4 14px 15px); }
+.chart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.log { border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.loghead { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.loghead b { font-size: 13px; }
+.seg2 { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; } .seg2 span { padding: 2px 8px; font-size: 11px; } .seg2 .on { background: var(--fill-2); font-weight: 600; }
+.lines { font: 12px/1.7 var(--mono); overflow: hidden; }
+.ln { display: grid; grid-template-columns: 70px 50px 86px 1fr; gap: 10px; padding: 0 10px; white-space: nowrap; }
+.ln .t, .ln .s { color: var(--ink-3); }
+.ln.warn { background: #f4f4f4; border-left: 3px solid var(--ink-2); } .ln.err { background: #ededed; border-left: 3px solid var(--ink); }
+.ln .why { grid-column: 4; white-space: normal; color: var(--ink-2); font-family: system-ui, sans-serif; font-size: 12px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.panel { border: 2px solid var(--ink); border-radius: 6px; padding: 10px 14px; display: flex; gap: 12px; align-items: flex-start; background: #f7f7f7; }
+.panel .ico { width: 22px; height: 22px; border: 2px solid var(--ink); border-radius: 50%; flex: none; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; } .kv span:nth-child(odd) { color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 32px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 520px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font-size: 15px; }
+.drawer .body { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+.bigchart { height: 110px; border: 1px solid var(--soft); border-radius: 4px; position: relative; background: repeating-linear-gradient(0deg, transparent 0 21px, #f4f4f4 21px 22px); }
+.bigchart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 460px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.tip { position: absolute; padding: 4px 8px; background: var(--ink); color: #fff; border-radius: 4px; font-size: 11px; max-width: 260px; white-space: normal; z-index: 6; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-04 — Live job view · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: MON-4.1, MON-4.2, MON-4.3, MON-1.1–1.5, MON-2.1, 2.3, 2.4, 2.5, MON-3.1; RUN-1.1 and RUN-1.2 slice</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §3 SCR-04 (approved v1)</span><span>Route: <span class="mono">/jobs/:job_id</span></span><span>2026-11-15</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-01 shell (faint). Blue numbers are annotations. The starting point is the layout sketched in SPEC MON-4; the data continue <span class="mono">job_0142</span> from the earlier screens: clean and preprocess done, label running.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Five bands, most urgent first</b>, as in SPEC MON-4: who and what state; what it is doing now and how far; the stage timeline; resources; the activity log. The log takes whatever height is left and scrolls on its own.</li>
+<li><b>The activity line is the largest text on the screen</b> (14 px mono, bold), because "what is it doing right now" is the question this screen answers (MON-1.2). Progress sits right under it, with percent, step, rate and ETA in fixed-width columns so nothing moves as they change.</li>
+<li><b>Timeline bars are sized by duration</b>, with a minimum width so short stages stay readable; the running stage grows as it runs and pending ones are dashed. A bar is a button: it opens a drawer with that stage's events, resource charts and peaks (MON-4.2), and the main charts and log then filter to that stage too.</li>
+<li><b>Five resource tiles with their own small charts</b> (the last 5 minutes), in the fixed resource order. VRAM shows the driver's figure big and PyTorch's allocated and reserved below it, as a dashed line on the same chart (MON-2.4). GPU utilisation carries the tooltip SPEC asks for.</li>
+<li><b>The activity log</b> has a <i>This job / All jobs</i> switch (approved in SCREENS.md, open point 2), level and stage filters, and pauses its auto-scroll as soon as you scroll up, with a "Jump to latest" button.</li>
+<li><b>One primary action per state:</b> Cancel while queued or running (danger style, with a confirm); Retry when failed; Open output version when completed.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Running: label stage, 13%</h2>
+<div class="frame" style="height:780px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b> / <span class="mono">job_0142</span></span><span class="spacer"></span><span>[ Running · job_0142 · label · 13% ]</span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0142</span><span class="pill">● Running</span><span class="sub">pipeline · coco10k · from <span class="mono">ds_0b1f9e77a3c4</span> · attempt 1 · started 13:54:20 · 15m 43s</span><span class="spacer"></span><span class="btn ghost sm">Copy ID</span><span class="btn danger">Cancel job</span></div>
+      <div class="activity"><span class="pill" style="border-style:dotted">label</span><span class="msg">▶ Captioning batch 77/595 · Florence-2-base · bs=16 · fp16</span></div>
+      <div class="prog"><div class="bar" style="--p:13%"></div><span><b>13%</b></span><span>1,232 / 9,512 images · 2.4 img/s</span><span>ETA <b>57m 33s</b></span></div>
+      <div class="timeline">
+        <div class="seg" style="--w:3.7"><b>✓ clean</b><span>3m 40s</span></div>
+        <div class="seg" style="--w:2.9"><b>✓ preprocess</b><span>2m 55s</span></div>
+        <div class="seg run" style="--w:8.6"><b>▶ label</b><span>8m 33s · 13%</span></div>
+        <div class="seg pend" style="--w:2"><b>○ filter</b><span>pending</span></div>
+      </div>
+      <div class="res">
+        <div class="tile"><small>CPU</small><b>38%</b><span>16 cores · max 71%</span><div class="chart"><svg viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="#777" stroke-width="1.2" points="0,30 10,28 20,32 30,24 40,27 50,20 60,26 70,22 80,29 90,21 100,25"/></svg></div></div>
+        <div class="tile"><small>RAM</small><b>7.2 <span style="font-size:12px">/ 10.0 GB</span></b><span>job RSS 3.1 GB</span><div class="chart"><svg viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="#777" stroke-width="1.2" points="0,26 20,25 40,22 60,20 80,19 100,18"/></svg></div></div>
+        <div class="tile"><small>GPU ⓘ</small><b>94%</b><span>mem ctrl 61%</span><div class="chart"><svg viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="#777" stroke-width="1.2" points="0,40 8,40 12,8 20,6 30,9 40,5 50,7 60,4 70,6 80,5 90,7 100,5"/></svg></div></div>
+        <div class="tile"><small>VRAM</small><b>3.9 <span style="font-size:12px">/ 6.0 GB</span></b><span>torch alloc 3.1 · rsv 3.6</span><div class="chart"><svg viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="#777" stroke-width="1.2" points="0,42 10,42 14,22 20,20 100,20"/><polyline fill="none" stroke="#777" stroke-width="1.2" stroke-dasharray="3 2" points="0,44 10,44 14,26 20,25 100,25"/></svg></div></div>
+        <div class="tile"><small>GPU temp · power</small><b>71 °C</b><span>48 W · max 74 °C</span><div class="chart"><svg viewBox="0 0 100 46" preserveAspectRatio="none"><polyline fill="none" stroke="#777" stroke-width="1.2" points="0,36 10,35 14,26 30,20 50,17 70,16 100,15"/></svg></div></div>
+      </div>
+      <div class="log">
+        <div class="loghead"><b>Activity</b><span class="seg2"><span class="on">This job</span><span>All jobs</span></span><span class="select">Level: INFO+ ▾</span><span class="select">Stage: all ▾</span><span class="spacer"></span><span class="k">/</span> filter<span class="btn sm ghost">⏸ Auto-scroll on</span></div>
+        <div class="lines">
+          <div class="ln"><span class="t">14:10:03</span><span>INFO</span><span class="s">label</span><span>Captioning batch 77/595 · Florence-2-base · bs=16 · fp16</span></div>
+          <div class="ln"><span class="t">14:09:56</span><span>INFO</span><span class="s">label</span><span>Captioning batch 76/595 · Florence-2-base · bs=16 · fp16</span></div>
+          <div class="ln"><span class="t">14:01:33</span><span>INFO</span><span class="s">label</span><span>Loaded Florence-2-base to GPU (0.9 GB, 2.1 s) · VRAM 0.3 → 1.2 GB</span></div>
+          <div class="ln"><span class="t">14:01:00</span><span>INFO</span><span class="s">preprocess</span><span>Recording lineage → ds_c8e21d0f6a3b</span></div>
+          <div class="ln"><span class="t">14:00:57</span><span>INFO</span><span class="s">preprocess</span><span>Resizing to 768px · normalizing 9,512/9,512</span></div>
+          <div class="ln warn"><span class="t">13:57:12</span><span>WARN</span><span class="s">clean</span><span>212 exact duplicates marked (2.1% of accepted rows)</span><span class="why"><b>Why:</b> more than the 1% usually seen in a curated source. <b>Do:</b> check the source for copied folders.</span></div>
+          <div class="ln"><span class="t">13:56:40</span><span>INFO</span><span class="s">clean</span><span>Comparing hashes: 128 near-duplicate groups found</span></div>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 38% · RAM 7.2 / 10.0 GB · GPU 94% · VRAM 3.9 / 6.0 GB · 71 °C<span class="spacer"></span>● live · 1 s</footer>
+  </div>
+  <span class="tip" style="left:820px;top:398px">GPU utilisation is the share of time at least one kernel ran. 100% does not mean the GPU is used efficiently.</span>
+  <span class="n" style="left:226px;top:60px">1</span>
+  <span class="n" style="left:1150px;top:42px">2</span>
+  <span class="n" style="left:226px;top:104px">3</span>
+  <span class="n" style="left:226px;top:148px">4</span>
+  <span class="n" style="left:226px;top:184px">5</span>
+  <span class="n" style="left:226px;top:248px">6</span>
+  <span class="n" style="left:226px;top:360px">7</span>
+  <span class="n" style="left:226px;top:396px">8</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Header</td><td>Job ID, state pill, kind, dataset, input version, attempt, start time, elapsed. "Cancelling…" replaces the pill's word while <span class="mono">desired_state</span> is set</td><td><span class="mono">GET /jobs/{id}</span>, then <span class="mono">job</span> messages on <span class="mono">GET /jobs/{id}/stream</span></td><td>yes</td></tr>
+<tr><td><span class="num">2</span></td><td>Actions</td><td>Primary by state: Cancel job (frame F) · Retry (frame C) · Open output version (frame D)</td><td><span class="mono">POST /jobs/{id}/cancel</span>, <span class="mono">/retry</span></td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Activity line</td><td>The current stage and its latest plain-language message (MON-1.2)</td><td><span class="mono">event</span> messages; stage <span class="mono">activity</span></td><td>yes</td></tr>
+<tr><td><span class="num">4</span></td><td>Progress</td><td>Bar in the state colour, percent, items, rate, ETA ("—" until known; MON-1.5)</td><td>stage <span class="mono">step</span>, <span class="mono">total</span>, <span class="mono">throughput</span>, <span class="mono">eta_seconds</span></td><td>yes</td></tr>
+<tr><td><span class="num">5</span></td><td>Timeline</td><td>One bar per stage, width by duration; name, state icon, duration; reused stages marked "cached". Click opens the stage drawer (frame B) (MON-4.2)</td><td><span class="mono">GET /jobs/{id}</span> stages</td><td>yes</td></tr>
+<tr><td><span class="num">6</span></td><td>Resources</td><td>CPU, RAM (VM and job RSS), GPU (with tooltip), VRAM (NVML big; PyTorch allocated and reserved, dashed), temperature and power; last 5 minutes; filtered to a stage when one is selected (MON-2.1, 2.3, 2.4)</td><td><span class="mono">sample</span> messages; history from <span class="mono">GET /jobs/{id}/telemetry</span></td><td>yes, 1 s</td></tr>
+<tr><td><span class="num">7</span></td><td>Log controls</td><td>This job / All jobs (adds a job filter), level, stage, text filter, auto-scroll (MON-4.3)</td><td><span class="mono">GET /jobs/{id}/events</span> or <span class="mono">GET /events</span></td><td>–</td></tr>
+<tr><td><span class="num">8</span></td><td>Activity log</td><td>Newest first: time, level, stage, message; WARN and ERROR rows show <b>Why</b> and <b>Do</b> (MON-1.3). <span class="mono">role="log"</span>, polite</td><td>same, then <span class="mono">event</span> messages</td><td>yes</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · A stage selected: its drawer</h2>
+<div class="frame" style="height:600px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b> / <span class="mono">job_0142</span></span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0142</span><span class="pill">● Running</span></div>
+      <div class="timeline" style="width:660px"><div class="seg sel" style="--w:3.7"><b>✓ clean</b><span>3m 40s</span></div><div class="seg" style="--w:2.9"><b>✓ preprocess</b><span>2m 55s</span></div><div class="seg run" style="--w:8.6"><b>▶ label</b><span>13%</span></div><div class="seg pend" style="--w:2"><b>○ filter</b></div></div>
+      <p style="margin:0;font-size:12px;color:var(--ink-3)">Charts and log below now show <b>clean</b> only · <span class="btn sm ghost">✕ Show all stages</span></p>
+    </section>
+    <footer class="status">CPU 38%<span class="spacer"></span>● live</footer>
+  </div>
+  <aside class="drawer">
+    <header><b>clean</b><span class="pill">✓ Completed</span><span class="spacer"></span><span class="k">Esc</span> ✕</header>
+    <div class="body">
+      <div class="kv"><span>Ran</span><span class="mono">13:54:20 – 13:58:00 · 3m 40s · cpu worker</span><span>Input → output</span><span class="mono">ds_0b1f9e77a3c4 → ds_e1aa7c52d940</span><span>Work</span><span class="mono">9,852 hashed · 44.8 img/s · 0 from cache</span><span>Decided</span><span class="mono">212 exact + 128 near duplicates</span></div>
+      <table class="t"><tr><th>Peak</th><th class="r">RAM</th><th class="r">VRAM</th><th class="r">GPU temp</th><th class="r">CPU</th></tr><tr><td>clean</td><td class="r m">1.9 GB</td><td class="r m">—</td><td class="r m">52 °C</td><td class="r m">96%</td></tr></table>
+      <div class="bigchart"><svg viewBox="0 0 100 110" preserveAspectRatio="none"><polyline fill="none" stroke="#777" stroke-width="1" points="0,30 10,12 20,10 30,14 40,9 50,11 60,10 70,13 80,40 90,60 100,62"/><polyline fill="none" stroke="#aaa" stroke-width="1" points="0,80 20,74 40,70 60,66 80,64 100,70"/></svg></div>
+      <p style="margin:0;font-size:11px;color:var(--ink-3)">CPU and RAM over the stage; GPU lines omitted (unused: CPU stage). Expected bottleneck for cleaning: CPU (hashing), RAM (hash index) — MON-3.</p>
+      <div class="lines" style="border:1px solid var(--soft);border-radius:4px">
+        <div class="ln" style="grid-template-columns:64px 44px 1fr"><span class="t">13:58:00</span><span>INFO</span><span>Recording lineage → ds_e1aa7c52d940</span></div>
+        <div class="ln warn" style="grid-template-columns:64px 44px 1fr"><span class="t">13:57:12</span><span>WARN</span><span>212 exact duplicates marked (2.1%)</span></div>
+        <div class="ln" style="grid-template-columns:64px 44px 1fr"><span class="t">13:56:40</span><span>INFO</span><span>Comparing hashes: 128 near-duplicate groups found</span></div>
+        <div class="ln" style="grid-template-columns:64px 44px 1fr"><span class="t">13:56:38</span><span>INFO</span><span>Hashing images (pHash) 9,852/9,852</span></div>
+      </div>
+    </div>
+  </aside>
+  <span class="n" style="left:744px;top:60px">9</span>
+</div>
+<p class="caption"><b>9</b> · Stage drawer: when it ran, its input and output versions, its work in its own terms (MON-3 metrics), peaks for the stage (MON-2.5), its resource curves and its events. Fed by <span class="mono">GET /jobs/{id}</span> (stage), <span class="mono">GET /jobs/{id}/telemetry?stage=clean</span>, <span class="mono">GET /jobs/{id}/events?stage=clean</span>.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Failed: out of GPU memory</h2>
+<div class="frame" style="height:540px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b> / <span class="mono">job_0145</span></span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0145</span><span class="pill">✕ Failed</span><span class="sub">pipeline · coco10k · from <span class="mono">ds_c8e21d0f6a3b</span> · attempt 1 · ran 4m 51s</span><span class="spacer"></span><span class="btn">Open input version</span><span class="btn primary">↻ Retry</span></div>
+      <div class="panel"><span class="ico"></span><div><b>label failed: CUDA out of memory at batch 43/298</b> <span class="mono" style="color:var(--ink-3)">gpu_oom</span><br><span style="font-size:12px">Tried to allocate 1.1 GB with 5.4 GB of 6.0 GB in use, at batch size 32.</span><br><span style="font-size:12px"><b>Do:</b> reduce batch size from 32 → 16, then retry. <b>Kept:</b> 1,344 captions already made (42 batches) are cached and will not be redone.</span><div style="margin-top:6px;display:flex;gap:8px"><span class="btn sm">Retry with batch size 16</span><span class="btn sm ghost">Open the failing stage</span></div></div></div>
+      <div class="timeline"><div class="seg fail" style="--w:5"><b>✕ label</b><span>4m 51s · batch 43/298</span></div><div class="seg pend" style="--w:1"><b>○ filter</b><span>not run</span></div></div>
+      <div class="log"><div class="loghead"><b>Activity</b><span class="select">Level: WARN+ ▾</span></div><div class="lines">
+        <div class="ln err"><span class="t">14:31:05</span><span>ERROR</span><span class="s">label</span><span>CUDA out of memory at batch 43/298 · bs=32</span><span class="why"><b>Why:</b> tried to allocate 1.1 GB; 5.4 of 6.0 GB in use. <b>Do:</b> reduce batch size from 32 → 16.</span></div>
+        <div class="ln warn"><span class="t">14:30:58</span><span>WARN</span><span class="s">label</span><span>VRAM at 91% (5.5 of 6.0 GB)</span><span class="why"><b>Why:</b> above the 90% threshold. <b>Do:</b> none yet; the next batch may not fit.</span></div>
+      </div></div>
+    </section>
+    <footer class="status">CPU 4% · RAM 3.1 / 10.0 GB<span class="spacer"></span>● live · 10 s idle</footer>
+  </div>
+  <span class="n" style="left:226px;top:104px">10</span>
+</div>
+<p class="caption"><b>10</b> · Failure panel: the stage, the error <span class="mono">code</span>, the reason, the suggested action and what was kept (from <span class="mono">job.error</span> and the ERROR event). "Retry with batch size 16" appears only when the action names a concrete setting; plain Retry reuses the stage's config (SCREENS.md flow 3). <i>Note:</i> the "label" stage and its OOM handling arrive in M4; this frame fixes where they will show. This job started from a preprocess version, so its timeline begins at label.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Completed: the summary</h2>
+<div class="frame" style="height:470px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b> / <span class="mono">job_0142</span></span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0142</span><span class="pill">✓ Completed</span><span class="sub">pipeline · coco10k · 1h 14m 06s · finished 15:08:26</span><span class="spacer"></span><span class="btn">Open job's events</span><span class="btn primary">Open output version ds_b0c3e5a8d217</span></div>
+      <div class="timeline"><div class="seg" style="--w:3.7"><b>✓ clean</b><span>3m 40s</span></div><div class="seg" style="--w:2.9"><b>✓ preprocess</b><span>2m 55s</span></div><div class="seg" style="--w:66"><b>✓ label</b><span>1h 06m 03s</span></div><div class="seg" style="--w:1"><b>✓ filter</b><span>21 s</span></div></div>
+      <table class="t">
+        <tr><th>Stage</th><th class="r">Duration</th><th class="r">Items</th><th class="r">Rate</th><th class="r">Peak RAM</th><th class="r">Peak VRAM</th><th class="r">Max temp</th><th>Output</th></tr>
+        <tr><td>clean</td><td class="r m">3m 40s</td><td class="r m">9,852</td><td class="r m">44.8/s</td><td class="r m">1.9 GB</td><td class="r m">—</td><td class="r m">52 °C</td><td class="m">ds_e1aa7c52d940</td></tr>
+        <tr><td>preprocess</td><td class="r m">2m 55s</td><td class="r m">9,512</td><td class="r m">54.4/s</td><td class="r m">1.4 GB</td><td class="r m">—</td><td class="r m">55 °C</td><td class="m">ds_c8e21d0f6a3b</td></tr>
+        <tr><td>label</td><td class="r m">1h 06m 03s</td><td class="r m">9,512</td><td class="r m">2.4/s</td><td class="r m">3.1 GB</td><td class="r m">4.1 GB</td><td class="r m">74 °C</td><td class="m">ds_a41f07be92c6</td></tr>
+        <tr><td>filter</td><td class="r m">21 s</td><td class="r m">9,512</td><td class="r m">453/s</td><td class="r m">0.9 GB</td><td class="r m">—</td><td class="r m">58 °C</td><td class="m">ds_b0c3e5a8d217</td></tr>
+        <tr><td><b>job</b></td><td class="r m"><b>1h 14m 06s</b></td><td></td><td></td><td class="r m"><b>3.1 GB</b></td><td class="r m"><b>4.1 GB</b></td><td class="r m"><b>74 °C</b></td><td></td></tr>
+      </table>
+      <p style="margin:0;font-size:12px;color:var(--ink-3)">Below the summary: the resource charts for the whole run and the log, as in frame A, no longer live.</p>
+    </section>
+    <footer class="status">CPU 4%<span class="spacer"></span>● live · 10 s idle</footer>
+  </div>
+  <span class="n" style="left:226px;top:156px">11</span>
+</div>
+<p class="caption"><b>11</b> · Summary: per stage duration, items, rate, peak RAM, peak VRAM, max temperature and output version, and the job's peaks (MON-2.5). From <span class="mono">GET /jobs/{id}</span> (<span class="mono">summary</span>, stage <span class="mono">peaks</span>).</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Queued</h2>
+<div class="frame" style="height:230px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b> / <span class="mono">job_0146</span></span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0146</span><span class="pill dash">◷ Queued</span><span class="sub">pipeline · birds2k · created 14:40:02 · waiting 1m 12s</span><span class="spacer"></span><span class="btn danger">Cancel job</span></div>
+      <div class="activity"><span class="msg" style="font-weight:400;color:var(--ink-2)">Waiting for a gpu worker · job_0142 holds the GPU (label, 13%)</span></div>
+      <div class="timeline"><div class="seg pend"><b>○ label</b><span>queued</span></div><div class="seg pend"><b>○ filter</b><span>pending</span></div></div>
+    </section>
+    <footer class="status">CPU 38%<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<p class="caption">Before a job starts, the activity line says what it is waiting for. One GPU job runs at a time (ADR-0003), so a GPU stage waits for the one holding it, which is named and linked.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · Cancel: confirm, then "Cancelling…"</h2>
+<div style="display:flex;gap:16px">
+<div class="frame" style="height:300px;width:632px">
+  <div class="scrim"><div class="modal"><header>Cancel job_0142?</header><div class="b">The <b>label</b> stage stops at its next safe point (after the current batch). <b>Kept:</b> the versions made by clean and preprocess, and the 1,232 captions already cached. <b>Lost:</b> the rest of this run; a new run continues from the cache.</div><footer><span class="btn">Keep running</span><span class="btn danger">Cancel job</span></footer></div></div>
+</div>
+<div class="frame" style="height:300px;width:632px">
+  <div style="padding:16px"><div class="jhead"><span class="id">job_0142</span><span class="pill">⏳ Cancelling…</span><span class="sub">stopping after batch 78/595</span></div>
+  <div class="activity" style="margin-top:10px"><span class="msg" style="font-size:13px">Stopping at the next safe point…</span></div>
+  <p style="font-size:12px">The pill keeps saying "Cancelling…" until the job has actually stopped (<span class="mono">desired_state</span>), then turns to Cancelled. If the stage ignores the request, the supervisor ends it after the grace period, and the log says so.</p></div>
+</div>
+</div>
+
+<!-- ===================================================================== G -->
+<h2>G · Activity log across all jobs, filtered</h2>
+<div class="frame" style="height:280px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b> / <span class="mono">job_0142</span></span></header>
+    <section class="content">
+      <div class="log"><div class="loghead"><b>Activity</b><span class="seg2"><span>This job</span><span class="on">All jobs</span></span><span class="select">Job: any ▾</span><span class="select">Level: WARN+ ▾</span><span class="select">Stage: all ▾</span><span class="spacer"></span><span class="btn sm ghost">Jump to latest ↓</span></div>
+      <div class="lines">
+        <div class="ln" style="grid-template-columns:70px 70px 50px 86px 1fr"><span class="t">14:31:05</span><span class="mono">job_0145</span><span>ERROR</span><span class="s">label</span><span>CUDA out of memory at batch 43/298 · bs=32</span></div>
+        <div class="ln" style="grid-template-columns:70px 70px 50px 86px 1fr"><span class="t">13:57:12</span><span class="mono">job_0142</span><span>WARN</span><span class="s">clean</span><span>212 exact duplicates marked (2.1% of accepted rows)</span></div>
+        <div class="ln" style="grid-template-columns:70px 70px 50px 86px 1fr"><span class="t">09:12:40</span><span class="mono">job_0139</span><span>WARN</span><span class="s">ingest</span><span>214 of 214 files below the minimum size</span></div>
+      </div></div>
+    </section>
+    <footer class="status">CPU 38%<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<p class="caption">MON-4.3: with "All jobs", a job column and a job filter appear; the stream is the global one (<span class="mono">GET /events</span>, then <span class="mono">GET /stream</span>). Scrolling up pauses auto-scroll; "Jump to latest" resumes it.</p>
+
+<!-- ===================================================================== H -->
+<h2>H · Loading, unknown job, and a resource that cannot be read</h2>
+<div class="frame" style="height:250px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b> / …</span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start">
+      <div style="border:1.5px solid var(--ink);border-radius:8px;padding:20px;text-align:center"><b>Job job_9999 not found</b><p style="font-size:12px"><span class="mono">not_found</span> · No job 'job_9999'.<br><b>Do:</b> open it from the jobs list.</p><span class="btn">Go to jobs</span></div>
+      <div class="tile" style="max-width:220px"><small>GPU</small><b style="color:var(--ink-3);font-weight:400">— unavailable</b><span>NVML not reachable (cuda_unavailable)</span><div class="chart"></div></div>
+    </section>
+    <footer class="status">connecting…</footer>
+  </div>
+</div>
+<p class="caption">Loading uses skeletons the size of each band (as on SCR-03). A metric that cannot be read shows a dash and the word, never zero; its chart stays empty rather than drawing a flat line.</p>
+
+<!-- ===================================================================== I -->
+<h2>I · 1024 px</h2>
+<div class="frame w1024" style="height:340px">
+  <div class="shell rail">
+    <aside class="side"></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b> / <span class="mono">job_0142</span></span></header>
+    <section class="content">
+      <div class="jhead"><span class="id" style="font-size:16px">job_0142</span><span class="pill">● Running</span><span class="spacer"></span><span class="btn danger sm">Cancel job</span></div>
+      <div class="activity"><span class="msg" style="font-size:13px">▶ Captioning batch 77/595 · Florence-2-base · bs=16</span></div>
+      <div class="prog"><div class="bar"></div><span><b>13%</b></span><span>2.4 img/s</span><span>ETA <b>57m 33s</b></span></div>
+      <div class="res" style="grid-template-columns:repeat(3,1fr)"><div class="tile"><small>CPU</small><b>38%</b></div><div class="tile"><small>RAM</small><b>7.2/10.0</b></div><div class="tile"><small>GPU</small><b>94%</b></div><div class="tile"><small>VRAM</small><b>3.9/6.0</b></div><div class="tile"><small>Temp</small><b>71 °C</b></div></div>
+    </section>
+    <footer class="status">CPU 38%<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<p class="caption">Resource tiles wrap to three per row; the log moves below them at full width; the items count drops from the progress line; the stage drawer overlays the content.</p>
+
+<h2>Not decided here</h2>
+<ul>
+<li>Colours, icons, chart styling (ECharts with the resource tokens) and exact spacing: the hi-fi.</li>
+<li>Pause and resume (RUN-1.2), stall handling (RUN-1.7) and alert-with-action pairs (MON-2.7) join this screen in phase 2.</li>
+</ul>
+</main>
+</body>
+</html>
