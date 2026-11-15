@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-07 jobs list (phase-1 slice) — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+/* SCR-07 */
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.danger { border-width: 2px; border-color: var(--ink); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; } .select.off { color: var(--ink-3); }
+.search { height: 24px; width: 200px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; color: var(--ink-3); font-size: 11px; gap: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); } .pill.strike { text-decoration: line-through; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 40px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.hover td { background: #f7f7f7; }
+.t .sec td { height: 26px; background: var(--fill); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.bar { width: 80px; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; display: inline-block; position: relative; vertical-align: middle; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); }
+.muted { color: var(--ink-3); }
+.err-line { font-size: 11px; color: var(--ink-2); }
+.empty { display: grid; place-items: center; text-align: center; padding: 30px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 460px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.toast { position: absolute; right: 16px; bottom: 44px; width: 360px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.1); font-size: 12px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-07 — Jobs list (phase-1 slice) · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: RUN-1.1 and RUN-1.2 phase-1 slice (states, start, cancel, retry); MON-1.4 (live)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §4 SCR-07, slice decided by the owner on 2026-11-15</span><span>Route: <span class="mono">/jobs</span></span><span>2026-11-15</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-01 shell (faint). Blue numbers are annotations. The slice is what SCREENS.md open point 1 (a) says: the list with state and kind filters, open, cancel and retry. Pause, resume and queue control arrive with phase 2 (M8) and are not drawn.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>One table, active jobs pinned on top.</b> Running and queued jobs sit in an "Active" section above "Finished", whatever the sort, because they are the ones you act on. Finished jobs are newest first.</li>
+<li><b>Each row answers "what is it doing or how did it end"</b> in one column: progress for a running job, what it waits for when queued, the error code and reason for a failure, the output version for a completed one.</li>
+<li><b>Row actions are on the row</b>, shown on hover and focus: Cancel for queued or running (with the same confirm as SCR-04), Retry for failed. Opening is a click or <kbd class="k">Enter</kbd> anywhere on the row and goes to SCR-04.</li>
+<li><b>Filters are a state button group with counts</b> (the pattern approved with SCR-03), a dataset filter, and a kind filter. In phase 1 every job is a pipeline job, so kind shows only "pipeline" and is disabled; it becomes useful when training and studies arrive.</li>
+<li><b>Live</b>: rows change in place as job messages arrive on the global stream; a new job appears at the top of Active with no reload.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Populated: all jobs</h2>
+<div class="frame" style="height:720px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b></span><span class="spacer"></span><span>[ Running · job_0142 · label · 13% ]</span></header>
+    <section class="content">
+      <div class="phead"><b>Jobs</b><span class="spacer"></span><span class="btn">Start a pipeline…</span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="group"><span class="btn sm on">All <span class="k">9</span></span><span class="btn sm">Active <span class="k">2</span></span><span class="btn sm">Failed <span class="k">1</span></span><span class="btn sm">Completed <span class="k">5</span></span><span class="btn sm">Cancelled <span class="k">1</span></span></span>
+        <span class="select">Dataset: any ▾</span><span class="select off">Kind: pipeline ▾</span><span class="spacer"></span><span class="search">⌕ job ID <span class="k">/</span></span>
+      </div>
+      <table class="t">
+        <tr><th>Job</th><th>State</th><th>Dataset</th><th>Now / outcome</th><th class="r">Attempt</th><th>Created</th><th class="r">Duration</th><th></th></tr>
+        <tr class="sec"><td colspan="8">Active · 2</td></tr>
+        <tr class="hover"><td class="m">job_0142</td><td><span class="pill">● Running</span></td><td class="m">coco10k</td><td><span class="mono">label</span> · <span class="bar" style="--p:13%"></span> 13% · ETA 57m 33s</td><td class="r m">1</td><td>13:54</td><td class="r m">15m 43s</td><td><span class="btn sm danger">Cancel</span> <span class="btn sm ghost">›</span></td></tr>
+        <tr><td class="m">job_0146</td><td><span class="pill dash">◷ Queued</span></td><td class="m">birds2k</td><td class="muted">waiting for the gpu worker · <span class="mono">job_0142</span> holds the GPU</td><td class="r m">0</td><td>14:40</td><td class="r m">1m 12s</td><td></td></tr>
+        <tr class="sec"><td colspan="8">Finished · 7</td></tr>
+        <tr><td class="m">job_0147</td><td><span class="pill">✓ Completed</span></td><td class="m">coco10k</td><td>report <span class="mono">#12</span> for <span class="mono">ds_b0c3e5a8d217</span></td><td class="r m">1</td><td>15:43</td><td class="r m">38 s</td><td></td></tr>
+        <tr class="on"><td class="m">job_0145</td><td><span class="pill">✕ Failed</span></td><td class="m">coco10k</td><td><span class="err-line"><span class="mono">gpu_oom</span> in label · CUDA out of memory at batch 43/298</span></td><td class="r m">1</td><td>14:26</td><td class="r m">4m 51s</td><td><span class="btn sm">↻ Retry</span></td></tr>
+        <tr><td class="m">job_0141</td><td><span class="pill">✓ Completed</span></td><td class="m">demo</td><td>→ <span class="mono">ds_389dd9b94119</span></td><td class="r m">2</td><td>13:20</td><td class="r m">4m 12s</td><td></td></tr>
+        <tr><td class="m">job_0140</td><td><span class="pill strike">⊘ Cancelled</span></td><td class="m">birds2k</td><td class="muted">cancelled by you in clean · 2 versions kept</td><td class="r m">1</td><td>12:58</td><td class="r m">2m 03s</td><td></td></tr>
+        <tr><td class="m">job_0139</td><td><span class="pill">✓ Completed</span></td><td class="m">scans</td><td>→ <span class="mono">ds_5a90c3e1f27d</span> · <span class="muted">0 of 214 accepted</span></td><td class="r m">1</td><td>09:12</td><td class="r m">21 s</td><td></td></tr>
+        <tr><td class="m">job_0131</td><td><span class="pill">✓ Completed</span></td><td class="m">coco10k</td><td>→ <span class="mono">ds_7f3a9c21b04e</span></td><td class="r m">1</td><td>Nov 14</td><td class="r m">7m 02s</td><td></td></tr>
+        <tr><td class="m">job_0127</td><td><span class="pill">✓ Completed</span></td><td class="m">coco10k</td><td>→ <span class="mono">ds_0b1f9e77a3c4</span></td><td class="r m">1</td><td>Nov 14</td><td class="r m">6m 48s</td><td></td></tr>
+      </table>
+      <p style="margin:0;font-size:12px;color:var(--ink-3)">Showing 9 of 9 · older jobs load as you scroll (<span class="mono">next_cursor</span>)</p>
+    </section>
+    <footer class="status">CPU 38% · RAM 7.2 / 10.0 GB · GPU 94% · VRAM 3.9 / 6.0 GB<span class="spacer"></span>● live · 1 s</footer>
+  </div>
+  <span class="n" style="left:1176px;top:40px">1</span>
+  <span class="n" style="left:206px;top:100px">2</span>
+  <span class="n" style="left:206px;top:142px">3</span>
+  <span class="n" style="left:206px;top:168px">4</span>
+  <span class="n" style="left:600px;top:184px">5</span>
+  <span class="n" style="left:1250px;top:184px">6</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Start a pipeline</td><td>Opens the Start pipeline drawer approved on SCR-02 (folder or version); secondary here, as starting work belongs to data screens</td><td>–</td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Filters</td><td>State group with counts (All, Active, Failed, Completed, Cancelled), dataset, kind (disabled in phase 1), job-ID search. Kept in the URL</td><td><span class="mono">GET /jobs?state=&amp;kind=</span>; dataset filter and counts are additions to that endpoint (see below)</td><td>counts on <span class="mono">job</span> messages</td></tr>
+<tr><td><span class="num">3</span></td><td>Columns</td><td>Job, state, dataset, now/outcome, attempt, created, duration. Sortable by created and duration</td><td>–</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Active section</td><td>Running and queued jobs pinned above the rest</td><td><span class="mono">GET /jobs?state=running,queued</span></td><td>yes</td></tr>
+<tr><td><span class="num">5</span></td><td>Now / outcome</td><td>Running: stage, progress, ETA. Queued: what it waits for. Failed: code, stage, reason. Completed: the output version (a link). Cancelled: where it stopped and what was kept</td><td>job view: <span class="mono">current_stage</span>, stage progress, <span class="mono">error</span>, <span class="mono">output_version_id</span></td><td>yes</td></tr>
+<tr><td><span class="num">6</span></td><td>Row actions</td><td>Cancel (queued, running; confirm as on SCR-04), Retry (failed). Open: click or <kbd class="k">Enter</kbd> → SCR-04</td><td><span class="mono">POST /jobs/{id}/cancel</span>, <span class="mono">/retry</span></td><td>–</td></tr>
+</table>
+<p class="caption"><b>API additions this screen needs</b> (to approve with it): a <span class="mono">dataset</span> filter on <span class="mono">GET /jobs</span>, and counts per state in its response (<span class="mono">{"items": [...], "counts": {"running": 1, ...}}</span>) for the filter badges. Accepting <span class="mono">state</span> as a comma-separated list serves the Active section.</p>
+
+<!-- ===================================================================== B -->
+<h2>B · Filtered to Failed, and nothing matches</h2>
+<div style="display:flex;gap:16px">
+<div class="frame" style="height:260px;width:632px"><div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+  <span class="group"><span class="btn sm">All 9</span><span class="btn sm">Active 2</span><span class="btn sm on">Failed 1</span><span class="btn sm">Completed 5</span></span>
+  <table class="t"><tr><th>Job</th><th>State</th><th>Now / outcome</th><th></th></tr><tr><td class="m">job_0145</td><td><span class="pill">✕ Failed</span></td><td class="err-line"><span class="mono">gpu_oom</span> in label · out of memory at batch 43/298</td><td><span class="btn sm">↻ Retry</span></td></tr></table></div></div>
+<div class="frame" style="height:260px;width:632px"><div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+  <span class="group"><span class="btn sm">All 9</span><span class="btn sm">Active 2</span><span class="btn sm">Failed 1</span><span class="btn sm on">Cancelled 1</span></span><span class="select" style="align-self:flex-start">Dataset: demo ▾</span>
+  <div class="empty" style="height:150px"><div><b>No cancelled jobs for demo</b><p style="font-size:12px;margin:4px 0 8px">1 cancelled job in other datasets.</p><span class="btn sm">Clear filters</span></div></div></div></div>
+</div>
+
+<!-- ===================================================================== C -->
+<h2>C · Cancel from the list, and a retry that started</h2>
+<div class="frame" style="height:300px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b></span></header>
+    <section class="content"></section>
+    <footer class="status">CPU 38%<span class="spacer"></span>● live</footer>
+  </div>
+  <div class="scrim"><div class="modal"><header>Cancel job_0146?</header><div class="b">It has not started: nothing is lost, and nothing was made. <b>Queued</b> jobs are cancelled at once; a running one stops at its next safe point, as on SCR-04.</div><footer><span class="btn">Keep it queued</span><span class="btn danger">Cancel job</span></footer></div></div>
+  <div class="toast"><b>job_0145 queued again</b> · attempt 2 · the 1,344 captions already made are reused · <span class="btn sm ghost">Open ›</span></div>
+</div>
+<p class="caption">The dialog adapts to the state: a queued job loses nothing; a running one keeps its finished stages (same wording as SCR-04 frame F). After Retry the row moves to Active as Queued, attempt 2, and a toast links to it.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Empty, loading and error</h2>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div class="frame" style="height:260px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Jobs</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b></span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-content:start">
+      <div class="empty" style="height:180px"><div><b>No jobs yet</b><p style="font-size:12px">Jobs appear here when you ingest a folder or continue from a version.</p><span class="btn primary">Go to datasets</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px;padding-top:8px"><span class="skel" style="width:240px;height:22px"></span><span class="skel" style="width:100%;height:24px"></span><span class="skel" style="width:100%;height:24px"></span><span class="skel" style="width:100%;height:24px"></span></div>
+      <div class="empty err" style="height:180px"><div><b>Jobs could not be loaded</b><p style="font-size:12px"><span class="mono">dependency_unavailable</span> · Postgres is unreachable.<br><b>Do:</b> check the postgres container, then retry.</p><span class="btn">Retry</span></div></div>
+    </section>
+    <footer class="status">connecting…</footer>
+  </div>
+</div>
+</div>
+
+<!-- ===================================================================== E -->
+<h2>E · 1024 px</h2>
+<div class="frame w1024" style="height:300px">
+  <div class="shell rail">
+    <aside class="side"></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b></span></header>
+    <section class="content">
+      <div style="display:flex;gap:8px"><span class="group"><span class="btn sm on">All 9</span><span class="btn sm">Active 2</span><span class="btn sm">Failed 1</span><span class="btn sm">More ▾</span></span></div>
+      <table class="t"><tr><th>Job</th><th>State</th><th>Now / outcome</th><th class="r">Duration</th><th></th></tr>
+        <tr><td class="m">job_0142</td><td><span class="pill">● Running</span></td><td><span class="mono">label</span> · 13% · ETA 57m</td><td class="r m">15m 43s</td><td><span class="btn sm danger">Cancel</span></td></tr>
+        <tr><td class="m">job_0145</td><td><span class="pill">✕ Failed</span></td><td class="err-line"><span class="mono">gpu_oom</span> in label</td><td class="r m">4m 51s</td><td><span class="btn sm">Retry</span></td></tr></table>
+    </section>
+    <footer class="status">CPU 38%<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<p class="caption">Dataset, attempt and created move into the row's tooltip and SCR-04; the state group folds Completed and Cancelled into "More".</p>
+
+<h2>Not decided here</h2>
+<ul>
+<li>Colours, icons and exact spacing: the hi-fi.</li>
+<li>Pause, resume, queue position and priorities (RUN-1.2 full, phase 2): added to this screen in M8.</li>
+<li>Bulk actions (cancel several): not asked for; not designed.</li>
+</ul>
+</main>
+</body>
+</html>
