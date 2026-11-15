@@ -90,6 +90,38 @@ class ModelNotPulled(StratalError):
     http_status = 409
 
 
+class GpuOom(StratalError):
+    """PyTorch ran out of VRAM and a smaller batch did not help (RUN-1.5, BUG2)."""
+
+    code = "gpu_oom"
+    title = "GPU out of memory"
+    http_status = 500
+
+
+class VramInsufficient(StratalError):
+    """A model load was refused because free VRAM is below its estimate (ADR-0006 rule 4)."""
+
+    code = "vram_insufficient"
+    title = "Not enough free VRAM"
+    http_status = 409
+
+
+class GpuBusy(StratalError):
+    """Another process holds the GPU lease (BUG6, ADR-0006 rule 2)."""
+
+    code = "gpu_busy"
+    title = "GPU busy"
+    http_status = 409
+
+
+class CudaUnavailable(StratalError):
+    """The GPU cannot be reached, e.g. after a sleep (ADR-0008)."""
+
+    code = "cuda_unavailable"
+    title = "CUDA unavailable"
+    http_status = 503
+
+
 class DependencyUnavailable(StratalError):
     code = "dependency_unavailable"
     title = "Dependency unavailable"
