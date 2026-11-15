@@ -105,7 +105,7 @@ Version (abridged):
 | Method and path | Purpose | Success |
 |---|---|---|
 | `POST /jobs` | Start a job. Body is a union on `kind`; phase 1 accepts `pipeline` | `202` Job |
-| `GET /jobs` | List. Filters: `state`, `kind` | `200` list of Job |
+| `GET /jobs` | List. Filters: `state`, `kind`. Planned additions for SCR-07 (accepted 2026-11-15): `state` as a comma-separated list (`running,queued`), a `dataset` filter, and `counts` (jobs per state under the other filters) beside `items` | `200` list of Job |
 | `GET /jobs/{job_id}` | One job with its stages | `200` Job |
 | `POST /jobs/{job_id}/cancel` | Request cancellation | `202` Job; `409` if already finished |
 | `POST /jobs/{job_id}/retry` | Requeue a failed job; finished stages are reused | `202` Job; `409` if not failed |

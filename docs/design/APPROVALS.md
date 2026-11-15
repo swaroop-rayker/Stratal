@@ -20,3 +20,4 @@ Only an explicit "approved" from the owner passes a gate (SPEC §9.2). Silence o
 | 2026-11-15 | SCR-05 labeling review, hi-fi mockup (`screens/SCR-05_v1.html`) | v1 | owner | "Approved". Gate 2 passed for SCR-05. Its note icon joins the set |
 | 2026-11-15 | SCR-06 eval report, low-fi wireframe (`screens/SCR-06-lofi_v1.html`) | v1 | owner | "Approved". Next: the hi-fi mockup |
 | 2026-11-15 | SCR-06 eval report, hi-fi mockup (`screens/SCR-06_v1.html`) | v1 | owner | "Approved". Gate 2 passed for SCR-06. Its chart icon joins the set |
+| 2026-11-15 | SCR-07 jobs list (phase-1 slice), low-fi wireframe (`screens/SCR-07-lofi_v1.html`) | v1 | owner | "Approved", including the `GET /jobs` additions (dataset filter, state lists, per-state counts; added to API.md). Next: the hi-fi mockup |
