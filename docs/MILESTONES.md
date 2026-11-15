@@ -238,7 +238,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** M · **Branch** `m5-split-review-eval` · **Serves** DATA-4, LABEL-1.5, EVAL-1.1, DATA-5.1 (in the pipeline), NFR-4
 
-**Before starting:** 👤 DATA-4 written by the owner and reviewed.
+**Before starting:** 👤 DATA-4 written by the owner and reviewed. **2026-11-15:** draft v1 written by the agent at the owner's request ([drafts/DATA-4_v1.md](drafts/DATA-4_v1.md)), in the owner's review.
 
 **Scope**
 

@@ -98,6 +98,8 @@ This document is the source of truth for what Stratal must do. It restates every
 > 2. How do near or semantic duplicates of each other stay on one side of the split?
 > 3. Does adding 500 images in a later version reshuffle existing assignments?
 > 4. Where does the split sit relative to the CLIP filter and manual review?
+>
+> **2026-11-15:** at the owner's request the agent wrote draft v1, now in the owner's review: [drafts/DATA-4_v1.md](drafts/DATA-4_v1.md). This placeholder stays until a reviewed version is approved.
 
 #### DATA-5 Dataset Types
 
