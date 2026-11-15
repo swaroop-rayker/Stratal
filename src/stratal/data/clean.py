@@ -63,7 +63,7 @@ class CleanConfig(BaseModel):
         ge=0,
         le=1024,
         description="Images whose pHashes differ in at most this many bits are near duplicates "
-        "(DATA-2.2). Provisional: the owner chooses it from measured distances (OC-5).",
+        "(DATA-2.2). 8 chosen by the owner from measured distances (OC-5, 2026-11-15).",
     )
     algorithm_version: int = Field(
         default=dedupe.ALGORITHM_VERSION,

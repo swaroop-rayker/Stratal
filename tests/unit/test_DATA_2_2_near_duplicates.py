@@ -5,9 +5,9 @@ removed on 2026-11-15 when ``stratal.data.dedupe.perceptual_hash`` and
 ``group_near_duplicates`` were written (by the agent, at the owner's request:
 ADR-0012).
 
-The threshold used is the clean stage's default ``phash_max_distance``. It is
-provisional; choosing it from measured distances is the owner's (OC-5). If the
-default changes, these tests follow it.
+The threshold used is the clean stage's default ``phash_max_distance``: 8, chosen
+by the owner from measured distances on 2026-11-15 (OC-5). If the default
+changes, these tests follow it.
 """
 
 import io

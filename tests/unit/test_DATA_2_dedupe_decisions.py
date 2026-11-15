@@ -12,6 +12,7 @@ import random
 import pytest
 from PIL import Image
 
+from stratal.data.clean import CleanConfig
 from stratal.data.dedupe import (
     ExactItem,
     HashedItem,
@@ -85,6 +86,12 @@ def test_DATA_2_2_threshold_edges() -> None:
     assert group_near_duplicates([_item("a.png", base)], max_distance=8) == []
     with pytest.raises(ValueError, match="at least 0"):
         group_near_duplicates(same, max_distance=-1)
+
+
+def test_DATA_2_2_default_threshold_is_the_owners_choice() -> None:
+    config = CleanConfig()
+
+    assert (config.phash_hash_size, config.phash_max_distance) == (8, 8), "OC-5, chosen 2026-11-15"
 
 
 def test_DATA_2_2_hashes_of_different_lengths_are_refused() -> None:

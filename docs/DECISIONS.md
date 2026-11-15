@@ -213,7 +213,7 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** It goes into the version's config hash and the pHash cache key.
 - **Why:** Without it, stage memoization would keep reusing versions made by an older implementation of DATA-2.1 and DATA-2.2.
 
-**Near-duplicate threshold is provisional** (M3, OC-5)
+**Near-duplicate threshold: 8 of 64 bits** (M3, OC-5; chosen by the owner 2026-11-15)
 - **What:** `phash_hash_size = 8`, `phash_max_distance = 8` by default.
 - **How:** Plain config fields; the DATA-2.2 tests read the default, so they follow it when the owner changes it. Measured 2026-11-15 on generated pictures (600 drawn for the test, and the 1,500 in `sources/demo/valid`), 64-bit hashes:
   - JPEG 90, 70 or 40, or a resize to half size: at most 4 bits from the original.
@@ -222,7 +222,7 @@ Newest entries go at the bottom of their section. All entries below date from th
   - A 5 % crop on each side: median 10, at most 22.
   - Unrelated pictures: the nearest other picture was 12 to 22 bits away. Nothing in the demo folder groups at 8 or 10; one pair groups at 12.
   - Distances are always even: each hash has exactly 32 one-bits, because each bit says above or below the median of 64 values. A threshold of 9 therefore behaves exactly like 8.
-- **Why:** OC-5 gives the owner the choice from measured distances; the stage needs some value to run. 8 sits between re-encodings (≤ 4) and the nearest unrelated generated pictures (≥ 12). Generated pictures are not photographs, so the choice waits for the phase-1 dataset.
+- **Why:** OC-5 gives the owner the choice from measured distances. The owner accepted 8 on 2026-11-15: it sits between re-encodings (≤ 4) and the nearest unrelated generated pictures (≥ 12). Generated pictures are not photographs, so the same two measurements are worth repeating on the phase-1 dataset; a change is a config change and gives new version IDs.
 
 **Exact duplicates keep the smallest row key** (M3, DATA-2.1)
 - **What:** Files with the same SHA-256 form one group; the copy with the smallest `row_key` stays accepted.

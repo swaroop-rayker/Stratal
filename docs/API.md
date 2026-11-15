@@ -236,7 +236,7 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 |---|---|---|---|
 | Version ID derivation | DATA-3.2 | Manifest rows + resolved config → content hash, config hash, version ID, per [DATA_MODEL.md §3](DATA_MODEL.md#3-identifiers) | M1 |
 | Exact-duplicate grouping | DATA-2.1 | `group_exact_duplicates(items: Sequence[ExactItem]) -> list[DuplicateGroup]`: rows with content hashes → groups of identical files, one deterministic keeper each | M3; written by the agent at the owner's request (ADR-0012) |
-| Perceptual hash and near-duplicate grouping | DATA-2.2 | `perceptual_hash(image, *, hash_size) -> str` (lowercase hex of the hash's bits); `group_near_duplicates(items: Sequence[HashedItem], *, max_distance) -> list[DuplicateGroup]` by Hamming distance, grouped transitively | M3; written by the agent at the owner's request (ADR-0012); the threshold stays the owner's (OC-5) |
+| Perceptual hash and near-duplicate grouping | DATA-2.2 | `perceptual_hash(image, *, hash_size) -> str` (lowercase hex of the hash's bits); `group_near_duplicates(items: Sequence[HashedItem], *, max_distance) -> list[DuplicateGroup]` by Hamming distance, grouped transitively | M3; written by the agent at the owner's request (ADR-0012); threshold 8, chosen by the owner (OC-5) |
 | Caption batching loop | LABEL-1.1, LABEL-1.2 | Uncached items + captioner → cached captions, committed per batch, surviving OOM by shrinking the batch | M4 |
 | VRAM manager | RUN-1.4, RUN-1.5 | Load one model under the cap; unload and prove VRAM returned to baseline | M4 |
 | CLIP scoring | LABEL-1.3 | Image + caption → similarity score | M4 |
