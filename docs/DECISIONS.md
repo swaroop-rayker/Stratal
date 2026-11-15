@@ -387,6 +387,16 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Each review item records its row's split; the phase-1 report gives acceptance overall and for `test`.
 - **Why:** The review estimates label quality with a Wilson interval (EVAL-1.1); editing the data from a sample would bias the very estimate it produces.
 
+**Split units cut into grouping, strata and assignment** (M5, DATA-4.1 to 4.5; agent, stubs for the owner)
+- **What:** Three owner functions in `stratal.data.splitting`: `group_for_split` (DATA-4.2), `strata_for` (DATA-4.3), `assign_splits` (DATA-4.1, 4.4, 4.5). The shell does the carry-over lookup and lists moved rows.
+- **How:** A group counts in its anchor's stratum. "Within one group" means less than the largest group's size, per stratum and for the totals together. A merge goes to the split with more members, ties to the larger proportion, then train, val, test. A root-level file's source folder is `.`.
+- **Why:** Each function then has one idea to learn and test. The lookup needs the database and earlier manifests, which owner units never touch. Moved rows can be checked independently of the function that moved them. The tie rule and `.` are interpretations that DATA-4 leaves open.
+
+**Report statistics as five pure functions** (M5, EVAL-1.1; agent, stubs for the owner)
+- **What:** `rejection_counts`, `filter_rate`, `score_distribution`, `wilson_interval` and `review_acceptance` in `stratal.eval.report_stats`; the assembly and the evaluate stage are the agent's.
+- **How:** Fixed histogram edges chosen by the caller; type-7 quantiles; sample standard deviation; the filter rate is over the rows that reached the filter; z is computed from the normal quantile, not rounded to 1.96. The Wilson tests use Newcombe (1998), table I.
+- **Why:** API.md §5 lists all four report parts as the owner's statistics. Fixed edges let reports of different versions be compared bin by bin, and published values make the interval checkable without trusting our own arithmetic.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
