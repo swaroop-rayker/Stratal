@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-03 version detail and lineage — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --cat-1: #5aa9f5; --cat-2: #f29e4c; --cat-3: #3cc4b4; --cat-4: #e58ad6; --cat-5: #a3d35c; --cat-6: #b79cff; --cat-7: #f0d264; --cat-8: #f4737b;
+  --seq-1: #1b2440; --seq-2: #27356a; --seq-3: #374a96; --seq-4: #4d64c0; --seq-5: #6f86e0; --seq-6: #9fb0f2; --seq-7: #d3dcfb;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --cat-1: #1f6fc4; --cat-2: #b0560a; --cat-3: #0b7d70; --cat-4: #a8348f; --cat-5: #4d7a12; --cat-6: #6a4fd8; --cat-7: #7d6300; --cat-8: #c2364a;
+  --seq-1: #e4e9fb; --seq-2: #c2cdf5; --seq-3: #9aabec; --seq-4: #7087de; --seq-5: #4d64c8; --seq-6: #3548a3; --seq-7: #222f72;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.tabs { display: flex; gap: var(--sp-1); border-bottom: var(--bw) solid var(--border); }
+.tab { padding: var(--sp-2) var(--sp-3); border: 0; background: none; color: var(--text-secondary); font: var(--fw-medium) var(--fs-13) var(--font-ui); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: var(--sp-2); align-items: center; }
+.tab[aria-selected=true] { color: var(--text-primary); border-bottom-color: var(--accent); }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t td { padding: 0 var(--sp-2); border-bottom: var(--bw) solid var(--border); height: 44px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); }
+.pill svg.i { width: 12px; height: 12px; }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.node { display: inline-flex; flex-direction: column; gap: 2px; min-width: 168px; padding: var(--sp-2) var(--sp-3); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-left: 3px solid var(--c, var(--accent)); border-radius: var(--r-md); box-shadow: var(--shadow-1); }
+.node small { font-size: var(--fs-11); color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.node b { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .node span { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-1); }
+.edge { width: 28px; height: 1px; background: var(--border-strong); position: relative; flex: none; }
+.edge::after { content: ""; position: absolute; right: 0; top: -3px; border: 3.5px solid transparent; border-left-color: var(--border-strong); }
+pre.code { margin: 0; background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); font: var(--fs-12)/1.6 var(--font-mono); }
+pre.code .k { color: var(--cat-6); } pre.code .s { color: var(--cat-5); } pre.code .n { color: var(--cat-2); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-8) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); max-width: 46ch; color: var(--text-secondary); }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.tip { position: absolute; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); box-shadow: var(--shadow-2); z-index: var(--z-tooltip); white-space: nowrap; }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; } .crumbs .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; } .progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-03 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.vhead { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.vhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); display: flex; align-items: center; gap: var(--sp-2); }
+.vhead .sub { color: var(--text-muted); font-size: var(--fs-12); margin-top: var(--sp-1); display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; } .vhead .sub .mono { color: var(--text-secondary); }
+.vhead .sub svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.stage-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.lineage { display: flex; align-items: center; padding: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.node.pending { --c: var(--state-running); border-style: dashed; background: transparent; box-shadow: none; }
+.node.done { --c: var(--state-completed); }
+.fork { display: flex; flex-direction: column; gap: var(--sp-2); } .fork .row { display: flex; align-items: center; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
+.stile { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c); border-radius: var(--r-md); text-align: left; cursor: pointer; }
+.stile:hover, .stile.is-hover { border-color: var(--border-strong); border-left-color: var(--c); }
+.stile[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); border-left-color: var(--c); }
+.stile .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.stile .k i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); }
+.stile .v { font: var(--fw-medium) var(--fs-20)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.stile .d { font-size: var(--fs-11); color: var(--text-muted); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.group-btns { display: inline-flex; }
+.group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.thumb { width: 32px; height: 32px; border-radius: var(--r-sm); border: var(--bw) solid var(--border); display: block; background: linear-gradient(135deg, var(--a, var(--seq-3)), var(--b, var(--seq-5))); }
+.rs { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-12); } .rs i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.rs.acc { --c: var(--success); } .rs.rej { --c: var(--danger); } .rs.dup { --c: var(--text-muted); } .rs.fil { --c: var(--warning); }
+.reason { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.muted { color: var(--text-muted); }
+.t td.hash { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); text-align: right; }
+.notice { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--warning-soft); border: var(--bw) solid color-mix(in srgb, var(--warning) 45%, transparent); font-size: var(--fs-12); }
+.notice svg.i { color: var(--warning); margin-top: 2px; }
+.kv { display: grid; grid-template-columns: 150px 1fr; gap: var(--sp-2) var(--sp-3); font-size: var(--fs-12); } .kv > span:nth-child(odd) { color: var(--text-muted); } .kv .mono { word-break: break-all; font-size: var(--fs-12); }
+h3.sec { margin: 0 0 var(--sp-2); font-size: var(--fs-12); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.reason-bar { display: inline-block; height: 6px; border-radius: var(--r-pill); background: var(--c); vertical-align: middle; }
+/* row drawer */
+.drawer { width: 540px; }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.drawer > header b { font: var(--fw-medium) var(--fs-14) var(--font-mono); }
+.drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); overflow: hidden; }
+.group-head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-secondary); }
+.group-head b { color: var(--text-primary); }
+.dist { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.card-img { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-12); }
+.photo { height: 190px; border-radius: var(--r-md); border: var(--bw) solid var(--border); background: radial-gradient(circle at 30% 35%, var(--cat-5) 0 16%, transparent 17%), radial-gradient(circle at 68% 60%, var(--cat-2) 0 13%, transparent 14%), linear-gradient(160deg, var(--seq-2), var(--seq-4)); position: relative; }
+.photo.kept { box-shadow: 0 0 0 2px var(--success); }
+.photo .tag { position: absolute; left: var(--sp-2); top: var(--sp-2); }
+.card-img .mono { font-size: var(--fs-12); color: var(--text-primary); } .card-img span { color: var(--text-secondary); } .card-img .hash { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.hash mark { background: var(--warning-soft); color: var(--warning); border-radius: var(--r-xs); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M3.5 10.5h-1v-8h8v1"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><path d="M3.5 8h.3M8 8h.3M12.5 8h.3" stroke-width="2.4"/></symbol>
+  <!-- New in this mockup, same style -->
+  <symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+</svg>
+
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-03 — Version detail and lineage · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-03-lofi_v1.html</span>, approved 2026-11-15) inside the approved SCR-01 shell, using only design system v1 tokens and components. Image thumbnails are placeholders drawn from the data-viz tokens; the real screen shows the images. Open as <span class="mono">SCR-03_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>Status tiles</b> are cards with a 3-px left edge in the row-status colour (the rule approved with SCR-02), a label, the number in mono and one line of context. Pressed (filtering) uses the accent outline, the same as a selected row.</li>
+<li><b>Row-status filters</b> are a group of small buttons with a pressed state, since the design system has no chip component; Table / Grid is a second group. Both reuse the button component's existing look.</li>
+<li><b>Lineage nodes</b> are the design system's lineage node. Their left edge carries the state of the job that made the version (completed green; a running child dashed and blue); this version is the "selected" node.</li>
+<li><b>In the duplicate drawer</b>, the kept image has a success outline and a "kept" pill; the hex characters where the two pHashes differ are highlighted, so the distance can be read off the hashes.</li>
+<li><b>Three icons are new</b> (eye, report, grid), same grid and stroke.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Populated: a preprocess version, Rows tab (dark)</h2>
+<div class="frame" style="height:780px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="group">Data</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="group">Jobs</div><a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+    </nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_c8e21d0f6a3b</span></div><span class="spacer"></span>
+      <span class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0142</span><span class="stage">label</span><span class="progress" style="width:80px"><i style="--p:13%"></i></span><span class="num">13%</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content">
+      <div class="vhead">
+        <div><h1>ds_c8e21d0f6a3b <span class="stage-tag">preprocess</span></h1>
+          <div class="sub">coco10k · made 14:01 by <span class="mono">job_0142</span><svg class="i" aria-label="completed"><use href="#i-check"/></svg>· from <span class="mono">ds_e1aa7c52d940</span> (clean)</div></div>
+        <span class="spacer"></span>
+        <button class="btn sm ghost"><svg class="i"><use href="#i-copy"/></svg>Copy ID</button>
+        <button class="btn is-disabled" aria-disabled="true" aria-describedby="why"><svg class="i"><use href="#i-eye"/></svg>Start a review</button>
+        <button class="btn"><svg class="i"><use href="#i-list"/></svg>Open job</button>
+        <button class="btn primary"><svg class="i"><use href="#i-branch"/></svg>Continue the pipeline</button>
+      </div>
+      <div class="lineage" aria-label="Lineage">
+        <div class="node done"><small>ingest</small><b>ds_0b1f9e77a3c4</b><span>9,852 accepted</span></div><span class="edge"></span>
+        <div class="node done"><small>clean</small><b>ds_e1aa7c52d940</b><span>340 duplicates</span></div><span class="edge"></span>
+        <div class="node done selected" aria-current="true"><small>preprocess · this version</small><b>ds_c8e21d0f6a3b</b><span>9,512 copies · +1.1 GB</span></div><span class="edge"></span>
+        <div class="node pending"><small>label · running</small><b>job_0142 · 13%</b><span>will add a child version</span></div>
+      </div>
+      <div class="tiles">
+        <button class="stile" style="--c:var(--success)"><span class="k"><i></i>Accepted</span><span class="v">9,512</span><span class="d">95.1% · copies ≤ 768 px</span></button>
+        <button class="stile" style="--c:var(--danger)"><span class="k"><i></i>Rejected</span><span class="v">148</span><span class="d">at ingest · 3 reasons</span></button>
+        <button class="stile is-hover" style="--c:var(--text-muted)"><span class="k"><i></i>Duplicate</span><span class="v">340</span><span class="d">212 exact · 128 near</span></button>
+        <button class="stile" style="--c:var(--warning)"><span class="k"><i></i>Filtered</span><span class="v">0</span><span class="d">no filter stage yet</span></button>
+      </div>
+      <div class="tabs" role="tablist"><span class="tab" role="tab" aria-selected="true">Rows <span class="count">10,000</span></span><span class="tab" role="tab">Reasons <span class="count">5</span></span><span class="tab" role="tab">Config</span></div>
+      <div class="toolbar">
+        <span class="group-btns"><button class="btn sm" aria-pressed="true">All</button><button class="btn sm">Accepted</button><button class="btn sm">Rejected</button><button class="btn sm">Duplicate</button><button class="btn sm">Filtered</button></span>
+        <button class="btn sm">Reason<svg class="i"><use href="#i-down"/></svg></button>
+        <span class="spacer"></span>
+        <span class="search"><svg class="i"><use href="#i-search"/></svg><span class="input">Row key</span><kbd>/</kbd></span>
+        <span class="group-btns"><button class="btn sm" aria-pressed="true"><svg class="i"><use href="#i-list"/></svg>Table</button><button class="btn sm"><svg class="i"><use href="#i-grid"/></svg>Grid</button></span>
+      </div>
+      <div class="table-wrap"><table class="t">
+        <thead><tr><th></th><th>Row key</th><th>Status</th><th>Reason</th><th class="r">Size</th><th class="r">Original</th><th class="r">Copy</th><th>Duplicate of</th><th class="r">pHash</th></tr></thead>
+        <tbody>
+        <tr><td><span class="thumb" style="--a:var(--seq-3);--b:var(--cat-5)"></span></td><td class="id">train/000000000009.jpg</td><td><span class="rs acc"><i></i>accepted</span></td><td class="muted">–</td><td class="r">160 KB</td><td class="r">640 × 480</td><td class="r">640 × 480</td><td class="muted">–</td><td class="hash">c3d1e0f0b8a49271</td></tr>
+        <tr><td><span class="thumb" style="--a:var(--cat-2);--b:var(--seq-4)"></span></td><td class="id">train/000000000025.jpg</td><td><span class="rs acc"><i></i>accepted</span></td><td class="muted">–</td><td class="r">196 KB</td><td class="r">640 × 426</td><td class="r">640 × 426</td><td class="muted">–</td><td class="hash">9a3f71c0e2d4b856</td></tr>
+        <tr aria-selected="true"><td><span class="thumb" style="--a:var(--seq-5);--b:var(--cat-3)"></span></td><td class="id">train/000000000030.jpg</td><td><span class="rs dup"><i></i>duplicate</span></td><td class="reason">near_duplicate</td><td class="r">148 KB</td><td class="r">640 × 428</td><td class="r muted">–</td><td class="id">train/000000000027.jpg</td><td class="hash">f00e3c1d2b5a6978</td></tr>
+        <tr><td><span class="thumb" style="--a:var(--cat-1);--b:var(--seq-2)"></span></td><td class="id">train/000000000034.jpg</td><td><span class="rs acc"><i></i>accepted</span></td><td class="muted">–</td><td class="r">2.1 MB</td><td class="r">3024 × 4032</td><td class="r">576 × 768</td><td class="muted">–</td><td class="hash">71b8e2a0c9d3f146</td></tr>
+        <tr><td><span class="thumb" style="--a:var(--surface-raised);--b:var(--surface-raised)"></span></td><td class="id">train/000000000036.jpg</td><td><span class="rs rej"><i></i>rejected</span></td><td class="reason">corrupt_image</td><td class="r">88 KB</td><td class="r muted">–</td><td class="r muted">–</td><td class="muted">–</td><td class="hash muted">–</td></tr>
+        <tr><td><span class="thumb" style="--a:var(--cat-7);--b:var(--seq-5)"></span></td><td class="id">train/000000000042.jpg</td><td><span class="rs acc"><i></i>accepted</span></td><td class="muted">–</td><td class="r">244 KB</td><td class="r">640 × 478</td><td class="r">640 × 478</td><td class="muted">–</td><td class="hash">2e6d0a9f81c7b354</td></tr>
+        </tbody></table></div>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>38%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>7.2</b><small>/ 10.0 GB</small></span><span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>94%</b></span><span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>3.9</b><small>/ 6.0 GB</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+  <span class="tip" id="why" style="left:830px;top:96px">Needs captions: run the label stage first (M4)</span>
+  <span class="n" style="left:226px;top:60px">1</span>
+  <span class="n" style="left:1250px;top:96px">2</span>
+  <span class="n" style="left:226px;top:126px">3</span>
+  <span class="n" style="left:226px;top:244px">4</span>
+  <span class="n" style="left:226px;top:319px">5</span>
+  <span class="n" style="left:226px;top:360px">6</span>
+  <span class="n" style="left:226px;top:401px">7</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Header</td><td>ID and stage; dataset; when and by which job, with its state; parent and its stage; the stage's key setting in words</td><td><span class="mono">GET /versions/{id}</span> (planned)</td><td>–</td></tr>
+<tr><td><span class="n">2</span></td><td>Actions</td><td>Primary = the next step: Continue the pipeline (Start pipeline drawer, SCR-02 frame G), Start a review (<span class="mono">POST /versions/{id}/reviews</span> → SCR-05) or Build the eval report (<span class="mono">POST /versions/{id}/reports</span>). A disabled action explains itself in a tooltip on hover and focus</td><td>–</td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Lineage</td><td>Ancestors to raw, this version (selected node), descendants; a running child is dashed. Click opens that version</td><td><span class="mono">GET /versions/{id}/lineage</span></td><td>running child live via <span class="mono">job</span> messages</td></tr>
+<tr><td><span class="n">4</span></td><td>Status tiles</td><td>Rows by status with context; each is a toggle that filters the Rows tab</td><td><span class="mono">GET /versions/{id}/stats</span></td><td>–</td></tr>
+<tr><td><span class="n">5</span></td><td>Tabs</td><td>Rows, Reasons, Config, with counts</td><td>–</td><td>–</td></tr>
+<tr><td><span class="n">6</span></td><td>Toolbar</td><td>Status filter, reason menu, row-key search (<kbd>/</kbd>), Table or Grid. All in the URL</td><td>query of <span class="mono">GET /versions/{id}/rows</span> (<span class="mono">status</span>, <span class="mono">reason_code</span>, <span class="mono">q</span>)</td><td>–</td></tr>
+<tr><td><span class="n">7</span></td><td>Rows</td><td>Thumbnail, row key, status (dot + word), reason code, size, original and copy dimensions, kept row of a duplicate, pHash. Click or <kbd>Enter</kbd> opens the row drawer (frame B). Virtualised</td><td><span class="mono">GET /versions/{id}/rows</span>; thumbnails <span class="mono">GET /blobs/{sha256}?w=64</span></td><td>–</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:420px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="group">Data</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_c8e21d0f6a3b</span></div></header>
+    <main class="content">
+      <div class="vhead"><div><h1>ds_c8e21d0f6a3b <span class="stage-tag">preprocess</span></h1><div class="sub">coco10k · made 14:01 by <span class="mono">job_0142</span><svg class="i"><use href="#i-check"/></svg>· from <span class="mono">ds_e1aa7c52d940</span> (clean)</div></div><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-list"/></svg>Open job</button><button class="btn primary"><svg class="i"><use href="#i-branch"/></svg>Continue the pipeline</button></div>
+      <div class="lineage"><div class="node done"><small>ingest</small><b>ds_0b1f9e77a3c4</b><span>9,852 accepted</span></div><span class="edge"></span><div class="node done"><small>clean</small><b>ds_e1aa7c52d940</b><span>340 duplicates</span></div><span class="edge"></span><div class="node done selected"><small>preprocess · this version</small><b>ds_c8e21d0f6a3b</b><span>9,512 copies</span></div><span class="edge"></span><div class="node pending"><small>label · running</small><b>job_0142 · 13%</b><span>will add a child</span></div></div>
+      <div class="tiles">
+        <button class="stile" style="--c:var(--success)"><span class="k"><i></i>Accepted</span><span class="v">9,512</span><span class="d">95.1%</span></button>
+        <button class="stile" style="--c:var(--danger)"><span class="k"><i></i>Rejected</span><span class="v">148</span><span class="d">3 reasons</span></button>
+        <button class="stile" aria-pressed="true" style="--c:var(--text-muted)"><span class="k"><i></i>Duplicate</span><span class="v">340</span><span class="d">filtering the rows</span></button>
+        <button class="stile" style="--c:var(--warning)"><span class="k"><i></i>Filtered</span><span class="v">0</span><span class="d">–</span></button>
+      </div>
+      <div class="table-wrap"><table class="t"><thead><tr><th></th><th>Row key</th><th>Status</th><th>Reason</th><th>Duplicate of</th><th class="r">pHash</th></tr></thead><tbody>
+        <tr><td><span class="thumb" style="--a:var(--seq-5);--b:var(--cat-3)"></span></td><td class="id">train/000000000030.jpg</td><td><span class="rs dup"><i></i>duplicate</span></td><td class="reason">near_duplicate</td><td class="id">train/000000000027.jpg</td><td class="hash">f00e3c1d2b5a6978</td></tr>
+      </tbody></table></div>
+    </main>
+    <footer class="status"><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span></span></footer>
+  </div>
+</div></div>
+<p class="cap">Light, with the Duplicate tile pressed: it filters the rows, and the pressed state is the accent outline.</p>
+
+<!-- ===================================================================== B -->
+<h2>B · A duplicate opened: its group side by side</h2>
+<div class="frame" style="height:660px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_c8e21d0f6a3b</span></div></header>
+    <main class="content">
+      <div class="tabs"><span class="tab" aria-selected="true">Rows <span class="count">340</span></span><span class="tab">Reasons</span><span class="tab">Config</span></div>
+      <div class="toolbar"><span class="group-btns"><button class="btn sm">All</button><button class="btn sm">Accepted</button><button class="btn sm">Rejected</button><button class="btn sm" aria-pressed="true">Duplicate</button><button class="btn sm">Filtered</button></span></div>
+      <div class="table-wrap" style="width:470px"><table class="t"><thead><tr><th></th><th>Row key</th><th>Kind</th><th>Duplicate of</th></tr></thead><tbody>
+        <tr><td><span class="thumb" style="--a:var(--seq-5);--b:var(--cat-3)"></span></td><td class="id">…/000000000030.jpg</td><td class="reason">near</td><td class="id">…/000000000027.jpg</td></tr>
+        <tr aria-selected="true"><td><span class="thumb" style="--a:var(--seq-2);--b:var(--seq-4)"></span></td><td class="id">…/000000000061.jpg</td><td class="reason">near</td><td class="id">…/000000000058.jpg</td></tr>
+        <tr><td><span class="thumb" style="--a:var(--cat-4);--b:var(--seq-3)"></span></td><td class="id">…/000000000077.jpg</td><td class="reason">exact</td><td class="id">…/000000000012.jpg</td></tr>
+      </tbody></table></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <aside class="drawer" role="dialog" aria-label="Row train/000000000061.jpg">
+    <header><b>train/000000000061.jpg</b><span class="rs dup"><i></i>duplicate</span><span class="spacer"></span><kbd>j</kbd><kbd>k</kbd><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="body">
+      <div class="group-head"><b>Near-duplicate group</b><span class="mono">dg_4be2a90c1d37</span>· 2 rows · pHash distance <span class="dist">3 / 8</span><span class="muted">(threshold)</span></div>
+      <div class="pair">
+        <div class="card-img"><div class="photo kept"><span class="pill completed tag"><svg class="i"><use href="#i-check"/></svg>kept</span></div><span class="mono">train/000000000058.jpg</span><span>accepted · 640 × 480 · 212 KB</span><span class="hash">6c1e93a0f4b2d7<mark>85</mark></span></div>
+        <div class="card-img"><div class="photo" style="filter:saturate(.85)"></div><span class="mono">train/000000000061.jpg</span><span>duplicate · near · 640 × 480 · 131 KB</span><span class="hash">6c1e93a0f4b2d7<mark>c6</mark></span></div>
+      </div>
+      <div class="kv">
+        <span>Status · decided at</span><span><span class="rs dup"><i></i>duplicate</span> · clean</span>
+        <span>Reason</span><span><span class="mono">near_duplicate</span> · near duplicate of train/000000000058.jpg</span>
+        <span>SHA-256</span><span class="mono">4f0b91c2…7d3ae19a</span>
+        <span>Copy</span><span class="muted">none: only accepted rows get one</span>
+      </div>
+      <div style="display:flex;gap:var(--sp-2)"><button class="btn sm"><svg class="i"><use href="#i-chevron"/></svg>Open kept row</button><button class="btn sm ghost"><svg class="i"><use href="#i-copy"/></svg>Copy row key</button></div>
+    </div>
+  </aside>
+  <span class="n" style="left:728px;top:12px">8</span>
+  <span class="n" style="left:728px;top:66px">9</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">8</span></td><td>Row drawer</td><td>One row: image (copy if any, else original), every manifest field. <kbd>j</kbd> <kbd>k</kbd> move to the next row without closing; <kbd>Esc</kbd> closes and returns focus to the row</td><td>the row; <span class="mono">GET /blobs/{sha256}</span></td><td>–</td></tr>
+<tr><td><span class="n">9</span></td><td>Duplicate group</td><td>Kept row first, outlined and marked; each member with its pHash, the differing characters highlighted; group ID, kind, distance against the threshold</td><td><span class="mono">GET /versions/{id}/rows?dup_group_id=dg_…</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C + D -->
+<h2>C · Reasons tab, and D · Config tab</h2>
+<div style="display:flex;flex-direction:column;gap:var(--sp-4)">
+<div class="frame" style="height:380px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_c8e21d0f6a3b</span></div></header>
+    <main class="content">
+      <div class="tabs"><span class="tab">Rows <span class="count">10,000</span></span><span class="tab" aria-selected="true">Reasons <span class="count">5</span></span><span class="tab">Config</span></div>
+      <div class="table-wrap" style="width:820px"><table class="t"><thead><tr><th>Reason</th><th>Decided at</th><th>Status</th><th class="r">Rows</th><th class="r">Share</th><th style="width:180px"></th><th></th></tr></thead><tbody>
+        <tr><td class="reason">exact_duplicate</td><td>clean</td><td><span class="rs dup"><i></i>duplicate</span></td><td class="r">212</td><td class="r">2.1%</td><td><span class="reason-bar" style="--c:var(--text-muted);width:160px"></span></td><td><button class="btn sm ghost">Show rows<svg class="i"><use href="#i-chevron"/></svg></button></td></tr>
+        <tr><td class="reason">near_duplicate</td><td>clean</td><td><span class="rs dup"><i></i>duplicate</span></td><td class="r">128</td><td class="r">1.3%</td><td><span class="reason-bar" style="--c:var(--text-muted);width:97px"></span></td><td><button class="btn sm ghost">Show rows<svg class="i"><use href="#i-chevron"/></svg></button></td></tr>
+        <tr><td class="reason">corrupt_image</td><td>ingest</td><td><span class="rs rej"><i></i>rejected</span></td><td class="r">97</td><td class="r">1.0%</td><td><span class="reason-bar" style="--c:var(--danger);width:73px"></span></td><td><button class="btn sm ghost">Show rows<svg class="i"><use href="#i-chevron"/></svg></button></td></tr>
+        <tr><td class="reason">below_min_size</td><td>ingest</td><td><span class="rs rej"><i></i>rejected</span></td><td class="r">43</td><td class="r">0.4%</td><td><span class="reason-bar" style="--c:var(--danger);width:32px"></span></td><td><button class="btn sm ghost">Show rows<svg class="i"><use href="#i-chevron"/></svg></button></td></tr>
+        <tr><td class="reason">unsupported_format</td><td>ingest</td><td><span class="rs rej"><i></i>rejected</span></td><td class="r">8</td><td class="r">0.1%</td><td><span class="reason-bar" style="--c:var(--danger);width:6px"></span></td><td><button class="btn sm ghost">Show rows<svg class="i"><use href="#i-chevron"/></svg></button></td></tr>
+      </tbody></table></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <span class="n" style="left:226px;top:104px">10</span>
+</div>
+<div class="frame" style="height:390px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_c8e21d0f6a3b</span></div></header>
+    <main class="content">
+      <div class="tabs"><span class="tab">Rows <span class="count">10,000</span></span><span class="tab">Reasons <span class="count">5</span></span><span class="tab" aria-selected="true">Config</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:var(--sp-6)">
+        <div><h3 class="sec">Stage config (resolved)</h3><pre class="code">{
+  <span class="k">"max_side"</span>: <span class="n">768</span>,
+  <span class="k">"jpeg_quality"</span>: <span class="n">95</span>,
+  <span class="k">"resample"</span>: <span class="s">"lanczos"</span>,
+  <span class="k">"exif_transpose"</span>: <span class="n">true</span>,
+  <span class="k">"mode"</span>: <span class="s">"RGB"</span>,
+  <span class="k">"output_format"</span>: <span class="s">"JPEG"</span>
+}</pre></div>
+        <div><h3 class="sec">Identity and storage</h3><div class="kv">
+          <span>Version ID</span><span class="mono">ds_c8e21d0f6a3b</span>
+          <span>Content hash</span><span class="mono">9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08</span>
+          <span>Config hash</span><span class="mono">2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae</span>
+          <span>Manifest</span><span><span class="mono">manifests/ds_c8e21d0f6a3b.parquet</span> · 1.6 MB</span>
+          <span>New files</span><span>1.1 GB · 9,512 copies</span>
+          <span>Schema version</span><span class="mono">1</span>
+          <span>Code version</span><span class="muted">not recorded</span>
+        </div></div>
+      </div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <span class="n" style="left:226px;top:104px">11</span>
+</div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">10</span></td><td>Reasons</td><td>Each non-accepted reason: deciding stage, status, rows, share, a bar in its status colour scaled to the largest; "Show rows" filters the Rows tab</td><td><span class="mono">GET /versions/{id}/stats</span></td><td>–</td></tr>
+<tr><td><span class="n">11</span></td><td>Config and identity</td><td>The resolved config (DATA-6.1's transform), full hashes (DATA-3.2), manifest, new files (DATA-3.4), schema and code version</td><td><span class="mono">GET /versions/{id}</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== E -->
+<h2>E · Lineage with a fork</h2>
+<div class="frame" style="height:250px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_0b1f9e77a3c4</span></div></header>
+    <main class="content">
+      <div class="lineage">
+        <div class="node done selected"><small>ingest · this version</small><b>ds_0b1f9e77a3c4</b><span>9,852 accepted</span></div><span class="edge"></span>
+        <div class="fork">
+          <div class="row"><div class="node done"><small>clean</small><b>ds_e1aa7c52d940</b><span>340 duplicates · alg. 2</span></div><span class="edge"></span><div class="node done"><small>preprocess</small><b>ds_c8e21d0f6a3b</b><span>max 768</span></div></div>
+          <div class="row"><div class="node done"><small>clean</small><b>ds_9d02f1c4be77</b><span>251 duplicates · alg. 1</span></div><span class="edge"></span><div class="node done"><small>preprocess</small><b>ds_7f3a9c21b04e</b><span>max 768</span></div></div>
+        </div>
+      </div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== F -->
+<h2>F · Every row rejected</h2>
+<div class="frame" style="height:380px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>scans<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_5a90c3e1f27d</span></div></header>
+    <main class="content">
+      <div class="vhead"><div><h1>ds_5a90c3e1f27d <span class="stage-tag">ingest</span></h1><div class="sub">scans · made 09:12 by <span class="mono">job_0139</span><svg class="i"><use href="#i-check"/></svg>· raw · min size 256 px</div></div><span class="spacer"></span><button class="btn primary is-disabled" aria-disabled="true"><svg class="i"><use href="#i-branch"/></svg>Continue the pipeline</button></div>
+      <div class="notice" role="status"><svg class="i"><use href="#i-alert"/></svg><div><b>No row was accepted.</b> All 214 rows were rejected as <span class="mono">below_min_size</span> (shorter side below 256 px). <b>Do:</b> ingest again with a smaller <span class="mono">min_size</span>, if these images are meant to be used.</div></div>
+      <div class="tabs"><span class="tab" aria-selected="true">Rows <span class="count">214</span></span><span class="tab">Reasons <span class="count">1</span></span><span class="tab">Config</span></div>
+      <div class="toolbar"><span class="group-btns"><button class="btn sm">All</button><button class="btn sm">Accepted</button><button class="btn sm" aria-pressed="true">Rejected</button></span></div>
+      <div class="table-wrap"><table class="t"><thead><tr><th></th><th>Row key</th><th>Status</th><th>Reason</th><th class="r">Original</th></tr></thead><tbody><tr><td><span class="thumb" style="--a:var(--seq-6);--b:var(--seq-7)"></span></td><td class="id">page_001.png</td><td><span class="rs rej"><i></i>rejected</span></td><td class="reason">below_min_size · shorter side 180px is below the minimum 256px</td><td class="r">240 × 180</td></tr></tbody></table></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== G -->
+<h2>G · Later: a labelled version (after M4)</h2>
+<div class="frame" style="height:240px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_a41f07be92c6</span></div></header>
+    <main class="content">
+      <div class="vhead"><div><h1>ds_a41f07be92c6 <span class="stage-tag">label</span></h1><div class="sub">coco10k · Florence-2-base · revision <span class="mono">5ca5edf</span></div></div><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-branch"/></svg>Continue the pipeline</button><button class="btn primary"><svg class="i"><use href="#i-eye"/></svg>Start a review</button></div>
+      <div class="table-wrap"><table class="t"><thead><tr><th></th><th>Row key</th><th>Status</th><th>Caption</th><th class="r">CLIP</th><th>Model</th></tr></thead><tbody>
+        <tr><td><span class="thumb" style="--a:var(--seq-3);--b:var(--cat-5)"></span></td><td class="id">train/000000000009.jpg</td><td><span class="rs acc"><i></i>accepted</span></td><td>A plate of broccoli, rice and meat on a white table.</td><td class="r">0.312</td><td class="id">Florence-2-base</td></tr></tbody></table></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== H -->
+<h2>H · Loading, and an unknown version</h2>
+<div class="frame" style="height:320px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>…</div></header>
+    <main class="content" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-5);align-content:start">
+      <div style="display:flex;flex-direction:column;gap:var(--sp-3)" aria-busy="true"><span class="skeleton" style="width:280px;height:22px"></span><span class="skeleton" style="width:420px"></span><span class="skeleton" style="width:100%;height:62px"></span><div class="tiles"><span class="skeleton" style="height:64px"></span><span class="skeleton" style="height:64px"></span><span class="skeleton" style="height:64px"></span><span class="skeleton" style="height:64px"></span></div></div>
+      <div class="state err" role="alert"><svg class="i"><use href="#i-alert"/></svg><b>Version ds_000000000000 not found</b><span class="badge err">not_found</span><p>No dataset version 'ds_000000000000'.<br><b style="color:var(--text-primary)">Do:</b> check the link, or find the version in its dataset.</p><button class="btn sm" style="margin-top:var(--sp-2)"><svg class="i"><use href="#i-db"/></svg>Go to datasets</button></div>
+    </main>
+    <footer class="status"><span class="m conn">connecting…</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== I -->
+<h2>I · 1024 px</h2>
+<div class="frame compact" style="height:320px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center"><div class="brand" style="padding:0"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg></a><a class="nav"><svg class="i"><use href="#i-list"/></svg></a></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_c8e2…</span></div></header>
+    <main class="content">
+      <div class="vhead"><h1 style="font-size:var(--fs-16)">ds_c8e21d0f6a3b <span class="stage-tag">preprocess</span></h1><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-more"/></svg>More</button><button class="btn sm primary"><svg class="i"><use href="#i-branch"/></svg>Continue the pipeline</button></div>
+      <div class="lineage"><div class="node done"><small>clean</small><b>ds_e1aa7c52d940</b></div><span class="edge"></span><div class="node done selected"><small>preprocess · this</small><b>ds_c8e21d0f6a3b</b></div><span class="edge"></span><div class="node pending"><small>label</small><b>job_0142</b></div></div>
+      <div class="tiles"><button class="stile" style="--c:var(--success)"><span class="k"><i></i>Accepted</span><span class="v">9,512</span></button><button class="stile" style="--c:var(--danger)"><span class="k"><i></i>Rejected</span><span class="v">148</span></button><button class="stile" style="--c:var(--text-muted)"><span class="k"><i></i>Duplicate</span><span class="v">340</span></button><button class="stile" style="--c:var(--warning)"><span class="k"><i></i>Filtered</span><span class="v">0</span></button></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+<p class="cap">Secondary actions fold into More; the lineage strip shows the nearest ancestors and scrolls sideways for the rest; tiles drop their context line.</p>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>Status tiles and filter buttons are toggle buttons (<span class="mono">aria-pressed</span>); their label includes the count ("Duplicate, 340 rows").</li>
+<li>The lineage strip is a list of links in order; the current version has <span class="mono">aria-current</span>. The running child is announced as "running, will add a child version".</li>
+<li>The row drawer is a dialog; <kbd>j</kbd>/<kbd>k</kbd> move the selection in the table behind it, and the drawer's title is announced on each move.</li>
+<li>Disabled actions use <span class="mono">aria-disabled</span> (not <span class="mono">disabled</span>) so they stay focusable and their reason can be read.</li>
+</ul>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>

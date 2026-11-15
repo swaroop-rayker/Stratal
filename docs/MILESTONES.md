@@ -51,7 +51,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] G1 approved (v1, 2026-11-15)
 - [x] G2 approved: SCR-01 (low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-01_v1.html`)
 - [x] G2 approved: SCR-02 (low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-02_v1.html`)
-- [ ] G2 approved: SCR-03
+- [ ] G2 approved: SCR-03 (low-fi v1 approved 2026-11-15; hi-fi in progress)
 - [ ] G2 approved: SCR-04
 - [ ] G2 approved: SCR-05
 - [ ] G2 approved: SCR-06
