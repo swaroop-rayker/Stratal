@@ -150,6 +150,7 @@ All are in the preview with their variants and states. States shown where they a
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-14 | First version, for Gate 0 review |
+| v1 (SCR-06) | 2026-11-15 | The chart icon joins the set. Approved with the SCR-06 hi-fi mockup |
 | v1 (SCR-05) | 2026-11-15 | The note icon joins the set. Approved with the SCR-05 hi-fi mockup |
 | v1 (SCR-03) | 2026-11-15 | Three icons join the set (eye, report, grid). Filters are a group of small buttons with a pressed state (accent-soft fill, accent border), since there is no chip component. Approved with the SCR-03 hi-fi mockup |
 | v1 (SCR-02) | 2026-11-15 | Row-status colour rule added; five icons join the set (plus, more, folder, copy, branch). Approved with the SCR-02 hi-fi mockup, where their definitions are |
