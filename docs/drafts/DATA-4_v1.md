@@ -1,6 +1,6 @@
 # DATA-4 Train/Val/Test Splits — draft v1, for the owner's review
 
-**Status:** draft v1, 2026-11-15. Written by the agent at the owner's request ("You draft it"). It answers the four questions in SPEC.md and KICKOFF.md. Nothing here is a requirement until the owner approves a reviewed version; then the requirement block below replaces the placeholder in SPEC.md §DATA-4, and the schema change goes into DATA_MODEL.md.
+**Status:** approved by the owner on 2026-11-15 as v1, without changes. The requirement block below is now SPEC.md §DATA-4, the schema change is in DATA_MODEL.md, and the review decisions below were taken as proposed (DECISIONS.md, M5). This file stays as the record of the reasoning and measurements. Written by the agent at the owner's request ("You draft it").
 
 ## The requirements (proposed text for SPEC.md)
 

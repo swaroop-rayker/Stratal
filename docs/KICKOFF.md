@@ -94,7 +94,7 @@ None of these needs an account, email or key. Model weights and the dataset are 
 | Settle OC-4 (version ID length) | in M1 | Part of your DATA-3.2 implementation |
 | Settle OC-3 (preprocess size) | before M3 | Proposed 768 px |
 | Choose the phase-1 dataset | before M4 | **Done 2026-11-15:** a 10k subset of COCO 2017 |
-| Write DATA-4 | before M5 | **Draft v1 by the agent at the owner's request, 2026-11-15, in review:** [drafts/DATA-4_v1.md](drafts/DATA-4_v1.md) |
+| Write DATA-4 | before M5 | **Done 2026-11-15:** drafted by the agent at the owner's request; v1 approved and moved into SPEC.md |
 | Review the design system (Gate 0) | when delivered, alongside M1 | Only an explicit "approved" passes |
 | GitHub remote | whenever you want CI and PRs | **Done 2026-11-15:** `origin` is the owner's repository; `main` and tags pushed |
 | Translation language pairs | phase 5 | |

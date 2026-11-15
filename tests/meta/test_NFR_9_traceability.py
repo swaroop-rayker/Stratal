@@ -37,7 +37,9 @@ def _test_names() -> set[str]:
 def test_NFR_9_spec_requirements_are_machine_readable() -> None:
     requirements = _requirements()
 
-    assert len(requirements) == 112, "111 from the input plus DATA-6.1"
+    assert len(requirements) == 120, "111 from the input, DATA-6.1 and DATA-4.1 to DATA-4.8"
+    assert requirements["DATA-4.1"] == ("P0", "1")
+    assert requirements["DATA-4.8"] == ("P2", "1")
     assert requirements["DATA-1.1"] == ("P0", "1")
     assert requirements["REG-2.11"] == ("P1", "2")
     p0 = [rid for rid, (priority, _) in requirements.items() if priority == "P0"]

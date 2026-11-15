@@ -246,7 +246,8 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 | VRAM manager | RUN-1.4, RUN-1.5 | `VramManager(gpu: GpuBackend, *, sink)`: `load(loader, *, name, estimate_mb)`, `unload() -> UnloadReport`; one model at a time, refuse what does not fit, prove allocated memory is back at baseline | M4; written by the agent at the owner's request (ADR-0012) |
 | CLIP scoring | LABEL-1.3 | `clip_similarity(image_vectors, text_vectors) -> list[float]`: raw CLIP embeddings → one score per pair: plain cosine | M4; written by the agent at the owner's request (ADR-0012) |
 | Filter rule | LABEL-1.4 | `filter_decisions(items: Sequence[ScoredItem], *, threshold) -> dict[row_key, reason]`: rows to mark `filtered` (`clip_below_threshold`, `missing_caption`) | M4; written by the agent at the owner's request (ADR-0012); threshold 0.2, chosen by the owner (OC-5) |
-| Split assignment | DATA-4 | Rows + split config + seed → a split per row, per the section the owner writes | M5 |
+| Leakage grouping | DATA-4.2 | Accepted rows with duplicate groups and perceptual hashes + leakage distance → split groups, each named by its anchor's `sha256` | M5 |
+| Split assignment | DATA-4.1, 4.3 to 4.5 | Split groups with their strata + the previous split's assignments + proportions + seed → one split per group: carried over where known, new groups filling each stratum's shortfall, merges reported | M5 |
 | Report statistics | EVAL-1.1 | Manifest + review decisions → counts per stage, score distribution, filter rate, acceptance with a 95% Wilson interval | M5 |
 | Semantic-duplicate clustering | DATA-2.3 (P2) | CLIP embeddings → clusters | M7 if time |
 

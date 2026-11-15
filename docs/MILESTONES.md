@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 waits on the owner's DATA-4 section. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 started: DATA-4 approved 2026-11-15 (drafted by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -22,7 +22,7 @@
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
 | M3 | Cleaning and preprocessing | 1 | M | Done 2026-11-15 |
 | M4 | Labeling | 1 | L | Done 2026-11-15 |
-| M5 | Splits, review, eval report | 1 | M | Not started |
+| M5 | Splits, review, eval report | 1 | M | In progress: DATA-4 approved 2026-11-15 |
 | M6 | Phase-1 screens | 1 | L | Not started |
 | M7 | Phase-1 acceptance | 1 | M | Not started |
 | M8 | Training runtime and registry | 2 | L | Outline |
@@ -238,18 +238,18 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** M · **Branch** `m5-split-review-eval` · **Serves** DATA-4, LABEL-1.5, EVAL-1.1, DATA-5.1 (in the pipeline), NFR-4
 
-**Before starting:** 👤 DATA-4 written by the owner and reviewed. **2026-11-15:** draft v1 written by the agent at the owner's request ([drafts/DATA-4_v1.md](drafts/DATA-4_v1.md)), in the owner's review.
+**Before starting:** 👤 DATA-4 written by the owner and reviewed. **Done 2026-11-15:** drafted by the agent at the owner's request, v1 approved by the owner and moved into SPEC.md.
 
 **Scope**
 
-- Split stage shell. 👤 Split assignment per DATA-4.
+- Split stage shell. 👤 Split assignment and leakage grouping per DATA-4.
 - Review sessions: sampling, decisions, storage, endpoints.
 - Report assembly. 👤 Report statistics, including the Wilson interval.
 - Evaluate stage; schema validation applied in the filter stage.
 
 **Done when**
 
-- [ ] DATA-4 is in SPEC.md with IDs and criteria, approved
+- [x] DATA-4 is in SPEC.md with IDs and criteria, approved (2026-11-15, v1)
 - [ ] 👤 `test_DATA_4_*`: one test per criterion in DATA-4
 - [ ] `test_LABEL_1_5_*`: N rows sampled; decisions stored and linked to the version
 - [ ] 👤 `test_EVAL_1_1_*`: a report per version with all four parts; the interval checked against known values

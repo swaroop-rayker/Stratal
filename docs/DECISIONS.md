@@ -365,6 +365,28 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `TOLERANCE_MB = 1.0`. A leak is a WARN with the megabytes still held, not an exception; a loader that fails part-way is cleaned up before the error propagates.
 - **Why:** Cached but unused blocks of this process are free for the next model, and an honest baseline needs them gone. Measured on the card: after Florence-2 and CLIP had run, allocated memory came back to exactly its baseline, cuBLAS workspaces included, so any real leak (one layer's weights is many megabytes) stands out.
 
+## M5: splits, review, evaluation report
+
+**DATA-4 approved as drafted** (M5, DATA-4; approved by the owner 2026-11-15)
+- **What:** The split requirements DATA-4.1 to 4.8, drafted by the agent at the owner's request and approved as v1 without changes; with them, the review decisions taken as proposed (below).
+- **How:** Requirement text in SPEC.md §DATA-4; reasoning and measurements in `docs/drafts/DATA-4_v1.md`; new manifest columns `split_group` and `split_stratum` in DATA_MODEL.md.
+- **Why:** M5 could not start without them (KICKOFF.md). The draft answers the four questions the input set, from measurements on 2,958 labelled COCO rows.
+
+**Split proportions 80/10/10, leakage distance 12 bits** (M5, DATA-4.1, DATA-4.2)
+- **What:** `train` 0.8, `val` 0.1, `test` 0.1 by default; accepted rows within 12 bits of each other by pHash join one split group.
+- **How:** Config fields of the split stage, recorded in each split version.
+- **Why:** About 1,000 test images from the 10k set. Above the dedupe threshold, pHash mixes same-event shots with lookalikes; grouping a false match costs a little randomness while a missed pair inflates test scores. At 12 bits 2 % of rows group, at most 4 to a group.
+
+**Stratified on CLIP quartile, orientation and source folder; carried over, shortfalls filled** (M5, DATA-4.3 to 4.5)
+- **What:** New split groups fill each stratum's shortfall towards the proportions; rows of the dataset's previous split with the same proportions and seed keep their split.
+- **How:** The previous split's version ID and the seed go into the split version's config (DATA-4.4); moves happen only when a new row joins two groups, and are reported.
+- **Why:** Exact proportions per stratum and stable assignments together. Pure hashing would be stable without history but right only on average, several points off in a 100-row stratum.
+
+**Review measures and changes nothing in phase 1** (M5, DATA-4.7, LABEL-1.5)
+- **What:** The review samples a split version; its decisions change no split and no status.
+- **How:** Each review item records its row's split; the phase-1 report gives acceptance overall and for `test`.
+- **Why:** The review estimates label quality with a Wilson interval (EVAL-1.1); editing the data from a sample would bias the very estimate it produces.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
