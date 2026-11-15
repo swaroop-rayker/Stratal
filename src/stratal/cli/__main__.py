@@ -3,6 +3,8 @@
   python -m stratal.cli ingest --dataset NAME --source /path [--min-size 256]
   python -m stratal.cli versions --dataset NAME
   python -m stratal.cli lineage VERSION_ID
+  python -m stratal.cli models list
+  python -m stratal.cli models pull NAME... | --all
 
 Results are printed as JSON on standard output. Log lines go to standard error.
 """
@@ -15,7 +17,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from stratal.core.errors import StratalError
+from stratal.core.errors import StratalError, ValidationFailed
 from stratal.core.logging import configure_logging
 from stratal.core.settings import get_settings
 from stratal.data import registry
@@ -24,6 +26,8 @@ from stratal.data.versioning import derive_version_identity
 from stratal.db.engine import get_engine
 from stratal.db.models import DatasetVersion
 from stratal.mon.sink import LogSink
+from stratal.pretrained import catalog
+from stratal.pretrained.pull import pull
 
 
 def _version_json(version: DatasetVersion) -> dict[str, Any]:
@@ -70,6 +74,49 @@ def _lineage(args: argparse.Namespace) -> list[dict[str, Any]]:
         return [_version_json(v) for v in registry.lineage(session, args.version_id)]
 
 
+def _models_list(_args: argparse.Namespace) -> list[dict[str, Any]]:
+    models_dir = get_settings().data_dir / "models"
+    rows: list[dict[str, Any]] = []
+    for model in catalog.CATALOG.values():
+        try:
+            folder: str | None = str(catalog.local_path(models_dir, model.name))
+        except StratalError:
+            folder = None
+        rows.append(
+            {
+                "name": model.name,
+                "repo_id": model.repo_id,
+                "revision": model.revision,
+                "role": model.role,
+                "licence": model.licence,
+                "size_mb": round(model.total_bytes / 1e6),
+                "pulled": folder,
+            }
+        )
+    return rows
+
+
+def _models_pull(args: argparse.Namespace) -> list[dict[str, Any]]:
+    names: list[str] = list(catalog.CATALOG) if args.all else list(args.names)
+    if not names:
+        raise ValidationFailed("Name at least one model, or pass --all.")
+    models = [catalog.get_model(name) for name in names]  # refuse before downloading anything
+    models_dir = get_settings().data_dir / "models"
+    results: list[dict[str, Any]] = []
+    for model in models:
+        result = pull(model, models_dir, progress=lambda message: print(message, file=sys.stderr))
+        results.append(
+            {
+                "name": result.name,
+                "folder": str(result.folder),
+                "files_downloaded": result.files_downloaded,
+                "files_present": result.files_present,
+                "downloaded_mb": round(result.downloaded_bytes / 1e6),
+            }
+        )
+    return results
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="stratal")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -87,6 +134,15 @@ def main(argv: list[str] | None = None) -> int:
     lineage = commands.add_parser("lineage", help="show a version's ancestry back to raw")
     lineage.add_argument("version_id")
     lineage.set_defaults(run=_lineage)
+
+    models = commands.add_parser("models", help="the pretrained-model allow-list (NFR-8)")
+    model_commands = models.add_subparsers(dest="models_command", required=True)
+    listing = model_commands.add_parser("list", help="allowed models and whether each is pulled")
+    listing.set_defaults(run=_models_list)
+    pulling = model_commands.add_parser("pull", help="download and verify allowed models")
+    pulling.add_argument("names", nargs="*")
+    pulling.add_argument("--all", action="store_true")
+    pulling.set_defaults(run=_models_pull)
 
     args = parser.parse_args(argv)
     configure_logging(get_settings().log_level, sys.stderr)

@@ -199,7 +199,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** L · **Branch** `m4-labeling` · **Serves** LABEL-1.1–1.4, MON-3.1 (labeling), NFR-1, NFR-3, NFR-7, NFR-8, the phase-1 slice of RUN-1.4 and RUN-1.5; BUG2, BUG5, BUG6
 
-**Before starting:** phase-1 dataset chosen (open question); model-weight downloads approved. **Dataset chosen 2026-11-15:** a 10k subset of COCO 2017, accepted by the owner. Downloads: waiting for approval.
+**Before starting:** phase-1 dataset chosen (open question); model-weight downloads approved. **Dataset chosen 2026-11-15:** a 10k subset of COCO 2017, accepted by the owner. Downloads approved 2026-11-15: COCO annotations and 10,000 images; Florence-2-base, CLIP ViT-B/32 (LAION) and BLIP-large.
 
 **Scope**
 
@@ -226,7 +226,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [ ] `test_NFR_1_*` (gpu): logged peak VRAM is under 5.5 GB
 - [ ] NFR-3 benchmark recorded; target adjusted with the owner if needed
 - [ ] `test_NFR_7_*`: the label stage runs with the network disabled after models are pulled
-- [ ] `test_NFR_8_*`: no `trust_remote_code` in source; a model outside the allow-list is refused
+- [x] `test_NFR_8_*`: no `trust_remote_code` in source; a model outside the allow-list is refused (also: every file pinned by hash, a mismatched file is not kept)
 - [ ] Demo: label 1,000 images and watch it live through the API
 - [ ] Docs updated
 - [ ] Owner's OK to merge

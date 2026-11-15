@@ -98,6 +98,8 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 | Apply database migrations | `docker compose run --rm dev alembic upgrade head` |
 | Create a migration after changing `src/stratal/db/models.py` | `docker compose run --rm dev alembic revision --autogenerate -m "what changed"`, then read the generated file |
 | Command line | `docker compose run --rm dev python -m stratal.cli ingest --dataset NAME --source PATH` (also `versions`, `lineage`) |
+| Pull the allowed pretrained models (the only hub access) | `docker compose run --rm dev python -m stratal.cli models pull --all` (`models list` shows what is pulled) |
+| Rebuild the phase-1 source folder (COCO 2017, 10k) | `docker compose run --rm dev python -I scripts/datasets/coco10k.py fetch` (`select` first if `sources/coco10k-meta` is missing) |
 
 The `stratal-base` image is built with `docker build --target base -t stratal-base -f docker/Dockerfile .`. Rebuild `dev` after changing dependencies; source changes need no rebuild because the repository is bind-mounted into `dev`. The `api`, `worker-cpu` and `monitor` services share one image that copies the source, so run `docker compose build api` and `docker compose up -d` to see code changes there. Integration tests use their own database (`stratal_test`), Redis database 15 and a temporary data folder. Source folders for ingestion go under `.\sources` (or `STRATAL_SOURCES_DIR`) and are seen as `/sources/<name>`.
 

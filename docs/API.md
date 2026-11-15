@@ -42,6 +42,9 @@ Every error response uses RFC 9457 problem details with media type `application/
 | `conflict` | 409 | The resource already exists, e.g. a dataset slug |
 | `source_not_found` | 422 | The source folder does not exist or is not readable from the workers |
 | `dependency_unavailable` | 503 | Postgres, Redis or the data volume is unreachable |
+| `model_not_allowed` | 422 | A model name that is not on the allow-list (NFR-8) |
+| `model_integrity_failed` | 502 | A downloaded model file did not match its pinned size or hash; it was not kept (NFR-8) |
+| `model_not_pulled` | 409 | An allowed model that has not been downloaded; run time never downloads (NFR-7) |
 | `internal_error` | 500 | Anything unexpected. The detail carries the request ID, not a stack trace |
 
 Jobs that fail carry the same idea in `job.error`. These codes appear there and in ERROR events, never as HTTP statuses:

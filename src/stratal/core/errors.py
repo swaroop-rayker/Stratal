@@ -66,6 +66,30 @@ class SourceNotFound(StratalError):
     http_status = 422
 
 
+class ModelNotAllowed(StratalError):
+    """A model name that is not on the allow-list (NFR-8)."""
+
+    code = "model_not_allowed"
+    title = "Model not allowed"
+    http_status = 422
+
+
+class ModelIntegrityFailed(StratalError):
+    """A downloaded model file did not match its pinned size or hash (NFR-8)."""
+
+    code = "model_integrity_failed"
+    title = "Model file failed its integrity check"
+    http_status = 502
+
+
+class ModelNotPulled(StratalError):
+    """An allowed model that has not been downloaded; run time never downloads (NFR-7)."""
+
+    code = "model_not_pulled"
+    title = "Model not pulled"
+    http_status = 409
+
+
 class DependencyUnavailable(StratalError):
     code = "dependency_unavailable"
     title = "Dependency unavailable"

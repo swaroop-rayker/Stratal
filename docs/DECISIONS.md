@@ -301,6 +301,26 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** A seeded random choice of image IDs, the list kept in the repository so the subset can be rebuilt; images in `sources/`, never in git.
 - **Why:** Everyday photographs with reference captions, so captioning quality (CIDEr-D, CL-13) and CLIP scores can be checked against human text; 10k is a few hours of captioning at NFR-3's 2 img/s and about 1.6 GB on disk.
 
+**COCO images chosen by licence** (M4, LABEL-1.1)
+- **What:** The 10,000 images come only from the 30,836 COCO 2017 training images whose Flickr licence allows reuse, commercial reuse included: CC BY, CC BY-SA, or no known copyright.
+- **How:** `scripts/datasets/coco10k.py select` draws them with seed 2026; the IDs are committed in `scripts/datasets/coco10k_ids.txt`, and each image's licence, Flickr link and five captions go to `sources/coco10k-meta/images.jsonl`. The annotations zip matched its published MD5 and SHA-1.
+- **Why:** The repository is on GitHub, and later LoRA samples (IMG-1.2) may be shown. CC BY needs attribution, so the link is kept. COCO serves only plain HTTP and has no per-image checksums; ingest rejects anything that does not decode.
+
+**Model allow-list with every file pinned** (M4, NFR-8, ARCHITECTURE §8)
+- **What:** `stratal.pretrained.catalog` lists each allowed model by repository, full commit hash and every file it may fetch, with its size and hash. `python -m stratal.cli models pull` is the only code that contacts the hub.
+- **How:** Large files are checked against the SHA-256 in their Git LFS pointer, small ones against git's blob SHA-1, while streaming to a temporary name; a mismatch is deleted and stops the pull. A stamp file is written last. The download uses the standard library, so pulling needs no new dependency; jobs run with `HF_HUB_OFFLINE` and `TRANSFORMERS_OFFLINE` set (NFR-7).
+- **Why:** Pinning a revision trusts whatever the hub serves for it; pinning hashes does not. Listing files means pickle weights (`pytorch_model.bin`, `tf_model.h5`) that repositories also carry can never be fetched.
+
+**CLIP ViT-B/32 from LAION, BLIP-large for S-06** (M4, LABEL-1.3, spike S-06)
+- **What:** CLIP scoring uses `laion/CLIP-ViT-B-32-laion2B-s34B-b79K`; the comparison captioner is `Salesforce/blip-image-captioning-large`. Florence-2-base stays the default (ADR-0009).
+- **How:** Each pinned in the catalog; 605 MB and 1.88 GB.
+- **Why:** OpenAI's ViT-B/32 and BLIP-base carry safetensors only in unreviewed community pull requests, which anyone can upload; their main branches have pickle weights only. These two publish safetensors on their main branch. LAION's model is the same architecture, so scores are comparable in kind but not in value with published OpenAI-CLIP scores.
+
+**transformers in the GPU worker only** (M4, LABEL-1.1, LABEL-1.3)
+- **What:** `transformers` (SPEC §7.2) is in the `gpu` extra, with the 13 packages it brings, numpy among them.
+- **How:** Re-locked with uv; the API, CPU worker and dev images are unchanged.
+- **Why:** Only GPU stages load models, and the API image must stay free of ML libraries.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
