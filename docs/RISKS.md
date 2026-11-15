@@ -143,7 +143,25 @@ Likelihood and impact are High, Medium or Low.
 - **Question:** Which captioner is the default, and with which caption style?
 - **Method:** Caption the same 50 images with both. Measure images per second at batch sizes 4, 8 and 16 in half precision, and peak VRAM. Produce a side-by-side sheet for the owner, with mean CLIP score, and CIDEr-D if the dataset has reference captions.
 - **Decides:** the owner picks the default captioner. This closes the input's open question.
-- **Result:** not run yet.
+- **Result (2026-11-15):** run with `scripts/spikes/s06_captioner_compare.py` on 50 COCO 2017 images (seed 6), fp16, three beams, offline. Side-by-side sheet: [spikes/S-06-captions.md](spikes/S-06-captions.md); figures: [spikes/S-06-results.json](spikes/S-06-results.json).
+
+  | Captioner | img/s at bs 4 / 8 / 16 | Peak reserved VRAM | Mean CLIP cosine | Mean words |
+  |---|---|---|---|---|
+  | Human (first COCO caption) | | | 0.302 | 10.4 |
+  | Florence-2-base, `<CAPTION>` | 8.9 / 10.1 / 10.1 | 4.05 GB | 0.300 | 10.6 |
+  | Florence-2-base, `<DETAILED_CAPTION>` | 4.4 / 5.6 / 6.0 | 4.05 GB | 0.309 | 44.3 |
+  | BLIP-large | 7.7 / 11.9 / 13.1 | 2.61 GB | 0.295 | 12.7 |
+
+  The CLIP cosine is measured with `clip-vit-b-32-laion2b` for this spike only; it is not the owner's LABEL-1.3 unit. CIDEr-D against the five references is not computed here, because it is the owner's evaluation code (CL-13).
+
+  **Reading it:**
+  - **Every option is far above NFR-3's 2 img/s.** At 10 img/s, Florence-2 `<CAPTION>` labels the 10k set in about 17 minutes.
+  - **VRAM is within NFR-1.** Florence-2's peak at batch 16 is 4.05 GB reserved plus about 0.09 GB of context, against 5.5 GB. Most of it is the vision encoder's activations, not the 0.23 GB of fp16 weights.
+  - **On CLIP, the short captions are level with the human ones** (0.295 to 0.300 against 0.302).
+  - **The detailed captions score a little higher, but they run past CLIP's 77-token limit** (R-09): CLIP sees only their beginning. They also take twice as long.
+  - **BLIP-large is a little faster, with a steady "there is a ..." opening and some visible mistakes** (image 4: "in the snow" for a rainy street).
+
+  **Recommendation:** keep Florence-2-base with `<CAPTION>` as the default (SPEC LABEL-1.1, ADR-0009). Use `<DETAILED_CAPTION>` only where long captions are wanted and are scored some other way than CLIP. **Decision:** the owner's.
 
 ### S-07 — Does the memory budget hold? (M4)
 
