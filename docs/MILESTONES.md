@@ -214,14 +214,14 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Done when**
 
-- [ ] S-06 report delivered; owner decides Florence-2 vs BLIP
+- [ ] S-06 report delivered; owner decides Florence-2 vs BLIP (report delivered 2026-11-15 in RISKS.md; decision pending)
 - [ ] 👤 `test_LABEL_1_1_*`: every accepted row has a caption and a model version
 - [ ] 👤 `test_LABEL_1_2_*`: kill at 60%, restart, completes; no finished image is captioned twice
 - [ ] 👤 `test_LABEL_1_3_*`: a score is present for every pair
 - [ ] 👤 `test_LABEL_1_4_*`: rows below the threshold are marked with a reason, not deleted
 - [ ] `test_MON_3_1_*`: labeling emits its listed messages and metrics
 - [ ] 👤 `test_BUG5_*` (gpu): VRAM returns to baseline after unload and after the stage's process exits
-- [ ] `test_BUG6_*`: a second process cannot take the GPU lease
+- [x] `test_BUG6_*`: a second process cannot take the GPU lease (also: a dead holder releases it)
 - [ ] 👤 `test_BUG2_*` (gpu): an oversized batch produces a WARN with a smaller batch and the stage completes
 - [ ] `test_NFR_1_*` (gpu): logged peak VRAM is under 5.5 GB
 - [ ] NFR-3 benchmark recorded; target adjusted with the owner if needed

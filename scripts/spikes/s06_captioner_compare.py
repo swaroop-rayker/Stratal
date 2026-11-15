@@ -56,7 +56,9 @@ def main() -> None:
     for name, task, tokens, label in RUNS:
         torch.cuda.reset_peak_memory_stats()
         started = time.monotonic()
-        model = load_captioner(name, MODELS, dtype="fp16", task=task or "<CAPTION>", max_new_tokens=tokens)
+        model = load_captioner(
+            name, MODELS, dtype="fp16", task=task or "<CAPTION>", max_new_tokens=tokens
+        )
         load_s = time.monotonic() - started
         speed: dict[int, float] = {}
         for batch in BATCHES:
@@ -74,7 +76,11 @@ def main() -> None:
         model.close()
         del model
         torch.cuda.empty_cache()
-        results[label] = {"load_s": round(load_s, 1), "img_per_s": speed, "peak_reserved_gb": round(peak_gb, 2)}
+        results[label] = {
+            "load_s": round(load_s, 1),
+            "img_per_s": speed,
+            "peak_reserved_gb": round(peak_gb, 2),
+        }
         print(label, results[label], flush=True)
 
     clip = load_clip("clip-vit-b-32-laion2b", MODELS, dtype="fp16")
@@ -84,7 +90,9 @@ def main() -> None:
         scores[label] = _cosines(clip, images, texts)
     clip.close()
 
-    words = {label: statistics.mean(len(t.split()) for t in texts) for label, texts in captions.items()}
+    words = {
+        label: statistics.mean(len(t.split()) for t in texts) for label, texts in captions.items()
+    }
     words["Human (first COCO caption)"] = statistics.mean(len(t.split()) for t in humans)
     summary = {
         "images": [r["file_name"] for r in chosen],
