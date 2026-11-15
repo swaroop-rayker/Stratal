@@ -46,7 +46,11 @@ def test_MON_2_4_nvml_and_pytorch_figures_are_recorded_side_by_side() -> None:
     before = gpu.read()
     assert before is not None and before.vram_used_mb is not None
 
-    block = torch.empty((ALLOCATE_MB, 1024, 1024), dtype=torch.uint8, device="cuda")
+    # Write the block and wait for the write: on WSL, NVML counts memory that has never
+    # been written about 100 ms late, so an untouched block made this check flaky (E-008).
+    # synchronize() alone does not help, and zeros() alone returns before its fill runs.
+    block = torch.zeros((ALLOCATE_MB, 1024, 1024), dtype=torch.uint8, device="cuda")
+    torch.cuda.synchronize()
     reporter.report()
     held = gpu.read()
     del block

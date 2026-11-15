@@ -35,6 +35,16 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-008 — The MON-2.4 GPU test was flaky: NVML counts new VRAM late on WSL
+
+- **Date:** 2026-11-15
+- **Seen:** `test_MON_2_4_nvml_and_pytorch_figures_are_recorded_side_by_side` failed 3 times in 4 runs with `assert (565.8046875 - 228.6171875) >= (512 * 0.9)`; it had passed in the M2 check.
+- **Where:** `tests/gpu/test_MON_2_gpu.py`; MON-2.4
+- **Cause:** On WSL, NVML reports memory from an allocation that has never been written about 100 ms late. Measured straight after `torch.empty` of 512 MB: +337 MB, then the full amount 0.1 s later. `torch.cuda.synchronize()` alone does not change this. Writing the memory does, but only once the write has run: `torch.zeros` without a sync still failed 3 times in 10, because the fill kernel is asynchronous. The test read NVML in the same instant it allocated. The sampler itself is not affected in any way that matters: it reads once a second, so it is at most one sample behind.
+- **Fix:** The test allocates with `torch.zeros` and then calls `torch.cuda.synchronize()`.
+- **Guard:** The test itself: 20 passes in 20 runs after the fix, and the full `check.ps1 -Gpu`.
+- **Status:** verified
+
 ### E-007 — A unit test leaked a bound version ID into another test
 
 - **Date:** 2026-11-14
