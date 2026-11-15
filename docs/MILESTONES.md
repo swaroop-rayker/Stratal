@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 in progress: agent's part built 2026-11-15 (allow-list and pull, adapters, S-06 with Florence-2 `<CAPTION>` chosen, GPU lease, label and filter stages); the four owner units written by the agent at the owner's request; demo run; the CLIP threshold (OC-5), spike S-07 and the owner's OK to merge are left. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 in progress: agent's part built 2026-11-15 (allow-list and pull, adapters, S-06 with Florence-2 `<CAPTION>` chosen, GPU lease, label and filter stages); the four owner units written by the agent at the owner's request; demo run; CLIP threshold 0.2 chosen (OC-5); spike S-07 and the owner's OK to merge are left. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -21,7 +21,7 @@
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
 | M3 | Cleaning and preprocessing | 1 | M | Done 2026-11-15 |
-| M4 | Labeling | 1 | L | In progress: everything built and demonstrated 2026-11-15; waiting on the CLIP threshold (OC-5), S-07 and the owner's OK |
+| M4 | Labeling | 1 | L | In progress: everything built and demonstrated 2026-11-15; CLIP threshold 0.2 chosen; waiting on S-07 and the owner's OK |
 | M5 | Splits, review, eval report | 1 | M | Not started |
 | M6 | Phase-1 screens | 1 | L | Not started |
 | M7 | Phase-1 acceptance | 1 | M | Not started |
@@ -211,7 +211,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - GPU lease primitive; label and filter stage shells.
 - Caption batching loop with resume (LABEL-1.1, LABEL-1.2). Owner unit, written by the agent at the owner's request on 2026-11-15 (ADR-0012).
 - VRAM manager v1: load under the cap, unload and verify, OOM backoff (slice of RUN-1.4, RUN-1.5). Owner unit, written by the agent at the owner's request.
-- CLIP scoring (LABEL-1.3) and the filter rule (LABEL-1.4). Owner units, written by the agent at the owner's request. 👤 The threshold stays the owner's (OC-5).
+- CLIP scoring (LABEL-1.3) and the filter rule (LABEL-1.4). Owner units, written by the agent at the owner's request. 👤 The threshold is the owner's: 0.2, chosen 2026-11-15 (OC-5).
 - Spike S-07: memory under the container limits.
 
 **Done when**
@@ -221,7 +221,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] `test_LABEL_1_2_*`: kill at 60%, restart, completes; no finished image is captioned twice
 - [x] `test_LABEL_1_3_*`: a score is present for every pair
 - [x] `test_LABEL_1_4_*`: rows below the threshold are marked with a reason, not deleted
-- [ ] 👤 CLIP threshold chosen from the measured distribution (OC-5); 0.2 until then (distribution in DECISIONS.md)
+- [x] 👤 CLIP threshold chosen from the measured distribution (OC-5): 0.2, kept by the owner 2026-11-15 (`test_LABEL_1_4_default_threshold_is_the_owners_choice`)
 - [x] `test_MON_3_1_*`: labeling emits its listed messages and metrics (the shell's, with fakes; the caption loop's and VRAM manager's are in the owner's tests)
 - [x] `test_BUG5_*` (gpu): VRAM returns to baseline after unload and after the stage's process exits
 - [x] `test_BUG6_*`: a second process cannot take the GPU lease (also: a dead holder releases it)

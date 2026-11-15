@@ -788,7 +788,7 @@ These are the agent's interpretations. They do not change any requirement text, 
 | OC-2 | Job streams: WebSocket or SSE | **Resolved 2026-11-14, accepted by the owner:** job streams use SSE, not the WebSockets listed in §7.3 (MON-1.4 allows either). The feed is one-way and SSE resumes after a disconnect. [ADR-0005](decisions/ADR-0005-event-and-telemetry-pipeline.md) | done |
 | OC-3 | Unspecified parameter defaults | **DATA-6.1 part resolved 2026-11-15, accepted by the owner:** the preprocess maximum side defaults to 768 px (MON-3's "384px" is an example message). Still proposed: NFR-5 N = 10 minutes; RUN-1.7 T = 300 s | M3 done / phase 2 |
 | OC-4 | Version ID length | **Resolved 2026-11-14:** twelve hex characters, set when DATA-3.2 was implemented at the owner's request. The examples' six (`ds_7f3a9c`) collide too easily | done |
-| OC-5 | Thresholds owned by the owner | pHash distance (DATA-2.2) and CLIP cut-off (LABEL-1.4) are chosen by the owner from measured distributions. **pHash part resolved 2026-11-15:** 8 of 64 bits, chosen by the owner (measurements in DECISIONS.md). CLIP cut-off still open | M3 done / M4 |
+| OC-5 | Thresholds owned by the owner | pHash distance (DATA-2.2) and CLIP cut-off (LABEL-1.4) are chosen by the owner from measured distributions. **pHash part resolved 2026-11-15:** 8 of 64 bits, chosen by the owner (measurements in DECISIONS.md). **CLIP part resolved 2026-11-15:** 0.2 on the plain-cosine scale, chosen by the owner from the M4 demo's distribution | M3 done / M4 done |
 
 ## Appendix C — Requirement counts
 

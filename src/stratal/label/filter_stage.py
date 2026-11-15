@@ -41,9 +41,8 @@ class FilterConfig(BaseModel):
     clip_threshold: float = Field(
         default=0.2,
         allow_inf_nan=False,
-        description="Pairs scoring below this are filtered (LABEL-1.4). Provisional: the owner "
-        "chooses it from the measured score distribution (OC-5), on the scale of their "
-        "clip_similarity.",
+        description="Pairs whose CLIP cosine is below this are filtered (LABEL-1.4). 0.2, "
+        "chosen by the owner from the measured score distribution (OC-5, 2026-11-15).",
     )
     algorithm_version: int = filtering.ALGORITHM_VERSION
 

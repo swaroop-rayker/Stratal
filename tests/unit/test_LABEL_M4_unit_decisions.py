@@ -14,6 +14,7 @@ import pytest
 from PIL import Image
 
 from stratal.label.captioning import CaptionItem, caption_items
+from stratal.label.filter_stage import FilterConfig
 from stratal.label.filtering import (
     REASON_BELOW_THRESHOLD,
     REASON_MISSING_CAPTION,
@@ -84,6 +85,10 @@ def test_LABEL_1_4_a_negative_threshold_is_allowed_on_the_cosine_scale() -> None
     items = [ScoredItem("a.jpg", "x", -0.2), ScoredItem("b.jpg", "x", -0.05)]
 
     assert filter_decisions(items, threshold=-0.1) == {"a.jpg": REASON_BELOW_THRESHOLD}
+
+
+def test_LABEL_1_4_default_threshold_is_the_owners_choice() -> None:
+    assert FilterConfig().clip_threshold == 0.2, "OC-5, kept by the owner 2026-11-15"
 
 
 # -- LABEL-1.1, BUG2: halving, no regrowth, an honest total -------------------

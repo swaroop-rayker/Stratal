@@ -336,10 +336,10 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `caption_vram_estimate_mb` and `clip_vram_estimate_mb` in the label config; the VRAM manager compares the total with the driver's free memory. The weights file's size is used as is, an upper bound at either precision: Florence-2-base is stored in fp16 (452 MB on the card), CLIP and BLIP in fp32.
 - **Why:** Florence-2 at batch 16 peaks at 4.05 GB reserved (S-06; 3.78 GB in the NFR-1 run), almost all of it activations. The first estimate asked for 4.7 GB of the 5.07 GB that was free in the demo, leaving 0.3 GB for anything else on the card; 4.3 GB still covers the peak with a quarter of a gigabyte to spare.
 
-**CLIP threshold provisional at 0.2** (M4, LABEL-1.4, OC-5)
+**CLIP threshold: 0.2 on the cosine scale** (M4, LABEL-1.4, OC-5; chosen by the owner 2026-11-15)
 - **What:** `FilterConfig.clip_threshold = 0.2` by default.
 - **How:** A config field; a new value reruns only `filter` and later stages.
-- **Why:** OC-5 gives the owner the choice from the measured score distribution. Measured in the M4 demo, 994 COCO images captioned by Florence-2 and scored as plain cosine:
+- **Why:** OC-5 gives the owner the choice from the measured score distribution; the owner kept 0.2 after seeing it. Measured in the M4 demo, 994 COCO images captioned by Florence-2 and scored as plain cosine:
   - Median 0.313, middle half 0.286 to 0.340, lowest 0.165, highest 0.455. One peak; no separate cluster of bad captions.
   - Below 0.18: 0.3 %; below 0.20: 0.9 %; below 0.22: 2.3 %; below 0.25: 6.9 %.
   - The nine rows under 0.20 are mostly plausible captions of busy, generic street scenes, with a few partly wrong ("a painting of a man pushing a cart", "mushroom" for a bagel). CLIP scores busy scenes lower whatever the caption, so a threshold trims a tail more than it catches wrong captions; the manual review (LABEL-1.5, M5) will show how many of the trimmed rows were bad.
