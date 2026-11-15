@@ -16,19 +16,21 @@ import threading
 import time
 from collections.abc import Iterator
 from dataclasses import fields
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 import uvicorn
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from stratal.api.app import create_app
 from stratal.core.bus import Bus
 from stratal.core.settings import get_settings
 from stratal.db.engine import get_engine
-from stratal.mon.collector import Collector
+from stratal.db.models import Job, JobStage
+from stratal.mon.collector import Collector, write_batch
 from stratal.mon.emitter import StreamEmitter
 from stratal.mon.events import Event
 from stratal.mon.sampler import ActiveJobs, MachineProbe, Reading, Sampler, primary_job
@@ -378,3 +380,58 @@ def test_NFR_13_kill_the_job_and_the_monitor_continues(
     )
     assert monitor.poll() is None, "the monitor is still running"
     assert _count("resource_samples") >= 1, "and still sampling"
+
+
+def _sessions_waiting_for_a_lock() -> int:
+    with get_engine().connect() as connection:
+        query = (
+            "SELECT count(*) FROM pg_stat_activity"
+            " WHERE wait_event_type = 'Lock' AND datname = current_database()"
+        )
+        return int(connection.execute(text(query)).scalar_one())
+
+
+def test_NFR_13_collector_and_supervisor_lock_job_rows_in_one_order(runner: Runner) -> None:
+    """Regression for E-009 (first CI run, 2026-11-15): a deadlock between the two.
+
+    The supervisor's ``finalize`` locks the job row and then updates the stage row.
+    The collector used to update the stage row from an event and then, for
+    ``stage_failed``, the job's summary: the opposite order. Here the interleaving
+    is forced instead of left to timing.
+    """
+    job_id = runner.create([("synthetic", {"items": 1})])
+    event = Event(
+        job_id=job_id,
+        stage="synthetic",
+        type="stage_failed",
+        level="ERROR",
+        message="Stage synthetic failed",
+        reason="planted for the test",
+        suggested_action="none",
+        metrics={"code": "stage_failed"},  # as the child sends it; this updates the stage row
+    )
+    errors: list[BaseException] = []
+
+    def collect() -> None:
+        try:
+            with Session(get_engine()) as session, session.begin():
+                write_batch(session, [event], [])
+        except BaseException as exc:
+            errors.append(exc)
+
+    with Session(get_engine()) as supervisor, supervisor.begin():
+        assert supervisor.get(Job, job_id, with_for_update=True) is not None
+        collecting = threading.Thread(target=collect)
+        collecting.start()
+        wait_until(
+            lambda: _sessions_waiting_for_a_lock() >= 1, what="the collector to wait for a lock"
+        )
+        stage = supervisor.get(JobStage, (job_id, 0))
+        assert stage is not None
+        stage.finished_at = datetime.now(UTC)
+        supervisor.flush()  # with the old order: "deadlock detected" here or in the collector
+    collecting.join(10)
+
+    assert not collecting.is_alive()
+    assert errors == []
+    assert runner.job(job_id)["summary"] is not None, "the collector finished its work after"

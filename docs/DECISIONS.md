@@ -151,6 +151,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** A stage is taken only if its status is `queued`. Heartbeats and the final write carry the attempt number and do nothing if it no longer matches.
 - **Why:** A task delivered twice starts the stage once, and a supervisor that was frozen and then replaced finds out and stands down instead of writing over its successor.
 
+**One lock order: the job row before its stage rows** (M2, fixed 2026-11-15, E-009)
+- **What:** Any transaction that changes a job's stage rows locks the job's row first; a transaction touching several jobs locks them in ID order.
+- **How:** The supervisor, watchdog and job service lock the job with `FOR UPDATE`; the collector's `write_batch` locks the batch's jobs with `FOR NO KEY UPDATE` before applying events.
+- **Why:** Two writers taking the same rows in opposite orders deadlock. The first CI run showed it between the collector and `finalize`, at the moment a stage failed.
+
 **Exit status as a report** (M2, BUG2)
 - **What:** The supervisor turns the child's exit status into a typed error when the child could not report one.
 - **How:** A negative status is a signal. SIGKILL together with a rise in the container's cgroup `oom_kill` counter is reported as `host_oom_killed` with the peak memory; any other signal as `stage_failed` naming the signal.

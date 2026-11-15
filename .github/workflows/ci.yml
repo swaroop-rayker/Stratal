@@ -33,8 +33,8 @@ jobs:
       STRATAL_REDIS_URL: redis://localhost:6379/0
       STRATAL_DATA_DIR: /tmp/stratal-data
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "0.9.30"
           python-version: "3.12"
