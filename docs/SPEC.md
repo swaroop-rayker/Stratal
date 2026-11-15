@@ -486,7 +486,7 @@ The sampler runs as a separate process/thread from the jobs (this is what NFR-13
 
 | Question (as written in the input) | Status |
 |---|---|
-| Which image dataset for phase 1 (license, size, domain)? | Open. Needed before the first real run in M4. Agent's recommendation: a 10k subset of COCO 2017 |
+| Which image dataset for phase 1 (license, size, domain)? | **Resolved 2026-11-15:** a 10k subset of COCO 2017, accepted by the owner (DECISIONS.md, M4) |
 | Florence-2 vs BLIP: decide after a 50-image quality + speed test. | Open. The test is spike S-06 in M4 |
 | Translation language pairs (EN<->HI? EN<->KN?). | Open. Needed in phase 5 |
 | Environment: DECIDED — Docker Compose on WSL2 (required by Celery and Redis). Verify GPU passthrough works on day 1 before any pipeline code. | Decided. WSL-level passthrough verified 2026-11-13; the container-level check is spike S-01 in M0 |

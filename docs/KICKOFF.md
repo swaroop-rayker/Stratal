@@ -93,7 +93,7 @@ None of these needs an account, email or key. Model weights and the dataset are 
 | Review ADR-0005 and open clarifications OC-1, OC-2 | before M2 | Done 2026-11-14: all three accepted as proposed |
 | Settle OC-4 (version ID length) | in M1 | Part of your DATA-3.2 implementation |
 | Settle OC-3 (preprocess size) | before M3 | Proposed 768 px |
-| Choose the phase-1 dataset | before M4 | Recommendation: a 10k subset of COCO 2017 |
+| Choose the phase-1 dataset | before M4 | **Done 2026-11-15:** a 10k subset of COCO 2017 |
 | Write DATA-4 | before M5 | Brief below. Sooner helps: it shapes manifest columns |
 | Review the design system (Gate 0) | when delivered, alongside M1 | Only an explicit "approved" passes |
 | GitHub remote | whenever you want CI and PRs | **Done 2026-11-15:** `origin` is the owner's repository; `main` and tags pushed |

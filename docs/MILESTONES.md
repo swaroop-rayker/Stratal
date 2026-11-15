@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 waits on the phase-1 dataset and the model-weight downloads. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 in progress: dataset chosen (COCO 2017, 10k subset); downloads waiting for approval. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -21,7 +21,7 @@
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
 | M3 | Cleaning and preprocessing | 1 | M | Done 2026-11-15 |
-| M4 | Labeling | 1 | L | Not started |
+| M4 | Labeling | 1 | L | In progress: started 2026-11-15 |
 | M5 | Splits, review, eval report | 1 | M | Not started |
 | M6 | Phase-1 screens | 1 | L | Not started |
 | M7 | Phase-1 acceptance | 1 | M | Not started |
@@ -83,14 +83,14 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] `GET /api/v1/health` returns ok, and an error response has the problem-details shape (`test_API_health_*`, `test_ADR_0011_*`)
 - [x] `test_NFR_10_*`: every log line is JSON and carries the bound IDs
 - [x] `test_NFR_9_*`: the meta-test runs and reports no done-but-untested P0
-- [x] ruff, pyright (strict) and pytest pass locally; CI workflow file present (the workflow itself has never run: there is no remote)
+- [x] ruff, pyright (strict) and pytest pass locally; CI workflow file present (first green run on GitHub 2026-11-15, after E-009 was fixed)
 - [x] README has real setup and run steps
 - [x] RISKS.md, ERRORS.md and affected ADRs updated with spike results
 - [x] The old 84.6 GB Docker disk image on C: deleted on the owner's instruction; the D: image compacted from 89.7 GB to 40.9 GB
 - [x] Demo: stack up, health endpoint, GPU check output (shown in the session of 2026-11-13)
 - [x] Owner's OK to merge into `main` ("go ahead and finish M0", 2026-11-14)
 
-**Carried forward, not blocking:** the Mermaid diagrams in ARCHITECTURE.md and DATA_MODEL.md have not been rendered. The CI workflow first ran on 2026-11-15, when `main` was pushed to GitHub, and was rejected for a workflow-file error (`runner.temp` in job-level `env`); the fix is on `m3-clean-preprocess` and is verified when M3 reaches `main`.
+**Carried forward, not blocking:** the Mermaid diagrams in ARCHITECTURE.md and DATA_MODEL.md have not been rendered. The CI workflow first ran on 2026-11-15, when `main` was pushed to GitHub. It was rejected for a workflow-file error (`runner.temp` in job-level `env`), then failed on a real deadlock (E-009); both are fixed and CI has been green since.
 
 ## M1 — Ingestion, manifests, versions, lineage
 
@@ -199,7 +199,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** L · **Branch** `m4-labeling` · **Serves** LABEL-1.1–1.4, MON-3.1 (labeling), NFR-1, NFR-3, NFR-7, NFR-8, the phase-1 slice of RUN-1.4 and RUN-1.5; BUG2, BUG5, BUG6
 
-**Before starting:** phase-1 dataset chosen (open question); model-weight downloads approved.
+**Before starting:** phase-1 dataset chosen (open question); model-weight downloads approved. **Dataset chosen 2026-11-15:** a 10k subset of COCO 2017, accepted by the owner. Downloads: waiting for approval.
 
 **Scope**
 

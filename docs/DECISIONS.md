@@ -294,6 +294,13 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Five files fetched individually from each project's release tag (`@ibm/plex-sans@1.1.0`, `v2.304`) rather than the release zips, checked for the WOFF2 signature and the listed sizes, hashes recorded in the folder's README. The design preview declares them with `@font-face`; the frontend will use the same files in M6.
 - **Why:** The approved pairing was only visible on machines with the fonts installed, and run time must not depend on the network. Only the weights the design system uses are kept.
 
+## M4: labeling
+
+**Phase-1 dataset: a 10k subset of COCO 2017** (M4, SPEC §6 open question; accepted by the owner 2026-11-15)
+- **What:** 10,000 images from COCO 2017 with their five human captions each.
+- **How:** A seeded random choice of image IDs, the list kept in the repository so the subset can be rebuilt; images in `sources/`, never in git.
+- **Why:** Everyday photographs with reference captions, so captioning quality (CIDEr-D, CL-13) and CLIP scores can be checked against human text; 10k is a few hours of captioning at NFR-3's 2 img/s and about 1.6 GB on disk.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
