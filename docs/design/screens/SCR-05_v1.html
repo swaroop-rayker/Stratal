@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-05 labeling review — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --cat-2: #f29e4c; --cat-5: #a3d35c; --cat-7: #f0d264;
+  --seq-2: #27356a; --seq-3: #374a96; --seq-4: #4d64c0; --seq-6: #9fb0f2; --seq-7: #d3dcfb;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px; --fs-32: 32px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --cat-2: #b0560a; --cat-5: #4d7a12; --cat-7: #7d6300;
+  --seq-2: #c2cdf5; --seq-3: #9aabec; --seq-4: #7087de; --seq-6: #3548a3; --seq-7: #222f72;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .skeleton, .spinner { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); } .btn.lg { height: var(--h-lg); padding: 0 var(--sp-4); font-size: var(--fs-14); }
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.input { min-height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-13) var(--font-ui); width: 100%; display: flex; align-items: center; }
+.input.mono { font-family: var(--font-mono); } .input.ph { color: var(--text-muted); }
+textarea.input { padding: var(--sp-2); resize: none; height: 64px; display: block; }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 8px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; display: flex; }
+.progress > i { display: block; height: 100%; }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 420px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; } .toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.modal { width: 480px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); display: flex; flex-direction: column; gap: var(--sp-3); }
+.modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.spinner { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: var(--r-pill); animation: spin .7s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; } .crumbs .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); font: var(--fs-12) var(--font-ui); background: transparent; color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-05 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.sbar { display: flex; align-items: center; gap: var(--sp-3); }
+.sbar h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); }
+.sbar .sub { color: var(--text-muted); font-size: var(--fs-12); } .sbar .sub .mono { color: var(--text-secondary); }
+.pill.open { --c: var(--info); } .pill.closed { --c: var(--text-muted); }
+.prog { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-4); align-items: center; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.prog b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.prog .acc { background: var(--success); } .prog .rej { background: var(--danger); }
+.prog .k-acc { color: var(--success); } .prog .k-rej { color: var(--danger); }
+.work { display: grid; grid-template-columns: 1fr 380px; gap: var(--sp-4); min-height: 0; flex: 1; }
+.photo { position: relative; border-radius: var(--r-md); border: var(--bw) solid var(--border); overflow: hidden; min-height: 0;
+  background:
+    radial-gradient(ellipse 14% 9% at 38% 64%, var(--seq-7) 0 60%, transparent 62%),
+    radial-gradient(ellipse 12% 8% at 58% 70%, var(--seq-6) 0 60%, transparent 62%),
+    radial-gradient(circle at 78% 30%, var(--cat-7) 0 7%, transparent 8%),
+    linear-gradient(180deg, var(--cat-2) 0%, var(--seq-4) 45%, var(--seq-7) 46%, var(--seq-6) 100%); }
+.photo .tag { position: absolute; left: var(--sp-3); top: var(--sp-3); display: inline-flex; gap: var(--sp-2); align-items: center; padding: 2px var(--sp-2); border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.photo .arrows { position: absolute; right: var(--sp-3); bottom: var(--sp-3); display: flex; gap: var(--sp-2); }
+.photo .dims { position: absolute; left: var(--sp-3); bottom: var(--sp-3); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); background: var(--surface-raised); border: var(--bw) solid var(--border); padding: 0 var(--sp-2); border-radius: var(--r-sm); }
+.panel { display: flex; flex-direction: column; gap: var(--sp-3); }
+.capcard { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+.capcard .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.capcard p { margin: var(--sp-1) 0 0; font-size: var(--fs-16); line-height: 1.45; color: var(--text-primary); }
+.kv { display: grid; grid-template-columns: 96px 1fr; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); align-items: center; } .kv > span:nth-child(odd) { color: var(--text-muted); } .kv .mono { color: var(--text-primary); }
+.scale { display: flex; align-items: center; gap: var(--sp-2); }
+.scale .track { position: relative; flex: 1; height: 6px; border-radius: var(--r-pill); background: linear-gradient(90deg, var(--danger-soft) 0 40%, var(--surface-sunken) 40%); border: var(--bw) solid var(--border); }
+.scale .thr { position: absolute; top: -5px; width: 2px; height: 14px; background: var(--warning); }
+.scale .val { position: absolute; top: -4px; width: 10px; height: 10px; margin-left: -5px; border-radius: var(--r-pill); background: var(--text-primary); border: 2px solid var(--bg); }
+.scale-key { display: flex; gap: var(--sp-3); font-size: var(--fs-11); color: var(--text-muted); } .scale-key i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); margin-right: var(--sp-1); vertical-align: middle; }
+.decide { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.dbtn { height: 48px; font-size: var(--fs-14); }
+.dbtn .i { width: 16px; height: 16px; }
+.dbtn.acc svg { color: var(--success); } .dbtn.rej svg { color: var(--danger); }
+.dbtn.acc.chosen { background: var(--success-soft); border-color: var(--success); } .dbtn.rej.chosen { background: var(--danger-soft); border-color: var(--danger); }
+.hint { font-size: var(--fs-11); color: var(--text-muted); margin: 0; }
+.strip { display: flex; gap: var(--sp-1); padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); overflow: hidden; }
+.cell { width: 21px; height: 28px; flex: none; display: grid; place-items: center; border-radius: var(--r-xs); border: var(--bw) solid var(--border-strong); font: var(--fs-11) var(--font-mono); color: var(--text-muted); background: transparent; }
+.cell svg.i { width: 11px; height: 11px; }
+.cell.a { background: var(--success-soft); border-color: color-mix(in srgb, var(--success) 50%, transparent); color: var(--success); }
+.cell.r { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 50%, transparent); color: var(--danger); }
+.cell.cur { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; color: var(--text-primary); }
+.cell.unsaved { border-style: dashed; border-color: var(--warning); color: var(--warning); }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+.bignum { font: var(--fw-medium) var(--fs-32)/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.sumgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+.sumcard { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--border)); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+.sumcard .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); } .sumcard .d { font-size: var(--fs-12); color: var(--text-muted); }
+.rejrow { display: flex; gap: var(--sp-3); }
+.rejitem { width: 168px; display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-11); color: var(--text-secondary); }
+.rejitem .ph { height: 100px; border-radius: var(--r-md); border: var(--bw) solid color-mix(in srgb, var(--danger) 45%, transparent); background: linear-gradient(160deg, var(--seq-3), var(--seq-2)); }
+.rejitem .note { color: var(--text-primary); font-style: italic; }
+h3.sec { margin: 0; font-size: var(--fs-12); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-back" viewBox="0 0 16 16"><path d="M10 4L6 8l4 4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-keys" viewBox="0 0 16 16"><rect x="1.8" y="4" width="12.4" height="8" rx="1.5"/><path d="M4.5 6.7h.3M7 6.7h.3M9.5 6.7h.3M5 9.4h6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+  <!-- New in this mockup, same style -->
+  <symbol id="i-note" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3zM5.5 6h5M5.5 8.5h5M5.5 11h3"/></symbol>
+</svg>
+
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-05 — Labeling review · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-05-lofi_v1.html</span>, approved 2026-11-15) inside the approved SCR-01 shell, using only design system v1 tokens and components. The photograph is a placeholder drawn from the data-viz tokens. Open as <span class="mono">SCR-05_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>Accept and Reject are equal secondary buttons</b>, large (48 px), each with its key. Neither is "primary": nudging the reviewer towards one answer would bias the sample. Their icons carry the row-status colours (accepted green, rejected red), and the chosen one fills with its soft colour.</li>
+<li><b>Strip cells</b> use the same colours plus an icon (check or cross), so a decision is never colour alone; the current cell has the focus ring; a decision not yet saved is dashed amber.</li>
+<li><b>The CLIP scale</b> shades the part below the filter threshold in danger-soft and marks the threshold with a warning-coloured tick; the item's score is a dot.</li>
+<li><b>The session pill</b> uses info for "open" and muted for "closed": they are session states, not job states, so job-state colours are not borrowed.</li>
+<li><b>One new icon</b> (note).</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Reviewing: item 24 of 50 (dark)</h2>
+<div class="frame" style="height:760px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="group">Data</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="group">Jobs</div><a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+    </nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_b0c3e5a8d217</span><svg class="i"><use href="#i-chevron"/></svg>review <span class="mono">rev_0007</span></div><span class="spacer"></span><span class="jobind"><span class="pill" style="--c:var(--text-muted)"><svg class="i"><use href="#i-clock"/></svg>Idle</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content">
+      <div class="sbar"><h1>rev_0007</h1><span class="pill open"><svg class="i"><use href="#i-eye"/></svg>Open</span><span class="sub">of <span class="mono">ds_b0c3e5a8d217</span> (filter) · 50 of 9,431 accepted rows · seed <span class="mono">1142</span> · started 15:20</span><span class="spacer"></span><button class="btn sm ghost"><svg class="i"><use href="#i-keys"/></svg>Keys<kbd>?</kbd></button><button class="btn">Close session</button></div>
+      <div class="prog"><span class="progress" role="progressbar" aria-valuenow="23" aria-valuemax="50"><i class="acc" style="width:40%"></i><i class="rej" style="width:6%"></i></span><span><b>23</b> / 50 decided · <span class="k-acc">20 accepted</span> · <span class="k-rej">3 rejected</span></span></div>
+      <div class="work">
+        <div class="photo" role="img" aria-label="Item 24 of 50"><span class="tag"><b style="color:var(--text-primary)">24 / 50</b>train/000000004512.jpg</span><span class="dims">copy 768 × 512</span><span class="arrows"><button class="btn sm"><svg class="i"><use href="#i-back"/></svg><kbd>k</kbd></button><button class="btn sm"><kbd>j</kbd><svg class="i"><use href="#i-chevron"/></svg></button></span></div>
+        <div class="panel">
+          <div class="capcard"><span class="k">Caption</span><p>Two dogs running across a snowy field at sunset.</p></div>
+          <div class="kv">
+            <span>Model</span><span class="mono">Florence-2-base · 5ca5edf</span>
+            <span>CLIP score</span><span class="scale"><b class="mono">0.284</b><span class="track"><span class="thr" style="left:40%"></span><span class="val" style="left:57%"></span></span></span>
+            <span></span><span class="scale-key"><span><i style="--c:var(--warning)"></i>threshold 0.20</span><span><i style="--c:var(--danger-soft)"></i>would be filtered</span></span>
+            <span>Row</span><span class="mono">train/000000004512.jpg</span>
+            <span>Original</span><span class="mono">640 × 427 · 188 KB</span>
+          </div>
+          <div class="decide"><button class="btn dbtn acc"><svg class="i"><use href="#i-check"/></svg>Accept<kbd>a</kbd></button><button class="btn dbtn rej"><svg class="i"><use href="#i-x"/></svg>Reject<kbd>r</kbd></button></div>
+          <div class="field"><label><svg class="i" style="width:12px;height:12px"><use href="#i-note"/></svg>Note, optional<kbd>n</kbd></label><textarea class="input" placeholder="e.g. two dogs, but it is dusk, not sunset"></textarea></div>
+          <p class="hint">Saved as you decide. Go back to an item to change its decision.</p>
+        </div>
+      </div>
+      <div class="strip" role="listbox" aria-label="Sampled items">
+        <span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell r"><svg class="i"><use href="#i-x"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell r"><svg class="i"><use href="#i-x"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell r"><svg class="i"><use href="#i-x"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell cur">24</span><span class="cell">25</span><span class="cell">26</span><span class="cell">27</span><span class="cell">28</span><span class="cell">29</span><span class="cell">30</span><span class="cell">31</span><span class="cell">32</span><span class="cell">33</span><span class="cell">34</span><span class="cell">35</span><span class="cell">36</span><span class="cell">37</span><span class="cell">38</span><span class="cell">39</span><span class="cell">40</span><span class="cell">41</span><span class="cell">42</span>
+      </div>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>6%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>3.2</b><small>/ 10.0 GB</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s idle</span></footer>
+  </div>
+  <span class="n" style="left:206px;top:66px">1</span>
+  <span class="n" style="left:1240px;top:40px">2</span>
+  <span class="n" style="left:226px;top:102px">3</span>
+  <span class="n" style="left:226px;top:134px">4</span>
+  <span class="n" style="left:858px;top:134px">5</span>
+  <span class="n" style="left:858px;top:238px">6</span>
+  <span class="n" style="left:858px;top:340px">7</span>
+  <span class="n" style="left:206px;top:690px">8</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Session</td><td>Review ID, Open or Closed, the version, sample size out of accepted rows, seed, start</td><td><span class="mono">GET /reviews/{id}</span> (planned)</td><td>–</td></tr>
+<tr><td><span class="n">2</span></td><td>Close session</td><td>Secondary: closing is not the goal of the screen. Confirms if items are undecided (frame C)</td><td><span class="mono">POST /reviews/{id}/close</span></td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Progress</td><td>Decided out of the sample; accepted and rejected shares in their colours and as words</td><td>the session's items</td><td>each decision</td></tr>
+<tr><td><span class="n">4</span></td><td>Image</td><td>The preprocessed copy; position and row key; copy size; previous and next</td><td><span class="mono">GET /blobs/{derived_sha256}</span></td><td>–</td></tr>
+<tr><td><span class="n">5</span></td><td>Caption</td><td>Reading size (16 px), then model and revision (LABEL-1.1)</td><td>the item's row</td><td>–</td></tr>
+<tr><td><span class="n">6</span></td><td>Score and facts</td><td>CLIP score against the filter threshold (LABEL-1.3, 1.4); row; original size</td><td>the row; the filter stage's config</td><td>–</td></tr>
+<tr><td><span class="n">7</span></td><td>Decision</td><td>Accept <kbd>a</kbd> / Reject <kbd>r</kbd>, note <kbd>n</kbd>; saved at once, then the next undecided item</td><td><span class="mono">PUT /reviews/{id}/items/{position}</span></td><td>–</td></tr>
+<tr><td><span class="n">8</span></td><td>Item strip</td><td>Every position with its saved decision (colour and icon); current has the focus ring; click to jump</td><td><span class="mono">GET /reviews/{id}</span></td><td>each decision</td></tr>
+</table>
+
+<h2>A · in light, with item 24 just accepted (saving)</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:440px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>…<svg class="i"><use href="#i-chevron"/></svg>review <span class="mono">rev_0007</span></div></header>
+    <main class="content">
+      <div class="sbar"><h1>rev_0007</h1><span class="pill open"><svg class="i"><use href="#i-eye"/></svg>Open</span><span class="sub">24 / 50 decided</span><span class="spacer"></span><button class="btn">Close session</button></div>
+      <div class="work" style="grid-template-columns:1fr 380px">
+        <div class="photo"></div>
+        <div class="panel"><div class="capcard"><span class="k">Caption</span><p>Two dogs running across a snowy field at sunset.</p></div>
+          <div class="decide"><button class="btn dbtn acc chosen" aria-pressed="true"><span class="spinner" style="color:var(--success)"></span>Accepted<kbd>a</kbd></button><button class="btn dbtn rej"><svg class="i"><use href="#i-x"/></svg>Reject<kbd>r</kbd></button></div>
+          <p class="hint">Saving… then item 25.</p></div>
+      </div>
+      <div class="strip"><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell r"><svg class="i"><use href="#i-x"/></svg></span><span class="cell a cur"><svg class="i"><use href="#i-check"/></svg></span><span class="cell">25</span><span class="cell">26</span></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div></div>
+
+<!-- ===================================================================== B + C -->
+<h2>B · Starting a review (from SCR-03), and C · Closing with items undecided</h2>
+<div style="display:flex;gap:var(--sp-4)">
+<div class="frame" style="height:360px;width:632px"><div class="scrim"><div class="modal" role="dialog" aria-label="Start a review"><header><svg class="i" style="color:var(--accent)"><use href="#i-eye"/></svg>Start a review of ds_b0c3e5a8d217</header><div>
+  <div class="field"><label>Sample size</label><div class="input mono">50</div><small>Drawn at random from the 9,431 accepted rows. 50 gives an interval about ±8 points wide; 200 about ±4.</small></div>
+  <div class="field"><label>Seed, optional</label><div class="input mono ph">random</div><small>Set it to draw the same sample again.</small></div>
+</div><footer><button class="btn ghost">Cancel</button><button class="btn primary"><svg class="i"><use href="#i-eye"/></svg>Start review</button></footer></div></div></div>
+<div class="frame" style="height:360px;width:632px"><div class="scrim"><div class="modal" role="alertdialog" aria-label="Close with items undecided"><header><svg class="i" style="color:var(--warning)"><use href="#i-alert"/></svg>Close rev_0007 with 27 undecided?</header><div>
+  <span>Only the <b>23 decided</b> items count towards the acceptance rate. The other 27 are not reviewed and cannot be decided after closing.</span>
+  <span>A smaller sample gives a wider interval in the report.</span>
+</div><footer><button class="btn is-focus">Keep reviewing</button><button class="btn primary">Close with 23 decided</button></footer></div></div></div>
+</div>
+<p class="cap">B: <span class="mono">POST /versions/{id}/reviews {sample_size, seed?}</span>, then this screen. The interval widths are approximate, assuming about 90% acceptance. C: the safe choice first and focused.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Closed: the summary</h2>
+<div class="frame" style="height:460px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_b0c3e5a8d217</span><svg class="i"><use href="#i-chevron"/></svg>review <span class="mono">rev_0007</span></div></header>
+    <main class="content">
+      <div class="sbar"><h1>rev_0007</h1><span class="pill closed"><svg class="i"><use href="#i-check"/></svg>Closed</span><span class="sub">closed 15:41 · 50 of 50 decided</span><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-db"/></svg>Open version</button><button class="btn primary"><svg class="i"><use href="#i-report"/></svg>Build the eval report</button></div>
+      <div class="sumgrid">
+        <div class="sumcard" style="--c:var(--success)"><span class="k">Accepted</span><div class="bignum">46</div><span class="d">of 50 reviewed · 92.0%</span></div>
+        <div class="sumcard" style="--c:var(--danger)"><span class="k">Rejected</span><div class="bignum">4</div><span class="d">3 with a note</span></div>
+        <div class="sumcard" style="--c:var(--accent)"><span class="k">Next</span><p style="margin:var(--sp-1) 0 0;font-size:var(--fs-13);color:var(--text-secondary)">The eval report turns this into an acceptance rate with its 95% interval (EVAL-1.1).</p></div>
+      </div>
+      <h3 class="sec">Rejected items</h3>
+      <div class="rejrow">
+        <div class="rejitem"><span class="ph"></span><span class="mono">#4 · …/000000000771.jpg</span><span>"A bowl of soup on a table."</span></div>
+        <div class="rejitem"><span class="ph"></span><span class="mono">#11 · …/000000001934.jpg</span><span>"A man riding a horse on a beach."</span><span class="note">it is a donkey</span></div>
+        <div class="rejitem"><span class="ph"></span><span class="mono">#18 · …/000000002210.jpg</span><span>"A red bus on a city street."</span><span class="note">tram, not a bus</span></div>
+        <div class="rejitem"><span class="ph"></span><span class="mono">#37 · …/000000007382.jpg</span><span>"Two people playing tennis."</span><span class="note">one person</span></div>
+      </div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+<p class="cap">Read-only once closed; items can be opened, not changed. From <span class="mono">POST /reviews/{id}/close</span>, and <span class="mono">GET /reviews/{id}</span> afterwards.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · A decision that could not be saved, loading, and an unknown review</h2>
+<div class="frame" style="height:300px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>…</div></header>
+    <main class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-4);align-content:start">
+      <div style="display:flex;flex-direction:column;gap:var(--sp-3)"><div class="strip" style="border:0;padding:0"><span class="cell a"><svg class="i"><use href="#i-check"/></svg></span><span class="cell unsaved cur"><svg class="i"><use href="#i-check"/></svg></span><span class="cell">25</span></div>
+        <div class="toast" role="alert" style="--c:var(--danger)"><svg class="i"><use href="#i-x"/></svg><div><b>Decision for item 24 not saved</b><span><span class="mono">dependency_unavailable</span> · Postgres is unreachable. Item 24 stays open until it is saved.</span><div style="margin-top:var(--sp-2)"><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></div></div></div></div>
+      <div style="display:grid;grid-template-columns:1fr 120px;gap:var(--sp-3)" aria-busy="true"><span class="skeleton" style="height:190px"></span><div style="display:flex;flex-direction:column;gap:var(--sp-2)"><span class="skeleton" style="width:110px"></span><span class="skeleton" style="width:90px"></span><span class="skeleton" style="height:48px"></span></div></div>
+      <div class="state err" role="alert"><svg class="i"><use href="#i-alert"/></svg><b>Review rev_0099 not found</b><span class="badge err">not_found</span><p>No review 'rev_0099'. <b style="color:var(--text-primary)">Do</b> open the version and start or pick a review there.</p><button class="btn sm"><svg class="i"><use href="#i-db"/></svg>Go to datasets</button></div>
+    </main>
+    <footer class="status"><span class="m conn">connecting…</span></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame compact" style="height:440px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center"><div class="brand" style="padding:0"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg></a></nav>
+    <header class="top"><div class="crumbs"><b>…</b><svg class="i"><use href="#i-chevron"/></svg>review <span class="mono">rev_0007</span></div></header>
+    <main class="content">
+      <div class="sbar"><h1 style="font-size:var(--fs-16)">rev_0007</h1><span class="sub">23 / 50</span><span class="spacer"></span><button class="btn sm">Close session</button></div>
+      <div class="work" style="grid-template-columns:1fr 300px"><div class="photo"></div><div class="panel"><div class="capcard"><p style="font-size:var(--fs-14)">Two dogs running across a snowy field at sunset.</p></div><div class="decide"><button class="btn dbtn acc" style="height:40px"><svg class="i"><use href="#i-check"/></svg>Accept<kbd>a</kbd></button><button class="btn dbtn rej" style="height:40px"><svg class="i"><use href="#i-x"/></svg>Reject<kbd>r</kbd></button></div><button class="btn sm ghost" style="align-self:flex-start">Details<svg class="i"><use href="#i-chevron"/></svg></button></div></div>
+    </main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+</div>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li><kbd>a</kbd>, <kbd>r</kbd>, <kbd>n</kbd>, <kbd>j</kbd>, <kbd>k</kbd> work only while focus is not in the note field; inside it, <kbd>Esc</kbd> returns to the item. Every action is also a button.</li>
+<li>After each decision, the new item's position and caption are announced politely ("Item 25 of 50: …"); a failed save is an alert.</li>
+<li>Judging a caption against its image needs sight of the image; this is the one task here that assistive technology cannot fully support. Everything else (caption, scores, facts, decisions, progress) is text and fully readable. The image's accessible name is its row key.</li>
+<li>Strip cells are options in a listbox, each named "Item 4, rejected"; colour is backed by the check or cross icon.</li>
+</ul>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>
