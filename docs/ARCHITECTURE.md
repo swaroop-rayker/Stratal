@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Kickoff baseline, 2026-11-13. Nothing here is built yet |
+| Status | Built through M2 (2026-11-14): storage and ingestion (M1); job runtime, events, telemetry, watchdog and host script (M2). Later stages and the UI are not built yet |
 | Detail level | Phase 1 is specified. Phases 2–5 are outlined and get detailed at each phase kickoff |
 | Decisions | Each major choice has an ADR in [decisions/](decisions/). This document describes the result; the ADRs hold the reasoning |
 
@@ -95,7 +95,7 @@ A pipeline run is one **job**. It has one **stage** per step, and each stage run
 
 Manual review (LABEL-1.5) is not a stage. It is a human activity attached to a version, and its result feeds the report.
 
-**Every stage ends with a commit step**: write the manifest, compute the version ID, record lineage. This is where the "Staging" messages in MON-3 come from (open clarification OC-1).
+**Every stage ends with a commit step**: write the manifest, compute the version ID, record lineage. This is where the "Staging" messages in MON-3 come from (OC-1, accepted by the owner on 2026-11-14).
 
 **Stages are memoized.** Before running, a stage looks for an existing version with the same stage name, parent version and config hash. If one exists it is reused and the stage is marked skipped. Two consequences:
 
@@ -196,7 +196,7 @@ Stage code calls the job context. It never talks to Redis or Postgres directly.
 - **Emit.** The emitter writes each event to the job's local log file and adds it to a Redis Stream from a background thread with a bounded queue. Emitting never blocks the job and never raises into it. If Redis is unreachable the job keeps running and the events remain in the local file (NFR-13).
 - **Collect.** The collector reads the stream in batches, inserts into Postgres (idempotent on the event's unique ID), acknowledges, and publishes each event for live viewers. If the collector is down, events wait in the stream and are picked up when it returns.
 - **Derive.** From stage events the collector keeps each stage's row current: status, progress, latest activity message, throughput and ETA. The timeline view (MON-4.2) reads those rows instead of replaying events.
-- **Deliver.** The API streams to the browser over SSE. A reconnecting client sends the last event ID it saw; the API replays the gap from Postgres and then switches to live. This meets the 1-second target in MON-1.4.
+- **Deliver.** The API streams to the browser over SSE. A reconnecting client sends the last event ID it saw; the API replays the gap from Postgres and then switches to live. Live uses the same query: a pub/sub message only tells the API to read Postgres again, so nothing can be missed or sent twice. This meets the 1-second target in MON-1.4.
 
 The event shape is the one in SPEC MON-1, plus a unique ID, an event type, and `reason` and `suggested_action`, which are required on WARN and ERROR (MON-1.3). **ETA** (MON-1.5) is remaining items divided by a moving average of throughput.
 
@@ -260,7 +260,7 @@ Containers cannot keep Windows awake and cannot see it go to sleep. A small Powe
 - **Recover.** After a resume, the next GPU operation either works or raises. If it raises, the child reports "interrupted" and exits; the job is requeued and resumes from its last committed work in a fresh process. If a fresh process cannot reach the GPU either, GPU jobs are held and an ERROR event tells the user to restart WSL.
 - **Limit the loss.** Work is committed per batch (pipelines) or checkpointed by elapsed time as well as by step (training, phase 2), which bounds what a sleep can cost (NFR-5).
 
-What actually happens to a CUDA job across sleep on this laptop is unverified until spike S-03.
+Spike S-03 (one run, 705 s of Modern Standby) found the job and the GPU unharmed and the wall clock ahead of the monotonic clock by the length of the sleep. The supervisor and the watchdog use that jump to detect a sleep, and the watchdog then gives every job a grace period before judging its heartbeat.
 
 ## 9. Cross-cutting concerns
 
@@ -325,7 +325,6 @@ Domain code in `data/`, `label/` and `eval/` does not import Celery, Redis or Fa
 
 ## 13. Not decided yet
 
-- Whether job streams use SSE only or also WebSocket (OC-2, [ADR-0005](decisions/ADR-0005-event-and-telemetry-pipeline.md) is still Proposed).
 - Exact memory limits per container (spike S-07).
-- What a CUDA job does across sleep on this laptop (spike S-03) and at the VRAM limit under WSL2 (spike S-02).
+- Hibernate, battery, and a sleep in the middle of a large allocation (spike S-03 covered one clean Modern Standby run).
 - Everything marked as an open clarification in [SPEC.md Appendix B](SPEC.md#appendix-b--open-clarifications-not-yet-approved).

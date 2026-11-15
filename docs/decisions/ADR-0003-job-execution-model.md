@@ -1,6 +1,6 @@
 # ADR-0003 — A supervisor task and one child process per job
 
-**Status:** Accepted, 2026-11-13 (SPEC CL-01). Details to be validated in M2.
+**Status:** Accepted, 2026-11-13 (SPEC CL-01). Built and validated in M2 (2026-11-14); see "Validated in M2" below.
 
 ## Context
 
@@ -42,3 +42,12 @@ Three more problems need the same answer:
 - CPU and GPU jobs work the same way.
 - Each stage pays a process start and a model load. That is negligible for long jobs. Classical-ML HPO trials, which can be sub-second, will be grouped in phase 2 instead of paying it per trial.
 - Celery's own retry and workflow features are not used for job logic; the state machine in Postgres does that.
+
+## Validated in M2 (2026-11-14)
+
+- A task delivered twice starts the stage once (`test_RUN_1_1_a_task_delivered_twice_runs_the_stage_once`).
+- A child killed by SIGKILL or SIGSEGV leaves the job failed with a reason, and the same worker runs the next job (`test_BUG2_*`).
+- A frozen supervisor is replaced by the watchdog; when it thaws it finds its attempt number is stale, kills its child and stands down (`test_BUG4_*`, and a 45-second `docker pause` of `worker-cpu` on the real stack).
+- Cooperative cancel stops at a safe point; a stage that ignores it is killed after the grace period (`test_RUN_1_2_*`).
+
+One addition to the decision: `jobs.attempt` is the fencing token. It is incremented on every claim, and every later write by a supervisor is conditional on it.

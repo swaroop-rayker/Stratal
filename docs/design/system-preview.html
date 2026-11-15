@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stratal design system — preview v1</title>
+<style>
+/* ============================================================================
+   TOKENS. Everything below this block uses only these variables.
+   Dark is the default theme; light redefines the colour tokens only.
+   ========================================================================== */
+:root {
+  /* neutral */
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  /* brand */
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  /* semantic */
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  /* job states */
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  /* resources: fixed app-wide */
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  /* data-viz: categorical */
+  --cat-1: #5aa9f5; --cat-2: #f29e4c; --cat-3: #3cc4b4; --cat-4: #e58ad6;
+  --cat-5: #a3d35c; --cat-6: #b79cff; --cat-7: #f0d264; --cat-8: #f4737b;
+  /* data-viz: sequential (low to high) and diverging (negative, neutral, positive) */
+  --seq-1: #1b2440; --seq-2: #27356a; --seq-3: #374a96; --seq-4: #4d64c0; --seq-5: #6f86e0; --seq-6: #9fb0f2; --seq-7: #d3dcfb;
+  --div-1: #3d8fe0; --div-2: #7fb5ea; --div-3: #b9d3ee; --div-4: #8a93a3; --div-5: #f0c9a0; --div-6: #f0a763; --div-7: #e8842c;
+  /* elevation */
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3;
+  --focus: #a596ff;
+
+  /* typography */
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px; --fs-32: 32px;
+  --lh-tight: 1.25; --lh-normal: 1.5;
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  /* spacing: 4px base */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  /* radii, borders */
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px;
+  --bw: 1px; --focus-width: 2px;
+  /* control heights */
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  /* z-index layers */
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  /* motion */
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+  /* breakpoints (for reference; used in @media below) : desktop 1280, compact 1024 */
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --cat-1: #1f6fc4; --cat-2: #b0560a; --cat-3: #0b7d70; --cat-4: #a8348f;
+  --cat-5: #4d7a12; --cat-6: #6a4fd8; --cat-7: #7d6300; --cat-8: #c2364a;
+  --seq-1: #e4e9fb; --seq-2: #c2cdf5; --seq-3: #9aabec; --seq-4: #7087de; --seq-5: #4d64c8; --seq-6: #3548a3; --seq-7: #222f72;
+  --div-1: #1f6fc4; --div-2: #5f9bd8; --div-3: #a9c7e8; --div-4: #868f9e; --div-5: #e8bb8c; --div-6: #d48a3f; --div-7: #b0560a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266;
+  --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; }
+  .pulse, .skeleton, .spinner, .progress.indeterminate > i { animation: none !important; }
+}
+
+/* ============================================================================ base */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; }
+[data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); }
+.num { font-variant-numeric: tabular-nums; }
+h1 { font-size: var(--fs-24); line-height: var(--lh-tight); font-weight: var(--fw-semibold); margin: 0; letter-spacing: -.01em; }
+h2 { font-size: var(--fs-20); line-height: var(--lh-tight); font-weight: var(--fw-semibold); margin: var(--sp-12) 0 var(--sp-2); padding-top: var(--sp-4); border-top: var(--bw) solid var(--border); }
+h3 { font-size: var(--fs-12); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); margin: var(--sp-6) 0 var(--sp-3); }
+p { margin: 0 0 var(--sp-3); max-width: 76ch; color: var(--text-secondary); }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+svg.i.fill { fill: currentColor; stroke: none; }
+:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+
+.page { max-width: 1280px; margin: 0 auto; padding: var(--sp-6) var(--sp-6) var(--sp-16); }
+.top { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.top > div { max-width: 1280px; margin: 0 auto; padding: var(--sp-3) var(--sp-6); display: flex; align-items: center; gap: var(--sp-4); }
+.top nav { display: flex; gap: var(--sp-4); margin-left: auto; font-size: var(--fs-12); }
+.top nav a { color: var(--text-secondary); text-decoration: none; }
+.top nav a:hover { color: var(--text-primary); }
+.row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }
+.grid { display: grid; gap: var(--sp-4); }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.label { font-size: var(--fs-11); color: var(--text-muted); }
+.note { font-size: var(--fs-12); color: var(--text-muted); }
+.stack { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+/* swatches */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-2); }
+.sw { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.sw > i { display: block; height: 36px; border-bottom: var(--bw) solid var(--border); }
+.sw > div { padding: var(--sp-1) var(--sp-2) var(--sp-2); font-size: var(--fs-11); line-height: 1.4; }
+.sw b { display: block; font-weight: var(--fw-medium); font-size: var(--fs-12); }
+.sw span { color: var(--text-muted); font-family: var(--font-mono); }
+.ramp { display: flex; height: 28px; border-radius: var(--r-sm); overflow: hidden; border: var(--bw) solid var(--border); }
+.ramp i { flex: 1; }
+
+/* ============================================================================ components */
+/* button */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); white-space: nowrap; }
+.btn:hover, .btn.is-hover { border-color: var(--text-secondary); background: var(--surface); }
+.btn:active, .btn.is-active { background: var(--surface-sunken); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover, .btn.primary.is-hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.ghost:hover, .btn.ghost.is-hover { background: var(--accent-soft); color: var(--text-primary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover, .btn.danger.is-hover { background: var(--danger); color: var(--on-danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); } .btn.lg { height: var(--h-lg); padding: 0 var(--sp-4); font-size: var(--fs-14); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.btn.is-error { border-color: var(--danger); }
+.spinner { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: var(--r-pill); animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* fields */
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.field.error > small { color: var(--danger); display: flex; gap: var(--sp-1); align-items: center; }
+.input, .select { height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-13) var(--font-ui); width: 100%; transition: border-color var(--dur-fast) var(--ease); }
+.input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.input:hover, .select:hover, .input.is-hover { border-color: var(--text-secondary); }
+.input::placeholder { color: var(--text-muted); }
+.input:disabled, .select:disabled { opacity: .5; cursor: not-allowed; }
+.field.error .input { border-color: var(--danger); }
+.select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%), linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%); background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: var(--sp-6); }
+.toggle { display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: var(--fs-13); }
+.toggle input { position: absolute; opacity: 0; }
+.toggle i { width: 30px; height: 18px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border-strong); position: relative; transition: background var(--dur-base) var(--ease); }
+.toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: var(--r-pill); background: var(--text-secondary); transition: transform var(--dur-base) var(--ease); }
+.toggle input:checked + i { background: var(--accent); border-color: var(--accent); }
+.toggle input:checked + i::after { transform: translateX(12px); background: var(--on-accent); }
+.toggle input:focus-visible + i { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.toggle input:disabled + i { opacity: .45; }
+input[type=range].slider { appearance: none; width: 100%; height: 4px; border-radius: var(--r-pill); background: linear-gradient(to right, var(--accent) var(--fill, 40%), var(--border) var(--fill, 40%)); }
+input[type=range].slider::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: var(--r-pill); background: var(--text-primary); border: 2px solid var(--accent); cursor: pointer; }
+input[type=range].slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: var(--r-pill); background: var(--text-primary); border: 2px solid var(--accent); }
+
+/* tabs */
+.tabs { display: flex; gap: var(--sp-1); border-bottom: var(--bw) solid var(--border); }
+.tab { padding: var(--sp-2) var(--sp-3); border: 0; background: none; color: var(--text-secondary); font: var(--fw-medium) var(--fs-13) var(--font-ui); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; display: inline-flex; gap: var(--sp-2); align-items: center; }
+.tab:hover { color: var(--text-primary); }
+.tab[aria-selected=true] { color: var(--text-primary); border-bottom-color: var(--accent); }
+.tab:disabled { opacity: .45; cursor: not-allowed; }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); }
+
+/* table */
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: auto; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { position: sticky; top: 0; text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th button { all: unset; cursor: pointer; display: inline-flex; gap: var(--sp-1); align-items: center; }
+.t th button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 36px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.t.dense td { height: 28px; padding: var(--sp-1) var(--sp-3); }
+
+/* card, metric tile */
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-4); min-width: 0; }
+.card.interactive:hover, .card.is-hover { border-color: var(--border-strong); }
+.card > header { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); font-weight: var(--fw-semibold); }
+.card > header .sub { margin-left: auto; font-weight: var(--fw-regular); color: var(--text-muted); font-size: var(--fs-12); }
+.tile { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); min-width: 0; border-top: 2px solid var(--res, var(--border)); }
+.tile .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.tile .k i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); }
+.tile .v { font: var(--fw-medium) var(--fs-24)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; margin-top: var(--sp-1); }
+.tile .v small { font-size: var(--fs-12); color: var(--text-muted); font-weight: var(--fw-regular); }
+.tile .d { font: var(--fs-11) var(--font-mono); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tile svg { display: block; width: 100%; height: 28px; margin-top: var(--sp-2); }
+.tile.unavailable .v { color: var(--text-muted); }
+
+/* status pill and badge */
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.paused { --c: var(--state-paused); }
+.pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); } .pill.stalled { --c: var(--state-stalled); }
+.pill.cancelled { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.info { color: var(--info); background: var(--info-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; } .badge.ok { color: var(--success); background: var(--success-soft); border-color: transparent; }
+.badge.debug { color: var(--text-muted); }
+
+/* progress */
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); transition: width var(--dur-slow) var(--ease); }
+.progress.indeterminate > i { width: 30%; animation: slide 1.4s var(--ease) infinite; }
+@keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
+.prog-head { display: flex; align-items: baseline; gap: var(--sp-3); margin-bottom: var(--sp-1); font-size: var(--fs-12); }
+.prog-head .eta { margin-left: auto; color: var(--text-secondary); }
+
+/* toast, tooltip */
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 420px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; }
+.toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.toast .btn { margin-left: auto; }
+.tooltip { display: inline-block; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); max-width: 280px; box-shadow: var(--shadow-2); }
+
+/* modal, drawer (drawn in place for the preview) */
+.stage { position: relative; background: var(--scrim); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-6); min-height: 240px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.modal { width: 420px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 320px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); padding: var(--sp-4); }
+
+/* log viewer */
+.log { background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); font: var(--fs-12)/1.7 var(--font-mono); overflow: auto; max-height: 240px; }
+.log > div { display: grid; grid-template-columns: 96px 52px 84px 1fr; gap: var(--sp-3); padding: 0 var(--sp-3); white-space: nowrap; }
+.log > div:hover { background: var(--accent-soft); }
+.log .ts, .log .st { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.log .lv-INFO { color: var(--info); } .log .lv-WARN { color: var(--warning); } .log .lv-ERROR { color: var(--danger); } .log .lv-DEBUG { color: var(--text-muted); }
+.log .why { grid-column: 4; color: var(--text-secondary); white-space: normal; }
+.log .warn { background: var(--warning-soft); } .log .error { background: var(--danger-soft); }
+pre.code { margin: 0; background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); font: var(--fs-12)/1.6 var(--font-mono); overflow: auto; }
+pre.code .k { color: var(--cat-6); } pre.code .s { color: var(--cat-5); } pre.code .n { color: var(--cat-2); } pre.code .c { color: var(--text-muted); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+
+/* charts */
+.chart { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+.chart svg { display: block; width: 100%; height: 140px; }
+.chart .grid-line { stroke: var(--border); stroke-width: 1; } .chart text { fill: var(--text-muted); font: 10px var(--font-mono); }
+.legend { display: flex; gap: var(--sp-4); font-size: var(--fs-12); color: var(--text-secondary); margin-bottom: var(--sp-2); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: var(--sp-1); background: var(--c); }
+.legend i.dash { background: repeating-linear-gradient(to right, var(--c) 0 4px, transparent 4px 7px); }
+
+/* timeline */
+.timeline { display: flex; gap: 2px; height: 36px; }
+.seg { flex: var(--w, 1); min-width: 56px; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--sp-2); border-radius: var(--r-sm); background: color-mix(in srgb, var(--c) 18%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 45%, transparent); color: var(--text-primary); font-size: var(--fs-11); line-height: 1.3; cursor: pointer; overflow: hidden; }
+.seg b { display: flex; gap: var(--sp-1); align-items: center; font-weight: var(--fw-medium); color: var(--c); } .seg span { font-family: var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.seg.pending { --c: var(--border-strong); border-style: dashed; background: transparent; } .seg[aria-current=true] { box-shadow: 0 0 0 2px var(--focus); }
+
+/* graph nodes */
+.node { display: inline-flex; flex-direction: column; gap: 2px; min-width: 168px; padding: var(--sp-2) var(--sp-3); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-left: 3px solid var(--c, var(--accent)); border-radius: var(--r-md); box-shadow: var(--shadow-1); }
+.node small { font-size: var(--fs-11); color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.node b { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .node span { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-1); }
+.node.invalid { --c: var(--danger); border-color: var(--danger); }
+.edge { width: 28px; height: 1px; background: var(--border-strong); position: relative; flex: none; }
+.edge::after { content: ""; position: absolute; right: 0; top: -3px; border: 3.5px solid transparent; border-left-color: var(--border-strong); }
+
+/* chat */
+.chat { display: flex; flex-direction: column; gap: var(--sp-3); max-width: 560px; }
+.bubble { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-lg); max-width: 85%; font-size: var(--fs-14); }
+.bubble.user { align-self: flex-end; background: var(--accent); color: var(--on-accent); border-bottom-right-radius: var(--r-xs); }
+.bubble.bot { align-self: flex-start; background: var(--surface-raised); border: var(--bw) solid var(--border); border-bottom-left-radius: var(--r-xs); }
+.bubble footer { margin-top: var(--sp-1); font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.caret { display: inline-block; width: 7px; height: 14px; background: var(--text-secondary); vertical-align: text-bottom; }
+
+/* empty, error, loading */
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-8) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); min-height: 190px; }
+.state > svg { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); max-width: 34ch; }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg { color: var(--danger); }
+.state.ok > svg { color: var(--success); }
+.skeleton { height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.type-row { display: grid; grid-template-columns: 120px 1fr; align-items: baseline; gap: var(--sp-4); padding: var(--sp-2) 0; border-bottom: var(--bw) solid var(--border); }
+.box { background: var(--accent-soft); border: var(--bw) solid var(--accent); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9" stroke-width="2.2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 16 16"><path d="M5 2.5h6v2.5L8.8 8 11 11v2.5H5V11l2.2-3L5 5z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+</svg>
+
+<div class="top"><div>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1 style="font-size:var(--fs-16)">Stratal design system <span class="badge">preview v1</span> <span class="badge ok">approved 2026-11-15</span></h1>
+  <nav aria-label="Sections"><a href="#color">Colour</a><a href="#type">Type</a><a href="#space">Space</a><a href="#components">Components</a><a href="#patterns">Patterns</a><a href="#states">States</a></nav>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</div></div>
+
+<main class="page">
+<p>Gate 0 deliverable (SPEC §9.3). Every colour, size and component on this page comes from the tokens at the top of this file; the swatches read their values from the live CSS and show the measured contrast against the page background. Use the button at the top right to check the light theme. The written rules are in <span class="mono">docs/DESIGN-SYSTEM.md</span>.</p>
+
+<h2 id="color">1. Colour</h2>
+<h3>Neutral</h3><div class="swatches" data-tokens="bg surface surface-raised surface-sunken border border-strong text-primary text-secondary text-muted"></div>
+<h3>Brand and semantic</h3><div class="swatches" data-tokens="accent accent-hover success warning danger info"></div>
+<h3>Job states — always shown with an icon and a word, never colour alone</h3>
+<div class="row" style="margin-bottom:var(--sp-3)">
+  <span class="pill queued"><svg class="i"><use href="#i-clock"/></svg>Queued</span>
+  <span class="pill running"><i class="pulse"></i>Running</span>
+  <span class="pill paused"><svg class="i"><use href="#i-pause"/></svg>Paused</span>
+  <span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span>
+  <span class="pill failed"><svg class="i"><use href="#i-x"/></svg>Failed</span>
+  <span class="pill cancelled"><svg class="i"><use href="#i-ban"/></svg>Cancelled</span>
+  <span class="pill stalled"><svg class="i"><use href="#i-hourglass"/></svg>Stalled</span>
+</div>
+<div class="swatches" data-tokens="state-queued state-running state-paused state-completed state-failed state-cancelled state-stalled"></div>
+<h3>Resources — the same colour for the same resource on every screen</h3><div class="swatches" data-tokens="res-cpu res-ram res-gpu res-vram res-temp"></div>
+<h3>Data-viz: categorical (8)</h3><div class="swatches" data-tokens="cat-1 cat-2 cat-3 cat-4 cat-5 cat-6 cat-7 cat-8"></div>
+<div class="grid g2" style="margin-top:var(--sp-4)">
+  <div><h3>Sequential (low → high)</h3><div class="ramp" data-ramp="seq"></div></div>
+  <div><h3>Diverging (below ← baseline → above)</h3><div class="ramp" data-ramp="div"></div></div>
+</div>
+
+<h2 id="type">2. Typography</h2>
+<p>UI: IBM Plex Sans. Numbers, IDs, logs and code: JetBrains Mono. Both are open-licence and will be bundled with the app, not loaded from the network. <strong style="color:var(--warning)">This preview shows them only if they are installed on this machine</strong>; otherwise it falls back to Segoe UI and Cascadia Mono. Currently rendering: <span class="mono" id="fonts">…</span></p>
+<div class="type-row"><span class="label mono">32 / semibold</span><span style="font-size:var(--fs-32);font-weight:var(--fw-semibold);line-height:var(--lh-tight)">Dataset versions</span></div>
+<div class="type-row"><span class="label mono">24 / semibold</span><span style="font-size:var(--fs-24);font-weight:var(--fw-semibold)">Page title</span></div>
+<div class="type-row"><span class="label mono">20 / semibold</span><span style="font-size:var(--fs-20);font-weight:var(--fw-semibold)">Section heading</span></div>
+<div class="type-row"><span class="label mono">16 / semibold</span><span style="font-size:var(--fs-16);font-weight:var(--fw-semibold)">Card or dialog title</span></div>
+<div class="type-row"><span class="label mono">14 / regular</span><span style="font-size:var(--fs-14)">Reading text: descriptions, chat messages, report prose.</span></div>
+<div class="type-row"><span class="label mono">13 / regular</span><span>Default UI text: tables, forms, buttons. 9,512 accepted · 148 rejected · 340 duplicates.</span></div>
+<div class="type-row"><span class="label mono">12 / medium</span><span style="font-size:var(--fs-12);font-weight:var(--fw-medium)">Field labels, secondary text, log lines</span></div>
+<div class="type-row"><span class="label mono">11 / semibold caps</span><span style="font-size:var(--fs-11);font-weight:var(--fw-semibold);letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary)">Table headers · tile labels</span></div>
+<div class="type-row"><span class="label mono">mono 13</span><span class="mono">job_0142 · ds_7f3a9c21b04e · sha256:9f86d081884c · 0O 1lI</span></div>
+<div class="type-row"><span class="label mono">tabular numerals</span><span class="num" style="font-size:var(--fs-20)"><span id="tick1">3,994</span> MB &nbsp; <span id="tick2">2.41</span> img/s &nbsp; <span id="tick3">14m 32s</span> <span class="note" style="font-family:var(--font-ui)">— live values; the text around them must not move</span></span></div>
+
+<h2 id="space">3. Spacing, radius, elevation, motion</h2>
+<div class="grid g2">
+  <div><h3>Spacing (4 px base)</h3><div class="row" style="align-items:flex-end" id="spacing"></div></div>
+  <div><h3>Radius</h3><div class="row" id="radii"></div>
+    <h3>Control heights</h3><div class="row"><button class="btn sm">24 small</button><button class="btn">32 default</button><button class="btn lg">40 large</button></div></div>
+  <div><h3>Elevation</h3><div class="row" style="gap:var(--sp-6)">
+    <div class="card" style="box-shadow:var(--shadow-1)">shadow-1<br><span class="note">graph nodes</span></div>
+    <div class="card" style="box-shadow:var(--shadow-2);background:var(--surface-raised)">shadow-2<br><span class="note">toasts, menus</span></div>
+    <div class="card" style="box-shadow:var(--shadow-3);background:var(--surface-raised)">shadow-3<br><span class="note">modals, drawers</span></div></div>
+    <p class="note" style="margin-top:var(--sp-3)">In the dark theme depth is carried mainly by the surface step and the border; shadows only separate floating layers.</p></div>
+  <div><h3>Motion and layers</h3>
+    <table class="t dense"><tr><td class="id">--dur-fast</td><td class="r">80 ms</td><td>hover, press</td></tr><tr><td class="id">--dur-base</td><td class="r">160 ms</td><td>toggles, tabs, tooltips</td></tr><tr><td class="id">--dur-slow</td><td class="r">240 ms</td><td>drawers, modals, progress</td></tr><tr><td class="id">--ease</td><td class="r">.2, 0, 0, 1</td><td>everything; nothing bounces</td></tr><tr><td class="id">z-index</td><td class="r">100–500</td><td>sticky · drawer · modal · toast · tooltip</td></tr></table>
+    <p class="note" style="margin-top:var(--sp-2)">With <span class="mono">prefers-reduced-motion</span> all durations are 0 and the pulse, shimmer and spinner stop.</p></div>
+</div>
+
+<h2 id="components">4. Components</h2>
+<h3>Buttons — default · hover · focus · active · disabled · loading · error</h3>
+<div class="stack">
+  <div class="row"><button class="btn primary">Start pipeline</button><button class="btn primary is-hover">Hover</button><button class="btn primary is-focus">Focus</button><button class="btn primary is-active">Active</button><button class="btn primary" disabled>Disabled</button><button class="btn primary" aria-busy="true"><i class="spinner"></i>Starting…</button></div>
+  <div class="row"><button class="btn">Retry</button><button class="btn is-hover">Hover</button><button class="btn is-focus">Focus</button><button class="btn is-active">Active</button><button class="btn" disabled>Disabled</button><button class="btn" aria-busy="true"><i class="spinner"></i>Retrying…</button><button class="btn is-error"><svg class="i" style="color:var(--danger)"><use href="#i-alert"/></svg>Failed, try again</button></div>
+  <div class="row"><button class="btn ghost">View events</button><button class="btn ghost is-hover">Hover</button><button class="btn ghost is-focus">Focus</button><button class="btn ghost" disabled>Disabled</button><button class="btn danger">Cancel job</button><button class="btn danger is-hover">Hover</button><button class="btn danger is-focus">Focus</button><button class="btn danger" disabled>Disabled</button></div>
+</div>
+
+<h3>Inputs, select, toggle, slider</h3>
+<div class="grid g4">
+  <div class="field"><label for="f1">Dataset name</label><input id="f1" class="input" placeholder="coco10k"><small>Lowercase letters, digits, - and _</small></div>
+  <div class="field"><label for="f2">Focused</label><input id="f2" class="input is-focus" value="coco10k"><small>Focus ring: 2 px accent, 2 px offset</small></div>
+  <div class="field error"><label for="f3">Minimum size (px)</label><input id="f3" class="input mono" value="0" aria-invalid="true" aria-describedby="f3e"><small id="f3e"><svg class="i"><use href="#i-alert"/></svg>Must be at least 1</small></div>
+  <div class="field"><label for="f4">Disabled</label><input id="f4" class="input" value="/sources/coco10k" disabled><small>Set when the job was created</small></div>
+  <div class="field"><label for="f5">Caption model</label><select id="f5" class="select"><option>Florence-2-base</option><option>BLIP-base</option></select><small>From the allow-list only</small></div>
+  <div class="field"><label for="f6">Batch size <span class="num" style="color:var(--text-primary)">16</span></label><input id="f6" type="range" class="slider" min="1" max="64" value="16" style="--fill:24%"><small>Halved automatically on out-of-memory</small></div>
+  <div class="field"><label>Options</label><label class="toggle"><input type="checkbox" checked><i></i>Use fp16</label><label class="toggle"><input type="checkbox"><i></i>Keep intermediates</label><label class="toggle"><input type="checkbox" disabled><i></i>Remote offload (phase 4)</label></div>
+  <div class="field"><label for="f8">Loading options</label><div class="input" style="display:flex;align-items:center;gap:var(--sp-2);color:var(--text-muted)"><i class="spinner"></i>Loading versions…</div><small>Fields never collapse while loading</small></div>
+</div>
+
+<h3>Tabs and table (sortable; rows virtualised beyond ~200)</h3>
+<div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="true">Versions <span class="count">6</span></button><button class="tab" role="tab" aria-selected="false">Rows <span class="count">10,000</span></button><button class="tab" role="tab" aria-selected="false">Lineage</button><button class="tab" role="tab" aria-selected="false" disabled>Report</button></div>
+<div class="table-wrap" style="margin-top:var(--sp-3)"><table class="t">
+  <thead><tr><th aria-sort="descending"><button>Version <svg class="i"><use href="#i-sort"/></svg></button></th><th><button>Stage <svg class="i"><use href="#i-sort"/></svg></button></th><th>State</th><th class="r"><button>Rows <svg class="i"><use href="#i-sort"/></svg></button></th><th class="r">Accepted</th><th class="r">Rejected</th><th class="r">Manifest</th><th>Created by</th><th>Created</th></tr></thead>
+  <tbody>
+    <tr aria-selected="true"><td class="id">ds_7f3a9c21b04e</td><td>label</td><td><span class="pill running"><i class="pulse"></i>Running</span></td><td class="r">10,000</td><td class="r">9,512</td><td class="r">488</td><td class="r">1.63 MB</td><td class="id">job_0142</td><td class="r">14:21:40</td></tr>
+    <tr><td class="id">ds_1c44e09ab7d2</td><td>preprocess</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span></td><td class="r">10,000</td><td class="r">9,512</td><td class="r">488</td><td class="r">1.21 MB</td><td class="id">job_0142</td><td class="r">13:59:03</td></tr>
+    <tr class="is-hover"><td class="id">ds_0b1f9e77a3c4</td><td>clean</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span></td><td class="r">10,000</td><td class="r">9,512</td><td class="r">488</td><td class="r">1.18 MB</td><td class="id">job_0142</td><td class="r">13:58:13</td></tr>
+    <tr><td class="id">ds_389dd9b94119</td><td>ingest</td><td><span class="pill failed"><svg class="i"><use href="#i-x"/></svg>Failed</span></td><td class="r">1,535</td><td class="r">1,520</td><td class="r">15</td><td class="r">0.14 MB</td><td class="id">job_0003</td><td class="r">16:55:12</td></tr>
+  </tbody></table></div>
+
+<h3>Metric tiles with sparkline, and live chart</h3>
+<div class="grid g4" style="grid-template-columns:repeat(5,minmax(0,1fr))">
+  <div class="tile" style="--res:var(--res-cpu)"><div class="k"><i></i>CPU</div><div class="v">38<small>%</small></div><div class="d">16 cores · max 71%</div><svg viewBox="0 0 100 28" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-cpu)" stroke-width="1.5" points="0,20 8,18 16,21 24,15 32,17 40,12 48,16 56,14 64,18 72,13 80,15 88,11 100,14"/></svg></div>
+  <div class="tile" style="--res:var(--res-ram)"><div class="k"><i></i>RAM</div><div class="v">7.2<small> / 9.7 GB</small></div><div class="d">WSL VM · job 3.1 GB</div><svg viewBox="0 0 100 28" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-ram)" stroke-width="1.5" points="0,16 12,16 24,15 36,14 48,12 60,11 72,10 84,10 100,9"/></svg></div>
+  <div class="tile" style="--res:var(--res-gpu)"><div class="k"><i></i>GPU <svg class="i" aria-label="What this means" style="width:12px;height:12px"><use href="#i-info"/></svg></div><div class="v">94<small>%</small></div><div class="d">48 W</div><svg viewBox="0 0 100 28" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-gpu)" stroke-width="1.5" points="0,8 10,6 20,7 30,5 40,9 50,5 60,6 70,4 80,6 90,5 100,5"/></svg></div>
+  <div class="tile" style="--res:var(--res-vram)"><div class="k"><i></i>VRAM</div><div class="v">3.9<small> / 6.0 GB</small></div><div class="d">alloc 3.1 · rsv 3.6</div><svg viewBox="0 0 100 28" preserveAspectRatio="none"><polyline fill="none" stroke="var(--res-vram)" stroke-width="1.5" points="0,24 10,22 20,12 30,11 40,11 50,10 60,10 70,10 80,10 90,10 100,10"/></svg></div>
+  <div class="tile unavailable" style="--res:var(--res-temp)"><div class="k"><i></i>Temp</div><div class="v">—</div><div class="d">unavailable in this container</div><svg viewBox="0 0 100 28"></svg></div>
+</div>
+<div class="chart" style="margin-top:var(--sp-4)">
+  <div class="legend"><span style="--c:var(--res-vram)"><i></i>VRAM used (NVML)</span><span style="--c:var(--res-vram)"><i class="dash"></i>PyTorch reserved</span><span style="--c:var(--res-gpu)"><i></i>GPU %</span><span style="--c:var(--res-cpu)"><i></i>CPU %</span><span class="note" style="margin-left:auto">stage: label · last 60 s · 1 s samples</span></div>
+  <svg viewBox="0 0 600 140" preserveAspectRatio="none" role="img" aria-label="Line chart of VRAM, GPU and CPU over the last 60 seconds">
+    <line class="grid-line" x1="0" y1="35" x2="600" y2="35"/><line class="grid-line" x1="0" y1="70" x2="600" y2="70"/><line class="grid-line" x1="0" y1="105" x2="600" y2="105"/>
+    <polyline fill="none" stroke="var(--res-cpu)" stroke-width="1.5" points="0,96 40,92 80,98 120,88 160,94 200,86 240,92 280,90 320,95 360,87 400,91 440,85 480,92 520,88 560,90 600,89"/>
+    <polyline fill="none" stroke="var(--res-gpu)" stroke-width="1.5" points="0,120 40,118 80,40 120,22 160,26 200,18 240,24 280,20 320,22 360,16 400,22 440,18 480,20 520,17 560,21 600,18"/>
+    <polyline fill="none" stroke="var(--res-vram)" stroke-width="1.5" stroke-dasharray="4 3" points="0,128 60,126 90,60 140,54 600,54"/>
+    <polyline fill="none" stroke="var(--res-vram)" stroke-width="2" points="0,126 60,124 90,52 140,46 300,45 600,44"/>
+    <text x="4" y="31">75</text><text x="4" y="66">50</text><text x="4" y="101">25</text>
+  </svg>
+</div>
+
+<h3>Progress with ETA, pipeline timeline</h3>
+<div class="card">
+  <div class="prog-head"><span class="pill running"><i class="pulse"></i>Running</span><b>Captioning batch 42/313 · Florence-2-base · bs=16 · fp16</b><span class="eta num">13% · 2.4 img/s · ETA 14m 32s</span></div>
+  <div class="progress" role="progressbar" aria-valuenow="13" aria-valuemin="0" aria-valuemax="100" style="--p:13%"><i></i></div>
+  <div class="grid g3" style="margin-top:var(--sp-4)">
+    <div><div class="prog-head"><span>Unknown total</span><span class="eta">scanning…</span></div><div class="progress indeterminate"><i></i></div></div>
+    <div><div class="prog-head"><span>Paused at 61%</span><span class="eta num">ETA —</span></div><div class="progress" style="--p:61%;--c:var(--state-paused)"><i></i></div></div>
+    <div><div class="prog-head"><span>Failed at 34%</span><span class="eta num">see error</span></div><div class="progress" style="--p:34%;--c:var(--state-failed)"><i></i></div></div>
+  </div>
+  <h3>Timeline bar — width follows duration; click a stage for its events and charts</h3>
+  <div class="timeline" role="list">
+    <div class="seg" role="listitem" tabindex="0" style="--c:var(--state-completed);--w:1.2"><b><svg class="i"><use href="#i-check"/></svg>ingest</b><span>1m 12s</span></div>
+    <div class="seg" role="listitem" tabindex="0" style="--c:var(--state-completed);--w:3.6"><b><svg class="i"><use href="#i-check"/></svg>clean</b><span>3m 40s</span></div>
+    <div class="seg" role="listitem" tabindex="0" style="--c:var(--state-completed);--w:.9"><b><svg class="i"><use href="#i-check"/></svg>preprocess</b><span>0m 50s</span></div>
+    <div class="seg" role="listitem" tabindex="0" aria-current="true" style="--c:var(--state-running);--w:4"><b><i class="pulse"></i>label</b><span>2m 18s · 13%</span></div>
+    <div class="seg pending" role="listitem" tabindex="0"><b><svg class="i"><use href="#i-clock"/></svg>filter</b><span>pending</span></div>
+    <div class="seg pending" role="listitem" tabindex="0"><b><svg class="i"><use href="#i-clock"/></svg>split</b><span>pending</span></div>
+  </div>
+</div>
+
+<h3>Activity log and code viewer</h3>
+<div class="grid g2">
+  <div class="log" role="log" aria-live="polite" aria-label="Activity log">
+    <div><span class="ts">14:03:11.204</span><span class="lv-INFO">INFO</span><span class="st">label</span><span>Captioning batch 42/313 · Florence-2-base · bs=16 · fp16</span></div>
+    <div><span class="ts">14:02:58.031</span><span class="lv-INFO">INFO</span><span class="st">label</span><span>Loaded Florence-2-base to GPU (0.9 GB, 2.1 s)</span></div>
+    <div class="warn"><span class="ts">14:02:55.870</span><span class="lv-WARN">WARN</span><span class="st">label</span><span>Out of GPU memory at batch size 32</span><span class="why">Why: PyTorch ran out of VRAM · Do: reduce batch size from 32 → 16 (done automatically)</span></div>
+    <div><span class="ts">13:59:03.412</span><span class="lv-INFO">INFO</span><span class="st">preprocess</span><span>Recording lineage → ds_1c44e09ab7d2</span></div>
+    <div class="error"><span class="ts">13:57:44.120</span><span class="lv-ERROR">ERROR</span><span class="st">ingest</span><span>Stage ingest failed: killed by SIGKILL</span><span class="why">Why: the kernel killed the stage for exceeding 2500 MB · Do: use fewer loader workers, then retry</span></div>
+    <div><span class="ts">13:57:01.006</span><span class="lv-DEBUG">DEBUG</span><span class="st">ingest</span><span>claimed by cpu@21102de855a7</span></div>
+  </div>
+  <pre class="code"><span class="c"># resolved config · ds_7f3a9c21b04e</span>
+<span class="k">label</span>:
+  <span class="k">model</span>: <span class="s">florence-community/Florence-2-base</span>
+  <span class="k">batch_size</span>: <span class="n">16</span>
+  <span class="k">precision</span>: <span class="s">fp16</span>
+<span class="k">filter</span>:
+  <span class="k">clip_threshold</span>: <span class="n">0.22</span></pre>
+</div>
+
+<h3>Cards, badges, tooltip, toasts</h3>
+<div class="grid g3">
+  <div class="card interactive"><header>coco10k <span class="badge">image</span><span class="sub num">6 versions</span></header><div class="row"><span class="badge ok">9,512 accepted</span><span class="badge warn">340 duplicates</span><span class="badge err">148 rejected</span></div><p class="note" style="margin:var(--sp-3) 0 0">Latest <span class="mono">ds_7f3a9c21b04e</span> · label · 2 min ago</p></div>
+  <div class="stack"><span class="tooltip">NVML "GPU utilization" is the share of time any kernel was running. It does not measure how much of the GPU was used.</span><div class="row"><span class="badge">default</span><span class="badge info">INFO</span><span class="badge warn">WARN</span><span class="badge err">ERROR</span><span class="badge debug">DEBUG</span><span class="badge ok">cache hit</span></div></div>
+  <div class="stack">
+    <div class="toast" role="status" style="--c:var(--success)"><svg class="i"><use href="#i-check"/></svg><div><b>job_0142 completed</b><span>6 stages · 21m 04s · ds_7f3a9c21b04e</span></div><button class="btn ghost sm" aria-label="Dismiss"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="toast" role="alert" style="--c:var(--danger)"><svg class="i"><use href="#i-alert"/></svg><div><b>job_0003 failed at ingest</b><span>Killed by SIGKILL. Retry keeps finished stages.</span></div><button class="btn sm">Retry</button></div>
+  </div>
+</div>
+
+<h3>Modal (destructive confirmation) and drawer</h3>
+<div class="grid g2">
+  <div class="stage"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="m1"><header id="m1"><svg class="i" style="color:var(--danger)"><use href="#i-alert"/></svg>Cancel job_0142?</header><div>The <b style="color:var(--text-primary)">label</b> stage stops at its next batch. 42 finished batches stay cached; the 3 completed stages are kept. This cannot be undone, but the job can be started again.</div><footer><button class="btn">Keep running</button><button class="btn danger">Cancel job</button></footer></div></div>
+  <div class="stage" style="justify-content:flex-start"><span class="note">page content behind the scrim</span><aside class="drawer" aria-label="Stage detail"><div class="row" style="margin-bottom:var(--sp-3)"><b style="font-size:var(--fs-16)">clean</b><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Completed</span><button class="btn ghost sm" style="margin-left:auto" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div><table class="t dense"><tr><td>Duration</td><td class="r">3m 40s</td></tr><tr><td>Peak RAM</td><td class="r">3,120 MB</td></tr><tr><td>Peak VRAM</td><td class="r">0 MB</td></tr><tr><td>Output</td><td class="r">ds_0b1f9e77a3c4</td></tr></table></aside></div>
+</div>
+
+<h3>Lineage node, layer node (model builder), chat bubble</h3>
+<div class="grid g2">
+  <div class="stack">
+    <div class="row" style="gap:0;flex-wrap:nowrap;overflow:auto;padding:var(--sp-1)"><div class="node" style="--c:var(--state-completed)"><small>ingest</small><b>ds_0b1f9e77a3c4</b><span>10,000 rows · 13:58</span></div><i class="edge"></i><div class="node selected" style="--c:var(--state-completed)"><small>clean</small><b>ds_1c44e09ab7d2</b><span>9,660 accepted</span></div><i class="edge"></i><div class="node" style="--c:var(--state-running)"><small>label</small><b>ds_7f3a9c21b04e</b><span>running · 13%</span></div></div>
+    <div class="row" style="gap:0;flex-wrap:nowrap;overflow:auto;padding:var(--sp-1)"><div class="node" style="--c:var(--cat-1)"><small>Conv2d</small><b>3 → 32 · k3 s1</b><span>out 32×64×64 · 896 params</span></div><i class="edge"></i><div class="node" style="--c:var(--cat-3)"><small>MaxPool2d</small><b>k2</b><span>out 32×32×32</span></div><i class="edge"></i><div class="node invalid"><small>Linear</small><b>1024 → 10</b><span style="color:var(--danger)">expects 1024, gets 32768</span></div></div>
+  </div>
+  <div class="chat"><div class="bubble user">Which stage rejected the most images in ds_7f3a9c21b04e?</div><div class="bubble bot">The <b>clean</b> stage: 340 marked as duplicates (212 near-duplicate groups). Ingest rejected 148, mostly <span class="mono">below_min_size</span>.<footer>router → llama3.2:3b · 1.4 s · 38 tok/s</footer></div><div class="bubble bot">Loading the manifest<span class="caret"></span></div></div>
+</div>
+
+<h2 id="patterns">5. Patterns</h2>
+<div class="grid g2">
+  <div class="card"><header>Form generated from a JSON schema (UI-2.3)</header>
+    <div class="grid g2">
+      <div class="field"><label for="p1">min_size <span class="badge">integer</span></label><input id="p1" class="input mono" value="256"><small>Images whose shorter side is below this many pixels are rejected. 1–16384.</small></div>
+      <div class="field"><label for="p2">precision <span class="badge">enum</span></label><select id="p2" class="select"><option>fp16</option><option>fp32</option></select><small>Default fp16</small></div>
+    </div>
+    <p class="note" style="margin:var(--sp-3) 0 0">Label = the property name in mono; the type as a badge; the schema's description and range as helper text; validation errors replace the helper text. One column below 1024 px.</p></div>
+  <div class="card"><header>Keyboard</header>
+    <table class="t dense"><tr><td><kbd>g</kbd> <kbd>d</kbd></td><td>Go to datasets</td><td><kbd>g</kbd> <kbd>j</kbd></td><td>Go to jobs</td></tr><tr><td><kbd>/</kbd></td><td>Focus search or filter</td><td><kbd>?</kbd></td><td>Show shortcuts</td></tr><tr><td><kbd>j</kbd> <kbd>k</kbd></td><td>Next / previous row</td><td><kbd>Enter</kbd></td><td>Open selected</td></tr><tr><td><kbd>a</kbd> <kbd>r</kbd></td><td>Accept / reject (review)</td><td><kbd>Esc</kbd></td><td>Close drawer or dialog</td></tr></table>
+    <p class="note" style="margin:var(--sp-3) 0 0">Every action is reachable by Tab; shortcuts are additions, never the only way.</p></div>
+</div>
+
+<h2 id="states">6. Screen states: empty, loading, error, success</h2>
+<div class="grid g4">
+  <div class="state"><svg class="i"><use href="#i-layers"/></svg><b>No datasets yet</b><p>Ingest a folder to create the first version.</p><button class="btn primary sm">Start a pipeline</button></div>
+  <div class="card" aria-busy="true" style="min-height:190px"><div class="stack" style="gap:var(--sp-3)"><div class="skeleton" style="width:40%"></div><div class="skeleton"></div><div class="skeleton" style="width:85%"></div><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:90%"></div><span class="note">Loading keeps the final layout's size</span></div></div>
+  <div class="state err" role="alert"><svg class="i"><use href="#i-alert"/></svg><b>Could not load versions</b><p>PostgreSQL is unreachable (<span class="mono">dependency_unavailable</span>). Run <span class="mono">docker compose ps</span>.</p><button class="btn sm">Try again</button></div>
+  <div class="state ok"><svg class="i"><use href="#i-check"/></svg><b>Review complete</b><p>50 of 50 decided · 46 accepted (92%, 95% CI 81–97%).</p><button class="btn sm">Open report</button></div>
+</div>
+</main>
+
+<script>
+(function () {
+  var root = document.documentElement, cs = function () { return getComputedStyle(root); };
+  function rgb(hex) { hex = hex.trim().replace('#', ''); return [0, 2, 4].map(function (i) { return parseInt(hex.substr(i, 2), 16) / 255; }); }
+  function lum(hex) { var c = rgb(hex).map(function (v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+  function ratio(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  function paint() {
+    var style = cs(), bg = style.getPropertyValue('--bg');
+    document.querySelectorAll('[data-tokens]').forEach(function (box) {
+      box.innerHTML = box.dataset.tokens.split(' ').map(function (name) {
+        var value = style.getPropertyValue('--' + name).trim();
+        var r = ratio(value, bg).toFixed(1);
+        return '<div class="sw"><i style="background:var(--' + name + ')"></i><div><b>' + name + '</b><span>' + value + ' · ' + r + ':1</span></div></div>';
+      }).join('');
+    });
+    document.querySelectorAll('[data-ramp]').forEach(function (box) {
+      var html = ''; for (var n = 1; n <= 7; n++) html += '<i style="background:var(--' + box.dataset.ramp + '-' + n + ')" title="--' + box.dataset.ramp + '-' + n + '"></i>';
+      box.innerHTML = html;
+    });
+  }
+  var sp = [1, 2, 3, 4, 5, 6, 8, 10, 12, 16];
+  document.getElementById('spacing').innerHTML = sp.map(function (n) { return '<div class="stack" style="align-items:center"><div class="box" style="width:var(--sp-' + n + ');height:var(--sp-' + n + ')"></div><span class="label mono">' + n + ' · ' + n * 4 + '</span></div>'; }).join('');
+  document.getElementById('radii').innerHTML = ['xs · 2', 'sm · 4', 'md · 6', 'lg · 10', 'pill'].map(function (n) { return '<div class="stack" style="align-items:center"><div class="box" style="width:56px;height:36px;border-radius:var(--r-' + n.split(' ')[0] + ')"></div><span class="label mono">' + n + '</span></div>'; }).join('');
+  var button = document.getElementById('theme');
+  button.addEventListener('click', function () {
+    var light = root.dataset.theme !== 'light';
+    root.dataset.theme = light ? 'light' : 'dark';
+    button.textContent = light ? 'Switch to dark' : 'Switch to light';
+    button.setAttribute('aria-pressed', String(light));
+    paint();
+  });
+  paint();
+  function has(font) {
+    // Installed if text set in it measures differently from the bare fallback.
+    var probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;visibility:hidden;font-size:72px;white-space:nowrap';
+    probe.textContent = 'mmmmlliiWW0O@#';
+    document.body.appendChild(probe);
+    var widths = ['monospace', 'serif'].map(function (base) {
+      probe.style.fontFamily = base; var plain = probe.offsetWidth;
+      probe.style.fontFamily = '"' + font + '", ' + base; return probe.offsetWidth !== plain;
+    });
+    probe.remove();
+    return widths[0] || widths[1];
+  }
+  var ready = document.fonts ? document.fonts.ready : Promise.resolve();
+  ready.then(function () {
+    document.getElementById('fonts').textContent = (has('IBM Plex Sans') ? 'IBM Plex Sans' : 'fallback (Segoe UI)') + ' + ' + (has('JetBrains Mono') ? 'JetBrains Mono' : 'fallback (Cascadia Mono / Consolas)');
+  });
+  var vram = 3994, rate = 2.41, eta = 872;
+  setInterval(function () {
+    vram = Math.max(3900, Math.min(4100, vram + Math.round((Math.random() - .5) * 40)));
+    rate = Math.max(2.1, Math.min(2.7, rate + (Math.random() - .5) * .08)); eta = eta > 1 ? eta - 1 : 872;
+    document.getElementById('tick1').textContent = vram.toLocaleString('en-US');
+    document.getElementById('tick2').textContent = rate.toFixed(2);
+    document.getElementById('tick3').textContent = Math.floor(eta / 60) + 'm ' + String(eta % 60).padStart(2, '0') + 's';
+  }, 1000);
+})();
+</script>
+</body>
+</html>

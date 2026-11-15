@@ -1,17 +1,20 @@
 """Where stage code sends its events.
 
-Stage code talks only to an :class:`EventSink`. In M1 the sink writes log
-lines; in M2 the job runtime supplies one that feeds the event stream
-(MON-1.1). Stage code does not change when that happens.
+Stage code talks only to an :class:`EventSink`. From the command line the sink
+writes log lines; inside a job the runtime supplies a
+:class:`stratal.runtime.context.JobContext`, which feeds the event stream
+(MON-1.1). Stage code is the same in both cases.
 """
 
 from collections.abc import Mapping
-from typing import Literal, Protocol
+from typing import Protocol
 
 from stratal.core.logging import get_logger
+from stratal.mon.events import Level
 
-Level = Literal["DEBUG", "INFO", "WARN", "ERROR"]
 Metrics = Mapping[str, float | int | str]
+
+__all__ = ["EventSink", "Level", "LogSink", "Metrics"]
 
 
 class EventSink(Protocol):
@@ -25,7 +28,12 @@ class EventSink(Protocol):
         step: int | None = None,
         total: int | None = None,
         metrics: Metrics | None = None,
-    ) -> None: ...
+        reason: str | None = None,
+        suggested_action: str | None = None,
+    ) -> None:
+        """Say what the stage is doing. WARN and ERROR need ``reason`` and
+        ``suggested_action`` (MON-1.3)."""
+        ...
 
 
 class LogSink:
@@ -44,6 +52,8 @@ class LogSink:
         step: int | None = None,
         total: int | None = None,
         metrics: Metrics | None = None,
+        reason: str | None = None,
+        suggested_action: str | None = None,
     ) -> None:
         method = {"DEBUG": "debug", "INFO": "info", "WARN": "warning", "ERROR": "error"}[level]
         getattr(self._log, method)(
@@ -53,4 +63,6 @@ class LogSink:
             step=step,
             total=total,
             metrics=dict(metrics) if metrics else None,
+            reason=reason,
+            suggested_action=suggested_action,
         )

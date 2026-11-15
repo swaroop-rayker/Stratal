@@ -1,18 +1,62 @@
-"""Shared fixtures for tests that use the real PostgreSQL (SPEC §8.1: no mocking)."""
+"""Shared fixtures for tests that use the real PostgreSQL and Redis (SPEC §8.1: no mocking).
 
+The tests get their own database (``stratal_test``), their own Redis database
+(number 15) and their own data folder. Job tests commit rows and start real
+processes, so they must not share the development stack's database or its
+event stream, where a running monitor would consume their events.
+"""
+
+import os
+import tempfile
 from collections.abc import Iterator
 
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
-from stratal.db.engine import get_engine
+from stratal.core.settings import get_settings
+
+_main_url = make_url(get_settings().database_url)
+_redis_base = get_settings().redis_url.rsplit("/", 1)[0]
+os.environ.update(
+    STRATAL_DATABASE_URL=_main_url.set(database="stratal_test").render_as_string(
+        hide_password=False
+    ),
+    STRATAL_REDIS_URL=f"{_redis_base}/15",
+    STRATAL_DATA_DIR=tempfile.mkdtemp(prefix="stratal-test-"),
+    STRATAL_EXTRA_STAGES="stratal.testing.stages",
+    STRATAL_HEARTBEAT_INTERVAL_S="0.3",
+    STRATAL_CANCEL_GRACE_S="1.0",
+    STRATAL_PROCESS_SAMPLE_INTERVAL_S="0.2",
+)
+get_settings.cache_clear()
+
+from stratal.core.bus import Bus  # noqa: E402
+from stratal.db.engine import get_engine  # noqa: E402
+from stratal.testing.harness import Runner  # noqa: E402
+
+get_engine.cache_clear()
+
+_TABLES = (
+    "events, resource_samples, process_samples, job_transitions, job_stages, "
+    "dataset_versions, jobs, datasets"
+)
 
 
 @pytest.fixture(scope="session")
 def migrated() -> None:
-    """Bring the schema to the newest migration once per test run."""
+    """Create the test database if needed and bring it to the newest migration."""
+    admin = create_engine(_main_url, isolation_level="AUTOCOMMIT")
+    with admin.connect() as connection:
+        exists = connection.execute(
+            text("SELECT 1 FROM pg_database WHERE datname = 'stratal_test'")
+        ).first()
+        if exists is None:
+            connection.execute(text("CREATE DATABASE stratal_test"))
+    admin.dispose()
     command.upgrade(Config("alembic.ini"), "head")
 
 
@@ -24,3 +68,20 @@ def session(migrated: None) -> Iterator[Session]:
         with Session(bind=connection, join_transaction_mode="create_savepoint") as db:
             yield db
         transaction.rollback()
+
+
+@pytest.fixture
+def bus(migrated: None) -> Iterator[Bus]:
+    """An empty database and an empty Redis, for tests that commit and start processes."""
+    client = Bus(get_settings().redis_url)
+    client.flush_all()
+    with get_engine().begin() as connection:
+        connection.execute(text(f"TRUNCATE {_TABLES} RESTART IDENTITY CASCADE"))
+    yield client
+    client.flush_all()
+    client.close()
+
+
+@pytest.fixture
+def runner(bus: Bus) -> Runner:
+    return Runner(bus)

@@ -4,8 +4,9 @@
 #
 #   .\scripts\check.ps1          # everything
 #   .\scripts\check.ps1 -Fast    # skip integration tests
+#   .\scripts\check.ps1 -Gpu     # also run the GPU-marked tests in the worker-gpu image
 
-param([switch]$Fast)
+param([switch]$Fast, [switch]$Gpu)
 
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
@@ -22,5 +23,8 @@ Step "type check"   { docker compose run --rm --no-deps dev pyright }
 Step "unit + meta"  { docker compose run --rm --no-deps dev pytest -q }
 if (-not $Fast) {
     Step "integration" { docker compose run --rm dev pytest -q -m integration }
+}
+if ($Gpu) {
+    Step "gpu" { docker compose run --rm --no-deps worker-gpu pytest -q -m gpu tests/gpu }
 }
 Write-Host "All checks passed." -ForegroundColor Green

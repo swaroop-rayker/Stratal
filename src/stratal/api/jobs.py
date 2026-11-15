@@ -1,0 +1,291 @@
+"""Jobs, events, telemetry and the host script's endpoints (docs/API.md §3.3, §3.4, §3.8)."""
+
+import contextlib
+from collections.abc import Callable, Iterator
+from datetime import datetime
+from typing import Annotated, Any, Literal
+
+from fastapi import APIRouter, Depends, Query, Response
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from stratal.core.bus import LIVE_GLOBAL, Bus
+from stratal.core.settings import get_settings
+from stratal.db.engine import get_engine
+from stratal.db.models import Event as EventRow
+from stratal.db.models import Job, ProcessSample, ResourceSample
+from stratal.mon.events import Event, Level
+from stratal.mon.store import insert_events
+from stratal.runtime import jobs as job_service
+from stratal.runtime.jobs import Enqueue, PipelineRequest
+from stratal.runtime.states import ACTIVE
+
+router = APIRouter()
+
+EnqueueFn = Callable[[Enqueue], None]
+Json = dict[str, Any]
+
+
+def get_session() -> Iterator[Session]:
+    with Session(get_engine()) as session:
+        yield session
+
+
+def get_enqueue() -> EnqueueFn:
+    """Dependency, so tests can run stages themselves instead of through Celery."""
+    from stratal.runtime.celery_app import enqueue_stage
+
+    return enqueue_stage
+
+
+def get_bus() -> Iterator[Bus]:
+    bus = Bus(get_settings().redis_url, timeout_s=2.0)
+    try:
+        yield bus
+    finally:
+        bus.close()
+
+
+Db = Annotated[Session, Depends(get_session)]
+Queue = Annotated[EnqueueFn, Depends(get_enqueue)]
+Redis = Annotated[Bus, Depends(get_bus)]
+Limit = Annotated[int, Query(ge=1, le=500)]
+
+
+def _iso(value: datetime) -> str:
+    return value.isoformat().replace("+00:00", "Z")
+
+
+def event_view(row: EventRow) -> Json:
+    return {
+        "id": row.id,
+        "event_uid": str(row.event_uid),
+        "ts": _iso(row.ts),
+        "job_id": row.job_id,
+        "stage": row.stage,
+        "substage": row.substage,
+        "version_id": row.version_id,
+        "type": row.type,
+        "level": row.level,
+        "step": row.step,
+        "total": row.total,
+        "message": row.message,
+        "metrics": row.metrics,
+        "reason": row.reason,
+        "suggested_action": row.suggested_action,
+        "attempt": row.attempt,
+    }
+
+
+def _columns(row: Any) -> Json:
+    values: Json = {}
+    for column in row.__table__.columns:
+        value = getattr(row, column.name)
+        values[column.name] = _iso(value) if isinstance(value, datetime) else value
+    return values
+
+
+def events_after(
+    session: Session,
+    *,
+    after: int,
+    limit: int,
+    job_id: str | None = None,
+    level: str | None = None,
+    stage: str | None = None,
+) -> list[EventRow]:
+    query = select(EventRow).where(EventRow.id > after)
+    if job_id is not None:
+        query = query.where(EventRow.job_id == job_id)
+    if level is not None:
+        query = query.where(EventRow.level == level)
+    if stage is not None:
+        query = query.where(EventRow.stage == stage)
+    return list(session.scalars(query.order_by(EventRow.id).limit(limit)))
+
+
+def _page(rows: list[EventRow], limit: int) -> Json:
+    full = len(rows) == limit
+    return {
+        "items": [event_view(row) for row in rows],
+        "next_cursor": str(rows[-1].id) if full else None,
+    }
+
+
+# -- jobs ----------------------------------------------------------------------
+
+
+@router.post("/jobs", status_code=202, tags=["jobs"])
+def create_job(request: PipelineRequest, session: Db, enqueue: Queue, bus: Redis) -> Json:
+    """Start a job. Phase 1 accepts ``kind: pipeline``."""
+    with session.begin():
+        job, first = job_service.create_pipeline_job(session, request)
+        view = job_service.job_view(session, job)
+    enqueue(first)
+    job_service.after_commit(bus, view["id"])
+    return view
+
+
+@router.get("/jobs", tags=["jobs"])
+def list_jobs(
+    session: Db,
+    state: str | None = None,
+    kind: str | None = None,
+    limit: Limit = 50,
+    cursor: str | None = None,
+) -> Json:
+    """Jobs, newest first."""
+    query = select(Job)
+    if state is not None:
+        query = query.where(Job.state == state)
+    if kind is not None:
+        query = query.where(Job.kind == kind)
+    if cursor is not None:
+        query = query.where(Job.id < cursor)
+    rows = list(session.scalars(query.order_by(Job.id.desc()).limit(limit)))
+    return {
+        "items": [job_service.job_view(session, job) for job in rows],
+        "next_cursor": rows[-1].id if len(rows) == limit else None,
+    }
+
+
+@router.get("/jobs/{job_id}", tags=["jobs"])
+def get_job(job_id: str, session: Db) -> Json:
+    return job_service.job_view(session, job_service.get_job(session, job_id))
+
+
+@router.post("/jobs/{job_id}/cancel", status_code=202, tags=["jobs"])
+def cancel_job(job_id: str, session: Db, bus: Redis) -> Json:
+    """Request cancellation. ``409`` if the job has already finished."""
+    with session.begin():
+        job, running = job_service.request_cancel(session, job_id)
+        view = job_service.job_view(session, job)
+    if running:
+        bus.set_control(job_id, "cancel")  # fast path; jobs.desired_state is the durable copy
+    job_service.after_commit(bus, job_id)
+    return view
+
+
+@router.post("/jobs/{job_id}/retry", status_code=202, tags=["jobs"])
+def retry_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
+    """Requeue a failed job. Finished stages are reused. ``409`` if it is not failed."""
+    with session.begin():
+        job, resume = job_service.request_retry(session, job_id)
+        view = job_service.job_view(session, job)
+    bus.clear_control(job_id)
+    enqueue(resume)
+    job_service.after_commit(bus, job_id)
+    return view
+
+
+@router.get("/jobs/{job_id}/events", tags=["jobs"])
+def job_events(
+    job_id: str,
+    session: Db,
+    level: Level | None = None,
+    stage: str | None = None,
+    after: int = 0,
+    limit: Limit = 50,
+    cursor: str | None = None,
+) -> Json:
+    job_service.get_job(session, job_id)
+    start = int(cursor) if cursor and cursor.isdigit() else after
+    rows = events_after(session, after=start, limit=limit, job_id=job_id, level=level, stage=stage)
+    return _page(rows, limit)
+
+
+@router.get("/jobs/{job_id}/telemetry", tags=["jobs"])
+def job_telemetry(
+    job_id: str,
+    session: Db,
+    stage: str | None = None,
+    from_: Annotated[datetime | None, Query(alias="from")] = None,
+    to: datetime | None = None,
+    max_points: Annotated[int, Query(ge=10, le=5000)] = 600,
+) -> Json:
+    """Samples for charts, thinned evenly to at most ``max_points`` per series."""
+    job_service.get_job(session, job_id)
+
+    def series(model: type[ResourceSample] | type[ProcessSample]) -> list[Json]:
+        query = select(model).where(model.job_id == job_id)
+        if stage is not None:
+            query = query.where(model.stage == stage)
+        if from_ is not None:
+            query = query.where(model.ts >= from_)
+        if to is not None:
+            query = query.where(model.ts <= to)
+        rows = list(session.scalars(query.order_by(model.ts, model.id)))
+        step = max(1, -(-len(rows) // max_points))
+        return [_columns(row) for row in rows[::step]]
+
+    return {"resource": series(ResourceSample), "process": series(ProcessSample)}
+
+
+# -- activity log and telemetry ------------------------------------------------
+
+
+@router.get("/events", tags=["monitoring"])
+def all_events(
+    session: Db,
+    level: Level | None = None,
+    stage: str | None = None,
+    job_id: str | None = None,
+    after: int = 0,
+    limit: Limit = 50,
+    cursor: str | None = None,
+) -> Json:
+    """Events across all jobs, oldest first (MON-4.3)."""
+    start = int(cursor) if cursor and cursor.isdigit() else after
+    rows = events_after(session, after=start, limit=limit, job_id=job_id, level=level, stage=stage)
+    return _page(rows, limit)
+
+
+@router.get("/telemetry/latest", tags=["monitoring"])
+def latest_sample(session: Db, response: Response) -> Json | None:
+    """The most recent resource sample; ``204`` if the sampler has not written one yet."""
+    row = session.scalars(
+        select(ResourceSample).order_by(ResourceSample.id.desc()).limit(1)
+    ).first()
+    if row is None:
+        response.status_code = 204
+        return None
+    return _columns(row)
+
+
+# -- host script ---------------------------------------------------------------
+
+
+class PowerEvent(BaseModel):
+    type: Literal["suspend", "resume"]
+    at: datetime
+
+
+@router.get("/host/keep-awake", tags=["host"])
+def keep_awake(session: Db) -> Json:
+    """Should Windows be kept awake right now? Polled by the host script (ADR-0008)."""
+    active = list(session.scalars(select(Job.id).where(Job.state.in_(ACTIVE)).order_by(Job.id)))
+    return {"keep_awake": bool(active), "active_jobs": active}
+
+
+@router.post("/host/power-events", status_code=202, tags=["host"])
+def power_event(body: PowerEvent, session: Db, bus: Redis) -> Json:
+    """Record a suspend or resume reported by the host script, so a gap on a job's
+    timeline is explained (BUG4)."""
+    resumed = body.type == "resume"
+    event = Event(
+        ts=body.at,
+        type="system",
+        level="INFO" if resumed else "WARN",
+        message="Windows resumed from sleep" if resumed else "Windows is going to sleep",
+        reason=None if resumed else "The host reported a suspend.",
+        suggested_action=None
+        if resumed
+        else "Running jobs pause with the machine and continue or are requeued on resume.",
+        metrics={"source": "host_script", "power": body.type},
+    )
+    with session.begin():
+        insert_events(session, [event])
+    with contextlib.suppress(Exception):
+        bus.publish(LIVE_GLOBAL, {"kind": "event", "job_id": None})
+    return {"accepted": True}
