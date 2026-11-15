@@ -15,3 +15,4 @@ Only an explicit "approved" from the owner passes a gate (SPEC §9.2). Silence o
 | 2026-11-15 | SCR-03 version detail and lineage, low-fi wireframe (`screens/SCR-03-lofi_v1.html`) | v1 | owner | "Approved", including the `dup_group_id` filter on `GET /versions/{id}/rows` (added to API.md). Next: the hi-fi mockup |
 | 2026-11-15 | SCR-03 version detail and lineage, hi-fi mockup (`screens/SCR-03_v1.html`) | v1 | owner | "Approved". Gate 2 passed for SCR-03. Its three icons (eye, report, grid) join the set; button groups with a pressed state become the pattern for filters |
 | 2026-11-15 | SCR-04 live job view, low-fi wireframe (`screens/SCR-04-lofi_v1.html`) | v1 | owner | "Approved". Next: the hi-fi mockup |
+| 2026-11-15 | SCR-04 live job view, hi-fi mockup (`screens/SCR-04_v1.html`) | v1 | owner | "Approved". Gate 2 passed for SCR-04 |
