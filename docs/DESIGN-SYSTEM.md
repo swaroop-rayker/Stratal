@@ -140,7 +140,7 @@ All are in the preview with their variants and states. States shown where they a
 
 ## Open points for the owner
 
-1. **Fonts.** The preview shows IBM Plex Sans and JetBrains Mono only if they are installed on the machine viewing it; on this laptop it currently falls back to Segoe UI and Cascadia Mono, so the type pairing you see is not the proposed one. To show the real fonts I need your OK to download the two families (about 1 MB, open licence, from their official GitHub releases) into the repository.
+1. **Fonts. Resolved 2026-11-15:** with the owner's OK, IBM Plex Sans (400, 500, 600) and JetBrains Mono (400, 500) are bundled in `assets/fonts/` as WOFF2 with their OFL licences (about 390 KB; sources and hashes in its README). The preview loads them from there; opened from disk in Edge it renders both. Firefox has not been tried and may refuse local font files from a parent folder, in which case the preview falls back and says so.
 2. **Accent colour.** Violet was chosen because it collides with no state, severity or resource colour. If you would rather have another hue, the constraint is the same.
 3. **Density.** 13 px default text and 36 px table rows (28 px dense). Say if you want it looser.
 
@@ -149,3 +149,4 @@ All are in the preview with their variants and states. States shown where they a
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-14 | First version, for Gate 0 review |
+| v1 (fonts) | 2026-11-15 | Not a new version: the approved typefaces are now bundled and the preview loads them. No token, size or component changed; the preview now shows the type the approval named instead of the fallback |

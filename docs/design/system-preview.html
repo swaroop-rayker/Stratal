@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Stratal design system — preview v1</title>
 <style>
+/* Bundled fonts (assets/fonts/, SIL OFL 1.1). Local files only: nothing is fetched from the network. */
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-style: normal; font-display: swap; src: url("../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-style: normal; font-display: swap; src: url("../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-style: normal; font-display: swap; src: url("../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-style: normal; font-display: swap; src: url("../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-style: normal; font-display: swap; src: url("../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
 /* ============================================================================
    TOKENS. Everything below this block uses only these variables.
    Dark is the default theme; light redefines the colour tokens only.
@@ -334,7 +340,7 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center
 </div>
 
 <h2 id="type">2. Typography</h2>
-<p>UI: IBM Plex Sans. Numbers, IDs, logs and code: JetBrains Mono. Both are open-licence and will be bundled with the app, not loaded from the network. <strong style="color:var(--warning)">This preview shows them only if they are installed on this machine</strong>; otherwise it falls back to Segoe UI and Cascadia Mono. Currently rendering: <span class="mono" id="fonts">…</span></p>
+<p>UI: IBM Plex Sans. Numbers, IDs, logs and code: JetBrains Mono. Both are open-licence and bundled in <span class="mono">assets/fonts/</span>, never loaded from the network. If a browser refuses to load them from a local file, the preview falls back to Segoe UI and Cascadia Mono and says so here. Currently rendering: <span class="mono" id="fonts">…</span></p>
 <div class="type-row"><span class="label mono">32 / semibold</span><span style="font-size:var(--fs-32);font-weight:var(--fw-semibold);line-height:var(--lh-tight)">Dataset versions</span></div>
 <div class="type-row"><span class="label mono">24 / semibold</span><span style="font-size:var(--fs-24);font-weight:var(--fw-semibold)">Page title</span></div>
 <div class="type-row"><span class="label mono">20 / semibold</span><span style="font-size:var(--fs-20);font-weight:var(--fw-semibold)">Section heading</span></div>

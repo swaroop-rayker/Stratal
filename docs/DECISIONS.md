@@ -248,6 +248,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Validated in `create_pipeline_job`; the first stage's `input_version_id` is the given version. Overrides or `until_stage` naming a stage that would not run are rejected.
 - **Why:** Changing one setting without re-ingesting, and the "continue from this version" action planned for SCR-03.
 
+**Fonts bundled in the repository** (2026-11-15, design system, NFR-7)
+- **What:** IBM Plex Sans 400/500/600 and JetBrains Mono 400/500 as WOFF2, with their SIL OFL 1.1 licences, in `assets/fonts/`.
+- **How:** Five files fetched individually from each project's release tag (`@ibm/plex-sans@1.1.0`, `v2.304`) rather than the release zips, checked for the WOFF2 signature and the listed sizes, hashes recorded in the folder's README. The design preview declares them with `@font-face`; the frontend will use the same files in M6.
+- **Why:** The approved pairing was only visible on machines with the fonts installed, and run time must not depend on the network. Only the weights the design system uses are kept.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
