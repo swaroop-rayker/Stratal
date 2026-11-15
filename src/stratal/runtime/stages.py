@@ -24,8 +24,13 @@ from stratal.data.ingest import IngestConfig, run_ingest
 from stratal.data.preprocess import PreprocessConfig, run_preprocess
 from stratal.data.versioning import derive_version_identity
 from stratal.db.models import Dataset
+from stratal.label.filter_stage import FilterConfig, FilterRule, run_filter
+from stratal.label.filtering import filter_decisions
+from stratal.label.stage import OWNER_UNITS as LABEL_UNITS
+from stratal.label.stage import LabelConfig, LabelModels, LabelUnits, run_label
 from stratal.mon.events import MetricValue
 from stratal.runtime.context import JobContext
+from stratal.runtime.gpu_lease import gpu_lease
 from stratal.storage.derivations import PgDerivationCache
 
 Queue = Literal["cpu", "gpu"]
@@ -253,3 +258,90 @@ def _run_preprocess(run: StageRun) -> StageResult:
 
 register(StageDef("clean", "cpu", CleanConfig, make_clean_runner(OWNER_UNITS)))
 register(StageDef("preprocess", "cpu", PreprocessConfig, _run_preprocess))
+
+
+def _owner_unit_missing(stage: str, exc: NotImplementedError) -> StratalError:
+    return StratalError(
+        f"Stage {stage} needs an owner unit that is not written yet: {exc}",
+        suggested_action='Stop the pipeline before it with "until_stage", or write the unit '
+        "(ADR-0012; its tests are strict expected failures until then).",
+    )
+
+
+def real_label_models(data_dir: Path) -> LabelModels:
+    """The real models, built in the GPU worker only: this is where PyTorch is imported."""
+    from stratal.label import hf
+
+    models_dir = data_dir / "models"
+    return LabelModels(
+        gpu=hf.TorchGpu,
+        load_captioner=lambda c: hf.load_captioner(
+            c.captioner,
+            models_dir,
+            dtype=c.dtype,
+            task=c.caption_task,
+            max_new_tokens=c.max_new_tokens,
+            num_beams=c.num_beams,
+        ),
+        load_clip=lambda c: hf.load_clip(c.clip_model, models_dir, dtype=c.dtype),
+        prepare=lambda c: hf.set_vram_cap(c.vram_fraction),
+        library_versions=hf.library_versions(),
+    )
+
+
+def make_label_runner(
+    models: Callable[[Path], LabelModels], units: LabelUnits
+) -> Callable[[StageRun], StageResult]:
+    """The label stage's runner. Tests register one built with fake models and units."""
+
+    def _run_label(run: StageRun) -> StageResult:
+        def body(given: DerivedInput) -> DerivedOutput:
+            try:
+                result = run_label(
+                    parent_manifest=given.manifest,
+                    parent_version_id=given.version_id,
+                    data_dir=run.data_dir,
+                    config=LabelConfig.model_validate(given.config),
+                    derive=derive_version_identity,
+                    sink=run.ctx,
+                    cache=PgDerivationCache(run.engine, job_id=run.ctx.job_id),
+                    models=models(run.data_dir),
+                    units=units,
+                    lease=lambda: gpu_lease(
+                        run.engine, holder=f"{run.ctx.job_id}/label", wait_s=60
+                    ),
+                    checkpoint=run.ctx.raise_if_cancelled,
+                )
+            except NotImplementedError as exc:
+                raise _owner_unit_missing("label", exc) from None
+            return DerivedOutput(result.record, 0, result.metrics)
+
+        return run_derived_stage(run, stage="label", config_model=LabelConfig, body=body)
+
+    return _run_label
+
+
+def make_filter_runner(rule: FilterRule) -> Callable[[StageRun], StageResult]:
+    def _run_filter(run: StageRun) -> StageResult:
+        def body(given: DerivedInput) -> DerivedOutput:
+            try:
+                result = run_filter(
+                    parent_manifest=given.manifest,
+                    parent_version_id=given.version_id,
+                    data_dir=run.data_dir,
+                    config=FilterConfig.model_validate(given.config),
+                    derive=derive_version_identity,
+                    sink=run.ctx,
+                    rule=rule,
+                )
+            except NotImplementedError as exc:
+                raise _owner_unit_missing("filter", exc) from None
+            return DerivedOutput(result.record, 0, result.metrics)
+
+        return run_derived_stage(run, stage="filter", config_model=FilterConfig, body=body)
+
+    return _run_filter
+
+
+register(StageDef("label", "gpu", LabelConfig, make_label_runner(real_label_models, LABEL_UNITS)))
+register(StageDef("filter", "cpu", FilterConfig, make_filter_runner(filter_decisions)))

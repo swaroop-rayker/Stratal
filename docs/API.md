@@ -42,6 +42,11 @@ Every error response uses RFC 9457 problem details with media type `application/
 | `conflict` | 409 | The resource already exists, e.g. a dataset slug |
 | `source_not_found` | 422 | The source folder does not exist or is not readable from the workers |
 | `dependency_unavailable` | 503 | Postgres, Redis or the data volume is unreachable |
+| `model_not_allowed` | 422 | A model name that is not on the allow-list (NFR-8) |
+| `model_integrity_failed` | 502 | A downloaded model file did not match its pinned size or hash; it was not kept (NFR-8) |
+| `vram_insufficient` | 409 | A model load was refused: free VRAM is below its estimate (ADR-0006) |
+| `gpu_busy` | 409 | Another process holds the GPU lease; the detail names it (BUG6) |
+| `model_not_pulled` | 409 | An allowed model that has not been downloaded; run time never downloads (NFR-7) |
 | `internal_error` | 500 | Anything unexpected. The detail carries the request ID, not a stack trace |
 
 Jobs that fail carry the same idea in `job.error`. These codes appear there and in ERROR events, never as HTTP statuses:
@@ -130,7 +135,7 @@ Pipeline request:
 }
 ```
 
-Every key under `stages` is optional and overrides the stage's defaults. As of M3 the stages are `ingest`, `clean` and `preprocess`; a key that names any other stage is rejected with `validation_error`. `until_stage` stops the pipeline after the named stage (`"ingest"` runs ingestion alone); `null` runs every available stage.
+Every key under `stages` is optional and overrides the stage's defaults. As of M4 the stages are `ingest`, `clean`, `preprocess`, `label` (GPU queue) and `filter`; a key that names any other stage is rejected with `validation_error`. `until_stage` stops the pipeline after the named stage (`"ingest"` runs ingestion alone); `null` runs every available stage.
 
 Give exactly one of `source` and `from_version`:
 
@@ -237,10 +242,10 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 | Version ID derivation | DATA-3.2 | Manifest rows + resolved config → content hash, config hash, version ID, per [DATA_MODEL.md §3](DATA_MODEL.md#3-identifiers) | M1 |
 | Exact-duplicate grouping | DATA-2.1 | `group_exact_duplicates(items: Sequence[ExactItem]) -> list[DuplicateGroup]`: rows with content hashes → groups of identical files, one deterministic keeper each | M3; written by the agent at the owner's request (ADR-0012) |
 | Perceptual hash and near-duplicate grouping | DATA-2.2 | `perceptual_hash(image, *, hash_size) -> str` (lowercase hex of the hash's bits); `group_near_duplicates(items: Sequence[HashedItem], *, max_distance) -> list[DuplicateGroup]` by Hamming distance, grouped transitively | M3; written by the agent at the owner's request (ADR-0012); threshold 8, chosen by the owner (OC-5) |
-| Caption batching loop | LABEL-1.1, LABEL-1.2 | Uncached items + captioner → cached captions, committed per batch, surviving OOM by shrinking the batch | M4 |
-| VRAM manager | RUN-1.4, RUN-1.5 | Load one model under the cap; unload and prove VRAM returned to baseline | M4 |
-| CLIP scoring | LABEL-1.3 | Image + caption → similarity score | M4 |
-| Filter rule | LABEL-1.4 | Scores + threshold → rows marked `filtered` with a reason | M4 |
+| Caption batching loop | LABEL-1.1, LABEL-1.2 | `caption_items(items: Sequence[CaptionItem], *, captioner, batch_size, open_image, commit, sink, checkpoint) -> CaptionReport`: uncached items → captions committed per batch, surviving `CudaOutOfMemory` by halving the batch | M4; written by the agent at the owner's request (ADR-0012) |
+| VRAM manager | RUN-1.4, RUN-1.5 | `VramManager(gpu: GpuBackend, *, sink)`: `load(loader, *, name, estimate_mb)`, `unload() -> UnloadReport`; one model at a time, refuse what does not fit, prove allocated memory is back at baseline | M4; written by the agent at the owner's request (ADR-0012) |
+| CLIP scoring | LABEL-1.3 | `clip_similarity(image_vectors, text_vectors) -> list[float]`: raw CLIP embeddings → one score per pair: plain cosine | M4; written by the agent at the owner's request (ADR-0012) |
+| Filter rule | LABEL-1.4 | `filter_decisions(items: Sequence[ScoredItem], *, threshold) -> dict[row_key, reason]`: rows to mark `filtered` (`clip_below_threshold`, `missing_caption`) | M4; written by the agent at the owner's request (ADR-0012); threshold 0.2, chosen by the owner (OC-5) |
 | Split assignment | DATA-4 | Rows + split config + seed → a split per row, per the section the owner writes | M5 |
 | Report statistics | EVAL-1.1 | Manifest + review decisions → counts per stage, score distribution, filter rate, acceptance with a 95% Wilson interval | M5 |
 | Semantic-duplicate clustering | DATA-2.3 (P2) | CLIP embeddings → clusters | M7 if time |
@@ -257,7 +262,10 @@ The CLI calls the same domain functions as the workers. It prints its result as 
 | `python -m stratal.cli versions --dataset NAME` | Lists a dataset's versions, newest first | M1 |
 | `python -m stratal.cli lineage VERSION_ID` | Shows a version's ancestry back to raw | M1 |
 
-Still planned for phase 1: run a pipeline, pull models.
+| `python -m stratal.cli models list` | Lists the allowed models and whether each is pulled | M4 |
+| `python -m stratal.cli models pull NAME... \| --all` | Downloads and verifies allowed models; the only hub access (NFR-8) | M4 |
+
+Still planned for phase 1: run a pipeline.
 
 ### Internal interfaces added in M1
 
@@ -285,6 +293,17 @@ Still planned for phase 1: run a pipeline, pull models.
 | `EtaEstimator` | `stratal.mon.eta` | `update(monotonic_seconds, step, total) -> Estimate(throughput, eta_seconds) \| None` |
 | Monitor | `python -m stratal.mon` | Collector, sampler and watchdog threads |
 | Host script | `host\stratal-host.ps1` | Polls `/host/keep-awake`; reports suspend and resume |
+
+### Internal interfaces added in M4
+
+| Interface | Where | Shape |
+|---|---|---|
+| Model protocols | `stratal.label.models` | `Captioner.caption(images) -> list[str]`, `ClipEncoder.encode_images/encode_texts -> list[Vector]`, `GpuBackend` (allocated, reserved, free, total MB; `synchronize`, `empty_cache`); adapters raise `CudaOutOfMemory(batch_size, detail)` |
+| Model adapters | `stratal.label.hf` (GPU image only) | `load_captioner(name, models_dir, *, dtype, task, max_new_tokens, num_beams)`, `load_clip(name, models_dir, *, dtype)`, `TorchGpu`, `set_vram_cap(fraction)`, `library_versions()` |
+| Label stage | `stratal.label.stage` | `run_label(*, parent_manifest, parent_version_id, data_dir, config: LabelConfig, derive, sink, cache, models: LabelModels, units: LabelUnits = OWNER_UNITS, lease, checkpoint) -> LabelResult` |
+| Filter stage | `stratal.label.filter_stage` | `run_filter(*, parent_manifest, parent_version_id, data_dir, config: FilterConfig, derive, sink, rule = filter_decisions) -> FilterResult` |
+| GPU lease | `stratal.runtime.gpu_lease` | `with gpu_lease(engine, *, holder, wait_s=0)`: raises `GpuBusy` naming the holder; `current_holder(engine)` |
+| Pretrained models | `stratal.pretrained` | `catalog.get_model(name)`, `catalog.local_path(models_dir, name)`, `pull.pull(model, models_dir)` |
 
 ### Internal interfaces added in M3
 

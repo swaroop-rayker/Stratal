@@ -228,6 +228,7 @@ Newest entries go at the bottom of their section. All entries below date from th
   - Unrelated pictures: the nearest other picture was 12 to 22 bits away. Nothing in the demo folder groups at 8 or 10; one pair groups at 12.
   - Distances are always even: each hash has exactly 32 one-bits, because each bit says above or below the median of 64 values. A threshold of 9 therefore behaves exactly like 8.
 - **Why:** OC-5 gives the owner the choice from measured distances. The owner accepted 8 on 2026-11-15: it sits between re-encodings (≤ 4) and the nearest unrelated generated pictures (≥ 12). Generated pictures are not photographs, so the same two measurements are worth repeating on the phase-1 dataset; a change is a config change and gives new version IDs.
+- **On real photographs (S-07 run, 2,000 COCO images):** one near-duplicate, at exactly 8 bits: two burst shots of the same table seconds apart (Flickr 9853575984 and 9853704863), the larger file kept. A correct catch, and the kind that would leak between train and test splits in M5.
 
 **Exact duplicates keep the smallest row key** (M3, DATA-2.1)
 - **What:** Files with the same SHA-256 form one group; the copy with the smallest `row_key` stays accepted.
@@ -293,6 +294,76 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **What:** IBM Plex Sans 400/500/600 and JetBrains Mono 400/500 as WOFF2, with their SIL OFL 1.1 licences, in `assets/fonts/`.
 - **How:** Five files fetched individually from each project's release tag (`@ibm/plex-sans@1.1.0`, `v2.304`) rather than the release zips, checked for the WOFF2 signature and the listed sizes, hashes recorded in the folder's README. The design preview declares them with `@font-face`; the frontend will use the same files in M6.
 - **Why:** The approved pairing was only visible on machines with the fonts installed, and run time must not depend on the network. Only the weights the design system uses are kept.
+
+## M4: labeling
+
+**Phase-1 dataset: a 10k subset of COCO 2017** (M4, SPEC §6 open question; accepted by the owner 2026-11-15)
+- **What:** 10,000 images from COCO 2017 with their five human captions each.
+- **How:** A seeded random choice of image IDs, the list kept in the repository so the subset can be rebuilt; images in `sources/`, never in git.
+- **Why:** Everyday photographs with reference captions, so captioning quality (CIDEr-D, CL-13) and CLIP scores can be checked against human text; 10k is a few hours of captioning at NFR-3's 2 img/s and about 1.6 GB on disk.
+
+**COCO images chosen by licence** (M4, LABEL-1.1)
+- **What:** The 10,000 images come only from the 30,836 COCO 2017 training images whose Flickr licence allows reuse, commercial reuse included: CC BY, CC BY-SA, or no known copyright.
+- **How:** `scripts/datasets/coco10k.py select` draws them with seed 2026; the IDs are committed in `scripts/datasets/coco10k_ids.txt`, and each image's licence, Flickr link and five captions go to `sources/coco10k-meta/images.jsonl`. The annotations zip matched its published MD5 and SHA-1.
+- **Why:** The repository is on GitHub, and later LoRA samples (IMG-1.2) may be shown. CC BY needs attribution, so the link is kept. COCO serves only plain HTTP and has no per-image checksums; ingest rejects anything that does not decode.
+
+**Model allow-list with every file pinned** (M4, NFR-8, ARCHITECTURE §8)
+- **What:** `stratal.pretrained.catalog` lists each allowed model by repository, full commit hash and every file it may fetch, with its size and hash. `python -m stratal.cli models pull` is the only code that contacts the hub.
+- **How:** Large files are checked against the SHA-256 in their Git LFS pointer, small ones against git's blob SHA-1, while streaming to a temporary name; a mismatch is deleted and stops the pull. A stamp file is written last. The download uses the standard library, so pulling needs no new dependency; jobs run with `HF_HUB_OFFLINE` and `TRANSFORMERS_OFFLINE` set (NFR-7).
+- **Why:** Pinning a revision trusts whatever the hub serves for it; pinning hashes does not. Listing files means pickle weights (`pytorch_model.bin`, `tf_model.h5`) that repositories also carry can never be fetched.
+
+**CLIP ViT-B/32 from LAION, BLIP-large for S-06** (M4, LABEL-1.3, spike S-06)
+- **What:** CLIP scoring uses `laion/CLIP-ViT-B-32-laion2B-s34B-b79K`; the comparison captioner is `Salesforce/blip-image-captioning-large`. Florence-2-base stays the default (ADR-0009).
+- **How:** Each pinned in the catalog; 605 MB and 1.88 GB.
+- **Why:** OpenAI's ViT-B/32 and BLIP-base carry safetensors only in unreviewed community pull requests, which anyone can upload; their main branches have pickle weights only. These two publish safetensors on their main branch. LAION's model is the same architecture, so scores are comparable in kind but not in value with published OpenAI-CLIP scores.
+
+**Default captioner: Florence-2-base, `<CAPTION>`** (M4, LABEL-1.1, spike S-06; chosen by the owner 2026-11-15)
+- **What:** The label stage captions with Florence-2-base's `<CAPTION>` task, fp16, three beams, at most 40 new tokens.
+- **How:** The defaults of the label stage's config; BLIP-large stays on the allow-list as the alternative.
+- **Why:** In S-06 its captions scored level with COCO's human captions on CLIP (0.300 against 0.302) at 10 img/s. The detailed task runs past CLIP's 77 tokens and takes twice as long; BLIP-large showed a fixed "there is a ..." opening and more mistakes.
+
+**transformers in the GPU worker only** (M4, LABEL-1.1, LABEL-1.3)
+- **What:** `transformers` (SPEC §7.2) is in the `gpu` extra, with the 13 packages it brings, numpy among them.
+- **How:** Re-locked with uv; the API, CPU worker and dev images are unchanged.
+- **Why:** Only GPU stages load models, and the API image must stay free of ML libraries.
+
+**Label stage: the GPU only for what is missing** (M4, LABEL-1.1 to 1.3, ADR-0006)
+- **What:** The label stage looks every image up in the derivation cache first and takes the GPU lease, sets the VRAM cap and loads a model only if something is missing: once for captions, once for CLIP scores, one model at a time.
+- **How:** Captions are keyed by the preprocessed copy's hash and every setting that can change the text, including library versions; scores by image and caption together. The caption loop commits per batch; the shell commits CLIP scores per batch. A second pass writes the manifest from the cache.
+- **Why:** A killed or repeated run resumes from the cache without reloading models (LABEL-1.2), identical copies are captioned once, and the lease is never held while nothing uses the GPU (BUG6).
+
+**VRAM estimates from measurements** (M4, ADR-0006 rule 4; revised 2026-11-15 after the demo)
+- **What:** Before loading, the card must have free the weights file's size plus 3.9 GB for the captioner (4.3 GB for Florence-2) or 1.2 GB for CLIP.
+- **How:** `caption_vram_estimate_mb` and `clip_vram_estimate_mb` in the label config; the VRAM manager compares the total with the driver's free memory. The weights file's size is used as is, an upper bound at either precision: Florence-2-base is stored in fp16 (452 MB on the card), CLIP and BLIP in fp32.
+- **Why:** Florence-2 at batch 16 peaks at 4.05 GB reserved (S-06; 3.78 GB in the NFR-1 run), almost all of it activations. The first estimate asked for 4.7 GB of the 5.07 GB that was free in the demo, leaving 0.3 GB for anything else on the card; 4.3 GB still covers the peak with a quarter of a gigabyte to spare.
+
+**CLIP threshold: 0.2 on the cosine scale** (M4, LABEL-1.4, OC-5; chosen by the owner 2026-11-15)
+- **What:** `FilterConfig.clip_threshold = 0.2` by default.
+- **How:** A config field; a new value reruns only `filter` and later stages.
+- **Why:** OC-5 gives the owner the choice from the measured score distribution; the owner kept 0.2 after seeing it. Measured in the M4 demo, 994 COCO images captioned by Florence-2 and scored as plain cosine:
+  - Median 0.313, middle half 0.286 to 0.340, lowest 0.165, highest 0.455. One peak; no separate cluster of bad captions.
+  - Below 0.18: 0.3 %; below 0.20: 0.9 %; below 0.22: 2.3 %; below 0.25: 6.9 %.
+  - The nine rows under 0.20 are mostly plausible captions of busy, generic street scenes, with a few partly wrong ("a painting of a man pushing a cart", "mushroom" for a bagel). CLIP scores busy scenes lower whatever the caption, so a threshold trims a tail more than it catches wrong captions; the manual review (LABEL-1.5, M5) will show how many of the trimmed rows were bad.
+
+**CLIP similarity is plain cosine** (M4, LABEL-1.3; written by the agent at the owner's request)
+- **What:** `clip_score` is the cosine between CLIP's image and text embeddings, in [-1, 1], neither rescaled nor clipped.
+- **How:** `math.sumprod` for the dot product, one square root of `|a|²·|b|²` (so a vector against itself gives exactly 1.0), clamped to [-1, 1]; zero, NaN or infinite vectors are refused.
+- **Why:** It is the quantity CLIP was trained on, and the scale S-06 and the demo measured. CLIPScore's 2.5 · max(cos, 0) can be computed from it at report time; clipping here would erase the difference between unrelated and contradictory.
+
+**Filter rule refuses what would make it order- or NaN-dependent** (M4, LABEL-1.4)
+- **What:** Missing or blank captions are marked first; then scores below the threshold. A row key given twice, a captioned row without a score, and a score that is not finite are all errors.
+- **How:** One pass with a set of keys seen; the result is sorted by row key.
+- **Why:** A NaN compares false with every threshold and would silently keep its row; duplicate keys would make the answer depend on order (rule 5).
+
+**Caption loop halves on out-of-memory and never grows back** (M4, LABEL-1.1, LABEL-1.2, BUG2)
+- **What:** On `CudaOutOfMemory` the batch is halved, down to 1, with a WARN naming the new size and the config key to set; the same images are retried; the size stays reduced for the rest of the run.
+- **How:** Each batch is committed before the next starts; the progress total is recomputed as batches done plus remaining images at the current size; a failed batch's images are reopened, not kept.
+- **Why:** Halving finds a fitting size in at most log2(batch) retries. Every image is a preprocessed copy of at most 768 px, so a size that failed once would fail again; growing back would cost one out-of-memory error each time for little speed.
+
+**VRAM manager measures after emptying the cache, with a 1 MB tolerance** (M4, RUN-1.4, BUG5)
+- **What:** Before a load it collects garbage, synchronises and empties PyTorch's cache, then reads the baseline and the driver's free memory; after an unload it does the same and compares allocated memory with the baseline.
+- **How:** `TOLERANCE_MB = 1.0`. A leak is a WARN with the megabytes still held, not an exception; a loader that fails part-way is cleaned up before the error propagates.
+- **Why:** Cached but unused blocks of this process are free for the next model, and an honest baseline needs them gone. Measured on the card: after Florence-2 and CLIP had run, allocated memory came back to exactly its baseline, cuBLAS workspaces included, so any real leak (one layer's weights is many megabytes) stands out.
 
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)

@@ -25,6 +25,7 @@ dependencies = [
 # Installed only in the GPU worker image. The API image stays free of ML libraries.
 gpu = [
     "torch>=2.5",               # LABEL-1.1, RUN-1.4; spikes S-01 and S-02
+    "transformers>=4.56",       # LABEL-1.1 Florence-2 (native class, ADR-0009), LABEL-1.3 CLIP
 ]
 
 [dependency-groups]

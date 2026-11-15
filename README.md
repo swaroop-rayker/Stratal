@@ -52,6 +52,24 @@ You need Docker Desktop (WSL2 backend) and git. Python runs only inside containe
 | Start a pipeline job | `POST http://127.0.0.1:8000/api/v1/jobs` (see docs/API.md §3.3); sources go under `.\sources` |
 | Keep Windows awake while jobs run | `.\host\stratal-host.ps1` |
 
+## Benchmarks (NFR-3)
+
+Measured on 2026-11-15 on the RTX 4050 Laptop GPU (6 GB) in the M4 demo (`job_0006`): 1,000 COCO 2017 images through the whole phase-1 pipeline as one job, in about 2 minutes 20 seconds. Florence-2-base with `<CAPTION>`, fp16, three beams, batch 16; CLIP ViT-B/32.
+
+| Stage | Throughput | Notes |
+|---|---|---|
+| ingest | 91 files/s | reads through the Windows mount (spike S-04) |
+| clean | 202 images/s | pHash, exact and near duplicates |
+| preprocess | 139 images/s | COCO images are already ≤ 640 px, so nothing was resized |
+| label | 8.9 images/s overall | captioning about 10 images/s, CLIP scoring about 100 pairs/s; model loads 1.5 s and 0.6 s |
+| filter | under 0.1 s | |
+
+- **NFR-3 (captioning ≥ 2 images/s):** met five times over; no change to the target is needed.
+- **Peak VRAM while labelling:** 4.20 GB in use on the card (NVML, the Windows desktop's 0.22 GB included); PyTorch allocated at most 3.55 GB. NFR-1's limit is 5.5 GB.
+- **Peak RAM of the label process:** 2.5 GB, under the GPU worker's 4.5 GB container limit.
+- **At 2,000 images** (spike S-07, `job_0007`): 4 minutes 56 seconds end to end, labelling at 8.7 images/s; every container under half its memory limit.
+- Spike S-06 has the same captioners at batch sizes 4, 8 and 16 ([docs/RISKS.md](docs/RISKS.md)).
+
 ## Documentation
 
 | | |

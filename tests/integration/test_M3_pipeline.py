@@ -53,7 +53,9 @@ class Api:
         self.client = TestClient(app)
 
     def post(self, body: dict[str, Any]) -> Any:
-        return self.client.post("/api/v1/jobs", json={"kind": "pipeline", **body})
+        # M3's pipeline ends at preprocess; label and filter are tested in test_M4_pipeline.
+        request = {"kind": "pipeline", "until_stage": "preprocess", **body}
+        return self.client.post("/api/v1/jobs", json=request)
 
     def run(self, body: dict[str, Any]) -> dict[str, Any]:
         response = self.post(body)
@@ -157,22 +159,21 @@ def test_API_from_version_requests_are_validated(
     done = api.run(
         {"dataset": "fv", "source": {"path": source}, "stages": {"ingest": {"min_size": 32}}}
     )
-    raw, last = done["stages"][0]["output_version_id"], done["output_version_id"]
+    raw = done["stages"][0]["output_version_id"]
 
     unknown = api.post({"from_version": "ds_000000000000"})
     both = api.post({"dataset": "fv", "source": {"path": source}, "from_version": raw})
     neither = api.post({"dataset": "fv"})
     no_dataset = api.post({"source": {"path": source}})
     other_dataset = api.post({"dataset": "other", "from_version": raw})
-    nothing_left = api.post({"from_version": last})
     earlier_stage = api.post({"from_version": raw, "stages": {"ingest": {"min_size": 64}}})
     until_before = api.post({"from_version": raw, "until_stage": "ingest"})
 
-    for response in (unknown, both, neither, no_dataset, other_dataset, nothing_left):
+    for response in (unknown, both, neither, no_dataset, other_dataset):
         assert response.status_code == 422, response.text
         assert response.json()["code"] == "validation_error"
     assert unknown.json()["errors"][0]["loc"] == ["from_version"]
-    assert "nothing after it" in nothing_left.json()["detail"]
+    # "nothing after it" needs a version from the last stage: test_M4_pipeline.py.
     assert earlier_stage.status_code == 422 and "ingest" in earlier_stage.json()["detail"]
     assert until_before.status_code == 422
     assert api.queued == [], "no rejected request queued anything"

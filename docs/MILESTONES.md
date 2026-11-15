@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 waits on the phase-1 dataset and the model-weight downloads. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 waits on the owner's DATA-4 section. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -21,7 +21,7 @@
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
 | M3 | Cleaning and preprocessing | 1 | M | Done 2026-11-15 |
-| M4 | Labeling | 1 | L | Not started |
+| M4 | Labeling | 1 | L | Done 2026-11-15 |
 | M5 | Splits, review, eval report | 1 | M | Not started |
 | M6 | Phase-1 screens | 1 | L | Not started |
 | M7 | Phase-1 acceptance | 1 | M | Not started |
@@ -83,14 +83,14 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] `GET /api/v1/health` returns ok, and an error response has the problem-details shape (`test_API_health_*`, `test_ADR_0011_*`)
 - [x] `test_NFR_10_*`: every log line is JSON and carries the bound IDs
 - [x] `test_NFR_9_*`: the meta-test runs and reports no done-but-untested P0
-- [x] ruff, pyright (strict) and pytest pass locally; CI workflow file present (the workflow itself has never run: there is no remote)
+- [x] ruff, pyright (strict) and pytest pass locally; CI workflow file present (first green run on GitHub 2026-11-15, after E-009 was fixed)
 - [x] README has real setup and run steps
 - [x] RISKS.md, ERRORS.md and affected ADRs updated with spike results
 - [x] The old 84.6 GB Docker disk image on C: deleted on the owner's instruction; the D: image compacted from 89.7 GB to 40.9 GB
 - [x] Demo: stack up, health endpoint, GPU check output (shown in the session of 2026-11-13)
 - [x] Owner's OK to merge into `main` ("go ahead and finish M0", 2026-11-14)
 
-**Carried forward, not blocking:** the Mermaid diagrams in ARCHITECTURE.md and DATA_MODEL.md have not been rendered. The CI workflow first ran on 2026-11-15, when `main` was pushed to GitHub, and was rejected for a workflow-file error (`runner.temp` in job-level `env`); the fix is on `m3-clean-preprocess` and is verified when M3 reaches `main`.
+**Carried forward, not blocking:** the Mermaid diagrams in ARCHITECTURE.md and DATA_MODEL.md have not been rendered. The CI workflow first ran on 2026-11-15, when `main` was pushed to GitHub. It was rejected for a workflow-file error (`runner.temp` in job-level `env`), then failed on a real deadlock (E-009); both are fixed and CI has been green since.
 
 ## M1 — Ingestion, manifests, versions, lineage
 
@@ -199,37 +199,40 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Size** L · **Branch** `m4-labeling` · **Serves** LABEL-1.1–1.4, MON-3.1 (labeling), NFR-1, NFR-3, NFR-7, NFR-8, the phase-1 slice of RUN-1.4 and RUN-1.5; BUG2, BUG5, BUG6
 
-**Before starting:** phase-1 dataset chosen (open question); model-weight downloads approved.
+**Before starting:** phase-1 dataset chosen (open question); model-weight downloads approved. **Dataset chosen 2026-11-15:** a 10k subset of COCO 2017, accepted by the owner. Downloads approved 2026-11-15: COCO annotations and 10,000 images; Florence-2-base, CLIP ViT-B/32 (LAION) and BLIP-large.
 
 **Scope**
 
 - Model allow-list and an explicit pull command; the hub is offline at run time.
+
+**Agent's part built 2026-11-15:** allow-list and pull command; captioner and CLIP adapters (`stratal.label.hf`) with fakes; spike S-06; the GPU lease; label and filter stage shells, run end to end as one job with fakes (`test_M4_pipeline.py`); stubs, strict expected-failure tests and fakes for the four owner units. Until they are written, a pipeline job fails at `label` with a reason naming the missing unit; `"until_stage": "preprocess"` stops before it.
 - Captioner interface with Florence-2 and BLIP adapters and a deterministic fake for CPU tests.
 - Spike S-06: Florence-2 vs BLIP on 50 images, quality and speed.
 - GPU lease primitive; label and filter stage shells.
-- 👤 Caption batching loop with resume (LABEL-1.1, LABEL-1.2).
-- 👤 VRAM manager v1: load under the cap, unload and verify, OOM backoff (slice of RUN-1.4, RUN-1.5).
-- 👤 CLIP scoring (LABEL-1.3) and the filter rule with a chosen threshold (LABEL-1.4, OC-5).
-- Spike S-07: memory under the container limits.
+- Caption batching loop with resume (LABEL-1.1, LABEL-1.2). Owner unit, written by the agent at the owner's request on 2026-11-15 (ADR-0012).
+- VRAM manager v1: load under the cap, unload and verify, OOM backoff (slice of RUN-1.4, RUN-1.5). Owner unit, written by the agent at the owner's request.
+- CLIP scoring (LABEL-1.3) and the filter rule (LABEL-1.4). Owner units, written by the agent at the owner's request. 👤 The threshold is the owner's: 0.2, chosen 2026-11-15 (OC-5).
+- Spike S-07: memory under the container limits. **Done 2026-11-15:** every container under half its limit on 2,000 images; limits kept (RISKS.md).
 
 **Done when**
 
-- [ ] S-06 report delivered; owner decides Florence-2 vs BLIP
-- [ ] 👤 `test_LABEL_1_1_*`: every accepted row has a caption and a model version
-- [ ] 👤 `test_LABEL_1_2_*`: kill at 60%, restart, completes; no finished image is captioned twice
-- [ ] 👤 `test_LABEL_1_3_*`: a score is present for every pair
-- [ ] 👤 `test_LABEL_1_4_*`: rows below the threshold are marked with a reason, not deleted
-- [ ] `test_MON_3_1_*`: labeling emits its listed messages and metrics
-- [ ] 👤 `test_BUG5_*` (gpu): VRAM returns to baseline after unload and after the stage's process exits
-- [ ] `test_BUG6_*`: a second process cannot take the GPU lease
-- [ ] 👤 `test_BUG2_*` (gpu): an oversized batch produces a WARN with a smaller batch and the stage completes
-- [ ] `test_NFR_1_*` (gpu): logged peak VRAM is under 5.5 GB
-- [ ] NFR-3 benchmark recorded; target adjusted with the owner if needed
-- [ ] `test_NFR_7_*`: the label stage runs with the network disabled after models are pulled
-- [ ] `test_NFR_8_*`: no `trust_remote_code` in source; a model outside the allow-list is refused
-- [ ] Demo: label 1,000 images and watch it live through the API
-- [ ] Docs updated
-- [ ] Owner's OK to merge
+- [x] S-06 report delivered; owner decides Florence-2 vs BLIP (2026-11-15: Florence-2-base, `<CAPTION>`)
+- [x] `test_LABEL_1_1_*`: every accepted row has a caption and a model version (units written by the agent at the owner's request)
+- [x] `test_LABEL_1_2_*`: kill at 60%, restart, completes; no finished image is captioned twice
+- [x] `test_LABEL_1_3_*`: a score is present for every pair
+- [x] `test_LABEL_1_4_*`: rows below the threshold are marked with a reason, not deleted
+- [x] 👤 CLIP threshold chosen from the measured distribution (OC-5): 0.2, kept by the owner 2026-11-15 (`test_LABEL_1_4_default_threshold_is_the_owners_choice`)
+- [x] `test_MON_3_1_*`: labeling emits its listed messages and metrics (the shell's, with fakes; the caption loop's and VRAM manager's are in the owner's tests)
+- [x] `test_BUG5_*` (gpu): VRAM returns to baseline after unload and after the stage's process exits
+- [x] `test_BUG6_*`: a second process cannot take the GPU lease (also: a dead holder releases it)
+- [x] `test_BUG2_*` (gpu): an oversized batch produces a WARN with a smaller batch and the stage completes
+- [x] `test_NFR_1_*` (gpu): logged peak VRAM is under 5.5 GB (test: 3.78 GB reserved + context; demo log: 4.20 GB card-wide)
+- [x] NFR-3 benchmark recorded; target adjusted with the owner if needed (README: about 10 img/s captioning, five times the target; no change needed)
+- [x] `test_NFR_7_*`: the label stage runs with the network disabled after models are pulled (every socket connection refused)
+- [x] `test_NFR_8_*`: no `trust_remote_code` in source; a model outside the allow-list is refused (also: every file pinned by hash, a mismatched file is not kept)
+- [x] Demo: label 1,000 images and watch it live through the API (2026-11-15, `job_0006`: 1,000 COCO images through all five stages in about 2 min 20 s; 994 labelled, 9 filtered at 0.2; final version `ds_ef5728d21725`)
+- [x] Docs updated (2026-11-15; learning notes §5f and §21)
+- [x] Owner's OK to merge (2026-11-15, "Yes, merge and push")
 
 ## M5 — Splits, review, eval report
 

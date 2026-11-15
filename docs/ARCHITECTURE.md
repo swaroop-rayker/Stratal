@@ -77,7 +77,7 @@ flowchart LR
 | `ollama` | Local LLM serving (LLM-1.1) | Phase 3 | yes | to be set |
 | Host script | PowerShell on Windows: keeps the laptop awake while jobs run, reports sleep and resume | M2 | – | – |
 
-The limits sum to 9.0 GB, which is how NFR-2 is enforced. They are starting values, tuned from measurements in spike S-07 ([RISKS.md](RISKS.md)).
+The limits sum to 9.0 GB, which is how NFR-2 is enforced. Spike S-07 ([RISKS.md](RISKS.md)) measured them while labelling 2,000 images on 2026-11-15: every container stayed under half its limit (worker-gpu 2.2 of 4.5 GB, worker-cpu 0.9 of 2.5 GB), so they are kept, with worker-gpu's headroom left for training in phase 2.
 
 ## 3. The phase-1 pipeline
 
@@ -88,8 +88,8 @@ A pipeline run is one **job**. It has one **stage** per step, and each stage run
 | 0 | `ingest` | cpu | Scan the source folder, copy files into the blob store, read metadata, reject corrupt and undersized files | DATA-1.1–1.3 | agent |
 | 1 | `clean` | cpu | Mark exact duplicates and near duplicates (pHash). Semantic duplicates (P2) add a GPU sub-step | DATA-2.1–2.3 | agent for 2.1 and 2.2, at the owner's request (ADR-0012); owner for 2.3 and the thresholds (OC-5) |
 | 2 | `preprocess` | cpu | Write resized copies, keep originals | DATA-6.1 | agent |
-| 3 | `label` | gpu | Caption each image, then CLIP-score each pair | LABEL-1.1–1.3 | owner |
-| 4 | `filter` | cpu | Mark pairs below the CLIP threshold; validate the image–caption schema | LABEL-1.4, DATA-5.1 | owner |
+| 3 | `label` | gpu | Caption each image, then CLIP-score each pair | LABEL-1.1–1.3 | agent, at the owner's request (ADR-0012) |
+| 4 | `filter` | cpu | Mark pairs below the CLIP threshold; validate the image–caption schema | LABEL-1.4, DATA-5.1 | agent for the rule, at the owner's request (ADR-0012); owner for the threshold (OC-5) |
 | 5 | `split` | cpu | Assign train / val / test | DATA-4 | owner |
 | 6 | `evaluate` | cpu | Build the phase-1 report | EVAL-1.1 | owner (statistics) |
 
@@ -227,7 +227,7 @@ Everything Stratal owns lives on one Docker volume, `stratal-data`, on the Linux
 ├── blobs/sha256/ab/cd/<hash>     immutable files, named by content hash
 ├── manifests/<version_id>.parquet  one immutable manifest per dataset version
 ├── jobs/<job_id>/                per-job log, event spool, in-run checkpoints
-├── models/                       downloaded pretrained models
+├── models/<name>/<revision>/     pretrained models from the allow-list, verified by `models pull`
 ├── registry/                     trained weights (phase 2)
 ├── telemetry/1m/                 downsampled telemetry archive (NFR-12)
 └── tmp/                          staging area for atomic writes

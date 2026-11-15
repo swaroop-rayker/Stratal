@@ -22,6 +22,8 @@ from stratal.db.models import Derivation
 
 KIND_PHASH = "phash"
 KIND_PREPROCESS = "preprocess"
+KIND_CAPTION = "caption"
+KIND_CLIP_SCORE = "clip_score"
 
 
 def params_hash(params: Mapping[str, Any]) -> str:

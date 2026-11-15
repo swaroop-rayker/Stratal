@@ -13,6 +13,10 @@ x-stratal-env: &stratal-env
   STRATAL_DATABASE_URL: postgresql+psycopg://stratal:stratal@postgres:5432/stratal
   STRATAL_REDIS_URL: redis://redis:6379/0
   STRATAL_DATA_DIR: /data
+  # NFR-7: jobs never reach the model hub. Models come only from
+  # 'python -m stratal.cli models pull', which does not use these libraries.
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
 
 # The api, worker-cpu and monitor services run the same image.
 x-stratal-build: &stratal-build
