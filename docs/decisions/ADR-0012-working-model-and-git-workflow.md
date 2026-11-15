@@ -47,6 +47,7 @@ The split above is the default. The owner can hand any unit to the agent, and ea
 | Date | Unit | What happened |
 |---|---|---|
 | 2026-11-14 | Version-ID derivation (DATA-3.2) | After the stub and tests were delivered, the owner asked the agent to implement it. The agent did, and explained the algorithm in `docs/learning/`. |
+| 2026-11-15 | Exact and near duplicate detection (DATA-2.1, DATA-2.2) | After the stubs, strict expected-failure tests and fakes were delivered, the owner asked the agent to write them ("you write it"). The agent did, made the open design choices itself and recorded them in DECISIONS.md, and explained the algorithms in `docs/learning/`. The near-duplicate threshold stays the owner's (OC-5). |
 
 The remaining owner units are unchanged unless the owner says otherwise.
 

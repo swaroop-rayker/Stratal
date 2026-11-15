@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 in progress: agent's part built, owner's DATA-2.1 and DATA-2.2 next. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 in progress: everything built; DATA-2.1 and DATA-2.2 written by the agent at the owner's request; the OC-5 threshold and the owner's OK to merge are left. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -20,7 +20,7 @@
 | M0 | Environment proof, skeleton, docs | 1 | M | Done 2026-11-14 |
 | M1 | Ingestion, manifests, versions, lineage | 1 | M | Done 2026-11-14 |
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
-| M3 | Cleaning and preprocessing | 1 | M | In progress: agent's part built 2026-11-15; waiting on DATA-2.1, DATA-2.2 |
+| M3 | Cleaning and preprocessing | 1 | M | In progress: everything built 2026-11-15 (DATA-2.1 and DATA-2.2 by the agent at the owner's request); waiting on the OC-5 threshold and the owner's OK |
 | M4 | Labeling | 1 | L | Not started |
 | M5 | Splits, review, eval report | 1 | M | Not started |
 | M6 | Phase-1 screens | 1 | L | Not started |
@@ -174,22 +174,25 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 **Scope**
 
 - Clean stage shell; pHash values kept in the derivation cache.
-- 👤 Exact-duplicate grouping (DATA-2.1) and near-duplicate detection with a chosen threshold (DATA-2.2, OC-5).
+- Exact-duplicate grouping (DATA-2.1) and near-duplicate detection (DATA-2.2). Owner units, written by the agent at the owner's request on 2026-11-15 (ADR-0012). 👤 The threshold is still the owner's to choose (OC-5).
 - Preprocess stage: resize, apply EXIF orientation, convert to RGB, store the copy.
 - Carried from M2: `from_version` in the pipeline request.
 
-**Agent's part built 2026-11-15:** stubs, strict expected-failure tests and fakes for DATA-2.1 and DATA-2.2 (`src/stratal/data/dedupe.py`; 16 tests in `tests/unit/test_DATA_2_1_*.py` and `test_DATA_2_2_*.py`); the clean shell; the preprocess stage; the derivation cache; stage memoization; `from_version`. Until DATA-2.1 and DATA-2.2 are written, a default pipeline job fails at `clean` with a reason naming them.
+**Agent's part built 2026-11-15:** stubs, strict expected-failure tests and fakes for DATA-2.1 and DATA-2.2 (`src/stratal/data/dedupe.py`; 16 tests in `tests/unit/test_DATA_2_1_*.py` and `test_DATA_2_2_*.py`); the clean shell; the preprocess stage; the derivation cache; stage memoization; `from_version`.
+
+**DATA-2.1 and DATA-2.2 written 2026-11-15** by the agent, at the owner's request ("you write it"). The expected-failure markers are removed and the 16 contract tests pass. Twelve more tests (`test_DATA_2_dedupe_decisions.py`) pin the choices the contract left open: the keepers, transitive grouping, unusual image modes, the threshold's edges. An integration test runs the real units in a pipeline job. The threshold stays at the provisional 8 until the owner chooses it; the measured distances are in DECISIONS.md.
 
 **Done when**
 
-- [ ] 👤 `test_DATA_2_1_*`: 20 planted exact copies are marked, one kept per group
-- [ ] 👤 `test_DATA_2_2_*`: the same image at JPEG 90 and 70 leaves one kept
+- [x] `test_DATA_2_1_*`: 20 planted exact copies are marked, one kept per group (units written by the agent at the owner's request)
+- [x] `test_DATA_2_2_*`: the same image at JPEG 90 and 70 leaves one kept (same; at the provisional threshold of 8)
+- [ ] 👤 Near-duplicate threshold chosen from the measured distances (OC-5); 8 until then
 - [x] `test_DATA_6_1_*`: copies exist and respect the maximum; originals kept; a rerun adds nothing; a new maximum gives a new version ID
 - [x] `test_MON_3_1_*`: cleaning and preprocessing emit their listed messages and metrics (the clean stage's with fakes for the owner's units)
 - [x] `test_BUG1_*`: every stage's output reloads by version ID and equals what was written
 - [x] Invariant INV-05 holds after clean: the stage refuses to commit a version that breaks it (`test_INV_05_*`)
-- [ ] Demo: ingest → clean → preprocess as one pipeline job (runs end to end with fakes in `test_DATA_6_1_pipeline_*`; the demo waits for the owner's units)
-- [ ] Docs updated (done for the agent's part; the owner's units and the threshold chosen under OC-5 still to be recorded)
+- [x] Demo: ingest → clean → preprocess as one pipeline job (2026-11-15, `job_0005` on the live stack). 595 planted files in `sources/demo-m3`: 580 ingested; 20 exact and 20 near duplicates marked, with every JPEG 90 kept over its JPEG 70; 540 copies at ≤ 768 px. Final version `ds_ad9a39e33ab5`
+- [ ] Docs updated (done for everything built; the threshold chosen under OC-5 still to be recorded)
 - [ ] Owner's OK to merge
 
 ## M4 — Labeling

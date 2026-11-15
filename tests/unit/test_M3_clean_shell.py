@@ -12,7 +12,7 @@ import pytest
 from PIL import Image
 
 from stratal.core.errors import StratalError
-from stratal.data.clean import OWNER_UNITS, CleanConfig, ContractBroken, DedupeUnits, group_id
+from stratal.data.clean import CleanConfig, ContractBroken, DedupeUnits, group_id
 from stratal.data.dedupe import DuplicateGroup
 from stratal.storage.derivations import MemoryDerivationCache
 from stratal.testing import stagekit
@@ -153,16 +153,6 @@ def test_ADR_0012_clean_refuses_a_hash_that_is_not_lowercase_hex(tmp_path: Path)
 
     with pytest.raises(ContractBroken, match="lowercase hex"):
         stagekit.clean(data, raw, DedupeUnits(no_exact_duplicates, shouting, no_near_duplicates))
-
-
-def test_ADR_0012_an_owner_unit_not_written_yet_surfaces_as_not_implemented(
-    tmp_path: Path,
-) -> None:
-    folder, data = _folder(tmp_path, valid=2)
-    raw = stagekit.ingest(folder.root, data)
-
-    with pytest.raises(NotImplementedError, match=r"DATA-2\.1"):
-        stagekit.clean(data, raw, OWNER_UNITS)
 
 
 def test_ADR_0004_phash_values_are_cached_by_content_and_reused(tmp_path: Path) -> None:

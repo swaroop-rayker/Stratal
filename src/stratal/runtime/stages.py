@@ -229,15 +229,7 @@ def make_clean_runner(units: DedupeUnits) -> Callable[[StageRun], StageResult]:
             )
             return DerivedOutput(result.record, 0, result.metrics)
 
-        try:
-            return run_derived_stage(run, stage="clean", config_model=CleanConfig, body=body)
-        except NotImplementedError as exc:
-            raise StratalError(
-                f"{exc}",
-                suggested_action="The clean stage calls owner-implemented code that is not "
-                "written yet (DATA-2.1, DATA-2.2). Until it is, run the pipeline with "
-                'until_stage = "ingest".',
-            ) from exc
+        return run_derived_stage(run, stage="clean", config_model=CleanConfig, body=body)
 
     return _run_clean
 

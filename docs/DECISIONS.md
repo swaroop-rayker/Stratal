@@ -199,7 +199,7 @@ Newest entries go at the bottom of their section. All entries below date from th
 ## M3: cleaning and preprocessing
 
 **Clean stage is a shell around three owner functions** (M3, DATA-2.1, DATA-2.2, ADR-0012)
-- **What:** `stratal.data.clean` feeds, caches, checks and records; `stratal.data.dedupe` (owner) decides which rows are copies and which is kept.
+- **What:** `stratal.data.clean` feeds, caches, checks and records; `stratal.data.dedupe` (an owner unit, written by the agent at the owner's request on 2026-11-15) decides which rows are copies and which is kept.
 - **How:** The functions are injected as `DedupeUnits`; the owner's three are the default, tests pass fakes or scripted groups. Rows are marked `duplicate` with `dup_kind`, `dup_group_id` (`dg_` + 12 hex of the kind and sorted members) and `dup_of`.
 - **Why:** The owner writes only the decisions, in plain functions with no database or events, and can test them alone; the plumbing can be built and tested before they exist.
 
@@ -211,12 +211,48 @@ Newest entries go at the bottom of their section. All entries below date from th
 **Owner code version is part of the config** (M3)
 - **What:** `CleanConfig.algorithm_version` defaults to `dedupe.ALGORITHM_VERSION`.
 - **How:** It goes into the version's config hash and the pHash cache key.
-- **Why:** Without it, stage memoization would keep reusing versions made by an older implementation while the owner iterates on DATA-2.1 and DATA-2.2.
+- **Why:** Without it, stage memoization would keep reusing versions made by an older implementation of DATA-2.1 and DATA-2.2.
 
 **Near-duplicate threshold is provisional** (M3, OC-5)
 - **What:** `phash_hash_size = 8`, `phash_max_distance = 8` by default.
-- **How:** Plain config fields; the DATA-2.2 tests read the default, so they follow it when the owner changes it.
-- **Why:** OC-5 gives the owner the choice from measured distances; the stage needs some value to run.
+- **How:** Plain config fields; the DATA-2.2 tests read the default, so they follow it when the owner changes it. Measured 2026-11-15 on generated pictures (600 drawn for the test, and the 1,500 in `sources/demo/valid`), 64-bit hashes:
+  - JPEG 90, 70 or 40, or a resize to half size: at most 4 bits from the original.
+  - Brightness +15 %: at most 8 (95 % within 4).
+  - A 3° rotation: median 8, at most 16.
+  - A 5 % crop on each side: median 10, at most 22.
+  - Unrelated pictures: the nearest other picture was 12 to 22 bits away. Nothing in the demo folder groups at 8 or 10; one pair groups at 12.
+  - Distances are always even: each hash has exactly 32 one-bits, because each bit says above or below the median of 64 values. A threshold of 9 therefore behaves exactly like 8.
+- **Why:** OC-5 gives the owner the choice from measured distances; the stage needs some value to run. 8 sits between re-encodings (≤ 4) and the nearest unrelated generated pictures (≥ 12). Generated pictures are not photographs, so the choice waits for the phase-1 dataset.
+
+**Exact duplicates keep the smallest row key** (M3, DATA-2.1)
+- **What:** Files with the same SHA-256 form one group; the copy with the smallest `row_key` stays accepted.
+- **How:** One pass into a dict keyed by hash; buckets of two or more keys are the groups.
+- **Why:** Identical bytes means no copy is better than another. The smallest key is the simplest rule that does not depend on input order (NFR-4).
+
+**pHash written out, without the imagehash library** (M3, DATA-2.2)
+- **What:** The classic DCT pHash, in the same steps as `imagehash.phash` (SPEC §7.2 lists that library): greyscale, Lanczos down to 32×32, the 8×8 lowest DCT-II frequencies, one bit each for above or below their median.
+- **How:** `dedupe.perceptual_hash`, about 40 lines of Python. A separable DCT computes only the 64 low frequencies (about 10,000 multiply-adds an image), from a cached cosine table. Transparent pixels are flattened onto white, as in preprocess. 16-bit and float images are rescaled from their own range, because Pillow's conversion clips them to white.
+- **Why:** No requirement needs the dependency, and imagehash would bring numpy, scipy and PyWavelets into the CPU worker for one function. Hashing takes 2.3 ms on a decoded 512 px image; with opening and decoding, 9.2 ms per demo file. The bits should match `imagehash.phash` for RGB and greyscale images: the steps are the same, and the DCT differs from scipy's unnormalised one only by a factor shared by every coefficient, which cannot change a comparison with the median. This has not been checked against the library, because that would mean installing it. Swapping the library in later would change hashes only for unusual image modes.
+
+**Near duplicates group transitively** (M3, DATA-2.2)
+- **What:** If A is within the threshold of B, and B of C, then A, B and C are one group.
+- **How:** A union-find (path halving, union by size) over the pairs found; each connected component of two or more rows is a group.
+- **Why:** Copies of copies form chains, and every row then belongs to exactly one group, which a non-transitive rule cannot promise. The cost is that a long chain can join two pictures that are not alike. With 8 of 64 bits that is rare, and SCR-03 shows each group side by side for review.
+
+**Near-duplicate keeper: most pixels, then most bytes, then smallest key** (M3, DATA-2.2)
+- **What:** In a near-duplicate group the row kept is the largest image, then the largest file, then the smallest `row_key`.
+- **How:** `_keeper_rank` sorts by `(-width × height, -size_bytes, row_key)`.
+- **Why:** For one picture, more pixels and more bytes usually mean the better copy (JPEG 90 over 70). The key decides ties, so the result does not depend on input order.
+
+**Hashes compared through a pigeonhole index** (M3, DATA-2.2)
+- **What:** Only hashes that agree exactly on some part of their bits are compared.
+- **How:** The 64 bits are split into `max_distance + 1` chunks, and rows are bucketed by each chunk's value. Two hashes at most `max_distance` bits apart cannot differ in every chunk, so every such pair shares at least one bucket.
+- **Why:** All pairs of 20,000 rows are 200 million comparisons. The index needs about 13 million for random hashes at a threshold of 8, and it finds the same pairs. The unit test groups 20,000 hashes in about a second.
+
+**The Pillow version is part of the pHash cache key** (M3, DATA-2.2, ADR-0004)
+- **What:** Cached pHash values are keyed by `hash_size`, `algorithm_version` and the Pillow version.
+- **How:** Added to the derivation cache's parameters in `clean.py`, as the preprocess key already did.
+- **Why:** A Pillow upgrade can change Lanczos resampling and so flip a bit near the median. A new version recomputes the hashes instead of mixing old values with new ones.
 
 **A missing blob fails the stage** (M3, BUG1)
 - **What:** If a file a row points at is not in the blob store, clean and preprocess stop with an error instead of marking the row rejected.

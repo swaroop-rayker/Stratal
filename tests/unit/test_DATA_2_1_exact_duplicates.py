@@ -1,14 +1,12 @@
-"""DATA-2.1: byte-identical duplicates are removed (marked, CL-17). OWNER'S UNIT.
+"""DATA-2.1: byte-identical duplicates are removed (marked, CL-17). An owner unit.
 
-Every test here is a strict expected-failure until
-``stratal.data.dedupe.group_exact_duplicates`` is implemented. When your
-implementation makes them pass, pytest reports unexpected passes and fails the
-run: that is the signal to delete the ``xfail`` line below, and then DATA-2.1
-can be ticked in docs/MILESTONES.md.
+Written as strict expected-failures before the unit existed; the marker was
+removed on 2026-11-15 when ``stratal.data.dedupe.group_exact_duplicates`` was
+written (by the agent, at the owner's request: ADR-0012).
 
 The contract is in the function's docstring. The last test runs the whole clean
-stage with your function and fakes for the two DATA-2.2 functions, so DATA-2.1
-can pass before DATA-2.2 exists.
+stage with the real function and fakes for the two DATA-2.2 functions, so it
+tests DATA-2.1 alone.
 """
 
 import hashlib
@@ -16,17 +14,11 @@ import random
 import time
 from pathlib import Path
 
-import pytest
-
 from stratal.data.clean import DedupeUnits
 from stratal.data.dedupe import DuplicateGroup, ExactItem, group_exact_duplicates
 from stratal.testing import stagekit
 from stratal.testing.fakes import fake_perceptual_hash, no_near_duplicates
 from stratal.testing.synthetic import make_image_folder
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="DATA-2.1 is not implemented yet (owner)"
-)
 
 
 def _sha(text: str) -> str:

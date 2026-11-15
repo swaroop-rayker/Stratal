@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from stratal.api.app import create_app
 from stratal.api.jobs import get_enqueue
 from stratal.core.settings import get_settings
-from stratal.data import dedupe, registry
+from stratal.data import registry
 from stratal.data.clean import OWNER_UNITS, CleanConfig
 from stratal.db.engine import get_engine
 from stratal.runtime import jobs as job_service
@@ -207,31 +207,37 @@ def test_BUG1_a_registered_version_is_found_by_id_and_a_wrong_manifest_is_caught
             list(registry.load_version(session, data_dir, cleaned))
 
 
-def _owner_dedupe_written() -> bool:
-    try:
-        dedupe.group_exact_duplicates([])
-    except NotImplementedError:
-        return False
-    return True
-
-
-@pytest.mark.skipif(_owner_dedupe_written(), reason="DATA-2.1 is written; nothing to report")
-def test_ADR_0012_until_dedupe_is_written_the_clean_stage_fails_with_a_clear_reason(
+def test_DATA_2_pipeline_with_the_real_units_marks_copies_and_pairs(
     runner: Runner, tmp_path: Path
 ) -> None:
     assert "fake_clean" not in os.environ.get("STRATAL_EXTRA_STAGES", "")
+    folder = make_image_folder(tmp_path / "src", valid=12, exact_copies=3, jpeg_pairs=4)
+
     job = Api(runner).run(
         {
-            "dataset": "real",
-            "source": {"path": _source(tmp_path, valid=3)},
-            "stages": {"ingest": {"min_size": 32}},
+            "dataset": "realdedupe",
+            "source": {"path": str(folder.root)},
+            "stages": {"ingest": {"min_size": 32}, "preprocess": {"max_side": 128}},
         }
     )
 
-    assert job["state"] == "failed"
-    assert [s["status"] for s in job["stages"][:2]] == ["completed", "failed"]
-    assert job["stages"][2]["status"] != "completed"
-    error = job["stages"][1]["error"]
-    assert error["code"] == "stage_failed"
-    assert "DATA-2.1" in error["reason"]
-    assert 'until_stage = "ingest"' in error["suggested_action"]
+    assert job["state"] == "completed", job
+    clean = job["stages"][1]
+    assert (clean["name"], clean["metrics"]["duplicates_exact"]) == ("clean", 3)
+    assert clean["metrics"]["duplicates_near"] == 4
+    with Session(get_engine()) as session:
+        rows = {
+            row["row_key"]: row
+            for row in registry.load_version(
+                session, get_settings().data_dir, job["output_version_id"]
+            )
+        }
+    for copy, original in folder.exact_copies:
+        assert {rows[copy]["status"], rows[original]["status"]} == {"accepted", "duplicate"}
+    for high, low in folder.jpeg_pairs:
+        assert rows[high]["status"] == "accepted", "the larger, quality-90 file is kept"
+        assert (rows[low]["status"], rows[low]["dup_of"]) == ("duplicate", high)
+    accepted = [r for r in rows.values() if r["status"] == "accepted"]
+    assert len(accepted) == 12 + 4, "12 originals or their copies, plus one of each pair"
+    assert all(r["derived_sha256"] for r in accepted)
+    assert not any(r["derived_sha256"] for r in rows.values() if r["status"] == "duplicate")

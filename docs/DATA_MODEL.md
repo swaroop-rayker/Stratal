@@ -228,7 +228,7 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 
 | Kind | `input_hash` | Parameters hashed | `value` |
 |---|---|---|---|
-| `phash` | original file's `sha256` | `hash_size`, the owner's `algorithm_version` | the hash, lowercase hex text |
+| `phash` | original file's `sha256` | `hash_size`, `algorithm_version` and the Pillow version | the hash, lowercase hex text |
 | `preprocess` | original file's `sha256` | the whole `PreprocessConfig` and the Pillow version | `{"sha256", "width", "height"}` of the copy; reused only if that blob still exists (INV-04) |
 
 ### 4.10 `review_sessions` and `review_items` (LABEL-1.5)
@@ -256,7 +256,7 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 | `decided_at_stage` | string | ingest onward | the stage that set a non-accepted status |
 | `reason_code` | string | ingest onward | see below |
 | `reason_detail` | string | ingest onward | free text, e.g. the decoder's error |
-| `phash` | string | clean | perceptual hash, hex; set on every row that was accepted when clean started (exact copies share their keeper's) |
+| `phash` | string | clean | perceptual hash as lowercase hex, `hash_size²` bits (16 hex digits at the default 8); set on every row that was accepted when clean started (exact copies share their keeper's) |
 | `dup_kind` | string | clean | `exact`, `near`, `semantic`; set on every member of a group, the kept one included |
 | `dup_group_id` | string | clean | shared by all members of a duplicate group, including the kept one: `dg_` + the first 12 hex of SHA-256 over the kind and the sorted member keys. A kept exact copy that also falls in a near group carries the near group's ID |
 | `dup_of` | string | clean | `row_key` of the kept item; null on the kept item |

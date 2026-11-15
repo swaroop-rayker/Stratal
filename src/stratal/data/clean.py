@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
+import PIL
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -286,8 +287,14 @@ class _Cleaner:
     def hash_images(self, left: dict[str, _Accepted], plan: _Plan) -> None:
         """pHash every remaining image once, through the cache, committing per batch."""
         size = self.config.phash_hash_size
+        # Pillow's resampling feeds the hash, so a Pillow upgrade must not reuse old values.
         params = params_hash(
-            {"kind": KIND_PHASH, "hash_size": size, "algorithm": self.config.algorithm_version}
+            {
+                "kind": KIND_PHASH,
+                "hash_size": size,
+                "algorithm": self.config.algorithm_version,
+                "pillow": PIL.__version__,
+            }
         )
         by_hash = {facts.sha256: key for key, facts in sorted(left.items())}
         shas = sorted(by_hash)

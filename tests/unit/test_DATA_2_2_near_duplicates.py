@@ -1,15 +1,13 @@
-"""DATA-2.2: near duplicates are removed (marked, CL-17) by perceptual hash. OWNER'S UNIT.
+"""DATA-2.2: near duplicates are removed (marked, CL-17) by perceptual hash. An owner unit.
 
-Every test here is a strict expected-failure until both
-``stratal.data.dedupe.perceptual_hash`` and
-``stratal.data.dedupe.group_near_duplicates`` are implemented. When yours make
-them pass, pytest reports unexpected passes and fails the run: that is the
-signal to delete the ``xfail`` line below, and then DATA-2.2 can be ticked in
-docs/MILESTONES.md.
+Written as strict expected-failures before the unit existed; the markers were
+removed on 2026-11-15 when ``stratal.data.dedupe.perceptual_hash`` and
+``group_near_duplicates`` were written (by the agent, at the owner's request:
+ADR-0012).
 
 The threshold used is the clean stage's default ``phash_max_distance``. It is
-provisional; choosing it from measured distances is yours (OC-5). If you change
-the default, these tests follow it.
+provisional; choosing it from measured distances is the owner's (OC-5). If the
+default changes, these tests follow it.
 """
 
 import io
@@ -17,7 +15,6 @@ import random
 import time
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
 from stratal.data.clean import CleanConfig, DedupeUnits
@@ -31,10 +28,6 @@ from stratal.data.dedupe import (
 from stratal.testing import stagekit
 from stratal.testing.fakes import no_exact_duplicates
 from stratal.testing.synthetic import make_image_folder
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="DATA-2.2 is not implemented yet (owner)"
-)
 
 DEFAULTS = CleanConfig()
 SIZE = DEFAULTS.phash_hash_size
@@ -180,11 +173,6 @@ def test_DATA_2_2_clean_stage_keeps_one_of_each_jpeg_pair(tmp_path: Path) -> Non
     assert all(rows[key]["phash"] for key in rows)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=NotImplementedError,
-    reason="needs both DATA-2.1 and DATA-2.2; delete this mark when both pass",
-)
 def test_DATA_2_2_with_2_1_clean_stage_handles_copies_and_pairs_together(
     tmp_path: Path,
 ) -> None:

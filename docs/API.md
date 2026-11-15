@@ -130,7 +130,7 @@ Pipeline request:
 }
 ```
 
-Every key under `stages` is optional and overrides the stage's defaults. As of M3 the stages are `ingest`, `clean` and `preprocess`; a key that names any other stage is rejected with `validation_error`.
+Every key under `stages` is optional and overrides the stage's defaults. As of M3 the stages are `ingest`, `clean` and `preprocess`; a key that names any other stage is rejected with `validation_error`. `until_stage` stops the pipeline after the named stage (`"ingest"` runs ingestion alone); `null` runs every available stage.
 
 Give exactly one of `source` and `from_version`:
 
@@ -138,8 +138,6 @@ Give exactly one of `source` and `from_version`:
 - **`"from_version": "ds_…"`**: continue from an existing version. The stages after the one that made it run, and its output is the first stage's input. `dataset` may be left out; if given it must be the version's dataset. A version made by the last available stage has nothing after it and is rejected. An unknown version is a `validation_error` with `loc: ["from_version"]`.
 
 With either, a key under `stages` or an `until_stage` that names a stage the request would not run is rejected. A stage whose input and config match an existing version reuses it (`cache_hit: true`) instead of running again.
-
-Until the owner's DATA-2.1 and DATA-2.2 functions exist, the `clean` stage fails with `stage_failed` and a reason naming them; `"until_stage": "ingest"` runs ingestion alone.
 
 Job (abridged):
 
@@ -237,8 +235,8 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 | Unit | Requirement | Contract in one line | Milestone |
 |---|---|---|---|
 | Version ID derivation | DATA-3.2 | Manifest rows + resolved config → content hash, config hash, version ID, per [DATA_MODEL.md §3](DATA_MODEL.md#3-identifiers) | M1 |
-| Exact-duplicate grouping | DATA-2.1 | `group_exact_duplicates(items: Sequence[ExactItem]) -> list[DuplicateGroup]`: rows with content hashes → groups of identical files, one deterministic keeper each | M3, stub delivered |
-| Perceptual hash and near-duplicate grouping | DATA-2.2 | `perceptual_hash(image, *, hash_size) -> str` (lowercase hex of the hash's bits); `group_near_duplicates(items: Sequence[HashedItem], *, max_distance) -> list[DuplicateGroup]` by Hamming distance | M3, stub delivered |
+| Exact-duplicate grouping | DATA-2.1 | `group_exact_duplicates(items: Sequence[ExactItem]) -> list[DuplicateGroup]`: rows with content hashes → groups of identical files, one deterministic keeper each | M3; written by the agent at the owner's request (ADR-0012) |
+| Perceptual hash and near-duplicate grouping | DATA-2.2 | `perceptual_hash(image, *, hash_size) -> str` (lowercase hex of the hash's bits); `group_near_duplicates(items: Sequence[HashedItem], *, max_distance) -> list[DuplicateGroup]` by Hamming distance, grouped transitively | M3; written by the agent at the owner's request (ADR-0012); the threshold stays the owner's (OC-5) |
 | Caption batching loop | LABEL-1.1, LABEL-1.2 | Uncached items + captioner → cached captions, committed per batch, surviving OOM by shrinking the batch | M4 |
 | VRAM manager | RUN-1.4, RUN-1.5 | Load one model under the cap; unload and prove VRAM returned to baseline | M4 |
 | CLIP scoring | LABEL-1.3 | Image + caption → similarity score | M4 |
@@ -292,7 +290,7 @@ Still planned for phase 1: run a pipeline, pull models.
 
 | Interface | Where | Shape |
 |---|---|---|
-| Owner's dedupe units (stubs) | `stratal.data.dedupe` | `ExactItem(row_key, sha256)`, `HashedItem(row_key, phash, width, height, size_bytes)`, `DuplicateGroup(keeper, members)`, the three functions above, and `ALGORITHM_VERSION` |
+| Dedupe units (DATA-2.1, DATA-2.2) | `stratal.data.dedupe` | `ExactItem(row_key, sha256)`, `HashedItem(row_key, phash, width, height, size_bytes)`, `DuplicateGroup(keeper, members)`, the three functions above, and `ALGORITHM_VERSION` |
 | Clean stage | `stratal.data.clean` | `run_clean(*, parent_manifest, parent_version_id, data_dir, config: CleanConfig, derive, sink, cache, units: DedupeUnits = OWNER_UNITS, checkpoint) -> CleanResult(record, metrics, seconds)`; raises `ContractBroken` when an owner unit breaks its contract |
 | Preprocess stage | `stratal.data.preprocess` | `run_preprocess(*, parent_manifest, parent_version_id, data_dir, config: PreprocessConfig, derive, sink, cache, checkpoint) -> PreprocessResult`; `transform(path, config) -> (jpeg_bytes, width, height)`; `target_size(w, h, max_side)` |
 | Derivation cache | `stratal.storage.derivations` | `DerivationCache` protocol: `get_many(kind, params_hash, input_hashes) -> {input_hash: value}`, `put_many(kind, params_hash, {input_hash: value})`; `PgDerivationCache(engine, job_id=)`, `MemoryDerivationCache()`, `params_hash(params)` |
