@@ -32,13 +32,13 @@ The agent reviews what the owner writes and does not rewrite it without being as
 
 ### Git
 
-- The repository is local. There is no remote and nothing is pushed until the owner sets one up.
+- The remote is `origin`, https://github.com/swaroop-rayker/Stratal.git, set up by the owner on 2026-11-15. Only `main` and the milestone tags are pushed, after the owner's OK to merge. Milestone branches stay local unless the owner asks. Never force-push.
 - `main` holds reviewed milestones only.
 - Each milestone has one branch, e.g. `m0-environment`, `m1-ingest-versioning`.
 - The agent commits its own work on the milestone branch, using conventional commits with requirement IDs.
 - A milestone branch is merged into `main` only with the owner's OK, after its done-checklist passes. This is the local stand-in for "one PR per milestone".
 - `docs/learning/` is ignored by git and never committed.
-- The CI workflow file is kept in the repository and starts running when a GitHub remote exists.
+- The CI workflow (`.github/workflows/ci.yml`) runs on every push to `main` and on pull requests.
 
 ## Exceptions made by the owner
 

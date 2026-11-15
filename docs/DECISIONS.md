@@ -338,7 +338,7 @@ Newest entries go at the bottom of their section. All entries below date from th
 
 **Git workflow** — [ADR-0012](decisions/ADR-0012-working-model-and-git-workflow.md)
 - **What:** A local repository with one branch per milestone; `main` receives a milestone only with the owner's OK.
-- **How:** Conventional commits with requirement IDs; no remote and no push until the owner sets one up.
+- **How:** Conventional commits with requirement IDs. Since 2026-11-15 the owner's GitHub repository is `origin`; only `main` and milestone tags are pushed, after the owner's OK.
 - **Why:** "One PR per milestone" without yet needing a GitHub account, which the owner asked to be consulted about.
 
 **Verbatim input kept**

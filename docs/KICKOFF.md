@@ -96,7 +96,7 @@ None of these needs an account, email or key. Model weights and the dataset are 
 | Choose the phase-1 dataset | before M4 | Recommendation: a 10k subset of COCO 2017 |
 | Write DATA-4 | before M5 | Brief below. Sooner helps: it shapes manifest columns |
 | Review the design system (Gate 0) | when delivered, alongside M1 | Only an explicit "approved" passes |
-| GitHub remote | whenever you want CI and PRs | Needs an account, which means an email |
+| GitHub remote | whenever you want CI and PRs | **Done 2026-11-15:** `origin` is the owner's repository; `main` and tags pushed |
 | Translation language pairs | phase 5 | |
 
 ## What the agent does next
