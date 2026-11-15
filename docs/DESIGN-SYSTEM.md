@@ -42,6 +42,7 @@ Rules:
 - **State colours and resource colours are reserved.** Blue-as-running and blue-as-CPU never appear in the same chart; state appears in pills and bars, resources in charts and tiles.
 - Paused shares its hue with warning, and failed with danger, on purpose: they ask for the same kind of attention. Stalled has its own (pink) so it is not mistaken for either.
 - The accent (violet) is not used for any state, severity or resource.
+- **Row statuses** (manifest rows, not jobs) use semantic colours: accepted `success`, rejected `danger`, duplicate `text-muted`, filtered `warning`. Always with the status word or its count beside them, and with a key where they appear as a bar. Approved with the SCR-02 mockup.
 - Soft backgrounds are the same hue at low opacity, so they work on any surface.
 
 **Measured contrast** (WCAG 2.1, against the three surfaces a colour can sit on; computed, not estimated):
@@ -149,6 +150,7 @@ All are in the preview with their variants and states. States shown where they a
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-14 | First version, for Gate 0 review |
+| v1 (SCR-02) | 2026-11-15 | Row-status colour rule added; five icons join the set (plus, more, folder, copy, branch). Approved with the SCR-02 hi-fi mockup, where their definitions are |
 | v1 (icons) | 2026-11-15 | Seven icons join the set, drawn on its 16-px grid and stroke: datasets, jobs, health, theme, shortcuts, chevron-down, retry. Introduced and approved with the SCR-01 hi-fi mockup, where their definitions are |
 | v1 (shortcuts) | 2026-11-15 | `g a` (active job) and `t` (theme) added to the keyboard pattern; proposed in the SCR-01 low-fi wireframe and approved with it |
 | v1 (fonts) | 2026-11-15 | Not a new version: the approved typefaces are now bundled and the preview loads them. No token, size or component changed; the preview now shows the type the approval named instead of the fallback |
