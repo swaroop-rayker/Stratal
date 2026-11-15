@@ -119,7 +119,7 @@ def test_LABEL_1_2_a_rerun_takes_everything_from_the_cache_and_never_touches_the
 
     assert (first.leases, first.captioner_loads, first.clip_loads) == (2, 1, 1)
     assert (again.leases, again.captioner_loads, again.clip_loads) == (0, 0, 0)
-    assert result.metrics["used_gpu"] is False
+    assert result.metrics["used_gpu"] == 0
     assert result.metrics["caption_cache_hits"] == 7
 
 

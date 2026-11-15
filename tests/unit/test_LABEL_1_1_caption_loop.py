@@ -1,7 +1,7 @@
 """LABEL-1.1, LABEL-1.2, BUG2: the caption batching loop. An owner unit.
 
-Strict expected failures until ``stratal.label.captioning.caption_items`` is
-written (ADR-0012); then remove the marker.
+Written as strict expected failures before the unit existed; the markers were
+removed on 2026-11-15 when the agent wrote it at the owner's request (ADR-0012).
 """
 
 import re
@@ -14,10 +14,6 @@ from stratal.core.errors import GpuOom
 from stratal.label.captioning import CaptionItem, caption_items
 from stratal.testing.fake_models import FakeCaptioner, fake_caption
 from stratal.testing.fakes import ListSink
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="owner unit LABEL-1.1 not written yet"
-)
 
 COLOURS = [(200, 30, 30), (30, 200, 30), (30, 30, 200), (128, 128, 128)]
 

@@ -1,13 +1,17 @@
-"""The filter rule (LABEL-1.4). An owner unit (ADR-0012).
+"""The filter rule (LABEL-1.4).
+
+An owner unit (ADR-0012), written by the agent at the owner's request on
+2026-11-15. The threshold itself stays the owner's to choose (OC-5).
 
 The filter stage reads the label stage's version, gives this function every row
 that is still accepted, and marks the rows it returns as ``filtered`` with the
 returned reason code. Rows are marked, never deleted (CL-17, LABEL-1.4.AC1).
 
-Tests: ``tests/unit/test_LABEL_1_4_filter_rule.py`` (strict expected failures
-until this is written).
+Tests: ``tests/unit/test_LABEL_1_4_filter_rule.py`` and
+``tests/unit/test_LABEL_M4_unit_decisions.py``.
 """
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -41,5 +45,37 @@ def filter_decisions(items: Sequence[ScoredItem], *, threshold: float) -> dict[s
        ``items`` appear in it.
     5. The result depends only on the items and the threshold, not their order.
     6. A threshold that is not a finite number is a ``ValueError``.
+
+    Two more refusals, so that rule 5 and the stage's counts can be trusted:
+
+    - The same ``row_key`` twice is a ``ValueError``. A manifest's keys are
+      unique, so this is broken input; accepting it would make the answer
+      depend on which copy came last.
+    - A score that is not a finite number (NaN, infinity) is a ``ValueError``
+      naming the row. NaN compares false with every threshold, so without this
+      a broken score would silently keep its row.
+
+    Missing captions are checked before scores (rule 1), so a row without a
+    caption is marked whatever its score, including no score at all.
     """
-    raise NotImplementedError("Owner unit LABEL-1.4: filter_decisions")
+    if not math.isfinite(threshold):
+        raise ValueError(f"the CLIP threshold must be a finite number, got {threshold!r}")
+    seen: set[str] = set()
+    marks: dict[str, str] = {}
+    for item in items:
+        if item.row_key in seen:
+            raise ValueError(f"row {item.row_key!r} is given twice")
+        seen.add(item.row_key)
+        if item.caption is None or not item.caption.strip():
+            marks[item.row_key] = REASON_MISSING_CAPTION
+            continue
+        if item.clip_score is None:
+            raise ValueError(
+                f"row {item.row_key!r} has a caption but no CLIP score; the label stage "
+                "scores every captioned row (LABEL-1.3.AC1)"
+            )
+        if not math.isfinite(item.clip_score):
+            raise ValueError(f"row {item.row_key!r} has a CLIP score that is not finite")
+        if item.clip_score < threshold:
+            marks[item.row_key] = REASON_BELOW_THRESHOLD
+    return dict(sorted(marks.items()))

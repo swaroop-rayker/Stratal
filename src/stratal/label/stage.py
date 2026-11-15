@@ -74,10 +74,11 @@ class LabelConfig(BaseModel):
         default=0.85, gt=0, le=0.95, description="PyTorch allocator cap (ADR-0006 rule 8)."
     )
     caption_vram_estimate_mb: int = Field(
-        default=4300,
+        default=3900,
         ge=1,
-        description="Free VRAM needed before loading the captioner: S-06 measured 4.05 GB "
-        "reserved for Florence-2 at batch 16, plus the CUDA context.",
+        description="Working VRAM the captioner needs beyond its weights file. Florence-2 at "
+        "batch 16 peaked at 4.05 GB reserved in S-06 (3.78 GB in the NFR-1 run), weights "
+        "included, so 0.44 + 3.9 GB leaves about 0.25 GB of margin.",
     )
     clip_vram_estimate_mb: int = Field(default=1200, ge=1)
     caption_algorithm_version: int = captioning.ALGORITHM_VERSION
@@ -180,9 +181,14 @@ def pair_key(image_sha256: str, caption: str) -> str:
     return hashlib.sha256(f"{image_sha256}\n{caption}".encode()).hexdigest()
 
 
-def _estimate(name: str, dtype: str, working_mb: int) -> float:
-    weights = get_model(name).weights_bytes / 2**20
-    return (weights / 2 if dtype == "fp16" else weights) + working_mb
+def _estimate(name: str, working_mb: int) -> float:
+    """VRAM to have free before loading: the weights file's size plus working memory.
+
+    The file size is an upper bound for the weights at either precision: some
+    checkpoints are stored in fp16 (Florence-2-base, 452 MB on the card) and
+    some in fp32 (CLIP, BLIP), which loading in fp16 halves.
+    """
+    return get_model(name).weights_bytes / 2**20 + working_mb
 
 
 @dataclass
@@ -276,9 +282,7 @@ class _Labeler:
         captioner = manager.load(
             lambda: self.models.load_captioner(self.config),
             name=self.captioner.display,
-            estimate_mb=_estimate(
-                self.captioner.name, self.config.dtype, self.config.caption_vram_estimate_mb
-            ),
+            estimate_mb=_estimate(self.captioner.name, self.config.caption_vram_estimate_mb),
         )
         try:
             self.stats.report = self.units.caption(
@@ -311,9 +315,7 @@ class _Labeler:
         clip = manager.load(
             lambda: self.models.load_clip(self.config),
             name=self.clip.display,
-            estimate_mb=_estimate(
-                self.clip.name, self.config.dtype, self.config.clip_vram_estimate_mb
-            ),
+            estimate_mb=_estimate(self.clip.name, self.config.clip_vram_estimate_mb),
         )
         size = self.config.clip_batch_size
         total = math.ceil(len(missing) / size)
@@ -466,7 +468,7 @@ def run_label(
         "oom_retries": report.oom_retries if report else 0,
         "clip_computed": stats.clip_computed,
         "clip_cache_hits": stats.clip_hits,
-        "used_gpu": stats.used_gpu,
+        "used_gpu": int(stats.used_gpu),
         "images_per_s": round(stats.images / max(seconds, 1e-9), 1),
     }
     if stats.scored_rows:

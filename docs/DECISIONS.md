@@ -331,15 +331,38 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Captions are keyed by the preprocessed copy's hash and every setting that can change the text, including library versions; scores by image and caption together. The caption loop commits per batch; the shell commits CLIP scores per batch. A second pass writes the manifest from the cache.
 - **Why:** A killed or repeated run resumes from the cache without reloading models (LABEL-1.2), identical copies are captioned once, and the lease is never held while nothing uses the GPU (BUG6).
 
-**VRAM estimates from S-06** (M4, ADR-0006 rule 4)
-- **What:** The captioner may load only with 4.3 GB free, CLIP with 1.2 GB, plus the weights at the chosen precision.
-- **How:** `caption_vram_estimate_mb` and `clip_vram_estimate_mb` in the label config; the owner's VRAM manager compares them with the card's free memory.
-- **Why:** S-06 measured 4.05 GB reserved for Florence-2 at batch 16, almost all of it activations, so the weights' size alone would underestimate by ten times.
+**VRAM estimates from measurements** (M4, ADR-0006 rule 4; revised 2026-11-15 after the demo)
+- **What:** Before loading, the card must have free the weights file's size plus 3.9 GB for the captioner (4.3 GB for Florence-2) or 1.2 GB for CLIP.
+- **How:** `caption_vram_estimate_mb` and `clip_vram_estimate_mb` in the label config; the VRAM manager compares the total with the driver's free memory. The weights file's size is used as is, an upper bound at either precision: Florence-2-base is stored in fp16 (452 MB on the card), CLIP and BLIP in fp32.
+- **Why:** Florence-2 at batch 16 peaks at 4.05 GB reserved (S-06; 3.78 GB in the NFR-1 run), almost all of it activations. The first estimate asked for 4.7 GB of the 5.07 GB that was free in the demo, leaving 0.3 GB for anything else on the card; 4.3 GB still covers the peak with a quarter of a gigabyte to spare.
 
 **CLIP threshold provisional at 0.2** (M4, LABEL-1.4, OC-5)
 - **What:** `FilterConfig.clip_threshold = 0.2` by default.
 - **How:** A config field; a new value reruns only `filter` and later stages.
-- **Why:** OC-5 gives the owner the choice from the measured score distribution, on the scale their `clip_similarity` produces. With plain cosine on LAION's CLIP, S-06 measured about 0.30 for good captions.
+- **Why:** OC-5 gives the owner the choice from the measured score distribution. Measured in the M4 demo, 994 COCO images captioned by Florence-2 and scored as plain cosine:
+  - Median 0.313, middle half 0.286 to 0.340, lowest 0.165, highest 0.455. One peak; no separate cluster of bad captions.
+  - Below 0.18: 0.3 %; below 0.20: 0.9 %; below 0.22: 2.3 %; below 0.25: 6.9 %.
+  - The nine rows under 0.20 are mostly plausible captions of busy, generic street scenes, with a few partly wrong ("a painting of a man pushing a cart", "mushroom" for a bagel). CLIP scores busy scenes lower whatever the caption, so a threshold trims a tail more than it catches wrong captions; the manual review (LABEL-1.5, M5) will show how many of the trimmed rows were bad.
+
+**CLIP similarity is plain cosine** (M4, LABEL-1.3; written by the agent at the owner's request)
+- **What:** `clip_score` is the cosine between CLIP's image and text embeddings, in [-1, 1], neither rescaled nor clipped.
+- **How:** `math.sumprod` for the dot product, one square root of `|a|²·|b|²` (so a vector against itself gives exactly 1.0), clamped to [-1, 1]; zero, NaN or infinite vectors are refused.
+- **Why:** It is the quantity CLIP was trained on, and the scale S-06 and the demo measured. CLIPScore's 2.5 · max(cos, 0) can be computed from it at report time; clipping here would erase the difference between unrelated and contradictory.
+
+**Filter rule refuses what would make it order- or NaN-dependent** (M4, LABEL-1.4)
+- **What:** Missing or blank captions are marked first; then scores below the threshold. A row key given twice, a captioned row without a score, and a score that is not finite are all errors.
+- **How:** One pass with a set of keys seen; the result is sorted by row key.
+- **Why:** A NaN compares false with every threshold and would silently keep its row; duplicate keys would make the answer depend on order (rule 5).
+
+**Caption loop halves on out-of-memory and never grows back** (M4, LABEL-1.1, LABEL-1.2, BUG2)
+- **What:** On `CudaOutOfMemory` the batch is halved, down to 1, with a WARN naming the new size and the config key to set; the same images are retried; the size stays reduced for the rest of the run.
+- **How:** Each batch is committed before the next starts; the progress total is recomputed as batches done plus remaining images at the current size; a failed batch's images are reopened, not kept.
+- **Why:** Halving finds a fitting size in at most log2(batch) retries. Every image is a preprocessed copy of at most 768 px, so a size that failed once would fail again; growing back would cost one out-of-memory error each time for little speed.
+
+**VRAM manager measures after emptying the cache, with a 1 MB tolerance** (M4, RUN-1.4, BUG5)
+- **What:** Before a load it collects garbage, synchronises and empties PyTorch's cache, then reads the baseline and the driver's free memory; after an unload it does the same and compares allocated memory with the baseline.
+- **How:** `TOLERANCE_MB = 1.0`. A leak is a WARN with the megabytes still held, not an exception; a loader that fails part-way is cleaned up before the error propagates.
+- **Why:** Cached but unused blocks of this process are free for the next model, and an honest baseline needs them gone. Measured on the card: after Florence-2 and CLIP had run, allocated memory came back to exactly its baseline, cuBLAS workspaces included, so any real leak (one layer's weights is many megabytes) stands out.
 
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)

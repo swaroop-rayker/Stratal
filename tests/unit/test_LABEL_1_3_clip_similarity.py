@@ -1,8 +1,9 @@
 """LABEL-1.3: CLIP image-caption similarity. An owner unit.
 
-Strict expected failures until ``stratal.label.scoring.clip_similarity`` is
-written (ADR-0012); then remove the marker. The formula is the owner's; these
-tests pin only the contract.
+Written as strict expected failures before the unit existed; the markers were
+removed on 2026-11-15 when the agent wrote it at the owner's request
+(ADR-0012). These tests pin only the contract; the formula chosen (plain
+cosine) is pinned in ``test_LABEL_M4_unit_decisions.py``.
 """
 
 import math
@@ -10,10 +11,6 @@ import math
 import pytest
 
 from stratal.label.scoring import clip_similarity
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="owner unit LABEL-1.3 not written yet"
-)
 
 
 def test_LABEL_1_3_one_finite_score_per_pair() -> None:

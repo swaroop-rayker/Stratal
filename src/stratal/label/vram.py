@@ -1,4 +1,7 @@
-"""The VRAM manager, v1 (RUN-1.4, RUN-1.5, BUG5, ADR-0006). An owner unit (ADR-0012).
+"""The VRAM manager, v1 (RUN-1.4, RUN-1.5, BUG5, ADR-0006).
+
+An owner unit (ADR-0012), written by the agent at the owner's request on
+2026-11-15. How and why it works is explained in ``docs/learning/sys-design.md``.
 
 The label stage loads one model at a time through this class and unloads it
 before loading the next (the captioner, then CLIP). Job processes also exit at
@@ -11,15 +14,29 @@ It talks to the GPU only through :class:`~stratal.label.models.GpuBackend`:
 back only when the fake weights are really garbage-collected.
 
 Tests: ``tests/unit/test_RUN_1_4_vram_manager.py`` (CPU) and
-``tests/gpu/test_BUG5_vram.py`` (the real card); strict expected failures until
-this is written.
+``tests/gpu/test_BUG5_vram.py`` (the real card).
 """
 
+import gc
+import math
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from stratal.core.errors import VramInsufficient
 from stratal.label.models import GpuBackend, GpuModel
+from stratal.mon.events import MetricValue
 from stratal.mon.sink import EventSink
+
+TOLERANCE_MB = 1.0
+"""How far above its baseline allocated memory may stay after an unload and still count as freed.
+
+Measured on the RTX 4050 on 2026-11-15: after Florence-2 captioned a batch and
+CLIP encoded one, close, garbage collection and ``empty_cache`` brought
+``memory_allocated`` back to exactly its baseline, cuBLAS workspaces included.
+So the tolerance only absorbs rounding; the smallest real leak, one layer's
+weights, is many megabytes.
+"""
 
 
 @dataclass(frozen=True)
@@ -74,14 +91,120 @@ class VramManager:
     """
 
     def __init__(self, gpu: GpuBackend, *, sink: EventSink, stage: str = "label") -> None:
-        raise NotImplementedError("Owner unit RUN-1.4: VramManager")
+        self._gpu = gpu
+        self._sink = sink
+        self._stage = stage
+        self._model: GpuModel | None = None
+        self._name: str | None = None
+        self._baseline: VramReading | None = None
 
     @property
     def loaded(self) -> str | None:
-        raise NotImplementedError("Owner unit RUN-1.4: VramManager.loaded")
+        return self._name
+
+    def _read(self) -> VramReading:
+        """Measure after queued GPU work has finished (E-008)."""
+        self._gpu.synchronize()
+        return VramReading(self._gpu.allocated_mb(), self._gpu.reserved_mb(), self._gpu.free_mb())
+
+    def _release_cached(self) -> None:
+        gc.collect()
+        self._gpu.synchronize()
+        self._gpu.empty_cache()
 
     def load[M: GpuModel](self, loader: Callable[[], M], *, name: str, estimate_mb: float) -> M:
-        raise NotImplementedError("Owner unit RUN-1.4: VramManager.load")
+        if self._model is not None:
+            raise RuntimeError(
+                f"{self._name} is still on the GPU; unload it before loading {name} (RUN-1.4)."
+            )
+        if not math.isfinite(estimate_mb) or estimate_mb < 0:
+            raise ValueError(f"estimate_mb must be a finite number of MB, got {estimate_mb!r}")
+        # Blocks this process cached earlier are free for the new model; give them
+        # back first, so the free figure and the baseline are both honest.
+        self._release_cached()
+        before = self._read()
+        if before.free_mb < estimate_mb:
+            raise VramInsufficient(
+                f"Loading {name} needs about {estimate_mb / 1024:.1f} GB of free VRAM; "
+                f"the card has {before.free_mb / 1024:.1f} GB free.",
+                suggested_action="Close other programs that use the GPU (nvidia-smi lists them) "
+                "and retry. If nothing else is running, lower the stage's batch size and its "
+                "VRAM estimate.",
+            )
+        self._sink.emit(
+            stage=self._stage,
+            message=f"Loading {name} to GPU ({estimate_mb / 1024:.1f} GB)",
+            metrics={
+                "estimate_mb": round(estimate_mb, 1),
+                "free_mb_before": round(before.free_mb, 1),
+            },
+        )
+        started = time.monotonic()
+        try:
+            model = loader()
+        except BaseException:
+            self._release_cached()  # whatever a half-finished load allocated
+            raise
+        seconds = time.monotonic() - started
+        after = self._read()
+        self._model, self._name, self._baseline = model, name, before
+        self._sink.emit(
+            stage=self._stage,
+            message=f"Loaded {name} to GPU "
+            f"({(after.allocated_mb - before.allocated_mb) / 1024:.1f} GB, {seconds:.1f} s)",
+            metrics={**_metrics(before, after), "load_s": round(seconds, 2)},
+        )
+        return model
 
     def unload(self) -> UnloadReport:
-        raise NotImplementedError("Owner unit RUN-1.4: VramManager.unload")
+        model, name, baseline = self._model, self._name, self._baseline
+        if model is None or name is None or baseline is None:
+            raise RuntimeError("No model is loaded; there is nothing to unload.")
+        before = self._read()
+        self._sink.emit(stage=self._stage, message=f"Unloading {name}, freeing VRAM")
+        self._model = self._name = self._baseline = None
+        try:
+            model.close()
+        finally:
+            del model
+        self._release_cached()
+        after = self._read()
+        held = after.allocated_mb - baseline.allocated_mb
+        returned = held <= TOLERANCE_MB
+        metrics = {
+            **_metrics(before, after),
+            "baseline_allocated_mb": round(baseline.allocated_mb, 1),
+        }
+        if returned:
+            freed = before.allocated_mb - after.allocated_mb
+            self._sink.emit(
+                stage=self._stage,
+                message=f"Unloaded {name}: {freed / 1024:.2f} GB freed, "
+                "allocated VRAM back to its baseline",
+                metrics=metrics,
+            )
+        else:
+            self._sink.emit(
+                stage=self._stage,
+                level="WARN",
+                message=f"Unloaded {name}, but {held:.0f} MB of VRAM is still allocated",
+                reason=f"{held:.0f} MB more is allocated than before {name} was loaded: "
+                "something still holds its tensors (BUG5).",
+                suggested_action="The process will be restarted to free it: a job's process "
+                "exits when its stage ends (ADR-0006 rules 1 and 6). Look for a reference "
+                "still kept to the model.",
+                metrics=metrics,
+            )
+        return UnloadReport(name, before, after, baseline.allocated_mb, returned)
+
+
+def _metrics(before: VramReading, after: VramReading) -> dict[str, MetricValue]:
+    """VRAM before and after, from PyTorch and from the driver (MON-3.3)."""
+    return {
+        "allocated_mb_before": round(before.allocated_mb, 1),
+        "allocated_mb_after": round(after.allocated_mb, 1),
+        "reserved_mb_before": round(before.reserved_mb, 1),
+        "reserved_mb_after": round(after.reserved_mb, 1),
+        "free_mb_before": round(before.free_mb, 1),
+        "free_mb_after": round(after.free_mb, 1),
+    }

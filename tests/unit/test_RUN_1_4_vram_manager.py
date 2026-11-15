@@ -1,8 +1,9 @@
 """RUN-1.4, RUN-1.5, BUG5 on the CPU: the VRAM manager against a fake GPU. An owner unit.
 
-Strict expected failures until ``stratal.label.vram.VramManager`` is written
-(ADR-0012); then remove the marker. ``FakeGpu`` frees memory only when the fake
-weights are garbage-collected, so a leaked reference behaves as on the card.
+Written as strict expected failures before the unit existed; the markers were
+removed on 2026-11-15 when the agent wrote it at the owner's request
+(ADR-0012). ``FakeGpu`` frees memory only when the fake weights are
+garbage-collected, so a leaked reference behaves as on the card.
 The same checks on the real card are in ``tests/gpu/test_BUG5_vram.py``.
 """
 
@@ -12,10 +13,6 @@ from stratal.core.errors import VramInsufficient
 from stratal.label.vram import VramManager
 from stratal.testing.fake_models import FakeCaptioner, FakeClipEncoder, FakeGpu
 from stratal.testing.fakes import ListSink
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="owner unit RUN-1.4 not written yet"
-)
 
 
 def test_RUN_1_4_unload_returns_allocated_memory_to_baseline() -> None:
@@ -99,7 +96,7 @@ def test_RUN_1_4_load_and_unload_report_vram_before_and_after() -> None:
 
 
 def test_RUN_1_4_unload_with_nothing_loaded_is_refused() -> None:
-    # Built outside the block: the stub's NotImplementedError is itself a RuntimeError.
+    # Built outside the block, so only unload() can satisfy it.
     manager = VramManager(FakeGpu(), sink=ListSink())
 
     with pytest.raises(RuntimeError):

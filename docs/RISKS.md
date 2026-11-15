@@ -168,4 +168,4 @@ Likelihood and impact are High, Medium or Low.
 - **Question:** Do the container limits in ARCHITECTURE.md §2 leave the label stage enough room?
 - **Method:** Label 2,000 images under the budgeted limits. Record each container's peak.
 - **Decides:** the final limits; whether NFR-2's 9 GB stands.
-- **Result:** not run yet.
+- **Result:** not run yet. **Early evidence (2026-11-15, M4 demo, 1,000 images):** the label process peaked at 2.5 GB RSS, under the GPU worker's 4.5 GB limit, and the WSL VM's used RAM at 3.3 GB. The 2,000-image run with every container's peak is still to do.

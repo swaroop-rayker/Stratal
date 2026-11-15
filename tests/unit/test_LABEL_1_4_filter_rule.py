@@ -1,8 +1,8 @@
 """LABEL-1.4: the filter rule. An owner unit.
 
-Strict expected failures until ``stratal.label.filtering.filter_decisions`` is
-written (ADR-0012); then remove the marker. That the stage marks rather than
-deletes is tested with the stage itself.
+Written as strict expected failures before the unit existed; the markers were
+removed on 2026-11-15 when the agent wrote it at the owner's request
+(ADR-0012). That the stage marks rather than deletes is tested with the stage.
 """
 
 import math
@@ -15,10 +15,6 @@ from stratal.label.filtering import (
     REASON_MISSING_CAPTION,
     ScoredItem,
     filter_decisions,
-)
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="owner unit LABEL-1.4 not written yet"
 )
 
 

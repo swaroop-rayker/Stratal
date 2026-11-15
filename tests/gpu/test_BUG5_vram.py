@@ -1,9 +1,10 @@
 # pyright: basic, reportMissingImports=false
 # PyTorch is installed only in the GPU image, so the type checker cannot see it here.
-"""BUG5, RUN-1.4, BUG2 on the real card: the owner's VRAM manager and caption loop.
+"""BUG5, RUN-1.4, BUG2 on the real card: the VRAM manager and the caption loop.
 
-Strict expected failures until ``VramManager`` and ``caption_items`` are written
-(ADR-0012); then remove the marker. Run in the GPU image:
+Written as strict expected failures before the units existed; the markers were
+removed on 2026-11-15 when the agent wrote them at the owner's request
+(ADR-0012). Run in the GPU image:
     docker compose run --rm --no-deps worker-gpu pytest -q -m gpu tests/gpu
 """
 
@@ -17,12 +18,7 @@ from stratal.label.captioning import CaptionItem, caption_items
 from stratal.label.vram import VramManager
 from stratal.testing.fakes import ListSink
 
-pytestmark = [
-    pytest.mark.gpu,
-    pytest.mark.xfail(
-        strict=True, raises=NotImplementedError, reason="owner units RUN-1.4 and LABEL-1.1"
-    ),
-]
+pytestmark = pytest.mark.gpu
 
 MODELS = get_settings().data_dir / "models"
 COCO = Path("/sources/coco10k")
