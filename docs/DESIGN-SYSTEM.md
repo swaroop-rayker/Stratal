@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **v1, delivered 2026-11-14 for review. Not approved.** No screen may be designed until this is approved (SPEC §9.2, Gate 0) |
+| Status | **v1, approved by the owner on 2026-11-15** (Gate 0). Changes from here on are new versions and need approval |
 | Preview | [design/system-preview.html](design/system-preview.html): every token and component rendered, dark and light. Open it in a browser |
 | Scope | SPEC §9.3 a–f. The token file and Tailwind theme (`tokens.css`) are written only after approval |
 | Approvals | Logged in [design/APPROVALS.md](design/APPROVALS.md) |

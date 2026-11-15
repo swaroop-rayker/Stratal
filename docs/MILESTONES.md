@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 built on its branch 2026-11-14, waiting for the owner's OK to merge. G0 delivered for review |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 built on its branch 2026-11-14, waiting for the owner's OK to merge. G0 approved 2026-11-15; G1 is next |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -47,7 +47,7 @@ No UI is implemented before its design is approved (SPEC §9.2). The gates wait 
 
 Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" passes a gate.
 
-- [ ] G0 approved
+- [x] G0 approved (v1, 2026-11-15)
 - [ ] G1 approved
 - [ ] G2 approved: SCR-01
 - [ ] G2 approved: SCR-02
