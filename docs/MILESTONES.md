@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 in progress: agent's part built, owner's DATA-2.1 and DATA-2.2 next. G0 and G1 approved 2026-11-15; G2 started with SCR-01 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 in progress: agent's part built, owner's DATA-2.1 and DATA-2.2 next. G0 and G1 approved 2026-11-15; G2: SCR-01 approved, SCR-02 in progress |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -49,7 +49,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 - [x] G0 approved (v1, 2026-11-15)
 - [x] G1 approved (v1, 2026-11-15)
-- [ ] G2 approved: SCR-01 (low-fi v1 approved 2026-11-15; hi-fi in progress)
+- [x] G2 approved: SCR-01 (low-fi v1 and hi-fi v1, 2026-11-15; `docs/design/screens/SCR-01_v1.html`)
 - [ ] G2 approved: SCR-02
 - [ ] G2 approved: SCR-03
 - [ ] G2 approved: SCR-04
