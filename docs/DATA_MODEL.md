@@ -293,6 +293,7 @@ File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.pa
 | `stratal:live:global` | pub/sub | job state changes, alerts and telemetry for global subscribers |
 | `stratal:job:<job_id>:control` | string | `pause` or `cancel`. Fast path only; `jobs.desired_state` is the durable copy |
 | `stratal:active` | hash | job ID → `{stage, queue, since}`. Read by the sampler to tag samples and pick the interval |
+| `stratal:system` | string | JSON `{gpu_name, gpu_error, vram_total_mb, ram_total_mb, cpu_count}`, written by the monitor when it starts; read by `GET /system` (M6) |
 | Celery's own keys | – | queues `cpu` and `gpu` |
 
 ## 8. Invariants

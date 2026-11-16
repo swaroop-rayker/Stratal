@@ -7,10 +7,11 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from stratal.core.bus import LIVE_GLOBAL, Bus
+from stratal.core.errors import ValidationFailed
 from stratal.core.settings import get_settings
 from stratal.db.engine import get_engine
 from stratal.db.models import Event as EventRow
@@ -19,7 +20,7 @@ from stratal.mon.events import Event, Level
 from stratal.mon.store import insert_events
 from stratal.runtime import jobs as job_service
 from stratal.runtime.jobs import Enqueue, PipelineRequest
-from stratal.runtime.states import ACTIVE
+from stratal.runtime.states import ACTIVE, TRANSITIONS
 
 router = APIRouter()
 
@@ -51,6 +52,7 @@ Db = Annotated[Session, Depends(get_session)]
 Queue = Annotated[EnqueueFn, Depends(get_enqueue)]
 Redis = Annotated[Bus, Depends(get_bus)]
 Limit = Annotated[int, Query(ge=1, le=500)]
+JOB_STATES = frozenset(TRANSITIONS)
 
 
 def _iso(value: datetime) -> str:
@@ -132,21 +134,39 @@ def list_jobs(
     session: Db,
     state: str | None = None,
     kind: str | None = None,
+    dataset: str | None = None,
     limit: Limit = 50,
     cursor: str | None = None,
 ) -> Json:
-    """Jobs, newest first."""
-    query = select(Job)
-    if state is not None:
-        query = query.where(Job.state == state)
+    """Jobs, newest first. ``state`` takes a comma-separated list (``running,queued``);
+    ``counts`` gives jobs per state under the other filters (SCR-07, RUN-1.1 slice)."""
+    states = [s.strip() for s in state.split(",") if s.strip()] if state else []
+    unknown = sorted(set(states) - JOB_STATES)
+    if unknown:
+        raise ValidationFailed(
+            f"Unknown job state {unknown[0]!r}.",
+            suggested_action=f"Use one or more of: {', '.join(sorted(JOB_STATES))}.",
+            errors=[{"loc": ["query", "state"], "msg": "unknown state", "code": "enum"}],
+        )
+    filters: list[Any] = []
     if kind is not None:
-        query = query.where(Job.kind == kind)
+        filters.append(Job.kind == kind)
+    if dataset is not None:
+        filters.append(Job.spec["dataset"].astext == dataset)
+    query = select(Job).where(*filters)
+    if states:
+        query = query.where(Job.state.in_(states))
     if cursor is not None:
         query = query.where(Job.id < cursor)
     rows = list(session.scalars(query.order_by(Job.id.desc()).limit(limit)))
+    counted = session.execute(
+        select(Job.state, func.count()).where(*filters).group_by(Job.state)
+    ).all()
+    counts = {s: 0 for s in sorted(JOB_STATES)} | {s: int(n) for s, n in counted}
     return {
         "items": [job_service.job_view(session, job) for job in rows],
         "next_cursor": rows[-1].id if len(rows) == limit else None,
+        "counts": counts,
     }
 
 

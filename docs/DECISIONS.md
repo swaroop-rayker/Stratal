@@ -443,6 +443,23 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The check compares pHash values bit by bit and duplicate-group IDs, without using the owner's groups. On 10k rows it compares about 17 million cross-split pairs in plain Python.
 - **Why:** The report then travels with the version, and a reused version keeps it. A failing check is a defect in the grouping, and the version is still inspectable, so the leaks are reported but the version is kept. The fakes join no pairs, so they would leak on folders that have near pairs, and the stage still has to run there.
 
+## M6: phase-1 screens
+
+**Rows are filtered by reading the whole manifest with PyArrow** (M6, DATA-3.1, UI-2.1; agent)
+- **What:** `GET /versions/{id}/rows` reads the version's Parquet file, filters it with PyArrow compute expressions, and returns one page in `row_key` order, with the count of matching rows.
+- **How:** `storage.manifest.select_rows`; the cursor is the last row key of a page, which is stable because manifests are sorted by `row_key` and never change (INV-01).
+- **Why:** A 10k-row manifest is 1–2 MB, read and filtered in milliseconds. DuckDB or an index would add a dependency for no measurable gain at phase-1 sizes; streaming in batches would make `matched` cost a second pass.
+
+**Thumbnails are made per request and cached by the browser** (M6, DATA-3.4, UI-2.1; agent)
+- **What:** `GET /blobs/{sha256}?w=` decodes, turns upright and shrinks the image on each request, and marks the response immutable.
+- **How:** Pillow's JPEG draft mode, then a Lanczos resize to the width; no thumbnail is written to the data volume.
+- **Why:** Blobs are content-addressed, so the URL never serves different bytes and the browser cache does the work. A thumbnail store would be a second copy of the data with its own garbage collection.
+
+**The monitor describes the machine for `GET /system`** (M6, MON-2.1; agent)
+- **What:** At start the monitor writes the GPU name, VRAM and RAM totals and CPU count to the Redis key `stratal:system`; the API reads it, falling back to the latest resource sample.
+- **How:** `Bus.set_system` / `get_system`; `GpuProbe.name()` through NVML.
+- **Why:** The API container has no GPU and must not get one (API image has no ML libraries). The monitor already holds NVML open.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

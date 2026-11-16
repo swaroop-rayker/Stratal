@@ -19,7 +19,10 @@ from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
+import pyarrow.compute as _compute
 import pyarrow.parquet as pq
+
+pc: Any = _compute  # its functions are generated at import, unknown to pyright
 
 SCHEMA_VERSION = 1
 
@@ -162,6 +165,47 @@ def iter_rows(
             yield from batch.to_pylist()
     finally:
         parquet.close()
+
+
+@dataclass(frozen=True)
+class RowPage:
+    rows: list[Row]
+    matched: int
+    """Rows matching the filters, over every page."""
+
+
+def select_rows(
+    path: Path,
+    *,
+    equals: Mapping[str, str],
+    key_contains: str | None = None,
+    after_key: str | None = None,
+    limit: int,
+) -> RowPage:
+    """One page of rows, in ``row_key`` order, that match every filter (DATA-3.1, UI-2.1).
+
+    ``equals`` maps column names to the value they must equal; ``key_contains``
+    is a substring of ``row_key``; ``after_key`` is the cursor, the last key of
+    the previous page. The manifest is read whole: at 1 to 2 MB per 10,000 rows
+    (DATA_MODEL.md §10) that is cheaper than streaming it in batches.
+    """
+    table = pq.read_table(path)
+    mask: Any = None
+
+    def both(condition: Any) -> None:
+        nonlocal mask
+        mask = condition if mask is None else pc.and_(mask, condition)
+
+    for name, value in equals.items():
+        both(pc.equal(table[name], value))
+    if key_contains:
+        both(pc.match_substring(table["row_key"], key_contains))
+    if mask is not None:
+        table = table.filter(mask)
+    matched = table.num_rows
+    if after_key is not None:
+        table = table.filter(pc.greater(table["row_key"], after_key))
+    return RowPage(rows=table.slice(0, limit).to_pylist(), matched=matched)
 
 
 def read_metadata(path: Path) -> dict[str, str]:
