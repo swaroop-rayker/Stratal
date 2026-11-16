@@ -42,7 +42,7 @@ get_engine.cache_clear()
 
 _TABLES = (
     "events, resource_samples, process_samples, job_transitions, job_stages, "
-    "dataset_versions, jobs, datasets, derivations"
+    "review_items, review_sessions, dataset_versions, jobs, datasets, derivations"
 )
 
 
@@ -85,3 +85,15 @@ def bus(migrated: None) -> Iterator[Bus]:
 @pytest.fixture
 def runner(bus: Bus) -> Runner:
     return Runner(bus)
+
+
+@pytest.fixture
+def fake_units(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Run the owner's units as fakes, here and in the stage processes (M5 on)."""
+    from stratal.runtime import stages as stage_registry
+    from stratal.testing.pipeline import FAKE_MODULES, restore_real_units
+
+    monkeypatch.setenv("STRATAL_EXTRA_STAGES", ",".join(FAKE_MODULES))
+    stage_registry.load_extra_stages()
+    yield
+    restore_real_units()

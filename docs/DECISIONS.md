@@ -402,6 +402,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `registry.find_previous_split`; the ID goes into the config, so it is part of both the version ID and the memo key. A kept copy that replaced another inherits that copy's split through `dup_of`.
 - **Why:** Without the exclusion, a second split of the same parent would continue the first, get a different config and so a different version ID, which would break DATA-4.4.AC1 and NFR-4.
 
+**Review samples are simple random samples by seed** (M5, LABEL-1.5, DATA-4.7; agent)
+- **What:** A session draws `sample_size` accepted rows uniformly with a recorded seed and stores each one with its split. It does not stratify by split.
+- **How:** The keys are sorted, then sampled with `random.Random(seed).sample`. A server-drawn seed is stored. Close counts the decisions and leaves the rate and the interval to the owner's `review_acceptance`. Until that unit exists, close still succeeds and the summary says what is missing.
+- **Why:** A uniform sample estimates acceptance for the whole version without reweighting. With 80/10/10 a 50-row sample holds about 5 test rows, so the test-split interval will be wide. A larger sample, or sampling the test split on its own, can be added if the owner wants a tighter test figure.
+
 **The split report lives in the version; a leak warns rather than fails** (M5, DATA-4.6, DATA-4.2.AC2; agent)
 - **What:** The report is stored as `counts.split` of the split version. The stage's own all-pairs check compares every cross-split pair. If a pair leaks, the stage emits a WARN with a reason and an action, and the report lists examples.
 - **How:** The check compares pHash values bit by bit and duplicate-group IDs, without using the owner's groups. On 10k rows it compares about 17 million cross-split pairs in plain Python.

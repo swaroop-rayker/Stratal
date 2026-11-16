@@ -9,84 +9,20 @@ bad proportions (DATA-4.1.AC2).
 """
 
 import shutil
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from stratal.api.app import create_app
-from stratal.api.jobs import get_enqueue
 from stratal.core.settings import get_settings
 from stratal.data import registry
-from stratal.data.clean import OWNER_UNITS as DEDUPE_UNITS
-from stratal.data.clean import CleanConfig
-from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
-from stratal.data.split_stage import SplitConfig
 from stratal.db.engine import get_engine
-from stratal.label.filter_stage import FilterConfig
-from stratal.label.filtering import filter_decisions
-from stratal.label.stage import OWNER_UNITS as LABEL_UNITS
-from stratal.label.stage import LabelConfig
-from stratal.runtime import jobs as job_service
-from stratal.runtime import stages as stage_registry
 from stratal.testing.harness import Runner
+from stratal.testing.pipeline import PipelineApi as Api
 from stratal.testing.synthetic import make_image_folder
 
-pytestmark = pytest.mark.integration
-
-FAKES = (
-    "stratal.testing.stages,stratal.testing.fake_clean,stratal.testing.fake_label,"
-    "stratal.testing.fake_split"
-)
-
-
-def _restore_real_stages() -> None:
-    register, StageDef = stage_registry.register, stage_registry.StageDef
-    register(StageDef("clean", "cpu", CleanConfig, stage_registry.make_clean_runner(DEDUPE_UNITS)))
-    register(
-        StageDef(
-            "label",
-            "gpu",
-            LabelConfig,
-            stage_registry.make_label_runner(stage_registry.real_label_models, LABEL_UNITS),
-        )
-    )
-    register(
-        StageDef("filter", "cpu", FilterConfig, stage_registry.make_filter_runner(filter_decisions))
-    )
-    register(StageDef("split", "cpu", SplitConfig, stage_registry.make_split_runner(SPLIT_UNITS)))
-
-
-@pytest.fixture
-def fakes(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    monkeypatch.setenv("STRATAL_EXTRA_STAGES", FAKES)
-    stage_registry.load_extra_stages()
-    yield
-    _restore_real_stages()
-
-
-class Api:
-    def __init__(self, runner: Runner) -> None:
-        self.runner = runner
-        self.queued: list[job_service.Enqueue] = []
-        app = create_app()
-        app.dependency_overrides[get_enqueue] = lambda: self.queued.append
-        self.client = TestClient(app)
-
-    def post(self, body: dict[str, Any]) -> Any:
-        return self.client.post("/api/v1/jobs", json={"kind": "pipeline", **body})
-
-    def run(self, body: dict[str, Any]) -> dict[str, Any]:
-        response = self.post(body)
-        assert response.status_code == 202, response.text
-        self.runner.queue.extend(self.queued)
-        self.queued.clear()
-        self.runner.run_queued()
-        self.runner.collect()
-        return self.runner.job(response.json()["id"])
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("fake_units")]
 
 
 def _version(version_id: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, dict[str, Any]]]:
@@ -116,7 +52,7 @@ def _pipeline(slug: str, source: Path, **split: Any) -> dict[str, Any]:
 
 
 def test_DATA_4_1_the_pipeline_runs_through_the_split_as_one_job(
-    runner: Runner, fakes: None, tmp_path: Path
+    runner: Runner, tmp_path: Path
 ) -> None:
     source = make_image_folder(tmp_path / "src", valid=12, corrupt=1).root
 
@@ -134,7 +70,7 @@ def test_DATA_4_1_the_pipeline_runs_through_the_split_as_one_job(
 
 
 def test_DATA_4_1_bad_proportions_are_refused_with_validation_error(
-    runner: Runner, fakes: None, tmp_path: Path
+    runner: Runner, tmp_path: Path
 ) -> None:
     source = make_image_folder(tmp_path / "src", valid=3).root
 
@@ -148,7 +84,7 @@ def test_DATA_4_1_bad_proportions_are_refused_with_validation_error(
 
 
 def test_DATA_4_4_rerunning_the_split_gives_the_same_version_and_a_new_seed_another(
-    runner: Runner, fakes: None, tmp_path: Path
+    runner: Runner, tmp_path: Path
 ) -> None:
     api = Api(runner)
     first = api.run(_pipeline("m5rerun", make_image_folder(tmp_path / "src", valid=20).root))
@@ -165,7 +101,7 @@ def test_DATA_4_4_rerunning_the_split_gives_the_same_version_and_a_new_seed_anot
 
 
 def test_DATA_4_5_a_new_version_of_the_dataset_continues_its_earlier_split(
-    runner: Runner, fakes: None, tmp_path: Path
+    runner: Runner, tmp_path: Path
 ) -> None:
     api = Api(runner)
     small = make_image_folder(tmp_path / "small", valid=15, seed=1).root
@@ -191,7 +127,7 @@ def test_DATA_4_5_a_new_version_of_the_dataset_continues_its_earlier_split(
 
 
 def test_DATA_4_4_a_continues_version_id_given_by_the_user_is_refused(
-    runner: Runner, fakes: None, tmp_path: Path
+    runner: Runner, tmp_path: Path
 ) -> None:
     source = make_image_folder(tmp_path / "src", valid=4).root
 

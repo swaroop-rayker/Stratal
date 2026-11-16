@@ -190,6 +190,13 @@ Event: the shape in SPEC MON-1, plus `id`, `event_uid`, `type`, `reason`, `sugge
 | `PUT /reviews/{review_id}/items/{position}` | Record a decision. Body: `{decision: "accept" | "reject", note?}` | `200` item |
 | `POST /reviews/{review_id}/close` | Close the session and return the acceptance summary | `200` |
 
+Built in M5 (2026-11-16). Details:
+
+- **Sampling.** `sample_size` is 1 to 1,000 and at most the version's accepted rows. The sample is drawn from the accepted row keys, sorted, with `random.Random(seed).sample`, so the same version and seed always give the same rows in the same order. Without `seed` the server draws one below 2³¹ and records it.
+- **ReviewSession:** `{id, version_id, sample_size, seed, status, created_at, closed_at, progress, items}`. `progress` is `{sampled, decided, accept, reject, undecided, by_split: {split: {sampled, accept, reject}}}`. Each item is `{position, row_key, split, decision, note, decided_at, row: {sha256, derived_sha256, caption, clip_score, split_stratum}}`. `row` is read from the manifest so SCR-05 can show the image and caption. `split` is the row's split when it was sampled (DATA-4.7).
+- **Decisions** can be changed while the session is open. A decision on a closed session gives `409 conflict`, an unknown position `404 not_found`, and a value other than `accept` or `reject` gives `422 validation_error`. No decision changes a manifest, a split or a status.
+- **Close** returns the session without its items, with `progress`, `acceptance` and `acceptance_unavailable`. `acceptance` is the owner's `review_acceptance` result (EVAL-1.1): overall and per split, each with a Wilson interval. While that unit is not written, `acceptance` is null and `acceptance_unavailable` says why. Closing a session twice gives `409 conflict`.
+
 ### 3.6 Evaluation (EVAL-1.1)
 
 | Method and path | Purpose | Success |

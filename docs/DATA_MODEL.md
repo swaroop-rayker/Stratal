@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14). §4.9–4.11 are still planned |
+| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 built in M5 (2026-11-16). §4.11 is still planned |
 | Detail level | Phase-1 tables are specified. Phase 2+ tables are outlined in [§9](#9-planned-for-later-phases) |
 | Rule | Any schema change updates this file in the same change. Applied migrations are never edited |
 
@@ -235,9 +235,9 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 
 ### 4.10 `review_sessions` and `review_items` (LABEL-1.5)
 
-`review_sessions`: `id` (PK, `rev_…`), `version_id` (FK, not null), `sample_size`, `seed`, `status` (`open`, `closed`), `created_at`, `closed_at`.
+`review_sessions`: `id` (text PK, `rev_` plus the sequence `review_id_seq`, zero-padded), `version_id` (FK → `dataset_versions`, not null), `sample_size` (integer > 0), `seed` (bigint; drawn by the server and recorded when the request gives none), `status` (`open`, `closed`), `created_at`, `closed_at`. Index `(version_id, created_at)`.
 
-`review_items`: `session_id` (FK), `position` (integer; PK with `session_id`), `row_key` (text), `decision` (`accept`, `reject`, null until decided), `note`, `decided_at`.
+`review_items`: `session_id` (FK, cascades on delete), `position` (integer > 0, the order of the sample; PK with `session_id`), `row_key` (text; unique within a session), `split` (the row's split when it was sampled, null for an unsplit version; DATA-4.7, added in M5), `decision` (`accept`, `reject`, null until decided), `note`, `decided_at`. Decisions change no manifest, split or status (DATA-4.7).
 
 ### 4.11 `eval_reports` (EVAL-1.1)
 
