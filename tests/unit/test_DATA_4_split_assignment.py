@@ -188,6 +188,33 @@ def test_DATA_4_3_every_stratum_is_within_one_group_of_its_targets() -> None:
     _assert_within_one_group(groups, result, DEFAULT)
 
 
+def test_DATA_4_3_strata_that_are_one_group_each_still_meet_the_totals() -> None:
+    """A group too big for every quota of its stratum must overshoot one split.
+
+    Ten strata, each one group of 5 rows: each stratum's targets are 4 / 0.5 /
+    0.5, which no group of 5 fits. Any split keeps the stratum within one group,
+    but the totals (40 / 5 / 5) are met only if the overshoots are spread:
+    8 strata to train, 1 to val, 1 to test.
+    """
+    groups = [_group([f"s{s}/{i}.jpg" for i in range(5)], f"s{s:02d}") for s in range(10)]
+
+    result = assign_splits(groups, proportions=DEFAULT, seed=SEED)
+
+    _assert_within_one_group(groups, result, DEFAULT)
+
+
+def test_DATA_4_3_groups_too_big_for_their_stratum_are_balanced_with_the_rest() -> None:
+    """Twelve tiny strata of 7 rows, each a group of 6 and one single row, next to
+    strata of ordinary size: the overshoots must not pile up in one split."""
+    groups = [_group([f"tiny{s}/{i}.jpg" for i in range(6)], f"tiny{s:02d}") for s in range(12)]
+    groups += [_group([f"tiny{s}/single.jpg"], f"tiny{s:02d}") for s in range(12)]
+    groups += _population({"big_a": 400, "big_b": 250}, seed=11)
+
+    result = assign_splits(groups, proportions=DEFAULT, seed=SEED)
+
+    _assert_within_one_group(groups, result, DEFAULT)
+
+
 # ------------------------------------------------------------------ DATA-4.4
 
 
@@ -288,3 +315,28 @@ def test_DATA_4_5_a_tied_merge_goes_to_the_larger_proportion_then_the_earlier_na
     result = assign_splits([joined], proportions=proportions, seed=SEED)
 
     assert result[joined.anchor] == expected
+
+
+@pytest.mark.parametrize("heavy_share", [0.0, 0.3, 1.0], ids=["realistic", "mixed", "all heavy"])
+def test_DATA_4_1_random_mixes_stay_within_one_group(heavy_share: float) -> None:
+    """Rules 4 and 6 on 100 seeded random mixes of strata each: sizes from 1 to
+    300 rows, and a share of "heavy" strata made mostly of groups of 2 to 6."""
+    for trial in range(100):
+        rng = random.Random(trial)
+        groups: list[GroupToAssign] = []
+        for stratum in range(rng.randint(1, 40)):
+            left = rng.choice([1, 3, 5, 8, 20, 60, 300])
+            heavy = rng.random() < heavy_share
+            index = 0
+            while left:
+                size = 1
+                if heavy or rng.random() < 0.02:
+                    size = min(left, rng.choice([2, 3, 4, 5, 6]))
+                keys = [f"t{trial}/s{stratum}/{index + k}.jpg" for k in range(size)]
+                groups.append(_group(keys, f"s{stratum:02d}"))
+                index += size
+                left -= size
+
+        result = assign_splits(groups, proportions=DEFAULT, seed=trial)
+
+        _assert_within_one_group(groups, result, DEFAULT)

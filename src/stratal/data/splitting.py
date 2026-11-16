@@ -363,27 +363,47 @@ def assign_splits(
        to 1 (within 1e-9), an anchor occurs twice, a group has no members, or a
        ``previous`` value is not one of :data:`SPLITS`.
 
-    How, in three steps:
+    How, in four steps. A split's *room* in a stratum is its target there
+    minus the rows it already has; its *global room* is the sum over strata.
 
     1. **Known groups** (rules 2 and 3) are settled first and counted as
        carried rows of their stratum.
-    2. **Quotas.** For each stratum, the rows each split still needs are its
-       target minus its carried rows. If carried rows already overfill a
-       split, those needs are projected onto "non-negative and summing to the
-       new rows" (a Euclidean projection onto a simplex), which spreads the
-       new rows as close to the needs as possible. The resulting matrix of
-       real numbers (strata by splits) is then rounded so that every cell is
-       its floor or its ceiling, every stratum's row sums to its new rows, and
-       every split's column sums to its own total rounded. This is
-       *controlled rounding*: a matrix with integer row sums always has such a
-       rounding (Bacharach, 1966). It is found as a small bipartite matching
-       between strata that need one more row and splits that need one more
-       row. Rounding each stratum on its own would let errors of up to one row
-       per stratum add up in the totals (the 48-strata test).
-    3. **Packing.** Within a stratum, multi-row groups go first, largest
-       first. Each goes to a split whose quota it fits, chosen at random with
-       weights equal to the remaining quotas. Single rows are then shuffled
-       and dealt out to fill the quotas exactly.
+    2. **Multi-row groups**, over all strata (in name order), largest first
+       within a stratum. A group goes to a split whose room fits it, chosen at
+       random with weights equal to that room. A group that fits no room
+       (a stratum of 5 rows that is one group of 5, say) has to overshoot one
+       split. It goes to the split with the most *global* room, among those
+       where the overshoot stays under one group. Spreading the overshoots by
+       global room is what keeps the totals right when many small strata
+       overshoot; choosing by room within the stratum alone sent all ten such
+       strata to train in the overshoot test.
+    3. **Single rows.** Each stratum's remaining room is projected onto
+       "non-negative and summing to its single rows" (a Euclidean projection
+       onto a simplex), which handles splits already overfilled by carried
+       rows or overshoots. The resulting matrix of real numbers (strata by
+       splits) is rounded so that every cell is its floor or its ceiling,
+       every stratum's row sums to its single rows, and every split's column
+       sums to its own total rounded. This is *controlled rounding*: a matrix
+       with integer row sums always has such a rounding (Bacharach, 1966). It
+       is found as a small bipartite matching between strata that need one
+       more row and splits that need one more row. Rounding each stratum on
+       its own would let errors of up to one row per stratum add up in the
+       totals (the 48-strata test). The single rows of each stratum are then
+       shuffled and dealt out to those quotas.
+    4. **Repair.** Strata made mostly of groups have few single rows to even
+       out their overshoots, so the totals can still be a group or more off.
+       Then new groups are moved, one at a time, from a split over its total
+       to one under it, where the stratum stays within its bound
+       (:func:`_repair_totals`).
+
+    Steps 2 and 3 alone kept the totals within bounds in every one of 1,000
+    random mixes with realistic grouping (about 2 % of rows in groups), but
+    in only 634 of 1,000 where 30 % of strata were mostly groups. With step 4
+    all of 3,000 random mixes passed, those where every stratum is mostly
+    groups included (a seeded sample of these is
+    ``test_DATA_4_1_random_mixes_stay_within_one_group``). Step 4 is a greedy
+    local search, so this is measured, not proven: it stops when no single
+    move helps.
 
     All randomness comes from ``random.Random(f"{seed}|{stratum}")``, so it is
     reproducible and independent of input order (groups are sorted by anchor
@@ -414,20 +434,122 @@ def assign_splits(
         else:
             new[group.stratum].append(group)
 
-    wanted: dict[str, dict[str, float]] = {}
-    new_rows: dict[str, int] = {}
-    for stratum in sorted(new):
-        new_rows[stratum] = sum(len(g.members) for g in new[stratum])
-        needs = {
-            split: proportions.of(split) * rows_in[stratum] - carried[stratum][split]
-            for split in SPLITS
-        }
-        wanted[stratum] = _project_onto_simplex(needs, new_rows[stratum])
-    quotas = _controlled_round(wanted, new_rows)
-    for stratum in sorted(new):
-        rng = random.Random(f"{seed}|{stratum}")
-        result.update(_pack(new[stratum], quotas[stratum], rng))
+    strata = sorted(new)
+    room = {s: {k: proportions.of(k) * rows_in[s] - carried[s][k] for k in SPLITS} for s in strata}
+    global_room = {k: sum(room[s][k] for s in strata) for k in SPLITS}
+    largest: Counter[str] = Counter()
+    for group in groups:
+        largest[group.stratum] = max(largest[group.stratum], len(group.members))
+    rngs = {s: random.Random(f"{seed}|{s}") for s in strata}
+
+    for stratum in strata:  # step 2
+        multi = [g for g in new[stratum] if len(g.members) > 1]
+        rngs[stratum].shuffle(multi)
+        multi.sort(key=lambda g: -len(g.members))  # stable: random order within a size
+        for group in multi:
+            size = len(group.members)
+            split = _place_group(size, room[stratum], global_room, largest[stratum], rngs[stratum])
+            result[group.anchor] = split
+            room[stratum][split] -= size
+            global_room[split] -= size
+
+    singles = {s: [g for g in new[s] if len(g.members) == 1] for s in strata}  # step 3
+    wanted = {s: _project_onto_simplex(room[s], len(singles[s])) for s in strata}
+    quotas = _controlled_round(wanted, {s: len(singles[s]) for s in strata})
+    for stratum in strata:
+        rows = singles[stratum]
+        rngs[stratum].shuffle(rows)
+        position = 0
+        for split in SPLITS:
+            for group in rows[position : position + quotas[stratum][split]]:
+                result[group.anchor] = split
+            position += quotas[stratum][split]
+
+    _repair_totals(groups, new, result, proportions, largest, random.Random(f"{seed}|repair"))
     return result
+
+
+def _repair_totals(
+    groups: Sequence[GroupToAssign],
+    new: Mapping[str, Sequence[GroupToAssign]],
+    result: dict[str, str],
+    proportions: Proportions,
+    largest: Mapping[str, int],
+    rng: random.Random,
+) -> None:
+    """Step 4: move new groups until every split's total is within one group.
+
+    Steps 2 and 3 keep every stratum within its bound. Strata made mostly of
+    large groups have few single rows to even things out, so their overshoots
+    can still add up in the totals. While a total is a group or more off, a
+    new group is moved from a split over its total to one under it, choosing
+    groups (in a seeded random order) whose stratum stays within its bound
+    after the move and whose move brings the two totals closer to their
+    targets. Carried groups never move (rule 2).
+    """
+    rows = sum(len(g.members) for g in groups)
+    tolerance = max((len(g.members) for g in groups), default=0)
+    counts: defaultdict[str, Counter[str]] = defaultdict(Counter)
+    rows_in: Counter[str] = Counter()
+    totals: Counter[str] = Counter()
+    for group in groups:
+        size = len(group.members)
+        counts[group.stratum][result[group.anchor]] += size
+        rows_in[group.stratum] += size
+        totals[result[group.anchor]] += size
+    movable = [g for s in sorted(new) for g in new[s]]
+    rng.shuffle(movable)
+
+    def gap(split: str) -> float:
+        return totals[split] - proportions.of(split) * rows
+
+    for _ in range(len(movable)):
+        if all(abs(gap(split)) < tolerance for split in SPLITS):
+            return
+        over = max(SPLITS, key=gap)
+        under = min(SPLITS, key=gap)
+        moved = False
+        for group in movable:
+            size, stratum = len(group.members), group.stratum
+            if result[group.anchor] != over:
+                continue
+            if max(abs(gap(over) - size), abs(gap(under) + size)) >= max(
+                abs(gap(over)), abs(gap(under))
+            ):
+                continue
+            in_stratum = counts[stratum]
+            bound = largest[stratum]
+            if abs(in_stratum[over] - size - proportions.of(over) * rows_in[stratum]) >= bound:
+                continue
+            if abs(in_stratum[under] + size - proportions.of(under) * rows_in[stratum]) >= bound:
+                continue
+            result[group.anchor] = under
+            in_stratum[over] -= size
+            in_stratum[under] += size
+            totals[over] -= size
+            totals[under] += size
+            moved = True
+            break
+        if not moved:
+            return
+
+
+def _place_group(
+    size: int,
+    room: Mapping[str, float],
+    global_room: Mapping[str, float],
+    largest: int,
+    rng: random.Random,
+) -> str:
+    """The split for one multi-row group. See :func:`assign_splits`, step 2."""
+    fits = [split for split in SPLITS if room[split] >= size - _EPS]
+    if fits:
+        return rng.choices(fits, weights=[room[s] for s in fits])[0]
+    bearable = [split for split in SPLITS if size - room[split] < largest]
+    return max(
+        bearable or SPLITS,
+        key=lambda s: (global_room[s], room[s], -SPLITS.index(s)),
+    )
 
 
 _EPS = 1e-9
@@ -505,38 +627,6 @@ def _controlled_round(
                 best = max(free, key=lambda k: wanted[stratum][k] - base[stratum][k])
                 extra[stratum][best] = 1
     return {s: {k: base[s][k] + extra[s][k] for k in SPLITS} for s in strata}
-
-
-def _pack(
-    groups: Sequence[GroupToAssign], quota: Mapping[str, int], rng: random.Random
-) -> dict[str, str]:
-    """Deal one stratum's new groups into its quotas. See :func:`assign_splits`, step 3."""
-    remaining = dict(quota)
-    result: dict[str, str] = {}
-    multi = [g for g in groups if len(g.members) > 1]
-    rng.shuffle(multi)
-    multi.sort(key=lambda g: -len(g.members))  # stable: random order within a size
-    for group in multi:
-        size = len(group.members)
-        fits = [split for split in SPLITS if remaining[split] >= size]
-        if fits:
-            split = rng.choices(fits, weights=[remaining[s] for s in fits])[0]
-        else:
-            split = max(SPLITS, key=lambda s: (remaining[s], -SPLITS.index(s)))
-        remaining[split] -= size
-        result[group.anchor] = split
-
-    singles = [g for g in groups if len(g.members) == 1]
-    rng.shuffle(singles)
-    position = 0
-    for split in SPLITS:
-        take = max(remaining[split], 0)
-        for group in singles[position : position + take]:
-            result[group.anchor] = split
-        position += take
-    for group in singles[position:]:  # only if quotas were overshot; not expected
-        result[group.anchor] = max(SPLITS, key=lambda s: (remaining[s], -SPLITS.index(s)))
-    return result
 
 
 def targets(rows: int, proportions: Proportions) -> Mapping[str, float]:
