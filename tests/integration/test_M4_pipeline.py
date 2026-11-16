@@ -21,6 +21,8 @@ from stratal.core.settings import get_settings
 from stratal.data import registry
 from stratal.data.clean import OWNER_UNITS as DEDUPE_UNITS
 from stratal.data.clean import CleanConfig
+from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
+from stratal.data.split_stage import SplitConfig
 from stratal.db.engine import get_engine
 from stratal.label.filter_stage import FilterConfig
 from stratal.label.filtering import filter_decisions
@@ -34,7 +36,10 @@ from stratal.testing.synthetic import make_image_folder
 
 pytestmark = pytest.mark.integration
 
-FAKES = "stratal.testing.stages,stratal.testing.fake_clean,stratal.testing.fake_label"
+FAKES = (
+    "stratal.testing.stages,stratal.testing.fake_clean,stratal.testing.fake_label,"
+    "stratal.testing.fake_split"
+)
 
 
 def _restore_real_stages() -> None:
@@ -51,6 +56,7 @@ def _restore_real_stages() -> None:
     register(
         StageDef("filter", "cpu", FilterConfig, stage_registry.make_filter_runner(filter_decisions))
     )
+    register(StageDef("split", "cpu", SplitConfig, stage_registry.make_split_runner(SPLIT_UNITS)))
 
 
 @pytest.fixture
@@ -102,6 +108,7 @@ def test_LABEL_1_1_the_pipeline_runs_all_five_stages_as_one_job(
             "dataset": "m4demo",
             "source": {"path": _source(tmp_path)},
             "stages": {"ingest": {"min_size": 32}, "preprocess": {"max_side": 128}},
+            "until_stage": "filter",
         }
     )
 
@@ -131,8 +138,13 @@ def test_LABEL_1_4_a_new_threshold_reruns_only_the_filter(
     )
     labelled = first["stages"][3]["output_version_id"]
 
-    changed = api.run({"from_version": labelled, "stages": {"filter": {"clip_threshold": 0.3}}})
-    same = api.run({"from_version": labelled, "stages": {"filter": {"clip_threshold": 0.3}}})
+    rerun = {
+        "from_version": labelled,
+        "stages": {"filter": {"clip_threshold": 0.3}},
+        "until_stage": "filter",
+    }
+    changed = api.run(rerun)
+    same = api.run(rerun)
 
     assert [s["name"] for s in changed["stages"]] == ["filter"], "nothing is captioned again"
     assert changed["output_version_id"] != first["output_version_id"]

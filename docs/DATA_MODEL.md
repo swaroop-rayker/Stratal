@@ -92,7 +92,7 @@ Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 | `manifest_path` | text | no | relative to the data root |
 | `manifest_bytes` | bigint | no | |
 | `row_count` | integer | no | |
-| `counts` | jsonb | no | rows by status and by reason |
+| `counts` | jsonb | no | rows by status and by reason; a `split` version adds `split`, its split report (DATA-4.6): rows per split and per stratum with targets and a within-one-group flag, group count and sizes, rows carried over, newly assigned and moved (with the moved rows listed), and the leakage check |
 | `new_blob_bytes` | bigint | no | bytes of files first written for this version (makes DATA-3.4.AC1 measurable) |
 | `schema_version` | integer | no | manifest schema version |
 | `code_version` | text | yes | git commit that produced it |

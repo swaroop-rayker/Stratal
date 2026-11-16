@@ -183,12 +183,12 @@ def test_API_jobs_rejects_bad_requests_with_problem_details(runner: Runner, tmp_
 
     missing = client.post("/api/v1/jobs", json={**base, "source": {"path": "/nowhere"}})
     config = client.post("/api/v1/jobs", json={**base, "stages": {"ingest": {"min_size": 0}}})
-    unknown = client.post("/api/v1/jobs", json={**base, "stages": {"split": {}}})
+    unknown = client.post("/api/v1/jobs", json={**base, "stages": {"train": {}}})
 
     assert (missing.status_code, missing.json()["code"]) == (422, "source_not_found")
     assert (config.status_code, config.json()["code"]) == (422, "validation_error")
     assert config.json()["errors"][0]["loc"] == ["stages", "ingest", "min_size"]
-    assert unknown.status_code == 422 and "split" in unknown.json()["detail"]
+    assert unknown.status_code == 422 and "train" in unknown.json()["detail"]
     assert client.get("/api/v1/jobs/job_9999").json()["code"] == "not_found"
     assert client.get("/api/v1/jobs").json() == {"items": [], "next_cursor": None}
 

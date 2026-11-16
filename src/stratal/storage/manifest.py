@@ -57,6 +57,8 @@ _FIELDS: list[tuple[str, pa.DataType]] = [
     ("clip_model", pa.string()),
     ("clip_model_revision", pa.string()),
     ("split", pa.string()),
+    ("split_group", pa.string()),
+    ("split_stratum", pa.string()),
 ]
 SCHEMA: pa.Schema = pa.schema(
     [pa.field(name, kind, nullable=name != "row_key") for name, kind in _FIELDS]

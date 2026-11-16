@@ -5,6 +5,7 @@ runner receives a :class:`StageRun` and returns a :class:`StageResult`. More
 stages register themselves here as their milestones arrive.
 """
 
+import dataclasses
 import importlib
 import os
 from collections.abc import Callable
@@ -16,12 +17,14 @@ from pydantic import BaseModel
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
-from stratal.core.errors import StratalError
+from stratal.core.errors import StratalError, ValidationFailed
 from stratal.data import registry
 from stratal.data.clean import OWNER_UNITS, CleanConfig, DedupeUnits, run_clean
 from stratal.data.commit import VersionRecord
 from stratal.data.ingest import IngestConfig, run_ingest
 from stratal.data.preprocess import PreprocessConfig, run_preprocess
+from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
+from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitUnits, run_split
 from stratal.data.versioning import derive_version_identity
 from stratal.db.models import Dataset
 from stratal.label.filter_stage import FilterConfig, FilterRule, run_filter
@@ -345,3 +348,70 @@ def make_filter_runner(rule: FilterRule) -> Callable[[StageRun], StageResult]:
 
 register(StageDef("label", "gpu", LabelConfig, make_label_runner(real_label_models, LABEL_UNITS)))
 register(StageDef("filter", "cpu", FilterConfig, make_filter_runner(filter_decisions)))
+
+
+def make_split_runner(units: SplitUnits) -> Callable[[StageRun], StageResult]:
+    """The split stage's runner (DATA-4). Tests register one built with fakes.
+
+    Before the usual frame, it decides which earlier split this one continues
+    (DATA-4.5) and writes that into the config, so the choice is part of the
+    version's identity and of its memo key (DATA-4.4).
+    """
+
+    def _run_split(run: StageRun) -> StageResult:
+        if run.input_version_id is None:
+            return run_derived_stage(run, stage="split", config_model=SplitConfig, body=_never)
+        asked = SplitConfig.model_validate(run.config)
+        with Session(run.engine) as session:
+            parent = registry.get_version(session, run.input_version_id)
+            found = registry.find_previous_split(
+                session,
+                dataset_id=parent.dataset_id,
+                parent_version_id=parent.version_id,
+                config=asked.model_dump(mode="json"),
+            )
+            previous = None
+            if found is not None:
+                _, manifest = registry.manifest_for(session, run.data_dir, found.version_id)
+                previous = PreviousSplit(found.version_id, manifest)
+        continues = previous.version_id if previous is not None else None
+        if asked.continues_version_id is not None and asked.continues_version_id != continues:
+            raise ValidationFailed(
+                f"continues_version_id is set by the split stage; it would be {continues!r}, "
+                f"not {asked.continues_version_id!r}.",
+                suggested_action="Leave continues_version_id out of the split config.",
+            )
+        config = {**asked.model_dump(mode="json"), "continues_version_id": continues}
+
+        def body(given: DerivedInput) -> DerivedOutput:
+            try:
+                result = run_split(
+                    parent_manifest=given.manifest,
+                    parent_version_id=given.version_id,
+                    data_dir=run.data_dir,
+                    config=SplitConfig.model_validate(given.config),
+                    derive=derive_version_identity,
+                    sink=run.ctx,
+                    previous=previous,
+                    units=units,
+                    checkpoint=run.ctx.raise_if_cancelled,
+                )
+            except NotImplementedError as exc:
+                raise _owner_unit_missing("split", exc) from None
+            return DerivedOutput(result.record, 0, result.metrics)
+
+        return run_derived_stage(
+            dataclasses.replace(run, config=config),
+            stage="split",
+            config_model=SplitConfig,
+            body=body,
+        )
+
+    return _run_split
+
+
+def _never(_given: DerivedInput) -> DerivedOutput:
+    raise AssertionError("run_derived_stage refuses a stage without an input first")
+
+
+register(StageDef("split", "cpu", SplitConfig, make_split_runner(SPLIT_UNITS)))

@@ -321,6 +321,18 @@ Still planned for phase 1: run a pipeline.
 | Job creation | `stratal.runtime.jobs` | `create_job_from_plan(..., input_version_id=None)` |
 | Test helpers | `stratal.testing` | `fakes`: `no_exact_duplicates`, `fake_perceptual_hash`, `no_near_duplicates`, `ScriptedGroups`; `fake_clean` (registers clean with fakes when named in `STRATAL_EXTRA_STAGES`); `stagekit` (stages as library calls); `synthetic` gained `exif_rotated` and `odd_modes` |
 
+### Internal interfaces added in M5
+
+| Interface | Where | Shape |
+|---|---|---|
+| Split units (DATA-4.1 to 4.5) | `stratal.data.splitting` | `LeakageItem`, `SplitGroup`, `StratumItem`, `StratumKey`, `Member`, `GroupToAssign`, `Proportions`, `SPLITS`, the three functions in §5, `targets(rows, proportions)` and `ALGORITHM_VERSION` |
+| Split stage | `stratal.data.split_stage` | `run_split(*, parent_manifest, parent_version_id, data_dir, config: SplitConfig, derive, sink, previous: PreviousSplit \| None, units: SplitUnits = OWNER_UNITS, checkpoint) -> SplitResult(record, report, metrics, seconds)`; raises `ContractBroken` when a unit breaks its contract; `leakage_check(rows, *, max_distance)` |
+| Split config | `stratal.data.split_stage.SplitConfig` | `train`, `val`, `test` (0.8 / 0.1 / 0.1, finite, not negative, summing to 1), `seed` (0), `leakage_distance` (12), `stratum_keys` (all three), `continues_version_id` (set by the stage; a different value from the user fails the stage), `algorithm_version`. Set per job as `stages.split` |
+| Previous split | `stratal.data.registry` | `find_previous_split(session, *, dataset_id, parent_version_id, config) -> DatasetVersion \| None`: the dataset's newest split with the same proportions and seed, not made from the same parent |
+| Split runner | `stratal.runtime.stages` | `make_split_runner(units)`: looks up the previous split, writes it into the config, then the derived-stage frame |
+| Report statistics (EVAL-1.1) | `stratal.eval.report_stats` | `RowStatus`, `RejectionCounts`, `ScoreDistribution`, `Interval`, `ReviewedItem`, `AcceptanceRate`, `Acceptance`, `QUANTILES` and the five functions in §5 |
+| Test helpers | `stratal.testing` | `fakes`: `singleton_split_groups`, `one_stratum`, `hashed_splits`, `lumped_rejection_counts`, `no_filter_rate`, `crude_score_distribution`, `vacuous_interval`, `overall_only_acceptance`; `fake_split` (registers split with fakes); `stagekit.split(data_dir, parent, units, *, config, previous, sink)` |
+
 ## 7. Later phases
 
 Listed so the phase-1 design leaves room. Each is specified at its phase kickoff.

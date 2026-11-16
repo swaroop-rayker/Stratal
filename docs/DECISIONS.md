@@ -397,6 +397,16 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Fixed histogram edges chosen by the caller; type-7 quantiles; sample standard deviation; the filter rate is over the rows that reached the filter; z is computed from the normal quantile, not rounded to 1.96. The Wilson tests use Newcombe (1998), table I.
 - **Why:** API.md §5 lists all four report parts as the owner's statistics. Fixed edges let reports of different versions be compared bin by bin, and published values make the interval checkable without trusting our own arithmetic.
 
+**The split continues the newest earlier split, never one of its own parent** (M5, DATA-4.4, DATA-4.5; agent)
+- **What:** The runner picks the dataset's newest `split` version with the same proportions and seed whose parent is a different version, and records it as `continues_version_id` before the memo lookup.
+- **How:** `registry.find_previous_split`; the ID goes into the config, so it is part of both the version ID and the memo key. A kept copy that replaced another inherits that copy's split through `dup_of`.
+- **Why:** Without the exclusion, a second split of the same parent would continue the first, get a different config and so a different version ID, which would break DATA-4.4.AC1 and NFR-4.
+
+**The split report lives in the version; a leak warns rather than fails** (M5, DATA-4.6, DATA-4.2.AC2; agent)
+- **What:** The report is stored as `counts.split` of the split version. The stage's own all-pairs check compares every cross-split pair. If a pair leaks, the stage emits a WARN with a reason and an action, and the report lists examples.
+- **How:** The check compares pHash values bit by bit and duplicate-group IDs, without using the owner's groups. On 10k rows it compares about 17 million cross-split pairs in plain Python.
+- **Why:** The report then travels with the version, and a reused version keeps it. A failing check is a defect in the grouping, and the version is still inspectable, so the leaks are reported but the version is kept. The fakes join no pairs, so they would leak on folders that have near pairs, and the stage still has to run there.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

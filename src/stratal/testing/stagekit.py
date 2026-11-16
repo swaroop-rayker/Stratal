@@ -12,6 +12,7 @@ from stratal.data.clean import CleanConfig, CleanResult, DedupeUnits, run_clean
 from stratal.data.commit import VersionRecord
 from stratal.data.ingest import IngestConfig, run_ingest
 from stratal.data.preprocess import PreprocessConfig, PreprocessResult, run_preprocess
+from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitResult, SplitUnits, run_split
 from stratal.data.versioning import derive_version_identity
 from stratal.label.filter_stage import FilterConfig, FilterResult, FilterRule, run_filter
 from stratal.label.stage import (
@@ -130,4 +131,32 @@ def filter_stage(
         derive=derive_version_identity,
         sink=sink or ListSink(),
         rule=rule,
+    )
+
+
+def split(
+    data_dir: Path,
+    parent: VersionRecord,
+    units: SplitUnits,
+    *,
+    config: SplitConfig | None = None,
+    previous: VersionRecord | None = None,
+    sink: ListSink | None = None,
+) -> SplitResult:
+    """The split stage on ``parent``, continuing ``previous`` if given (the runner's
+    database lookup is tested in the integration tests)."""
+    config = config or SplitConfig()
+    if previous is not None:
+        config = config.model_copy(update={"continues_version_id": previous.version_id})
+    return run_split(
+        parent_manifest=manifest_path(data_dir, parent),
+        parent_version_id=parent.version_id,
+        data_dir=data_dir,
+        config=config,
+        derive=derive_version_identity,
+        sink=sink or ListSink(),
+        previous=None
+        if previous is None
+        else PreviousSplit(previous.version_id, manifest_path(data_dir, previous)),
+        units=units,
     )
