@@ -7,79 +7,26 @@ derivation cache, memoization, version registry, lease plumbing and job
 runtime, is the production code. The real models are tested in ``tests/gpu``.
 """
 
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from stratal.api.app import create_app
-from stratal.api.jobs import get_enqueue
 from stratal.core.settings import get_settings
 from stratal.data import registry
-from stratal.data.clean import OWNER_UNITS as DEDUPE_UNITS
-from stratal.data.clean import CleanConfig
 from stratal.db.engine import get_engine
-from stratal.label.filter_stage import FilterConfig
-from stratal.label.filtering import filter_decisions
-from stratal.label.stage import OWNER_UNITS as LABEL_UNITS
-from stratal.label.stage import LabelConfig
-from stratal.runtime import jobs as job_service
-from stratal.runtime import stages as stage_registry
 from stratal.storage.manifest import STATUS_ACCEPTED
 from stratal.testing.harness import Runner
+from stratal.testing.pipeline import PipelineApi as Api
 from stratal.testing.synthetic import make_image_folder
 
 pytestmark = pytest.mark.integration
 
-FAKES = "stratal.testing.stages,stratal.testing.fake_clean,stratal.testing.fake_label"
-
-
-def _restore_real_stages() -> None:
-    register, StageDef = stage_registry.register, stage_registry.StageDef
-    register(StageDef("clean", "cpu", CleanConfig, stage_registry.make_clean_runner(DEDUPE_UNITS)))
-    register(
-        StageDef(
-            "label",
-            "gpu",
-            LabelConfig,
-            stage_registry.make_label_runner(stage_registry.real_label_models, LABEL_UNITS),
-        )
-    )
-    register(
-        StageDef("filter", "cpu", FilterConfig, stage_registry.make_filter_runner(filter_decisions))
-    )
-
 
 @pytest.fixture
-def fakes(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    monkeypatch.setenv("STRATAL_EXTRA_STAGES", FAKES)
-    stage_registry.load_extra_stages()
-    yield
-    _restore_real_stages()
-
-
-class Api:
-    def __init__(self, runner: Runner) -> None:
-        self.runner = runner
-        self.queued: list[job_service.Enqueue] = []
-        app = create_app()
-        app.dependency_overrides[get_enqueue] = lambda: self.queued.append
-        self.client = TestClient(app)
-
-    def post(self, body: dict[str, Any]) -> Any:
-        return self.client.post("/api/v1/jobs", json={"kind": "pipeline", **body})
-
-    def run(self, body: dict[str, Any]) -> dict[str, Any]:
-        response = self.post(body)
-        assert response.status_code == 202, response.text
-        self.runner.queue.extend(self.queued)
-        self.queued.clear()
-        self.runner.run_queued()
-        self.runner.collect()
-        return self.runner.job(response.json()["id"])
+def fakes(fake_units: None) -> None:
+    """The owner's units and the models as fakes (the shared ``fake_units`` fixture)."""
 
 
 def _rows(version_id: str) -> dict[str, dict[str, Any]]:
@@ -102,6 +49,7 @@ def test_LABEL_1_1_the_pipeline_runs_all_five_stages_as_one_job(
             "dataset": "m4demo",
             "source": {"path": _source(tmp_path)},
             "stages": {"ingest": {"min_size": 32}, "preprocess": {"max_side": 128}},
+            "until_stage": "filter",
         }
     )
 
@@ -131,8 +79,13 @@ def test_LABEL_1_4_a_new_threshold_reruns_only_the_filter(
     )
     labelled = first["stages"][3]["output_version_id"]
 
-    changed = api.run({"from_version": labelled, "stages": {"filter": {"clip_threshold": 0.3}}})
-    same = api.run({"from_version": labelled, "stages": {"filter": {"clip_threshold": 0.3}}})
+    rerun = {
+        "from_version": labelled,
+        "stages": {"filter": {"clip_threshold": 0.3}},
+        "until_stage": "filter",
+    }
+    changed = api.run(rerun)
+    same = api.run(rerun)
 
     assert [s["name"] for s in changed["stages"]] == ["filter"], "nothing is captioned again"
     assert changed["output_version_id"] != first["output_version_id"]
@@ -140,9 +93,12 @@ def test_LABEL_1_4_a_new_threshold_reruns_only_the_filter(
     assert same["output_version_id"] == changed["output_version_id"]
 
 
-def test_API_a_version_from_the_last_stage_has_nothing_after_it(
+def test_API_a_pipeline_from_the_final_version_runs_only_the_report(
     runner: Runner, fakes: None, tmp_path: Path
 ) -> None:
+    """Since M5 the last stage, evaluate, makes no version: a pipeline started from
+    the final (split) version only reports on it again. Before M5 this was refused
+    as having nothing after it."""
     api = Api(runner)
     done = api.run(
         {
@@ -152,7 +108,7 @@ def test_API_a_version_from_the_last_stage_has_nothing_after_it(
         }
     )
 
-    response = api.post({"from_version": done["output_version_id"]})
+    again = api.run({"from_version": done["output_version_id"]})
 
-    assert response.status_code == 422
-    assert "nothing after it" in response.json()["detail"]
+    assert [s["name"] for s in again["stages"]] == ["evaluate"]
+    assert again["output_version_id"] == done["output_version_id"]

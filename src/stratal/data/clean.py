@@ -318,7 +318,8 @@ class _Cleaner:
                             opened.load()
                             image = opened.copy()
                     except (OSError, SyntaxError, ValueError, Image.DecompressionBombError) as exc:
-                        plan.unreadable[by_hash[sha]] = f"{type(exc).__name__}: {exc}"[:500]
+                        detail = f"{type(exc).__name__}: {exc}".replace(str(path), by_hash[sha])
+                        plan.unreadable[by_hash[sha]] = detail[:500]  # no local path (E-010)
                         continue
                     # Outside the try: an error raised by the owner's function is a bug to
                     # report, not a corrupt image.

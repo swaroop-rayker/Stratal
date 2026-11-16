@@ -362,3 +362,33 @@ def job_view(session: Session, job: Job) -> dict[str, Any]:
         "started_at": _iso(job.started_at),
         "finished_at": _iso(job.finished_at),
     }
+
+
+def create_report_job(
+    session: Session, version_id: str, config: dict[str, Any]
+) -> tuple[Job, Enqueue]:
+    """Queue a one-stage job that reports on ``version_id`` (EVAL-1.1, API.md §3.6)."""
+    from stratal.eval.report import EvaluateConfig
+    from stratal.label import review as reviews
+
+    version = registry.get_version(session, version_id)
+    try:
+        resolved = EvaluateConfig.model_validate(config)
+    except ValidationError as exc:
+        raise ValidationFailed(
+            "The report request did not pass validation.",
+            suggested_action="Fix the fields listed in 'errors'.",
+            errors=_field_problems("evaluate", exc),
+        ) from None
+    if resolved.review_id is not None:
+        reviews.review_for_report(session, version_id, resolved.review_id)
+    plan = [("evaluate", resolved.model_dump(mode="json"))]
+    spec: dict[str, Any] = {"kind": "report", "version_id": version_id, "stages": dict(plan)}
+    return create_job_from_plan(
+        session,
+        kind="report",
+        spec=spec,
+        plan=plan,
+        dataset_id=version.dataset_id,
+        input_version_id=version_id,
+    )

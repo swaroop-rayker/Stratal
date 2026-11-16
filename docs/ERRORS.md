@@ -35,6 +35,16 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-010 — A version ID depended on where the data folder was
+
+- **Date:** 2026-11-16
+- **Seen:** The new NFR-4 test ran the phase-1 chain twice on one source folder, each run in its own data folder. The ingest versions differed (`ds_f68a49483e3b` and `ds_21d99864d836`). The only differing cell was the `reason_detail` of a corrupt file: `cannot identify image file '/tmp/…/d1/blobs/sha256/bc/7f/bc7f15ce…'` against the same text with `d2`.
+- **Where:** M1 ingest, and the same pattern in M3 clean and preprocess; NFR-4, DATA-3.2 rule 1 ("on any machine and any run")
+- **Cause:** Pillow's and the OS's error messages name the file by its absolute path. The stages copied them into `reason_detail`, which is part of the manifest and so of the content hash. The data folder is always `/data` in the containers, so this did not show on this laptop. It would show on any other layout, and when the source mount moves (`unreadable`).
+- **Fix:** Before a message is stored, the path in it is replaced: by the row key at ingest and clean, by `blob <first 12 hex>` at preprocess. Committed with the M5 NFR-4 tests. Existing versions keep their IDs. Re-ingesting a folder with corrupt files gives a new ID once, because the detail text changed.
+- **Guard:** `test_NFR_4_rejection_details_name_no_local_path`, `test_NFR_4_two_runs_give_the_same_version_ids_and_splits`
+- **Status:** verified
+
 ### E-009 — The collector and the supervisor could deadlock on a failing stage
 
 - **Date:** 2026-11-15

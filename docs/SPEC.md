@@ -90,14 +90,32 @@ This document is the source of truth for what Stratal must do. It restates every
 
 #### DATA-4 Train/Val/Test Splits
 
-> **Not yet written — owner's exercise.** 👤 The input says: "Your exercise: write this section yourself. Include stratification, reproducibility, and leakage prevention."
->
-> The owner writes this section and sends it for review. It is needed by milestone M5. The review will check that it answers:
->
-> 1. What is stratified on when image–caption rows have no class label?
-> 2. How do near or semantic duplicates of each other stay on one side of the split?
-> 3. Does adding 500 images in a later version reshuffle existing assignments?
-> 4. Where does the split sit relative to the CLIP filter and manual review?
+> **Approved by the owner on 2026-11-15** (draft v1, written by the agent at the owner's request: [drafts/DATA-4_v1.md](drafts/DATA-4_v1.md), which also gives the reasoning and measurements). It answers the four questions the input set: stratification without class labels (DATA-4.3), duplicates and near copies on one side (DATA-4.2, DATA-4.8), stability when rows are added (DATA-4.5), and the place of the split relative to the filter and the review (DATA-4.1, DATA-4.7). The manifest gains `split_group` and `split_stratum` (DATA_MODEL.md).
+
+- **DATA-4.1** `[P0][1]` 👤 The system shall assign every accepted row of a filtered version to exactly one of `train`, `val` and `test`, in configurable proportions (default 0.8 / 0.1 / 0.1), in a `split` stage that runs after `filter` and before `evaluate`. Rows that are not accepted get no split.
+  - `DATA-4.1.AC1` on the COCO 10k version, every accepted row has a split and no other row has one, and each split's row count differs from its target by less than the size of one split group.
+  - `DATA-4.1.AC2` proportions that are negative or do not sum to 1 are refused with `validation_error`.
+- **DATA-4.2** `[P0][1]` 👤 Rows that show the same picture or the same moment shall land in the same split (leakage prevention). Accepted rows are joined into split groups when they share a duplicate group (CL-17) or their perceptual hashes are within a configurable leakage distance (default 12 bits, wider than the dedupe threshold of 8). Each group is assigned as a whole.
+  - `DATA-4.2.AC1` planted near pairs (re-encoded, resized, and shots of one scene at 10 to 12 bits) always land in the same split.
+  - `DATA-4.2.AC2` on the COCO 10k version, an independent all-pairs check finds no two rows within the leakage distance in different splits.
+- **DATA-4.3** `[P0][1]` 👤 The split shall be stratified on row attributes, since image–caption rows have no class label. The stratum keys are configurable from: CLIP-score quartile, image orientation (landscape, portrait, square), and top-level source folder. The default uses all three.
+  - `DATA-4.3.AC1` in every stratum, each split's row count differs from its target share by less than the size of one split group.
+- **DATA-4.4** `[P0][1]` 👤 Splits shall be reproducible: the same parent version, configuration and seed always give the same assignments and the same version ID. The seed and the earlier split it continues (DATA-4.5) are recorded in the version's config (NFR-4).
+  - `DATA-4.4.AC1` running the split twice gives identical manifests and version IDs; a different seed changes the assignments and the version ID.
+- **DATA-4.5** `[P0][1]` 👤 A new version shall keep existing assignments. The split stage continues the dataset's most recent split made with the same proportions and seed:
+  - rows already assigned there, matched by content hash, keep their split;
+  - a row that has become the kept copy of a duplicate group inherits the split of the copy it replaced;
+  - only new split groups are assigned, filling each stratum towards its target.
+
+  The one exception is a new row that joins two existing groups from different splits. The smaller group moves to the larger one's split, and every moved row is listed in the split report.
+  - `DATA-4.5.AC1` split a 9,500-row version, add 500 new images and split again: all 9,500 rows keep their split, and each split is again within one group of its target.
+  - `DATA-4.5.AC2` a planted image that joins a train group and a test group moves the smaller group, and the report lists exactly the moved rows.
+- **DATA-4.6** `[P0][1]` The split stage shall report the rows per split and per stratum, the number and size of split groups, the rows carried over, newly assigned and moved, and the result of the leakage check (DATA-4.2.AC2).
+  - `DATA-4.6.AC1` the report's counts add up to the accepted rows and match the manifest.
+- **DATA-4.7** `[P0][1]` Manual review (LABEL-1.5) shall sample from a split version and record each sampled row's split. Review decisions shall not change any row's split or status.
+  - `DATA-4.7.AC1` every review item carries its row's split, and the phase-1 report (EVAL-1.1) gives the acceptance rate overall and for the test split.
+- **DATA-4.8** `[P2][1]` 👤 When semantic-duplicate clusters exist (DATA-2.3), rows in one cluster shall also join one split group.
+  - `DATA-4.8.AC1` two photos of one scene from different angles (far apart by pHash, close by CLIP embedding) land in the same split.
 
 #### DATA-5 Dataset Types
 
@@ -491,7 +509,7 @@ The sampler runs as a separate process/thread from the jobs (this is what NFR-13
 | Translation language pairs (EN<->HI? EN<->KN?). | Open. Needed in phase 5 |
 | Environment: DECIDED — Docker Compose on WSL2 (required by Celery and Redis). Verify GPU passthrough works on day 1 before any pipeline code. | Decided. WSL-level passthrough verified 2026-11-13; the container-level check is spike S-01 in M0 |
 
-The input ends this section with: "Next: write DATA-4 yourself and send it to me for review. Then start building DATA-1." DATA-4 remains the owner's exercise. DATA-1 is milestone M1.
+The input ends this section with: "Next: write DATA-4 yourself and send it to me for review. Then start building DATA-1." At the owner's request the agent drafted DATA-4; the owner approved draft v1 on 2026-11-15. DATA-1 is milestone M1.
 
 ### Technical constraints
 
@@ -794,9 +812,9 @@ These are the agent's interpretations. They do not change any requirement text, 
 
 | Phase | Numbered requirements |
 |---|---|
-| 1 | 31, plus DATA-4 (unwritten) and DATA-6.1 (added) |
+| 1 | 31, plus DATA-4.1 to DATA-4.8 (written 2026-11-15) and DATA-6.1 (added) |
 | 2 | 58 |
 | 3 | 12 |
 | 4 | 5 |
 | 5 | 5 |
-| Total from the input | 111, plus NFR-1 to NFR-15 |
+| Total from the input | 111, plus NFR-1 to NFR-15; 120 numbered requirements with DATA-4 and DATA-6.1 |

@@ -190,6 +190,13 @@ Event: the shape in SPEC MON-1, plus `id`, `event_uid`, `type`, `reason`, `sugge
 | `PUT /reviews/{review_id}/items/{position}` | Record a decision. Body: `{decision: "accept" | "reject", note?}` | `200` item |
 | `POST /reviews/{review_id}/close` | Close the session and return the acceptance summary | `200` |
 
+Built in M5 (2026-11-16). Details:
+
+- **Sampling.** `sample_size` is 1 to 1,000 and at most the version's accepted rows. The sample is drawn from the accepted row keys, sorted, with `random.Random(seed).sample`, so the same version and seed always give the same rows in the same order. Without `seed` the server draws one below 2³¹ and records it.
+- **ReviewSession:** `{id, version_id, sample_size, seed, status, created_at, closed_at, progress, items}`. `progress` is `{sampled, decided, accept, reject, undecided, by_split: {split: {sampled, accept, reject}}}`. Each item is `{position, row_key, split, decision, note, decided_at, row: {sha256, derived_sha256, caption, clip_score, split_stratum}}`. `row` is read from the manifest so SCR-05 can show the image and caption. `split` is the row's split when it was sampled (DATA-4.7).
+- **Decisions** can be changed while the session is open. A decision on a closed session gives `409 conflict`, an unknown position `404 not_found`, and a value other than `accept` or `reject` gives `422 validation_error`. No decision changes a manifest, a split or a status.
+- **Close** returns the session without its items, with `progress`, `acceptance` and `acceptance_unavailable`. `acceptance` is the owner's `review_acceptance` result (EVAL-1.1): overall and per split, each with a Wilson interval. While that unit is not written, `acceptance` is null and `acceptance_unavailable` says why. Closing a session twice gives `409 conflict`.
+
 ### 3.6 Evaluation (EVAL-1.1)
 
 | Method and path | Purpose | Success |
@@ -197,6 +204,14 @@ Event: the shape in SPEC MON-1, plus `id`, `event_uid`, `type`, `reason`, `sugge
 | `POST /versions/{version_id}/reports` | Build a report. Body: `{kind: "phase1_dataset", review_id?}` | `202` Job |
 | `GET /versions/{version_id}/reports/latest` | The newest report of a kind (`?kind=`) | `200` Report |
 | `GET /reports/{report_id}` | One report | `200` Report |
+
+Built in M5 (2026-11-16). Details:
+
+- **Jobs.** `POST /versions/{id}/reports` queues a one-stage job of kind `report`, whose only stage is `evaluate` (cpu queue). A pipeline also ends with `evaluate`, after `split`. The stage makes no dataset version. Its output is the version it reported on, so a pipeline's output version is still the split version, and its metrics carry `report_id`.
+- **Review.** With `review_id`, the report uses that review, which must belong to the version (otherwise `422 validation_error`). Without one, it uses the version's newest closed review, or none if there is none.
+- **Report:** `{id, version_id, kind, review_session_id, job_id, created_at, report}`. `report` is `{kind, version_id, stage, algorithm_version, confidence, rows: {total, accepted, by_split}, rejections: {total, accepted, by_stage: {stage: {reason: rows}}}, filter_rate, clip_scores: {edges, labelled, accepted, by_split: {split: …}}, review}`. Each distribution is `{count, mean, std, minimum, maximum, quantiles: {p05…p95}, edges, histogram, below, above}`. `review` is `{review_id, status, sample_size, seed, decided, acceptance: {sampled, undecided, overall, by_split}}`, or null. Each rate is `{decided, accepted, interval: {estimate, low, high, confidence}}`. `by_split` is null for a version that has not been split. The statistics are the owner's (§5), so the stage fails with the usual owner-unit message until they are written.
+- **Config** (`stages.evaluate`): `kind`, `review_id`, `score_edges` (default 0 to 0.5 in steps of 0.025, strictly increasing), `confidence` (0.95).
+- `GET …/reports/latest` gives `404 not_found` until the version has a report.
 
 ### 3.7 Configuration
 
@@ -246,8 +261,10 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 | VRAM manager | RUN-1.4, RUN-1.5 | `VramManager(gpu: GpuBackend, *, sink)`: `load(loader, *, name, estimate_mb)`, `unload() -> UnloadReport`; one model at a time, refuse what does not fit, prove allocated memory is back at baseline | M4; written by the agent at the owner's request (ADR-0012) |
 | CLIP scoring | LABEL-1.3 | `clip_similarity(image_vectors, text_vectors) -> list[float]`: raw CLIP embeddings → one score per pair: plain cosine | M4; written by the agent at the owner's request (ADR-0012) |
 | Filter rule | LABEL-1.4 | `filter_decisions(items: Sequence[ScoredItem], *, threshold) -> dict[row_key, reason]`: rows to mark `filtered` (`clip_below_threshold`, `missing_caption`) | M4; written by the agent at the owner's request (ADR-0012); threshold 0.2, chosen by the owner (OC-5) |
-| Split assignment | DATA-4 | Rows + split config + seed → a split per row, per the section the owner writes | M5 |
-| Report statistics | EVAL-1.1 | Manifest + review decisions → counts per stage, score distribution, filter rate, acceptance with a 95% Wilson interval | M5 |
+| Leakage grouping | DATA-4.2 | `group_for_split(items: Sequence[LeakageItem], *, max_distance) -> list[SplitGroup]` in `stratal.data.splitting`: accepted rows (`row_key`, `sha256`, `phash`, `dup_group_id`) → every row in exactly one group, joined transitively by a shared duplicate group or a pHash distance ≤ `max_distance`; `SplitGroup(anchor, members)`, anchor = smallest member `sha256` | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
+| Stratification | DATA-4.3 | `strata_for(items: Sequence[StratumItem], *, keys: Sequence[StratumKey]) -> dict[row_key, stratum]`: `clip_quartile` (`q1`–`q4`, interpolated boundaries, ties down), `orientation` of the upright image, `source_folder` (first `row_key` component, `.` at the root), joined by `\|` in key order; `all` without keys | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
+| Split assignment | DATA-4.1, 4.4, 4.5 | `assign_splits(groups: Sequence[GroupToAssign], *, proportions: Proportions, seed) -> dict[anchor, split]`: each `GroupToAssign(anchor, stratum, members: Member(row_key, previous))` carries its split where members agree, merges to the side with more members, and new groups fill each stratum's shortfall to within one group, per stratum and in total. The shell looks up `previous` and lists moved rows | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
+| Report statistics | EVAL-1.1 | In `stratal.eval.report_stats`: `rejection_counts(rows: Iterable[RowStatus]) -> RejectionCounts`, `filter_rate(counts) -> float \| None`, `score_distribution(scores, *, edges) -> ScoreDistribution` (type-7 quantiles, fixed bins), `wilson_interval(successes, trials, *, confidence=0.95) -> Interval`, `review_acceptance(items: Sequence[ReviewedItem], *, confidence) -> Acceptance` (overall and per split) | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
 | Semantic-duplicate clustering | DATA-2.3 (P2) | CLIP embeddings → clusters | M7 if time |
 
 What the plumbing gives each unit: a `JobContext` (emit an event, report progress, ask whether to stop), the derivation cache (`get_many`, `put_many`), `load_version` (stream manifest batches), the blob store (open a file by hash), and a model handle from the VRAM manager.
@@ -301,7 +318,7 @@ Still planned for phase 1: run a pipeline.
 | Model protocols | `stratal.label.models` | `Captioner.caption(images) -> list[str]`, `ClipEncoder.encode_images/encode_texts -> list[Vector]`, `GpuBackend` (allocated, reserved, free, total MB; `synchronize`, `empty_cache`); adapters raise `CudaOutOfMemory(batch_size, detail)` |
 | Model adapters | `stratal.label.hf` (GPU image only) | `load_captioner(name, models_dir, *, dtype, task, max_new_tokens, num_beams)`, `load_clip(name, models_dir, *, dtype)`, `TorchGpu`, `set_vram_cap(fraction)`, `library_versions()` |
 | Label stage | `stratal.label.stage` | `run_label(*, parent_manifest, parent_version_id, data_dir, config: LabelConfig, derive, sink, cache, models: LabelModels, units: LabelUnits = OWNER_UNITS, lease, checkpoint) -> LabelResult` |
-| Filter stage | `stratal.label.filter_stage` | `run_filter(*, parent_manifest, parent_version_id, data_dir, config: FilterConfig, derive, sink, rule = filter_decisions) -> FilterResult` |
+| Filter stage | `stratal.label.filter_stage` | `run_filter(*, parent_manifest, parent_version_id, data_dir, config: FilterConfig, derive, sink, rule = filter_decisions) -> FilterResult`; since M5 it also validates the image–caption schema (DATA-5.1), rejecting rows without a caption or file, and sets `dtype` and `counts.validation`. `VersionRecord` gained `dtype`, registered by `register_version`; `run_split` gained `dtype` (the parent's) |
 | GPU lease | `stratal.runtime.gpu_lease` | `with gpu_lease(engine, *, holder, wait_s=0)`: raises `GpuBusy` naming the holder; `current_holder(engine)` |
 | Pretrained models | `stratal.pretrained` | `catalog.get_model(name)`, `catalog.local_path(models_dir, name)`, `pull.pull(model, models_dir)` |
 
@@ -318,6 +335,18 @@ Still planned for phase 1: run a pipeline.
 | Derived-stage frame | `stratal.runtime.stages` | `run_derived_stage(run, *, stage, config_model, body)`: resolve the input by ID, reuse a memoized version, otherwise run `body` and register; `make_clean_runner(units)` |
 | Job creation | `stratal.runtime.jobs` | `create_job_from_plan(..., input_version_id=None)` |
 | Test helpers | `stratal.testing` | `fakes`: `no_exact_duplicates`, `fake_perceptual_hash`, `no_near_duplicates`, `ScriptedGroups`; `fake_clean` (registers clean with fakes when named in `STRATAL_EXTRA_STAGES`); `stagekit` (stages as library calls); `synthetic` gained `exif_rotated` and `odd_modes` |
+
+### Internal interfaces added in M5
+
+| Interface | Where | Shape |
+|---|---|---|
+| Split units (DATA-4.1 to 4.5) | `stratal.data.splitting` | `LeakageItem`, `SplitGroup`, `StratumItem`, `StratumKey`, `Member`, `GroupToAssign`, `Proportions`, `SPLITS`, the three functions in §5, `targets(rows, proportions)` and `ALGORITHM_VERSION` |
+| Split stage | `stratal.data.split_stage` | `run_split(*, parent_manifest, parent_version_id, data_dir, config: SplitConfig, derive, sink, previous: PreviousSplit \| None, units: SplitUnits = OWNER_UNITS, checkpoint) -> SplitResult(record, report, metrics, seconds)`; raises `ContractBroken` when a unit breaks its contract; `leakage_check(rows, *, max_distance)` |
+| Split config | `stratal.data.split_stage.SplitConfig` | `train`, `val`, `test` (0.8 / 0.1 / 0.1, finite, not negative, summing to 1), `seed` (0), `leakage_distance` (12), `stratum_keys` (all three), `continues_version_id` (set by the stage; a different value from the user fails the stage), `algorithm_version`. Set per job as `stages.split` |
+| Previous split | `stratal.data.registry` | `find_previous_split(session, *, dataset_id, parent_version_id, config) -> DatasetVersion \| None`: the dataset's newest split with the same proportions and seed, not made from the same parent |
+| Split runner | `stratal.runtime.stages` | `make_split_runner(units)`: looks up the previous split, writes it into the config, then the derived-stage frame |
+| Report statistics (EVAL-1.1) | `stratal.eval.report_stats` | `RowStatus`, `RejectionCounts`, `ScoreDistribution`, `Interval`, `ReviewedItem`, `AcceptanceRate`, `Acceptance`, `QUANTILES` and the five functions in §5 |
+| Test helpers | `stratal.testing` | `fakes`: `singleton_split_groups`, `one_stratum`, `hashed_splits`, `lumped_rejection_counts`, `no_filter_rate`, `crude_score_distribution`, `vacuous_interval`, `overall_only_acceptance`; `fake_split` (registers split with fakes); `stagekit.split(data_dir, parent, units, *, config, previous, sink)` |
 
 ## 7. Later phases
 

@@ -365,6 +365,84 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `TOLERANCE_MB = 1.0`. A leak is a WARN with the megabytes still held, not an exception; a loader that fails part-way is cleaned up before the error propagates.
 - **Why:** Cached but unused blocks of this process are free for the next model, and an honest baseline needs them gone. Measured on the card: after Florence-2 and CLIP had run, allocated memory came back to exactly its baseline, cuBLAS workspaces included, so any real leak (one layer's weights is many megabytes) stands out.
 
+## M5: splits, review, evaluation report
+
+**DATA-4 approved as drafted** (M5, DATA-4; approved by the owner 2026-11-15)
+- **What:** The split requirements DATA-4.1 to 4.8, drafted by the agent at the owner's request and approved as v1 without changes; with them, the review decisions taken as proposed (below).
+- **How:** Requirement text in SPEC.md §DATA-4; reasoning and measurements in `docs/drafts/DATA-4_v1.md`; new manifest columns `split_group` and `split_stratum` in DATA_MODEL.md.
+- **Why:** M5 could not start without them (KICKOFF.md). The draft answers the four questions the input set, from measurements on 2,958 labelled COCO rows.
+
+**Split proportions 80/10/10, leakage distance 12 bits** (M5, DATA-4.1, DATA-4.2)
+- **What:** `train` 0.8, `val` 0.1, `test` 0.1 by default; accepted rows within 12 bits of each other by pHash join one split group.
+- **How:** Config fields of the split stage, recorded in each split version.
+- **Why:** About 1,000 test images from the 10k set. Above the dedupe threshold, pHash mixes same-event shots with lookalikes; grouping a false match costs a little randomness while a missed pair inflates test scores. At 12 bits 2 % of rows group, at most 4 to a group.
+
+**Stratified on CLIP quartile, orientation and source folder; carried over, shortfalls filled** (M5, DATA-4.3 to 4.5)
+- **What:** New split groups fill each stratum's shortfall towards the proportions; rows of the dataset's previous split with the same proportions and seed keep their split.
+- **How:** The previous split's version ID and the seed go into the split version's config (DATA-4.4); moves happen only when a new row joins two groups, and are reported.
+- **Why:** Exact proportions per stratum and stable assignments together. Pure hashing would be stable without history but right only on average, several points off in a 100-row stratum.
+
+**Review measures and changes nothing in phase 1** (M5, DATA-4.7, LABEL-1.5)
+- **What:** The review samples a split version; its decisions change no split and no status.
+- **How:** Each review item records its row's split; the phase-1 report gives acceptance overall and for `test`.
+- **Why:** The review estimates label quality with a Wilson interval (EVAL-1.1); editing the data from a sample would bias the very estimate it produces.
+
+**DATA-4.8 moves to M7, with DATA-2.3** (M5, DATA-4.8; the owner's decision, 2026-11-16)
+- **What:** The P2 criterion that rows of one semantic-duplicate cluster join one split group is tested in M7, not M5. The requirement itself is unchanged.
+- **How:** MILESTONES.md lists it in M7's scope and checklist; M5 closed with DATA-4.1 to DATA-4.7 done.
+- **Why:** It cannot be tested before semantic clusters exist (DATA-2.3, "M7 if time"). `group_for_split` already joins rows by any shared group ID, so the clusters will plug into the same mechanism.
+
+**Split units cut into grouping, strata and assignment** (M5, DATA-4.1 to 4.5; agent, stubs for the owner)
+- **What:** Three owner functions in `stratal.data.splitting`: `group_for_split` (DATA-4.2), `strata_for` (DATA-4.3), `assign_splits` (DATA-4.1, 4.4, 4.5). The shell does the carry-over lookup and lists moved rows.
+- **How:** A group counts in its anchor's stratum. "Within one group" means less than the largest group's size, per stratum and for the totals together. A merge goes to the split with more members, ties to the larger proportion, then train, val, test. A root-level file's source folder is `.` (the owner's choice, 2026-11-16, over the source's name).
+- **Why:** Each function then has one idea to learn and test. The lookup needs the database and earlier manifests, which owner units never touch. Moved rows can be checked independently of the function that moved them. The tie rule is an interpretation DATA-4 leaves open. `.` says what is true of the row (it sits at the root) and needs nothing beyond `row_key`; a flat source then simply adds no information to the stratum.
+
+**DATA-4 units: all-pairs grouping, controlled rounding, seeded packing** (M5, DATA-4.1 to 4.5; written by the agent at the owner's request, 2026-11-16)
+- **What:** `group_for_split`, `strata_for` and `assign_splits` in `stratal.data.splitting`, meeting the contracts written with the stubs.
+- **How:** Grouping: a union-find over a shared duplicate group plus an all-pairs XOR and popcount (10k rows in 4 s, 20k in 18 s). Strata: `statistics.quantiles(..., method="inclusive")`, with a tie going to the lower quartile. Assignment, in four steps:
+  1. Known groups go first; a merge goes to the side with more members.
+  2. Multi-row groups go, largest first, to a split whose room in their stratum fits them, at random weighted by that room. A group that fits nowhere overshoots the split with the most room overall, among those where its stratum stays within its bound.
+  3. Single rows fill quotas from a simplex projection and a controlled rounding of the strata-by-splits matrix (a small bipartite matching).
+  4. A repair pass moves new groups from an over-full split to an under-full one, within the stratum bounds, until every total is within one group.
+
+  All randomness comes from `Random(f"{seed}|{stratum}")`.
+- **Why:** The pigeonhole index of dedupe saves little at 12 bits. Rounding each stratum on its own lets the totals drift by up to one row per stratum, so splits would miss DATA-4.1.AC1 with many strata. Random placement keeps file names and order from deciding a split (rule 7). Steps 2 and 4 were added after the owner asked for a test of the overshoot case: ten strata that are one group each sent every group to train. A fuzz of random mixes then showed totals missing in 366 of 1,000 when 30 % of strata are mostly groups. With the repair pass, all of 3,000 random mixes pass. That is measured, not proven (a greedy local search), and 300 seeded mixes are now a test. On coco1k and coco2k the totals and all 12 strata are within one group, with no leaks.
+
+**EVAL-1.1 statistics written; the filter rate is the filter stage's** (M5, EVAL-1.1; written by the agent at the owner's request, 2026-11-16)
+- **What:** The five functions in `stratal.eval.report_stats`, meeting the contracts written with the stubs.
+- **How:** Counts are kept in one pass, holding only the counters. Quantiles are type 7, read from the sorted list. Bins are found by `bisect_right`, which makes them half-open, with the last one closed. Wilson uses `NormalDist().inv_cdf` for z, the closed form of the score interval, and exact 0 and 1 at the extremes. Acceptance is reported overall and per split, in the order train, val, test.
+- **Why:** These are the standard definitions, and the tests check them against published values. The filter rate counts every row the filter stage took out, schema rejections (DATA-5.1) included, because the contract defines it by stage. The report keeps the reasons apart, so the CLIP-only rate can still be read from `rejections.by_stage.filter`.
+
+**Report statistics as five pure functions** (M5, EVAL-1.1; agent, stubs for the owner)
+- **What:** `rejection_counts`, `filter_rate`, `score_distribution`, `wilson_interval` and `review_acceptance` in `stratal.eval.report_stats`; the assembly and the evaluate stage are the agent's.
+- **How:** Fixed histogram edges chosen by the caller; type-7 quantiles; sample standard deviation; the filter rate is over the rows that reached the filter; z is computed from the normal quantile, not rounded to 1.96. The Wilson tests use Newcombe (1998), table I.
+- **Why:** API.md §5 lists all four report parts as the owner's statistics. Fixed edges let reports of different versions be compared bin by bin, and published values make the interval checkable without trusting our own arithmetic.
+
+**The split continues the newest earlier split, never one of its own parent** (M5, DATA-4.4, DATA-4.5; agent)
+- **What:** The runner picks the dataset's newest `split` version with the same proportions and seed whose parent is a different version, and records it as `continues_version_id` before the memo lookup.
+- **How:** `registry.find_previous_split`; the ID goes into the config, so it is part of both the version ID and the memo key. A kept copy that replaced another inherits that copy's split through `dup_of`.
+- **Why:** Without the exclusion, a second split of the same parent would continue the first, get a different config and so a different version ID, which would break DATA-4.4.AC1 and NFR-4.
+
+**Review samples are simple random samples by seed** (M5, LABEL-1.5, DATA-4.7; agent)
+- **What:** A session draws `sample_size` accepted rows uniformly with a recorded seed and stores each one with its split. It does not stratify by split.
+- **How:** The keys are sorted, then sampled with `random.Random(seed).sample`. A server-drawn seed is stored. Close counts the decisions and leaves the rate and the interval to the owner's `review_acceptance`. Until that unit exists, close still succeeds and the summary says what is missing.
+- **Why:** A uniform sample estimates acceptance for the whole version without reweighting. With 80/10/10 a 50-row sample holds about 5 test rows, so the test-split interval will be wide. A larger sample, or sampling the test split on its own, can be added if the owner wants a tighter test figure.
+
+**The filter stage validates the schema; a missing file rejects the row** (M5, DATA-5.1; the owner's choice, 2026-11-16)
+- **What:** After the CLIP rule, each row that is still accepted is checked against the image–caption schema. A row with no caption, or whose original or preprocessed file is missing, is marked `rejected` (`missing_caption`, `missing_file`) at stage `filter`. The version gets `dtype = image_caption`, and the split keeps it.
+- **How:** The M1 validator, `validate_image_caption`, now also checks `derived_sha256`; `apply_report` marks the rows. The type is the new config field `validate_as` (`image_caption`), so filter versions made before M5 have a different config and are not reused by memoization. The report is stored as `counts.validation`. Rejections come with a WARN event that has a reason and an action.
+- **Why:** DATA-5.1.AC1 asks for exactly this, rejection with a report. Asked whether a lost file should instead fail the stage, as in clean and preprocess (M3, BUG1), the owner chose rejection. The WARN and the listed rows keep the loss visible.
+
+**Evaluate stores a report and makes no version** (M5, EVAL-1.1; agent)
+- **What:** The evaluate stage ends the phase-1 pipeline. It writes one `eval_reports` row and passes its input version on as its output. `POST /versions/{id}/reports` runs it alone as a job of kind `report`.
+- **How:** `stratal.eval.report.assemble_phase1_report` reads the manifest twice (statuses, then scores) and calls the owner's five statistics. Without a named review it uses the version's newest closed review. The histograms share fixed edges, 0 to 0.5 in steps of 0.025.
+- **Why:** A report describes a version and changes no data, so it gets no version of its own. Because the output is passed on, a pipeline's output stays the version the report is about. A new review after the pipeline only needs a new report, never a rerun. A consequence: a pipeline started from the final version now runs only `evaluate`, where before M5 it was refused.
+
+**The split report lives in the version; a leak warns rather than fails** (M5, DATA-4.6, DATA-4.2.AC2; agent)
+- **What:** The report is stored as `counts.split` of the split version. The stage's own all-pairs check compares every cross-split pair. If a pair leaks, the stage emits a WARN with a reason and an action, and the report lists examples.
+- **How:** The check compares pHash values bit by bit and duplicate-group IDs, without using the owner's groups. On 10k rows it compares about 17 million cross-split pairs in plain Python.
+- **Why:** The report then travels with the version, and a reused version keeps it. A failing check is a defect in the grouping, and the version is still inspectable, so the leaks are reported but the version is kept. The fakes join no pairs, so they would leak on folders that have near pairs, and the stage still has to run there.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

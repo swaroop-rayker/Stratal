@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14). §4.9–4.11 are still planned |
+| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 and §4.11 built in M5 (2026-11-16) |
 | Detail level | Phase-1 tables are specified. Phase 2+ tables are outlined in [§9](#9-planned-for-later-phases) |
 | Rule | Any schema change updates this file in the same change. Applied migrations are never edited |
 
@@ -88,11 +88,11 @@ Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 | `content_hash` | text | no | 64 hex |
 | `config_hash` | text | no | 64 hex |
 | `config` | jsonb | no | fully resolved stage config |
-| `dtype` | text | yes | dataset type this version validates against, e.g. `image_caption` (DATA-5); null before it qualifies |
+| `dtype` | text | yes | dataset type this version validates against, e.g. `image_caption` (DATA-5); null before it qualifies. Set to `image_caption` by the filter stage, which validates the schema (DATA-5.1, since M5); split versions keep it |
 | `manifest_path` | text | no | relative to the data root |
 | `manifest_bytes` | bigint | no | |
 | `row_count` | integer | no | |
-| `counts` | jsonb | no | rows by status and by reason |
+| `counts` | jsonb | no | rows by status and by reason; a `filter` version adds `validation` (DATA-5.1: `dtype`, `checked`, `valid`, `by_reason`, `rejected_rows`); a `split` version adds `split`, its split report (DATA-4.6): rows per split and per stratum with targets and a within-one-group flag, group count and sizes, rows carried over, newly assigned and moved (with the moved rows listed), and the leakage check |
 | `new_blob_bytes` | bigint | no | bytes of files first written for this version (makes DATA-3.4.AC1 measurable) |
 | `schema_version` | integer | no | manifest schema version |
 | `code_version` | text | yes | git commit that produced it |
@@ -235,13 +235,13 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 
 ### 4.10 `review_sessions` and `review_items` (LABEL-1.5)
 
-`review_sessions`: `id` (PK, `rev_…`), `version_id` (FK, not null), `sample_size`, `seed`, `status` (`open`, `closed`), `created_at`, `closed_at`.
+`review_sessions`: `id` (text PK, `rev_` plus the sequence `review_id_seq`, zero-padded), `version_id` (FK → `dataset_versions`, not null), `sample_size` (integer > 0), `seed` (bigint; drawn by the server and recorded when the request gives none), `status` (`open`, `closed`), `created_at`, `closed_at`. Index `(version_id, created_at)`.
 
-`review_items`: `session_id` (FK), `position` (integer; PK with `session_id`), `row_key` (text), `decision` (`accept`, `reject`, null until decided), `note`, `decided_at`.
+`review_items`: `session_id` (FK, cascades on delete), `position` (integer > 0, the order of the sample; PK with `session_id`), `row_key` (text; unique within a session), `split` (the row's split when it was sampled, null for an unsplit version; DATA-4.7, added in M5), `decision` (`accept`, `reject`, null until decided), `note`, `decided_at`. Decisions change no manifest, split or status (DATA-4.7).
 
 ### 4.11 `eval_reports` (EVAL-1.1)
 
-`id` (bigint identity, PK), `version_id` (FK), `kind` (`phase1_dataset`), `report` (jsonb), `review_session_id` (FK, nullable), `job_id` (FK, nullable), `created_at`. Index: `(version_id, created_at desc)`.
+`id` (bigint identity, PK), `version_id` (FK), `kind` (`phase1_dataset`), `report` (jsonb), `review_session_id` (FK, nullable), `job_id` (FK, nullable), `created_at`. Index: `(version_id, created_at desc)`. Built in M5 (2026-11-16). The `report` document is described in [API.md §3.6](API.md#36-evaluation-eval-11).
 
 ## 5. Manifest schema
 
@@ -268,11 +268,13 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 | `caption_model`, `caption_model_revision` | string | label | LABEL-1.1.AC1 |
 | `clip_score` | float32 | label | |
 | `clip_model`, `clip_model_revision` | string | label | |
-| `split` | string | split | defined by DATA-4 when the owner writes it |
+| `split` | string | split | `train`, `val` or `test` on every accepted row, null on all others (DATA-4.1). Built in M5 |
+| `split_group` | string | split | content hash (`sha256`) of the split group's anchor, its member with the smallest `sha256`; rows sharing a duplicate group or within the leakage distance share it (DATA-4.2). Built in M5 |
+| `split_stratum` | string | split | the row's stratum, its keys joined by `\|`, e.g. `q3\|landscape\|train2017`, or `q3\|landscape\|.` for a file at the source's root, as in the flat COCO sources (DATA-4.3; `.` chosen by the owner 2026-11-16). Built in M5 |
 
 Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`.
 
-`corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. A file missing from the blob store is not a reason code: it fails the stage (BUG1).
+`corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. In clean and preprocess, a file missing from the blob store is not a reason code: it fails the stage (BUG1). The filter stage is the exception: its schema validation (DATA-5.1) marks a row whose original or preprocessed file is missing `rejected` with `missing_file`, warns, and lists it in `counts.validation` (the owner's choice, 2026-11-16).
 
 File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.parent_version_id`, `stratal.config_hash`. Rows are written sorted by `row_key`.
 

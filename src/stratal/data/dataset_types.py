@@ -47,7 +47,9 @@ def validate_image_caption(
     """Check accepted rows against the image–caption schema.
 
     A row fails if its image file is missing from the blob store, or if it has
-    no caption (absent, empty, or only whitespace). Rows that are already
+    no caption (absent, empty, or only whitespace). The image file is the
+    original (``sha256``) and, once preprocess has run, also the normalised
+    copy that training reads (``derived_sha256``). Rows that are already
     non-accepted are not part of the dataset and are not checked.
     """
     report = ValidationReport(dtype="image_caption")
@@ -57,10 +59,15 @@ def validate_image_caption(
         report.checked += 1
         key = str(row["row_key"])
         sha256 = row.get("sha256")
+        derived = row.get("derived_sha256")
         caption = row.get("caption")
         if not isinstance(sha256, str) or not blob_exists(sha256):
             report.problems.append(
                 RowProblem(key, "missing_file", "image file is not in the store")
+            )
+        elif isinstance(derived, str) and not blob_exists(derived):
+            report.problems.append(
+                RowProblem(key, "missing_file", "preprocessed copy is not in the store")
             )
         elif not isinstance(caption, str) or not caption.strip():
             report.problems.append(RowProblem(key, "missing_caption", "row has no caption"))

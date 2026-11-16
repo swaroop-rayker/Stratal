@@ -251,3 +251,73 @@ class Derivation(Base):
     # No foreign key: a cached value outlives the job that made it.
     created_by_job_id: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+REVIEW_STATUSES = ("open", "closed")
+REVIEW_DECISIONS = ("accept", "reject")
+
+
+class ReviewSession(Base):
+    """A sample of one version's rows for manual review (LABEL-1.5, DATA-4.7)."""
+
+    __tablename__ = "review_sessions"
+    __table_args__ = (
+        CheckConstraint(_one_of("status", REVIEW_STATUSES), name="ck_review_sessions_status"),
+        CheckConstraint("sample_size > 0", name="ck_review_sessions_sample_size"),
+        Index("ix_review_sessions_version", "version_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    version_id: Mapped[str] = mapped_column(Text, ForeignKey("dataset_versions.version_id"))
+    sample_size: Mapped[int] = mapped_column(Integer)
+    seed: Mapped[int] = mapped_column(BigInteger)
+    status: Mapped[str] = mapped_column(Text, server_default="open")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ReviewItem(Base):
+    """One sampled row and its decision. Decisions change no manifest (DATA-4.7)."""
+
+    __tablename__ = "review_items"
+    __table_args__ = (
+        CheckConstraint(
+            f"decision IS NULL OR {_one_of('decision', REVIEW_DECISIONS)}",
+            name="ck_review_items_decision",
+        ),
+        CheckConstraint("position > 0", name="ck_review_items_position"),
+        Index("uq_review_items_row", "session_id", "row_key", unique=True),
+    )
+
+    session_id: Mapped[str] = mapped_column(
+        Text, ForeignKey("review_sessions.id", ondelete="CASCADE"), primary_key=True
+    )
+    position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    row_key: Mapped[str] = mapped_column(Text)
+    split: Mapped[str | None] = mapped_column(Text)
+    decision: Mapped[str | None] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+REPORT_KINDS = ("phase1_dataset",)
+
+
+class EvalReport(Base):
+    """A report describing one dataset version (EVAL-1.1)."""
+
+    __tablename__ = "eval_reports"
+    __table_args__ = (
+        CheckConstraint(_one_of("kind", REPORT_KINDS), name="ck_eval_reports_kind"),
+        Index("ix_eval_reports_version_created", "version_id", text("created_at DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    version_id: Mapped[str] = mapped_column(Text, ForeignKey("dataset_versions.version_id"))
+    kind: Mapped[str] = mapped_column(Text)
+    report: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    review_session_id: Mapped[str | None] = mapped_column(Text, ForeignKey("review_sessions.id"))
+    job_id: Mapped[str | None] = mapped_column(
+        Text, ForeignKey("jobs.id", name="fk_eval_reports_job")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

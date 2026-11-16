@@ -59,6 +59,7 @@ def register_version(
         config_hash=record.config_hash,
         config=record.config,
         manifest_path=record.manifest_relpath,
+        dtype=record.dtype,
         manifest_bytes=record.manifest_bytes,
         row_count=record.row_count,
         counts=record.counts,
@@ -149,6 +150,35 @@ def find_memoized(
     )
     for version in session.scalars(query):
         if (data_dir / version.manifest_path).is_file():
+            return version
+    return None
+
+
+SPLIT_IDENTITY_KEYS = ("train", "val", "test", "seed")
+"""The config fields that decide whether one split continues another (DATA-4.5)."""
+
+
+def find_previous_split(
+    session: Session, *, dataset_id: int, parent_version_id: str, config: Mapping[str, Any]
+) -> DatasetVersion | None:
+    """The split the next split of ``parent_version_id`` continues (DATA-4.5), if any.
+
+    The dataset's most recent ``split`` version made with the same proportions
+    and seed, leaving out splits of this same parent. Leaving those out keeps a
+    rerun reproducible (DATA-4.4.AC1): it continues the same earlier split as
+    the first run did, gets the same config, and so the same version.
+    """
+    query = (
+        select(DatasetVersion)
+        .where(
+            DatasetVersion.dataset_id == dataset_id,
+            DatasetVersion.stage == "split",
+            DatasetVersion.parent_version_id != parent_version_id,
+        )
+        .order_by(DatasetVersion.created_at.desc(), DatasetVersion.version_id)
+    )
+    for version in session.scalars(query):
+        if all(version.config.get(key) == config.get(key) for key in SPLIT_IDENTITY_KEYS):
             return version
     return None
 

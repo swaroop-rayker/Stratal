@@ -90,10 +90,10 @@ A pipeline run is one **job**. It has one **stage** per step, and each stage run
 | 2 | `preprocess` | cpu | Write resized copies, keep originals | DATA-6.1 | agent |
 | 3 | `label` | gpu | Caption each image, then CLIP-score each pair | LABEL-1.1–1.3 | agent, at the owner's request (ADR-0012) |
 | 4 | `filter` | cpu | Mark pairs below the CLIP threshold; validate the image–caption schema | LABEL-1.4, DATA-5.1 | agent for the rule, at the owner's request (ADR-0012); owner for the threshold (OC-5) |
-| 5 | `split` | cpu | Assign train / val / test | DATA-4 | owner |
-| 6 | `evaluate` | cpu | Build the phase-1 report | EVAL-1.1 | owner (statistics) |
+| 5 | `split` | cpu | Group near-copies (12 bits), stratify, assign train / val / test carrying the previous split over, check for leaks, report | DATA-4.1–4.7 | agent, at the owner's request (ADR-0012); shell, lookup, leakage check and report by the agent |
+| 6 | `evaluate` | cpu | Build the phase-1 report and store it in `eval_reports`; makes no version and passes its input on | EVAL-1.1 | agent for the statistics, at the owner's request (ADR-0012), and for the assembly |
 
-Manual review (LABEL-1.5) is not a stage. It is a human activity attached to a version, and its result feeds the report.
+Manual review (LABEL-1.5) is not a stage. It is a human activity attached to a version (API.md §3.5), and the report uses the version's newest closed review. A report can be built again at any time without a pipeline: `POST /versions/{id}/reports` runs `evaluate` alone, as a job of kind `report`.
 
 **Every stage ends with a commit step**: write the manifest, compute the version ID, record lineage. This is where the "Staging" messages in MON-3 come from (OC-1, accepted by the owner on 2026-11-14).
 

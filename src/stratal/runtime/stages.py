@@ -5,6 +5,7 @@ runner receives a :class:`StageRun` and returns a :class:`StageResult`. More
 stages register themselves here as their milestones arrive.
 """
 
+import dataclasses
 import importlib
 import os
 from collections.abc import Callable
@@ -16,14 +17,18 @@ from pydantic import BaseModel
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
-from stratal.core.errors import StratalError
+from stratal.core.errors import StratalError, ValidationFailed
 from stratal.data import registry
 from stratal.data.clean import OWNER_UNITS, CleanConfig, DedupeUnits, run_clean
 from stratal.data.commit import VersionRecord
 from stratal.data.ingest import IngestConfig, run_ingest
 from stratal.data.preprocess import PreprocessConfig, run_preprocess
+from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
+from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitUnits, run_split
 from stratal.data.versioning import derive_version_identity
-from stratal.db.models import Dataset
+from stratal.db.models import Dataset, EvalReport
+from stratal.eval.report import OWNER_STATS, EvaluateConfig, ReportStats, assemble_phase1_report
+from stratal.label import review as reviews
 from stratal.label.filter_stage import FilterConfig, FilterRule, run_filter
 from stratal.label.filtering import filter_decisions
 from stratal.label.stage import OWNER_UNITS as LABEL_UNITS
@@ -345,3 +350,139 @@ def make_filter_runner(rule: FilterRule) -> Callable[[StageRun], StageResult]:
 
 register(StageDef("label", "gpu", LabelConfig, make_label_runner(real_label_models, LABEL_UNITS)))
 register(StageDef("filter", "cpu", FilterConfig, make_filter_runner(filter_decisions)))
+
+
+def make_split_runner(units: SplitUnits) -> Callable[[StageRun], StageResult]:
+    """The split stage's runner (DATA-4). Tests register one built with fakes.
+
+    Before the usual frame, it decides which earlier split this one continues
+    (DATA-4.5) and writes that into the config, so the choice is part of the
+    version's identity and of its memo key (DATA-4.4).
+    """
+
+    def _run_split(run: StageRun) -> StageResult:
+        if run.input_version_id is None:
+            return run_derived_stage(run, stage="split", config_model=SplitConfig, body=_never)
+        asked = SplitConfig.model_validate(run.config)
+        with Session(run.engine) as session:
+            parent = registry.get_version(session, run.input_version_id)
+            parent_dtype = parent.dtype
+            found = registry.find_previous_split(
+                session,
+                dataset_id=parent.dataset_id,
+                parent_version_id=parent.version_id,
+                config=asked.model_dump(mode="json"),
+            )
+            previous = None
+            if found is not None:
+                _, manifest = registry.manifest_for(session, run.data_dir, found.version_id)
+                previous = PreviousSplit(found.version_id, manifest)
+        continues = previous.version_id if previous is not None else None
+        if asked.continues_version_id is not None and asked.continues_version_id != continues:
+            raise ValidationFailed(
+                f"continues_version_id is set by the split stage; it would be {continues!r}, "
+                f"not {asked.continues_version_id!r}.",
+                suggested_action="Leave continues_version_id out of the split config.",
+            )
+        config = {**asked.model_dump(mode="json"), "continues_version_id": continues}
+
+        def body(given: DerivedInput) -> DerivedOutput:
+            try:
+                result = run_split(
+                    parent_manifest=given.manifest,
+                    parent_version_id=given.version_id,
+                    data_dir=run.data_dir,
+                    config=SplitConfig.model_validate(given.config),
+                    derive=derive_version_identity,
+                    sink=run.ctx,
+                    previous=previous,
+                    dtype=parent_dtype,
+                    units=units,
+                    checkpoint=run.ctx.raise_if_cancelled,
+                )
+            except NotImplementedError as exc:
+                raise _owner_unit_missing("split", exc) from None
+            return DerivedOutput(result.record, 0, result.metrics)
+
+        return run_derived_stage(
+            dataclasses.replace(run, config=config),
+            stage="split",
+            config_model=SplitConfig,
+            body=body,
+        )
+
+    return _run_split
+
+
+def _never(_given: DerivedInput) -> DerivedOutput:
+    raise AssertionError("run_derived_stage refuses a stage without an input first")
+
+
+register(StageDef("split", "cpu", SplitConfig, make_split_runner(SPLIT_UNITS)))
+
+
+def make_evaluate_runner(stats: ReportStats) -> Callable[[StageRun], StageResult]:
+    """The evaluate stage's runner (EVAL-1.1). Tests register one built with fakes.
+
+    It writes no dataset version: it stores a report in ``eval_reports`` and
+    passes its input version on as its output, so a pipeline's output is still
+    the version the report describes.
+    """
+
+    def _run_evaluate(run: StageRun) -> StageResult:
+        if run.input_version_id is None:
+            raise StratalError(
+                "Stage evaluate needs a version to report on and was given none.",
+                suggested_action="Report on an existing version (POST /versions/{id}/reports).",
+            )
+        config = EvaluateConfig.model_validate(run.config)
+        with Session(run.engine) as session:
+            version, manifest = registry.manifest_for(session, run.data_dir, run.input_version_id)
+            version_id, stage = version.version_id, version.stage
+            review = reviews.review_for_report(session, version_id, config.review_id)
+        with_review = f" with review {review.review_id}" if review is not None else ""
+        run.ctx.emit(
+            stage="evaluate",
+            message=f"Building the phase-1 report of {version_id}{with_review}",
+            metrics={"version_id": version_id},
+        )
+        try:
+            report = assemble_phase1_report(
+                manifest=manifest,
+                version_id=version_id,
+                stage=stage,
+                config=config,
+                review=review,
+                stats=stats,
+            )
+        except NotImplementedError as exc:
+            raise _owner_unit_missing("evaluate", exc) from None
+        with Session(run.engine) as session, session.begin():
+            row = EvalReport(
+                version_id=version_id,
+                kind=config.kind,
+                report=report,
+                review_session_id=review.review_id if review is not None else None,
+                job_id=run.ctx.job_id,
+            )
+            session.add(row)
+            session.flush()
+            report_id = row.id
+        metrics: dict[str, MetricValue] = {
+            "report_id": report_id,
+            "rows": int(report["rows"]["total"]),
+            "accepted": int(report["rows"]["accepted"]),
+        }
+        if report["filter_rate"] is not None:
+            metrics["filter_rate"] = round(float(report["filter_rate"]), 4)
+        if review is not None:
+            metrics["review_id"] = review.review_id
+        run.ctx.emit(
+            stage="evaluate", message=f"Stored report {report_id} for {version_id}", metrics=metrics
+        )
+        return StageResult(output_version_id=version_id, metrics=metrics)
+
+    return _run_evaluate
+
+
+register(StageDef("evaluate", "cpu", EvaluateConfig, make_evaluate_runner(OWNER_STATS)))
