@@ -219,4 +219,3 @@ def version_stats(path: Path, row_count: int) -> Json:
         "size_bytes": asdict(score_distribution(sizes, edges=SIZE_EDGES)),
         "clip_score": asdict(score_distribution(scores, edges=DEFAULT_EDGES)) if scores else None,
     }
-
