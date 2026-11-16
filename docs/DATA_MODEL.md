@@ -270,7 +270,7 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 | `clip_model`, `clip_model_revision` | string | label | |
 | `split` | string | split | `train`, `val` or `test` on every accepted row, null on all others (DATA-4.1). Built in M5 |
 | `split_group` | string | split | content hash (`sha256`) of the split group's anchor, its member with the smallest `sha256`; rows sharing a duplicate group or within the leakage distance share it (DATA-4.2). Built in M5 |
-| `split_stratum` | string | split | the row's stratum, its keys joined by `\|`, e.g. `q3\|landscape\|coco10k` (DATA-4.3). Built in M5 |
+| `split_stratum` | string | split | the row's stratum, its keys joined by `\|`, e.g. `q3\|landscape\|train2017`, or `q3\|landscape\|.` for a file at the source's root, as in the flat COCO sources (DATA-4.3; `.` chosen by the owner 2026-11-16). Built in M5 |
 
 Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`.
 

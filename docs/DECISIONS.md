@@ -389,8 +389,8 @@ Newest entries go at the bottom of their section. All entries below date from th
 
 **Split units cut into grouping, strata and assignment** (M5, DATA-4.1 to 4.5; agent, stubs for the owner)
 - **What:** Three owner functions in `stratal.data.splitting`: `group_for_split` (DATA-4.2), `strata_for` (DATA-4.3), `assign_splits` (DATA-4.1, 4.4, 4.5). The shell does the carry-over lookup and lists moved rows.
-- **How:** A group counts in its anchor's stratum. "Within one group" means less than the largest group's size, per stratum and for the totals together. A merge goes to the split with more members, ties to the larger proportion, then train, val, test. A root-level file's source folder is `.`.
-- **Why:** Each function then has one idea to learn and test. The lookup needs the database and earlier manifests, which owner units never touch. Moved rows can be checked independently of the function that moved them. The tie rule and `.` are interpretations that DATA-4 leaves open.
+- **How:** A group counts in its anchor's stratum. "Within one group" means less than the largest group's size, per stratum and for the totals together. A merge goes to the split with more members, ties to the larger proportion, then train, val, test. A root-level file's source folder is `.` (the owner's choice, 2026-11-16, over the source's name).
+- **Why:** Each function then has one idea to learn and test. The lookup needs the database and earlier manifests, which owner units never touch. Moved rows can be checked independently of the function that moved them. The tie rule is an interpretation DATA-4 leaves open. `.` says what is true of the row (it sits at the root) and needs nothing beyond `row_key`; a flat source then simply adds no information to the stratum.
 
 **Report statistics as five pure functions** (M5, EVAL-1.1; agent, stubs for the owner)
 - **What:** `rejection_counts`, `filter_rate`, `score_distribution`, `wilson_interval` and `review_acceptance` in `stratal.eval.report_stats`; the assembly and the evaluate stage are the agent's.
