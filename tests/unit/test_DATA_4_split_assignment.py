@@ -1,8 +1,7 @@
 """DATA-4.1, DATA-4.3.AC1, DATA-4.4, DATA-4.5: giving each split group a split.
 
-An owner unit. Strict expected failures until
-``stratal.data.splitting.assign_splits`` is written (ADR-0012); then remove the
-marker. The stage-level halves of these criteria (manifests, version IDs, the
+An owner unit, written by the agent at the owner's request on 2026-11-16
+(ADR-0012). The stage-level halves of these criteria (manifests, version IDs, the
 config refusing bad proportions, the carry-over lookup and the list of moved
 rows) are the agent's and are tested with the split stage.
 
@@ -28,10 +27,6 @@ from stratal.data.splitting import (
     Proportions,
     assign_splits,
     targets,
-)
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="owner unit DATA-4.1/4.4/4.5 not written yet"
 )
 
 DEFAULT = Proportions()

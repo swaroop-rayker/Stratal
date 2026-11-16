@@ -1,7 +1,7 @@
-"""DATA-4.2: leakage grouping for the split. An owner unit.
+"""DATA-4.2: leakage grouping for the split.
 
-Strict expected failures until ``stratal.data.splitting.group_for_split`` is
-written (ADR-0012); then remove the marker. DATA-4.2.AC2 on the real COCO 10k
+An owner unit, written by the agent at the owner's request on 2026-11-16
+(ADR-0012). DATA-4.2.AC2 on the real COCO 10k
 version is the split stage's own all-pairs check, tested with the stage and
 shown in the M5 demo; here the same property is checked on synthetic hashes.
 """
@@ -16,10 +16,6 @@ from PIL import Image
 
 from stratal.data.dedupe import perceptual_hash
 from stratal.data.splitting import LeakageItem, SplitGroup, group_for_split
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="owner unit DATA-4.2 not written yet"
-)
 
 LEAKAGE = 12
 """The default leakage distance (DECISIONS.md, M5)."""

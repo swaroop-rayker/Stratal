@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 started: DATA-4 approved 2026-11-15 (drafted by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 started: DATA-4 approved 2026-11-15 (drafted by the agent at the owner's request); DATA-4 units written by the agent at the owner's request 2026-11-16; EVAL-1.1 statistics still with the owner. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -250,10 +250,10 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 **Done when**
 
 - [x] DATA-4 is in SPEC.md with IDs and criteria, approved (2026-11-15, v1)
-- [ ] 👤 `test_DATA_4_*`: one test per criterion in DATA-4
+- [ ] 👤 `test_DATA_4_*`: one test per criterion in DATA-4. **2026-11-16:** the units were written by the agent at the owner's request. 65 unit and 7 integration `test_DATA_4_*` tests pass, covering every criterion of DATA-4.1 to DATA-4.7. Still open: DATA-4.1.AC1 and DATA-4.2.AC2 on the COCO 10k version (not labelled yet; on coco1k and coco2k: totals and all 12 strata within one group, 0 leaks), and DATA-4.8 (P2), which waits for DATA-2.3
 - [ ] `test_LABEL_1_5_*`: N rows sampled; decisions stored and linked to the version
 - [ ] 👤 `test_EVAL_1_1_*`: a report per version with all four parts; the interval checked against known values
-- [ ] `test_NFR_4_*`: two runs with the same data, config and seed give the same splits and version IDs
+- [x] `test_NFR_4_*`: two runs with the same data, config and seed give the same splits and version IDs (2026-11-16; with the owner's DATA-4 units. The test found E-010, fixed)
 - [ ] Demo: the full pipeline on 1,000 images, a 50-row review, the report
 - [ ] Docs updated
 - [ ] Owner's OK to merge

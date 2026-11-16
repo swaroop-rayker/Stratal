@@ -1,7 +1,7 @@
-"""DATA-4.3: each row's stratum. An owner unit.
+"""DATA-4.3: each row's stratum.
 
-Strict expected failures until ``stratal.data.splitting.strata_for`` is written
-(ADR-0012); then remove the marker. DATA-4.3.AC1 (each split within one group
+An owner unit, written by the agent at the owner's request on 2026-11-16
+(ADR-0012). DATA-4.3.AC1 (each split within one group
 of its target in every stratum) is tested with the assignment, in
 ``test_DATA_4_split_assignment.py``.
 """
@@ -17,10 +17,6 @@ from stratal.data.splitting import (
     StratumItem,
     StratumKey,
     strata_for,
-)
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="owner unit DATA-4.3 not written yet"
 )
 
 QUARTILE = StratumKey.CLIP_QUARTILE

@@ -4,8 +4,7 @@ Two runs of the whole phase-1 chain, ingest to split, each in its own data
 folder with its own cache, compared automatically (NFR-4.AC1). The dedupe,
 caption-loop, scoring and filter units are the real ones; the models are
 fakes (no GPU in the unit suite). The split runs once with fakes, which tests
-the stage's own determinism now, and once with the owner's units, a strict
-expected failure until DATA-4 is written.
+the stage's own determinism, and once with the owner's DATA-4 units.
 """
 
 from pathlib import Path
@@ -85,9 +84,6 @@ def test_NFR_4_a_different_seed_changes_only_the_split(source: Path, tmp_path: P
     assert other["ids"][-1] != first["ids"][-1]
 
 
-@pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="owner units DATA-4.1 to 4.5 not written yet"
-)
 def test_NFR_4_two_runs_with_the_owner_split_units_agree(source: Path, tmp_path: Path) -> None:
     first = _run(source, tmp_path / "run1", SPLIT_UNITS, seed=11)
     second = _run(source, tmp_path / "run2", SPLIT_UNITS, seed=11)

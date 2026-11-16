@@ -19,10 +19,17 @@ against these contracts and with its own all-pairs leakage check before
 anything is committed. Nothing here touches manifests, the database or events.
 
 The requirements and their reasoning: SPEC.md §DATA-4 and
-``docs/drafts/DATA-4_v1.md``. Tests: ``tests/unit/test_DATA_4_*.py`` (strict
-expected failures until these are written).
+``docs/drafts/DATA-4_v1.md``. Tests: ``tests/unit/test_DATA_4_*.py``.
+
+Written by the agent at the owner's request on 2026-11-16 ("write DATA-4 units
+for me"). Each function's docstring states the contract first, then how it is
+met and why; ``docs/learning/sys-design.md`` explains the algorithms at length.
 """
 
+import math
+import random
+import statistics
+from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
@@ -115,8 +122,85 @@ def group_for_split(items: Sequence[LeakageItem], *, max_distance: int) -> list[
     per duplicate group: a group's kept row can be a different file from one
     version to the next. The shell uses the duplicate group to carry the split
     over to the new keeper (DATA-4.5, second bullet).
+
+    How: a union-find (disjoint sets) over the items' positions. Rule 2 joins
+    every item to the first one seen with its duplicate-group ID. Rule 3
+    compares every pair: XOR of the two hashes read as integers, then a
+    population count (``int.bit_count``). The groups are the connected
+    components, so rule 4 holds by construction.
+
+    Why every pair rather than an index: at a 12-bit distance the pigeonhole
+    index of the dedupe step (``max_distance + 1`` exact-match chunks of 64
+    bits) has chunks of about 5 bits, so its buckets hold hundreds of items and
+    it saves little. The direct comparison in a list comprehension measured
+    4.5 s for 10,000 rows and 18 s for 20,000 in the CPU worker image. It is
+    simple and obviously complete.
     """
-    raise NotImplementedError("Owner unit DATA-4.2: group_for_split")
+    if max_distance < 0:
+        raise ValueError(f"max_distance must be at least 0, got {max_distance}")
+    _no_repeats("row_key", [item.row_key for item in items])
+    _no_repeats("sha256", [item.sha256 for item in items])
+    widths = {len(item.phash) for item in items}
+    if len(widths) > 1:
+        raise ValueError(f"hashes of different lengths cannot be compared: {sorted(widths)}")
+
+    ordered = sorted(items, key=lambda item: item.sha256)
+    sets = _DisjointSets(len(ordered))
+    first_of_group: dict[str, int] = {}
+    for index, item in enumerate(ordered):
+        if item.dup_group_id is not None:
+            sets.union(first_of_group.setdefault(item.dup_group_id, index), index)
+    hashes = [int(item.phash, 16) for item in ordered]
+    for i, value in enumerate(hashes):
+        near = [
+            j
+            for j, other in enumerate(hashes[i + 1 :], i + 1)
+            if (value ^ other).bit_count() <= max_distance
+        ]
+        for j in near:
+            sets.union(i, j)
+
+    members: defaultdict[int, list[int]] = defaultdict(list)
+    for index in range(len(ordered)):
+        members[sets.find(index)].append(index)
+    groups = [
+        SplitGroup(
+            anchor=ordered[min(indices)].sha256,  # ordered by sha256: the first is the smallest
+            members=tuple(sorted(ordered[i].row_key for i in indices)),
+        )
+        for indices in members.values()
+    ]
+    return sorted(groups, key=lambda group: group.anchor)
+
+
+def _no_repeats(what: str, values: Sequence[str]) -> None:
+    repeated = [value for value, count in Counter(values).items() if count > 1]
+    if repeated:
+        raise ValueError(f"{what} {sorted(repeated)[0]!r} occurs more than once")
+
+
+class _DisjointSets:
+    """Union-find with path halving and union by size."""
+
+    def __init__(self, size: int) -> None:
+        self._parent = list(range(size))
+        self._size = [1] * size
+
+    def find(self, index: int) -> int:
+        parent = self._parent
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(self, a: int, b: int) -> None:
+        root_a, root_b = self.find(a), self.find(b)
+        if root_a == root_b:
+            return
+        if self._size[root_a] < self._size[root_b]:
+            root_a, root_b = root_b, root_a
+        self._parent[root_b] = root_a
+        self._size[root_a] += self._size[root_b]
 
 
 # ---------------------------------------------------------------- DATA-4.3
@@ -178,8 +262,42 @@ def strata_for(items: Sequence[StratumItem], *, keys: Sequence[StratumKey]) -> d
     5. No keys: every row's stratum is :data:`NO_STRATUM`. A key given twice is
        a ``ValueError``.
     6. The same items in any order give the same result.
+
+    How: the three boundaries are computed once from all scores (they depend
+    only on the multiset of scores, so not on order). A row's quartile is 1
+    plus the number of boundaries its score is strictly above, which puts a
+    score equal to a boundary in the lower quartile. With a single row,
+    ``statistics.quantiles`` cannot interpolate, so all three boundaries are
+    that row's score and it is ``q1``.
     """
-    raise NotImplementedError("Owner unit DATA-4.3: strata_for")
+    if len(set(keys)) != len(keys):
+        raise ValueError(f"a stratum key is given twice: {[str(k) for k in keys]}")
+    if not keys:
+        return {item.row_key: NO_STRATUM for item in items}
+
+    boundaries: list[float] = []
+    if StratumKey.CLIP_QUARTILE in keys:
+        bad = [i.row_key for i in items if i.clip_score is None or not math.isfinite(i.clip_score)]
+        if bad:
+            raise ValueError(f"row {sorted(bad)[0]!r} has no finite CLIP score to stratify on")
+        scores = [float(item.clip_score) for item in items if item.clip_score is not None]
+        if len(scores) >= 2:
+            boundaries = statistics.quantiles(scores, n=4, method="inclusive")
+        elif scores:
+            boundaries = [scores[0]] * 3
+
+    def value(item: StratumItem, key: StratumKey) -> str:
+        if key is StratumKey.CLIP_QUARTILE:
+            score = float(item.clip_score or 0.0)
+            return f"q{1 + sum(1 for boundary in boundaries if score > boundary)}"
+        if key is StratumKey.ORIENTATION:
+            if item.width > item.height:
+                return "landscape"
+            return "portrait" if item.height > item.width else "square"
+        folder = item.row_key.split("/", 1)[0] if "/" in item.row_key else "."
+        return folder.replace("|", "_")
+
+    return {item.row_key: "|".join(value(item, key) for key in keys) for item in items}
 
 
 # ------------------------------------------------- DATA-4.1, DATA-4.4, DATA-4.5
@@ -244,8 +362,181 @@ def assign_splits(
     8. ``ValueError`` when a proportion is negative, the proportions do not sum
        to 1 (within 1e-9), an anchor occurs twice, a group has no members, or a
        ``previous`` value is not one of :data:`SPLITS`.
+
+    How, in three steps:
+
+    1. **Known groups** (rules 2 and 3) are settled first and counted as
+       carried rows of their stratum.
+    2. **Quotas.** For each stratum, the rows each split still needs are its
+       target minus its carried rows. If carried rows already overfill a
+       split, those needs are projected onto "non-negative and summing to the
+       new rows" (a Euclidean projection onto a simplex), which spreads the
+       new rows as close to the needs as possible. The resulting matrix of
+       real numbers (strata by splits) is then rounded so that every cell is
+       its floor or its ceiling, every stratum's row sums to its new rows, and
+       every split's column sums to its own total rounded. This is
+       *controlled rounding*: a matrix with integer row sums always has such a
+       rounding (Bacharach, 1966). It is found as a small bipartite matching
+       between strata that need one more row and splits that need one more
+       row. Rounding each stratum on its own would let errors of up to one row
+       per stratum add up in the totals (the 48-strata test).
+    3. **Packing.** Within a stratum, multi-row groups go first, largest
+       first. Each goes to a split whose quota it fits, chosen at random with
+       weights equal to the remaining quotas. Single rows are then shuffled
+       and dealt out to fill the quotas exactly.
+
+    All randomness comes from ``random.Random(f"{seed}|{stratum}")``, so it is
+    reproducible and independent of input order (groups are sorted by anchor
+    first). A string seed is hashed with SHA-512 by ``random``, so it does not
+    depend on ``PYTHONHASHSEED``.
     """
-    raise NotImplementedError("Owner unit DATA-4.1/4.4/4.5: assign_splits")
+    _check_proportions(proportions)
+    _no_repeats("anchor", [group.anchor for group in groups])
+    for group in groups:
+        if not group.members:
+            raise ValueError(f"group {group.anchor} has no members")
+        odd = [m.previous for m in group.members if m.previous not in (None, *SPLITS)]
+        if odd:
+            raise ValueError(f"group {group.anchor} has a member in unknown split {odd[0]!r}")
+
+    result: dict[str, str] = {}
+    rows_in: Counter[str] = Counter()
+    carried: defaultdict[str, Counter[str]] = defaultdict(Counter)
+    new: defaultdict[str, list[GroupToAssign]] = defaultdict(list)
+    for group in sorted(groups, key=lambda g: g.anchor):
+        size = len(group.members)
+        rows_in[group.stratum] += size
+        known = Counter(m.previous for m in group.members if m.previous is not None)
+        if known:
+            split = max(known, key=lambda s: (known[s], proportions.of(s), -SPLITS.index(s)))
+            result[group.anchor] = split
+            carried[group.stratum][split] += size
+        else:
+            new[group.stratum].append(group)
+
+    wanted: dict[str, dict[str, float]] = {}
+    new_rows: dict[str, int] = {}
+    for stratum in sorted(new):
+        new_rows[stratum] = sum(len(g.members) for g in new[stratum])
+        needs = {
+            split: proportions.of(split) * rows_in[stratum] - carried[stratum][split]
+            for split in SPLITS
+        }
+        wanted[stratum] = _project_onto_simplex(needs, new_rows[stratum])
+    quotas = _controlled_round(wanted, new_rows)
+    for stratum in sorted(new):
+        rng = random.Random(f"{seed}|{stratum}")
+        result.update(_pack(new[stratum], quotas[stratum], rng))
+    return result
+
+
+_EPS = 1e-9
+
+
+def _check_proportions(proportions: Proportions) -> None:
+    shares = {split: proportions.of(split) for split in SPLITS}
+    bad = [s for s, share in shares.items() if not math.isfinite(share) or share < 0]
+    if bad:
+        raise ValueError(f"proportions must be finite and not negative: {bad}")
+    if abs(sum(shares.values()) - 1.0) > _EPS:
+        raise ValueError(f"proportions must sum to 1, not {sum(shares.values())!r}")
+
+
+def _project_onto_simplex(needs: Mapping[str, float], total: int) -> dict[str, float]:
+    """The point ``x >= 0`` with ``sum(x) == total`` closest to ``needs``.
+
+    ``x = max(needs - lam, 0)`` for the one ``lam`` that makes the sum right.
+    Sorting the needs from the largest, ``lam`` is found from the longest
+    prefix whose members all stay positive (Held, Wolfe and Crowder, 1974).
+    """
+    if total <= 0:
+        return dict.fromkeys(needs, 0.0)
+    shift = 0.0
+    running = 0.0
+    for count, value in enumerate(sorted(needs.values(), reverse=True), start=1):
+        running += value
+        candidate = (running - total) / count
+        if value - candidate > 0:
+            shift = candidate
+    return {split: max(need - shift, 0.0) for split, need in needs.items()}
+
+
+def _controlled_round(
+    wanted: Mapping[str, Mapping[str, float]], rows: Mapping[str, int]
+) -> dict[str, dict[str, int]]:
+    """Round a strata-by-splits matrix: cells to floor or ceiling, row sums kept
+    exact, column sums to their own rounding. See :func:`assign_splits`, step 2."""
+    strata = sorted(wanted)
+    base = {s: {k: math.floor(wanted[s][k] + _EPS) for k in SPLITS} for s in strata}
+    open_cell = {s: {k: wanted[s][k] - base[s][k] > _EPS for k in SPLITS} for s in strata}
+    row_need = {s: rows[s] - sum(base[s].values()) for s in strata}
+
+    column = {k: sum(wanted[s][k] for s in strata) for k in SPLITS}
+    column_total = {k: math.floor(column[k] + _EPS) for k in SPLITS}
+    by_remainder = sorted(SPLITS, key=lambda k: (-(column[k] - column_total[k]), SPLITS.index(k)))
+    for index in range(sum(rows.values()) - sum(column_total.values())):
+        column_total[by_remainder[index % len(SPLITS)]] += 1
+    column_need = {k: column_total[k] - sum(base[s][k] for s in strata) for k in SPLITS}
+
+    extra = {s: dict.fromkeys(SPLITS, 0) for s in strata}
+
+    def augment(stratum: str, seen: set[str]) -> bool:
+        """Give ``stratum`` one more row in some split, rerouting others if needed."""
+        for split in SPLITS:
+            if split in seen or not open_cell[stratum][split] or extra[stratum][split]:
+                continue
+            seen.add(split)
+            if column_need[split] > 0:
+                column_need[split] -= 1
+                extra[stratum][split] = 1
+                return True
+            for other in strata:
+                if other != stratum and extra[other][split] and augment(other, seen):
+                    extra[other][split] = 0
+                    extra[stratum][split] = 1
+                    return True
+        return False
+
+    for stratum in strata:
+        for _ in range(row_need[stratum]):
+            if not augment(stratum, set()):
+                # Not expected (a rounding always exists); keep the row sum exact anyway.
+                free = [k for k in SPLITS if not extra[stratum][k]]
+                best = max(free, key=lambda k: wanted[stratum][k] - base[stratum][k])
+                extra[stratum][best] = 1
+    return {s: {k: base[s][k] + extra[s][k] for k in SPLITS} for s in strata}
+
+
+def _pack(
+    groups: Sequence[GroupToAssign], quota: Mapping[str, int], rng: random.Random
+) -> dict[str, str]:
+    """Deal one stratum's new groups into its quotas. See :func:`assign_splits`, step 3."""
+    remaining = dict(quota)
+    result: dict[str, str] = {}
+    multi = [g for g in groups if len(g.members) > 1]
+    rng.shuffle(multi)
+    multi.sort(key=lambda g: -len(g.members))  # stable: random order within a size
+    for group in multi:
+        size = len(group.members)
+        fits = [split for split in SPLITS if remaining[split] >= size]
+        if fits:
+            split = rng.choices(fits, weights=[remaining[s] for s in fits])[0]
+        else:
+            split = max(SPLITS, key=lambda s: (remaining[s], -SPLITS.index(s)))
+        remaining[split] -= size
+        result[group.anchor] = split
+
+    singles = [g for g in groups if len(g.members) == 1]
+    rng.shuffle(singles)
+    position = 0
+    for split in SPLITS:
+        take = max(remaining[split], 0)
+        for group in singles[position : position + take]:
+            result[group.anchor] = split
+        position += take
+    for group in singles[position:]:  # only if quotas were overshot; not expected
+        result[group.anchor] = max(SPLITS, key=lambda s: (remaining[s], -SPLITS.index(s)))
+    return result
 
 
 def targets(rows: int, proportions: Proportions) -> Mapping[str, float]:
