@@ -409,7 +409,7 @@ Newest entries go at the bottom of their section. All entries below date from th
 
 **The filter stage validates the schema; a missing file rejects the row** (M5, DATA-5.1; the owner's choice, 2026-11-16)
 - **What:** After the CLIP rule, each row that is still accepted is checked against the image–caption schema. A row with no caption, or whose original or preprocessed file is missing, is marked `rejected` (`missing_caption`, `missing_file`) at stage `filter`. The version gets `dtype = image_caption`, and the split keeps it.
-- **How:** The M1 validator, `validate_image_caption`, now also checks `derived_sha256`, then `apply_report`. The report is stored as `counts.validation`. Rejections come with a WARN event that has a reason and an action.
+- **How:** The M1 validator, `validate_image_caption`, now also checks `derived_sha256`; `apply_report` marks the rows. The type is the new config field `validate_as` (`image_caption`), so filter versions made before M5 have a different config and are not reused by memoization. The report is stored as `counts.validation`. Rejections come with a WARN event that has a reason and an action.
 - **Why:** DATA-5.1.AC1 asks for exactly this, rejection with a report. Asked whether a lost file should instead fail the stage, as in clean and preprocess (M3, BUG1), the owner chose rejection. The WARN and the listed rows keep the loss visible.
 
 **Evaluate stores a report and makes no version** (M5, EVAL-1.1; agent)

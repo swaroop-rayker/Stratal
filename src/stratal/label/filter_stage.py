@@ -13,13 +13,13 @@ import time
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from stratal.core.errors import StratalError
 from stratal.data.commit import VersionRecord, commit_version
-from stratal.data.dataset_types import apply_report, validate_image_caption
+from stratal.data.dataset_types import DATASET_TYPES, apply_report
 from stratal.data.versioning import VersionDeriver
 from stratal.label import filtering
 from stratal.label.filtering import (
@@ -48,6 +48,12 @@ class FilterConfig(BaseModel):
         "chosen by the owner from the measured score distribution (OC-5, 2026-11-15).",
     )
     algorithm_version: int = filtering.ALGORITHM_VERSION
+    validate_as: Literal["image_caption"] = Field(
+        default="image_caption",
+        description="The dataset type the rows left after the rule are validated against "
+        "(DATA-5.1). Part of the config so versions made before M5, without validation, are "
+        "not reused by memoization.",
+    )
 
 
 class FilterRule(Protocol):
@@ -144,7 +150,7 @@ def run_filter(
     decisions = _decide(parent_manifest, config, rule, sink)
     blobs = BlobStore(data_dir)
     threshold = config.clip_threshold
-    validation = validate_image_caption(
+    validation = DATASET_TYPES[config.validate_as](
         _apply(iter_rows(parent_manifest), decisions, threshold), blobs.exists
     )
     reasons = validation.by_reason()
