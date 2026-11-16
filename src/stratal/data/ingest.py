@@ -57,7 +57,16 @@ def scan(source: Path) -> list[str]:
     return sorted(p.relative_to(source).as_posix() for p in source.rglob("*") if p.is_file())
 
 
-def _reject(row: Row, code: str, detail: str) -> Row:
+def _reject(row: Row, code: str, detail: str, *paths: Path) -> Row:
+    """Mark ``row`` rejected. Every path in ``detail`` is replaced by the row key.
+
+    Decoder and OS messages name the file they failed on, by its absolute path
+    in the blob store or the source mount. The detail is part of the manifest
+    and so of the version ID, which must not depend on where the data folder
+    is (NFR-4, DATA-3.2 rule 1; E-010).
+    """
+    for path in sorted({str(p) for p in paths}, key=len, reverse=True):
+        detail = detail.replace(path, str(row["row_key"]))
     row.update(
         status=STATUS_REJECTED, decided_at_stage=STAGE, reason_code=code, reason_detail=detail[:500]
     )
@@ -75,9 +84,9 @@ def _inspect(path: Path, relpath: str, row: Row, config: IngestConfig) -> Row:
             image.load()
     except UnidentifiedImageError as exc:
         known = Path(relpath).suffix.lower() in _IMAGE_SUFFIXES
-        return _reject(row, "corrupt_image" if known else "unsupported_format", str(exc))
+        return _reject(row, "corrupt_image" if known else "unsupported_format", str(exc), path)
     except (OSError, SyntaxError, ValueError, Image.DecompressionBombError) as exc:
-        return _reject(row, "corrupt_image", f"{type(exc).__name__}: {exc}")
+        return _reject(row, "corrupt_image", f"{type(exc).__name__}: {exc}", path)
 
     shorter = min(int(row["width"]), int(row["height"]))
     if shorter < config.min_size:
@@ -109,7 +118,9 @@ class _Ingest:
             try:
                 stored = self.blobs.put_file(self.source / relpath)
             except OSError as exc:
-                yield _reject(row, "unreadable", f"{type(exc).__name__}: {exc}")
+                yield _reject(
+                    row, "unreadable", f"{type(exc).__name__}: {exc}", self.source / relpath
+                )
                 rejected += 1
                 continue
             if stored.created:

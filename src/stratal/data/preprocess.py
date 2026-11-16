@@ -204,7 +204,10 @@ class _Preprocessor:
                     try:
                         data, width, height = transform(path, self.config)
                     except (OSError, SyntaxError, ValueError, Image.DecompressionBombError) as exc:
-                        stats.failed[sha] = f"{type(exc).__name__}: {exc}"[:500]
+                        detail = f"{type(exc).__name__}: {exc}".replace(
+                            str(path), f"blob {sha[:12]}"
+                        )
+                        stats.failed[sha] = detail[:500]  # no local path (E-010)
                         continue
                     stored = self.blobs.put_bytes(data)
                     if stored.created:
