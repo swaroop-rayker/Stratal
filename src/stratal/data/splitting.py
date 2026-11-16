@@ -34,13 +34,17 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
-ALGORITHM_VERSION = 1
+ALGORITHM_VERSION = 2
 """Bump this whenever you change what any function in this file returns.
 
 It is part of the split stage's config, so a new value gives a new version ID
 (ARCHITECTURE.md §3, stage memoization). It does not reset carry-over: rows of
 an earlier split keep their split under a new algorithm as long as the
 proportions and the seed are the same (DATA-4.5).
+
+History: 1 covered the stubs and the fakes (the M5 dry run registered a coco1k
+split made with fakes under it, ``ds_28027327ad3f``); 2 is the first real
+algorithm, with the overshoot spreading and the repair pass (2026-11-16).
 """
 
 TRAIN = "train"

@@ -21,8 +21,12 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
-ALGORITHM_VERSION = 1
-"""Bump when any function here returns something different; it is stored in each report."""
+ALGORITHM_VERSION = 2
+"""Bump when any function here returns something different; it is stored in each report.
+
+1 covered the stubs and the fakes (the M5 dry-run reports on coco1k); 2 is the first real
+implementation (2026-11-16).
+"""
 
 ACCEPT = "accept"
 REJECT = "reject"
