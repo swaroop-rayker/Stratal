@@ -1,0 +1,28 @@
+/* SCR-03's row drawer (frame B), on the shared drawer. */
+.drawer.row-drawer { width: 540px; }
+.drawer.row-drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.drawer.row-drawer > header b { font: var(--fw-medium) var(--fs-14) var(--font-mono); }
+.drawer.row-drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); overflow: hidden; }
+.group-head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-secondary); }
+.group-head b { color: var(--text-primary); }
+.dist { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.card-img { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-12); }
+.photo { height: 190px; border-radius: var(--r-md); border: var(--bw) solid var(--border); background: radial-gradient(circle at 30% 35%, var(--cat-5) 0 16%, transparent 17%), radial-gradient(circle at 68% 60%, var(--cat-2) 0 13%, transparent 14%), linear-gradient(160deg, var(--seq-2), var(--seq-4)); position: relative; }
+.photo.kept { box-shadow: 0 0 0 2px var(--success); }
+.photo .tag { position: absolute; left: var(--sp-2); top: var(--sp-2); }
+.card-img .mono { font-size: var(--fs-12); color: var(--text-primary); } .card-img span { color: var(--text-secondary); } .card-img .hash { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.hash mark { background: var(--warning-soft); color: var(--warning); border-radius: var(--r-xs); }
+
+/* live: the row's own image in the drawer; real images instead of the mockup's drawn ones. */
+.row-drawer .photo { background: var(--surface-sunken); overflow: hidden; }
+.row-drawer .photo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.row-drawer .single .photo { height: 300px; }
+.row-drawer .body { overflow: auto; }
+.row-drawer .rs { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-12); }
+.row-drawer .rs i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.row-drawer .rs.acc { --c: var(--success); } .row-drawer .rs.rej { --c: var(--danger); } .row-drawer .rs.dup { --c: var(--text-muted); } .row-drawer .rs.fil { --c: var(--warning); }
+.row-drawer .kv { display: grid; grid-template-columns: 150px 1fr; gap: var(--sp-2) var(--sp-3); font-size: var(--fs-12); }
+.row-drawer .kv > span:nth-child(odd) { color: var(--text-muted); }
+.row-drawer .kv .mono { word-break: break-all; font-size: var(--fs-12); }
+.row-drawer .muted { color: var(--text-muted); }

@@ -43,6 +43,9 @@ export function useShortcuts(bindings: Record<string, () => void>): void {
       if (typing(event.target)) return;
       if (document.querySelector("[role=dialog]")) return;
       const key = event.key;
+      // Enter belongs to the focused control; only a focused row (or nothing) lets it through.
+      const target = event.target as HTMLElement | null;
+      if (key === "Enter" && target && target !== document.body && target.tagName !== "TR") return;
       const sequence = pending ? `${pending} ${key}` : key;
       const action = bindings[sequence];
       if (action) {
