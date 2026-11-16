@@ -88,11 +88,11 @@ Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 | `content_hash` | text | no | 64 hex |
 | `config_hash` | text | no | 64 hex |
 | `config` | jsonb | no | fully resolved stage config |
-| `dtype` | text | yes | dataset type this version validates against, e.g. `image_caption` (DATA-5); null before it qualifies |
+| `dtype` | text | yes | dataset type this version validates against, e.g. `image_caption` (DATA-5); null before it qualifies. Set to `image_caption` by the filter stage, which validates the schema (DATA-5.1, since M5); split versions keep it |
 | `manifest_path` | text | no | relative to the data root |
 | `manifest_bytes` | bigint | no | |
 | `row_count` | integer | no | |
-| `counts` | jsonb | no | rows by status and by reason; a `split` version adds `split`, its split report (DATA-4.6): rows per split and per stratum with targets and a within-one-group flag, group count and sizes, rows carried over, newly assigned and moved (with the moved rows listed), and the leakage check |
+| `counts` | jsonb | no | rows by status and by reason; a `filter` version adds `validation` (DATA-5.1: `dtype`, `checked`, `valid`, `by_reason`, `rejected_rows`); a `split` version adds `split`, its split report (DATA-4.6): rows per split and per stratum with targets and a within-one-group flag, group count and sizes, rows carried over, newly assigned and moved (with the moved rows listed), and the leakage check |
 | `new_blob_bytes` | bigint | no | bytes of files first written for this version (makes DATA-3.4.AC1 measurable) |
 | `schema_version` | integer | no | manifest schema version |
 | `code_version` | text | yes | git commit that produced it |
@@ -274,7 +274,7 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 
 Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`.
 
-`corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. A file missing from the blob store is not a reason code: it fails the stage (BUG1).
+`corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. In clean and preprocess, a file missing from the blob store is not a reason code: it fails the stage (BUG1). The filter stage is the exception: its schema validation (DATA-5.1) marks a row whose original or preprocessed file is missing `rejected` with `missing_file`, warns, and lists it in `counts.validation` (the owner's choice, 2026-11-16).
 
 File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.parent_version_id`, `stratal.config_hash`. Rows are written sorted by `row_key`.
 

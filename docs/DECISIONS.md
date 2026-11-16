@@ -407,6 +407,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The keys are sorted, then sampled with `random.Random(seed).sample`. A server-drawn seed is stored. Close counts the decisions and leaves the rate and the interval to the owner's `review_acceptance`. Until that unit exists, close still succeeds and the summary says what is missing.
 - **Why:** A uniform sample estimates acceptance for the whole version without reweighting. With 80/10/10 a 50-row sample holds about 5 test rows, so the test-split interval will be wide. A larger sample, or sampling the test split on its own, can be added if the owner wants a tighter test figure.
 
+**The filter stage validates the schema; a missing file rejects the row** (M5, DATA-5.1; the owner's choice, 2026-11-16)
+- **What:** After the CLIP rule, each row that is still accepted is checked against the image–caption schema. A row with no caption, or whose original or preprocessed file is missing, is marked `rejected` (`missing_caption`, `missing_file`) at stage `filter`. The version gets `dtype = image_caption`, and the split keeps it.
+- **How:** The M1 validator, `validate_image_caption`, now also checks `derived_sha256`, then `apply_report`. The report is stored as `counts.validation`. Rejections come with a WARN event that has a reason and an action.
+- **Why:** DATA-5.1.AC1 asks for exactly this, rejection with a report. Asked whether a lost file should instead fail the stage, as in clean and preprocess (M3, BUG1), the owner chose rejection. The WARN and the listed rows keep the loss visible.
+
 **Evaluate stores a report and makes no version** (M5, EVAL-1.1; agent)
 - **What:** The evaluate stage ends the phase-1 pipeline. It writes one `eval_reports` row and passes its input version on as its output. `POST /versions/{id}/reports` runs it alone as a job of kind `report`.
 - **How:** `stratal.eval.report.assemble_phase1_report` reads the manifest twice (statuses, then scores) and calls the owner's five statistics. Without a named review it uses the version's newest closed review. The histograms share fixed edges, 0 to 0.5 in steps of 0.025.

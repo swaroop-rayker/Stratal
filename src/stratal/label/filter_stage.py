@@ -7,6 +7,7 @@ back, and marks those rows ``filtered`` with the reason, keeping every row
 follows; nothing is captioned again (ARCHITECTURE.md §3).
 """
 
+import dataclasses
 import math
 import time
 from collections.abc import Iterator, Sequence
@@ -18,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from stratal.core.errors import StratalError
 from stratal.data.commit import VersionRecord, commit_version
+from stratal.data.dataset_types import apply_report, validate_image_caption
 from stratal.data.versioning import VersionDeriver
 from stratal.label import filtering
 from stratal.label.filtering import (
@@ -27,6 +29,7 @@ from stratal.label.filtering import (
 )
 from stratal.mon.events import MetricValue
 from stratal.mon.sink import EventSink
+from stratal.storage.blobs import BlobStore
 from stratal.storage.manifest import STATUS_ACCEPTED, STATUS_FILTERED, Row, iter_rows
 
 STAGE = "filter"
@@ -126,27 +129,84 @@ def run_filter(
     sink: EventSink,
     rule: FilterRule = filtering.filter_decisions,
 ) -> FilterResult:
-    """Apply the filter rule to the parent version and commit a ``filter`` version."""
+    """Apply the filter rule, validate what is left, and commit a ``filter`` version.
+
+    After the rule, the rows still accepted are checked against the
+    image–caption schema (DATA-5.1): a row without a caption, or whose original
+    or preprocessed image is missing from the blob store, is marked
+    ``rejected`` with ``missing_caption`` or ``missing_file`` and listed in the
+    validation report, stored as ``counts.validation``. Rejecting a missing
+    file rather than failing the stage is the owner's choice of 2026-11-16
+    (DECISIONS.md, M5); the WARN event makes the loss visible. The version is
+    then of type ``image_caption``.
+    """
     started = time.monotonic()
     decisions = _decide(parent_manifest, config, rule, sink)
+    blobs = BlobStore(data_dir)
+    threshold = config.clip_threshold
+    validation = validate_image_caption(
+        _apply(iter_rows(parent_manifest), decisions, threshold), blobs.exists
+    )
+    reasons = validation.by_reason()
+    if validation.problems:
+        first = validation.problems[0]
+        sink.emit(
+            stage=STAGE,
+            substage="validate",
+            level="WARN",
+            message=f"Schema validation rejected {len(validation.problems):,} rows "
+            f"({', '.join(f'{n} {r}' for r, n in sorted(reasons.items()))}), "
+            f"e.g. {first.row_key}: {first.detail}",
+            reason="Rows of an image–caption dataset need a caption and their image files "
+            "(DATA-5.1).",
+            suggested_action="A missing file means data was lost after preprocess: check the "
+            "data volume. The rows are kept, marked rejected, and listed in the version's "
+            "validation report.",
+            metrics={f"rejected_{r}": n for r, n in reasons.items()},
+        )
+    else:
+        sink.emit(
+            stage=STAGE,
+            substage="validate",
+            message=f"Schema validation passed: {validation.checked:,} image–caption rows",
+            metrics={"validated": validation.checked},
+        )
     record = commit_version(
         data_dir=data_dir,
         stage=STAGE,
         parent_version_id=parent_version_id,
-        rows=_apply(iter_rows(parent_manifest), decisions, config.clip_threshold),
+        rows=apply_report(
+            _apply(iter_rows(parent_manifest), decisions, threshold), validation, stage=STAGE
+        ),
         config=config.model_dump(mode="json"),
         derive=derive,
         sink=sink,
+    )
+    report = {
+        "dtype": validation.dtype,
+        "checked": validation.checked,
+        "valid": validation.valid,
+        "by_reason": dict(sorted(reasons.items())),
+        "rejected_rows": [
+            {"row_key": p.row_key, "reason_code": p.reason_code, "detail": p.detail}
+            for p in sorted(validation.problems, key=lambda p: p.row_key)
+        ],
+    }
+    record = dataclasses.replace(
+        record, dtype=validation.dtype, counts={**record.counts, "validation": report}
     )
     given = len(decisions.scores)
     filtered = len(decisions.marks)
     metrics: dict[str, MetricValue] = {
         "input_accepted": given,
         "filtered": filtered,
-        "accepted": given - filtered,
+        "accepted": validation.valid,
         "filter_rate": round(filtered / given, 4) if given else 0.0,
         "clip_threshold": config.clip_threshold,
+        "validated": validation.checked,
     }
     for reason in sorted(REASONS):
         metrics[f"filtered_{reason}"] = sum(1 for r in decisions.marks.values() if r == reason)
+    for reason in ("missing_caption", "missing_file"):
+        metrics[f"rejected_{reason}"] = reasons.get(reason, 0)
     return FilterResult(record, metrics, round(time.monotonic() - started, 3))

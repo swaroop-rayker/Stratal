@@ -509,8 +509,12 @@ def run_split(
     previous: PreviousSplit | None,
     units: SplitUnits = OWNER_UNITS,
     checkpoint: Callable[[], None] = lambda: None,
+    dtype: str | None = None,
 ) -> SplitResult:
-    """Split the accepted rows of a ``filter`` version and commit a ``split`` version."""
+    """Split the accepted rows of a ``filter`` version and commit a ``split`` version.
+
+    ``dtype`` is the parent's dataset type; the split keeps the rows and so the type.
+    """
     started = time.monotonic()
     made_by = read_metadata(parent_manifest).get("stratal.stage")
     if made_by != PARENT_STAGE:
@@ -598,7 +602,7 @@ def run_split(
         derive=derive,
         sink=sink,
     )
-    record = dataclasses.replace(record, counts={**record.counts, "split": report})
+    record = dataclasses.replace(record, dtype=dtype, counts={**record.counts, "split": report})
     metrics: dict[str, MetricValue] = {
         "accepted": len(rows),
         **{split: report["splits"][split]["rows"] for split in SPLITS},

@@ -59,6 +59,7 @@ def register_version(
         config_hash=record.config_hash,
         config=record.config,
         manifest_path=record.manifest_relpath,
+        dtype=record.dtype,
         manifest_bytes=record.manifest_bytes,
         row_count=record.row_count,
         counts=record.counts,

@@ -366,6 +366,7 @@ def make_split_runner(units: SplitUnits) -> Callable[[StageRun], StageResult]:
         asked = SplitConfig.model_validate(run.config)
         with Session(run.engine) as session:
             parent = registry.get_version(session, run.input_version_id)
+            parent_dtype = parent.dtype
             found = registry.find_previous_split(
                 session,
                 dataset_id=parent.dataset_id,
@@ -395,6 +396,7 @@ def make_split_runner(units: SplitUnits) -> Callable[[StageRun], StageResult]:
                     derive=derive_version_identity,
                     sink=run.ctx,
                     previous=previous,
+                    dtype=parent_dtype,
                     units=units,
                     checkpoint=run.ctx.raise_if_cancelled,
                 )

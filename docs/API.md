@@ -318,7 +318,7 @@ Still planned for phase 1: run a pipeline.
 | Model protocols | `stratal.label.models` | `Captioner.caption(images) -> list[str]`, `ClipEncoder.encode_images/encode_texts -> list[Vector]`, `GpuBackend` (allocated, reserved, free, total MB; `synchronize`, `empty_cache`); adapters raise `CudaOutOfMemory(batch_size, detail)` |
 | Model adapters | `stratal.label.hf` (GPU image only) | `load_captioner(name, models_dir, *, dtype, task, max_new_tokens, num_beams)`, `load_clip(name, models_dir, *, dtype)`, `TorchGpu`, `set_vram_cap(fraction)`, `library_versions()` |
 | Label stage | `stratal.label.stage` | `run_label(*, parent_manifest, parent_version_id, data_dir, config: LabelConfig, derive, sink, cache, models: LabelModels, units: LabelUnits = OWNER_UNITS, lease, checkpoint) -> LabelResult` |
-| Filter stage | `stratal.label.filter_stage` | `run_filter(*, parent_manifest, parent_version_id, data_dir, config: FilterConfig, derive, sink, rule = filter_decisions) -> FilterResult` |
+| Filter stage | `stratal.label.filter_stage` | `run_filter(*, parent_manifest, parent_version_id, data_dir, config: FilterConfig, derive, sink, rule = filter_decisions) -> FilterResult`; since M5 it also validates the image–caption schema (DATA-5.1), rejecting rows without a caption or file, and sets `dtype` and `counts.validation`. `VersionRecord` gained `dtype`, registered by `register_version`; `run_split` gained `dtype` (the parent's) |
 | GPU lease | `stratal.runtime.gpu_lease` | `with gpu_lease(engine, *, holder, wait_s=0)`: raises `GpuBusy` naming the holder; `current_holder(engine)` |
 | Pretrained models | `stratal.pretrained` | `catalog.get_model(name)`, `catalog.local_path(models_dir, name)`, `pull.pull(model, models_dir)` |
 

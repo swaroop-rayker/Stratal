@@ -159,4 +159,5 @@ def split(
         if previous is None
         else PreviousSplit(previous.version_id, manifest_path(data_dir, previous)),
         units=units,
+        dtype=parent.dtype,
     )

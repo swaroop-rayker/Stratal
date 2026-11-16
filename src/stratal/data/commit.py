@@ -35,6 +35,8 @@ class VersionRecord:
     schema_version: int
     reused_manifest: bool
     """True if an identical version already existed and its manifest was kept."""
+    dtype: str | None = None
+    """The dataset type the version validates against (DATA-5.1), set by the checking stage."""
 
 
 def manifest_relpath(version_id: str) -> str:

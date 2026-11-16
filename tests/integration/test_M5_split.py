@@ -62,6 +62,11 @@ def test_DATA_4_1_the_pipeline_runs_through_the_split_as_one_job(
     assert [s["name"] for s in job["stages"]][-3:] == ["filter", "split", "evaluate"]
     config, counts, rows = _version(job["output_version_id"])
     assert config["continues_version_id"] is None
+    with Session(get_engine()) as session:
+        split_version = registry.get_version(session, job["output_version_id"])
+        filter_version = registry.get_version(session, _stage(job, "filter")["output_version_id"])
+        assert split_version.dtype == filter_version.dtype == "image_caption", "DATA-5.1"
+        assert filter_version.counts["validation"]["rejected_rows"] == []
     accepted = [r for r in rows.values() if r["status"] == "accepted"]
     assert len(accepted) == 12 == counts["split"]["accepted"]
     assert all(r["split"] in {"train", "val", "test"} and r["split_group"] for r in accepted)
