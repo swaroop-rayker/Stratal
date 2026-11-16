@@ -72,6 +72,7 @@ Measured on 2026-11-15 on the RTX 4050 Laptop GPU (6 GB) in the M4 demo (`job_00
 - **Peak VRAM while labelling:** 4.20 GB in use on the card (NVML, the Windows desktop's 0.22 GB included); PyTorch allocated at most 3.55 GB. NFR-1's limit is 5.5 GB.
 - **Peak RAM of the label process:** 2.5 GB, under the GPU worker's 4.5 GB container limit.
 - **At 2,000 images** (spike S-07, `job_0007`): 4 minutes 56 seconds end to end, labelling at 8.7 images/s; every container under half its memory limit.
+- **At 10,000 images** (M5, `job_0013`): 17 minutes end to end. 2,983 images came from the cache (they are also in coco1k and coco2k); the other 6,949 were captioned at 8.7 images/s, with no out-of-memory retry at batch 16. The split took 5.6 s, including its leakage check over 16.5 million cross-split pairs.
 - Spike S-06 has the same captioners at batch sizes 4, 8 and 16 ([docs/RISKS.md](docs/RISKS.md)).
 
 ## Documentation
