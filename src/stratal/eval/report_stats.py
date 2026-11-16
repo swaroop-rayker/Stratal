@@ -7,10 +7,17 @@ agent's, :mod:`stratal.eval.report`) read the manifest and the review, call
 these five functions, and store what they return in ``eval_reports``.
 
 Every function is pure: plain values in, plain values out, nothing read from
-disk or the database. Tests: ``tests/unit/test_EVAL_1_1_*.py`` (strict
-expected failures until these are written).
+disk or the database. Tests: ``tests/unit/test_EVAL_1_1_report_stats.py``.
+
+Written by the agent at the owner's request on 2026-11-16 ("write this EVAL
+for me as well"). Each docstring gives the contract, then how it is met.
 """
 
+import bisect
+import itertools
+import math
+import statistics
+from collections import Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
@@ -55,8 +62,29 @@ def rejection_counts(rows: Iterable[RowStatus]) -> RejectionCounts:
     3. Only stages and reasons that occur appear; there are no zero counts.
     4. A non-accepted row without a stage or a reason breaks INV-07 and is a
        ``ValueError``; so is a status that is not one of the four.
+
+    How: one pass, a counter per stage. Only the counters are kept, never the
+    rows.
     """
-    raise NotImplementedError("Owner unit EVAL-1.1: rejection_counts")
+    total = accepted = 0
+    by_stage: defaultdict[str, Counter[str]] = defaultdict(Counter)
+    for row in rows:
+        total += 1
+        if row.status == "accepted":
+            accepted += 1
+            continue
+        if row.status not in _TAKEN_OUT:
+            raise ValueError(f"unknown status {row.status!r}")
+        if not row.decided_at_stage or not row.reason_code:
+            raise ValueError(
+                f"a {row.status} row has no deciding stage or reason (INV-07): "
+                f"stage={row.decided_at_stage!r}, reason={row.reason_code!r}"
+            )
+        by_stage[row.decided_at_stage][row.reason_code] += 1
+    return RejectionCounts(total, accepted, {s: dict(c) for s, c in by_stage.items()})
+
+
+_TAKEN_OUT = frozenset({"rejected", "duplicate", "filtered"})
 
 
 def filter_rate(counts: RejectionCounts) -> float | None:
@@ -69,8 +97,19 @@ def filter_rate(counts: RejectionCounts) -> float | None:
        took out are not part of it (they never reached the filter).
     2. ``None`` when no row reached the filter.
     3. A value between 0 and 1, not rounded.
+
+    Since M5 the filter stage also rejects rows that fail schema validation
+    (DATA-5.1, ``missing_caption`` or ``missing_file`` at stage ``filter``).
+    They count as taken out by the filter stage, so the rate is that of the
+    stage, not of the CLIP threshold alone. The report keeps the reasons
+    apart under ``rejections.by_stage.filter``.
     """
-    raise NotImplementedError("Owner unit EVAL-1.1: filter_rate")
+    taken = sum(counts.by_stage.get(FILTER_STAGE, {}).values())
+    reached = counts.accepted + taken
+    return None if reached == 0 else taken / reached
+
+
+FILTER_STAGE = "filter"
 
 
 # -------------------------------------------------------- score distribution
@@ -123,8 +162,52 @@ def score_distribution(scores: Sequence[float], *, edges: Sequence[float]) -> Sc
     4. No scores: ``count`` 0, every number ``None``, no quantiles, every bin 0.
     5. ``ValueError`` for a score that is not finite, or fewer than two edges,
        or edges that are not strictly increasing.
+
+    How: sort once; quantiles read from the sorted list; each score's bin by
+    binary search (``bisect_right`` gives the first edge greater than the
+    score, so the bin to its left holds it, which makes bins half-open).
     """
-    raise NotImplementedError("Owner unit EVAL-1.1: score_distribution")
+    bounds = tuple(float(edge) for edge in edges)
+    if len(bounds) < 2 or any(b <= a for a, b in itertools.pairwise(bounds)):
+        raise ValueError("edges must be at least two strictly increasing numbers")
+    values = sorted(float(score) for score in scores)
+    if any(not math.isfinite(value) for value in values):
+        raise ValueError("every score must be a finite number")
+    histogram = [0] * (len(bounds) - 1)
+    below = above = 0
+    for value in values:
+        if value < bounds[0]:
+            below += 1
+        elif value > bounds[-1]:
+            above += 1
+        elif value == bounds[-1]:
+            histogram[-1] += 1
+        else:
+            histogram[bisect.bisect_right(bounds, value) - 1] += 1
+    count = len(values)
+    if count == 0:
+        return ScoreDistribution(0, None, None, None, None, {}, bounds, tuple(histogram), 0, 0)
+    return ScoreDistribution(
+        count=count,
+        mean=statistics.fmean(values),
+        std=statistics.stdev(values) if count > 1 else 0.0,
+        minimum=values[0],
+        maximum=values[-1],
+        quantiles={name: _type7(values, q) for name, q in QUANTILES},
+        edges=bounds,
+        histogram=tuple(histogram),
+        below=below,
+        above=above,
+    )
+
+
+def _type7(ordered: Sequence[float], q: float) -> float:
+    """The q-th quantile of sorted values by linear interpolation (Hyndman–Fan type 7)."""
+    position = q * (len(ordered) - 1)
+    low = math.floor(position)
+    if low + 1 >= len(ordered):
+        return ordered[low]
+    return ordered[low] + (ordered[low + 1] - ordered[low]) * (position - low)
 
 
 # ------------------------------------------------------------ Wilson interval
@@ -158,8 +241,37 @@ def wilson_interval(successes: int, trials: int, *, confidence: float = 0.95) ->
        ``trials``.
     4. ``ValueError`` when ``trials < 1``, ``successes`` is outside
        ``0..trials``, or ``confidence`` is not strictly between 0 and 1.
+
+    How: with ``p = successes / trials``, ``n = trials`` and the quantile
+    ``z``, the interval is the set of proportions ``π`` for which
+    ``|p − π| ≤ z·sqrt(π(1 − π)/n)``. That is the test the textbook interval
+    inverts, except that the standard error uses the unknown ``π`` instead of
+    the estimate ``p``. Squaring both sides gives a quadratic in ``π``. Its
+    roots are::
+
+        centre = (p + z²/2n) / (1 + z²/n)
+        half   = z · sqrt(p(1 − p)/n + z²/4n²) / (1 + z²/n)
+
+    The centre is pulled from ``p`` towards 1/2, which is why the interval
+    neither passes 0 or 1 nor collapses when ``p`` is 0 or 1. At the
+    extremes the formula gives exactly 0 or 1 in exact arithmetic; the code
+    sets them exactly, so rounding cannot leave ``high = 0.9999999999``.
     """
-    raise NotImplementedError("Owner unit EVAL-1.1: wilson_interval")
+    if trials < 1:
+        raise ValueError(f"trials must be at least 1, not {trials}")
+    if not 0 <= successes <= trials:
+        raise ValueError(f"successes must be between 0 and {trials}, not {successes}")
+    if not (math.isfinite(confidence) and 0 < confidence < 1):
+        raise ValueError(f"confidence must be strictly between 0 and 1, not {confidence}")
+    z = statistics.NormalDist().inv_cdf(1 - (1 - confidence) / 2)
+    n = trials
+    p = successes / n
+    shrink = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / shrink
+    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / shrink
+    low = 0.0 if successes == 0 else min(max(centre - half, 0.0), p)
+    high = 1.0 if successes == trials else max(min(centre + half, 1.0), p)
+    return Interval(estimate=p, low=low, high=high, confidence=confidence)
 
 
 # ---------------------------------------------------------- review acceptance
@@ -203,5 +315,29 @@ def review_acceptance(items: Sequence[ReviewedItem], *, confidence: float = 0.95
     3. Items without a split count in ``overall`` only.
     4. ``ValueError`` for a decision that is not ``accept``, ``reject`` or
        ``None``.
+
+    ``by_split`` lists ``train``, ``val`` and ``test`` in that order, then any
+    other split names alphabetically.
     """
-    raise NotImplementedError("Owner unit EVAL-1.1: review_acceptance")
+    odd = sorted({str(i.decision) for i in items if i.decision not in (ACCEPT, REJECT, None)})
+    if odd:
+        raise ValueError(f"unknown review decisions: {odd}")
+    decided = [item for item in items if item.decision is not None]
+
+    def rate(subset: Sequence[ReviewedItem]) -> AcceptanceRate:
+        accepted = sum(1 for item in subset if item.decision == ACCEPT)
+        interval = wilson_interval(accepted, len(subset), confidence=confidence) if subset else None
+        return AcceptanceRate(len(subset), accepted, interval)
+
+    per_split: defaultdict[str, list[ReviewedItem]] = defaultdict(list)
+    for item in decided:
+        if item.split is not None:
+            per_split[item.split].append(item)
+    known = ("train", "val", "test")
+    order = [s for s in known if s in per_split] + sorted(s for s in per_split if s not in known)
+    return Acceptance(
+        sampled=len(items),
+        undecided=len(items) - len(decided),
+        overall=rate(decided),
+        by_split={split: rate(per_split[split]) for split in order},
+    )

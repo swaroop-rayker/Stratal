@@ -1,7 +1,7 @@
-"""EVAL-1.1: the statistics of the phase-1 dataset report. Owner units.
+"""EVAL-1.1: the statistics of the phase-1 dataset report.
 
-Strict expected failures until the functions in ``stratal.eval.report_stats``
-are written (ADR-0012); then remove the marker. EVAL-1.1.AC1 (a report per
+Owner units, written by the agent at the owner's request on 2026-11-16
+(ADR-0012). EVAL-1.1.AC1 (a report per
 dataset version, with all four parts) is tested with the report assembly and
 the evaluate stage, which are the agent's.
 
@@ -27,10 +27,6 @@ from stratal.eval.report_stats import (
     review_acceptance,
     score_distribution,
     wilson_interval,
-)
-
-pytestmark = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="owner unit EVAL-1.1 not written yet"
 )
 
 # --------------------------------------------------------- rejection counts
