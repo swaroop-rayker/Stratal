@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-03_v1.html`](../screens/SCR-03_v1.html), G2 approved 2026-11-15 |
 | Built | `frontend/src/screens/version/`, `frontend/src/styles/{scr03,rowdrawer}.css` |
 | Checked | 2026-11-16, live on coco10k (preprocess `ds_f81d0d552a1a`, split `ds_3f6fcc420a27`) and coco1k (the fork at `ds_acf73ab0758b`), at 1280 × 760 and 1024 × 640, dark and light |
-| Status | **Waiting for the owner's sign-off** |
+| Status | **Approved by the owner on 2026-11-16**, including the lineage strip in HTML rather than React Flow |
 
 ## Screenshots (in this folder)
 

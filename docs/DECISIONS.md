@@ -475,6 +475,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** One image (`docker/frontend.Dockerfile`, Norton's root through `NODE_EXTRA_CA_CERTS`), the source bind-mounted, `node_modules` in a volume, file watching by polling.
 - **Why:** Type-aware linting ran out of heap at the dev server's limit. Keeping the checks in an on-demand container leaves the always-on stack within NFR-2. openapi-typescript 7 and typescript-eslint 8 do not yet accept TypeScript 6.
 
+**The lineage view is HTML, not React Flow** (M6, DATA-3.3, UI-2.1; the owner's approval at SCR-03's G3, 2026-11-16)
+- **What:** SCR-03's lineage is a strip of linked nodes in plain HTML that forks into rows. SPEC §7.4 lists React Flow for "model builder, lineage graph, router view"; React Flow is kept for the model builder (SCR-08).
+- **How:** `frontend/src/screens/version/LineageStrip.tsx`: ancestors in order, this version, descendants grouped by parent; the strip scrolls sideways and keeps this version in view.
+- **Why:** The approved mockup draws a strip and its accessibility notes ask for "a list of links in order". A React Flow canvas is pannable and its nodes are not links. Nothing in phase 1 needs to drag or connect lineage nodes.
+
 **The live stream reopens itself after an HTTP error** (M6, MON-1.4; agent)
 - **What:** The UI's single global EventSource is reopened with backoff (1 s doubling to 15 s) when the browser gives up, resuming with `?after=<last event ID>`; when it comes back, every query is read again.
 - **How:** `Feed` in `frontend/src/api/stream.ts`; tests `test_MON_1_4_*`.
