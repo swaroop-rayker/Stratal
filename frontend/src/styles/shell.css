@@ -83,3 +83,5 @@ body { overflow: hidden; }
   .side .nav:hover .rail-tip, .side .nav:focus-visible .rail-tip { display: block; left: calc(100% + var(--sp-2)); top: var(--sp-1); }
 }
 .slot { height: 100%; border: var(--bw) dashed var(--border); border-radius: var(--r-md); display: grid; place-items: center; text-align: center; color: var(--text-muted); font-size: var(--fs-12); }
+/* live: text for screen readers only (status words beside icons). */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

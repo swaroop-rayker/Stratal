@@ -22,7 +22,9 @@ export function bytes(n: Maybe): string {
     value /= 1024;
     unit += 1;
   }
-  return `${unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit] ?? "B"}`;
+  // Three significant digits at most: "867 MB", "1.1 GB", "64.2 KB".
+  const digits = unit === 0 || value >= 100 ? 0 : 1;
+  return `${value.toFixed(digits)} ${units[unit] ?? "B"}`;
 }
 
 export function count(n: Maybe): string {

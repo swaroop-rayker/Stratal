@@ -70,6 +70,9 @@ async def _stream(
     latest_process: dict[str, Any] = {}
     quiet = 0.0
     first = True
+    # A comment line at once, so proxies pass the headers on and clients see the stream
+    # open now, not at the first event or ping (MON-1.4).
+    yield ": connected\n\n"
     async for received in subscribe(get_settings().redis_url, [channel], idle_s=idle_s):
         if await request.is_disconnected():
             break

@@ -166,3 +166,157 @@ class System(_Model):
     vram_cap_mb: float | None
     ram_total_mb: float | None
     cpu_count: int | None
+
+
+class Version(_Model):
+    """A dataset version (API.md §3.2). ``counts`` holds rows by status and by reason, and
+    the stage's own reports (``validation``, ``split``)."""
+
+    version_id: str
+    dataset: str
+    stage: str
+    parent_version_id: str | None
+    content_hash: str
+    config_hash: str
+    config: Json
+    dtype: str | None
+    row_count: int
+    counts: Json
+    manifest_path: str
+    manifest_bytes: int
+    new_blob_bytes: int
+    schema_version: int
+    code_version: str | None
+    created_by_job_id: str | None
+    created_by_job_state: JobState | None
+    created_at: str
+
+
+class VersionList(_Model):
+    items: list[Version]
+    next_cursor: str | None
+
+
+class Dataset(_Model):
+    slug: str
+    display_name: str | None
+    modality: Literal["image", "tabular", "text"]
+    source_uri: str | None
+    created_at: str
+    updated_at: str
+    version_count: int
+    stored_bytes: int
+    latest_version: Version | None
+
+
+class DatasetList(_Model):
+    items: list[Dataset]
+    next_cursor: str | None
+
+
+class ExtendingJob(_Model):
+    job_id: str
+    state: JobState
+    stage: str
+    step: int | None
+    total: int | None
+
+
+class Lineage(_Model):
+    version_id: str
+    ancestors: list[Version]
+    descendants: list[Version]
+    in_progress: list[ExtendingJob]
+
+
+class Row(BaseModel):
+    """One manifest row (DATA_MODEL.md §5). Columns a stage has not reached are null."""
+
+    model_config = ConfigDict(extra="allow")
+
+    row_key: str
+    sha256: str | None = None
+    size_bytes: int | None = None
+    format: str | None = None
+    width: int | None = None
+    height: int | None = None
+    status: Literal["accepted", "rejected", "duplicate", "filtered"]
+    decided_at_stage: str | None = None
+    reason_code: str | None = None
+    reason_detail: str | None = None
+    phash: str | None = None
+    dup_kind: str | None = None
+    dup_group_id: str | None = None
+    dup_of: str | None = None
+    derived_sha256: str | None = None
+    derived_width: int | None = None
+    derived_height: int | None = None
+    caption: str | None = None
+    caption_model: str | None = None
+    caption_model_revision: str | None = None
+    clip_score: float | None = None
+    clip_model: str | None = None
+    clip_model_revision: str | None = None
+    split: str | None = None
+    split_group: str | None = None
+    split_stratum: str | None = None
+
+
+class RowPage(_Model):
+    items: list[Row]
+    matched: int
+    next_cursor: str | None
+
+
+class Distribution(_Model):
+    count: int
+    mean: float | None
+    std: float | None
+    minimum: float | None
+    maximum: float | None
+    quantiles: dict[str, float]
+    edges: list[float]
+    histogram: list[int]
+    below: int
+    above: int
+
+
+class ReasonCount(_Model):
+    reason_code: str
+    decided_at_stage: str
+    status: str
+    rows: int
+    share: float
+
+
+class Stats(_Model):
+    version_id: str
+    row_count: int
+    by_status: dict[str, int]
+    reasons: list[ReasonCount]
+    by_stage: dict[str, dict[str, int]]
+    by_split: dict[str, int] | None
+    size_bytes: Distribution
+    clip_score: Distribution | None
+
+
+class Source(_Model):
+    name: str
+    path: str
+    files: int
+
+
+class SourceList(_Model):
+    items: list[Source]
+    next_cursor: str | None
+
+
+class StageSchema(_Model):
+    name: str
+    queue: Literal["cpu", "gpu"]
+    title: str
+
+
+class StageSchemaList(_Model):
+    items: list[StageSchema]
+    next_cursor: str | None

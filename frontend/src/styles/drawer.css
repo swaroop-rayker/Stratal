@@ -1,0 +1,41 @@
+/* Drawer and its form parts, from the SCR-02 mockup (the Start pipeline drawer); shared by
+   every screen with a right-side drawer. Replaces the preview's drawn-in-place .drawer.
+   live: fixed to the window, over the content, under the toasts. */
+.drawer-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: var(--z-drawer); }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 440px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); display: flex; flex-direction: column; z-index: var(--z-drawer); }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.drawer > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); overflow: hidden; flex: 1; }
+.drawer > footer { display: flex; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-top: var(--bw) solid var(--border); }
+.stages { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.st { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); height: 36px; border-top: var(--bw) solid var(--border); font-size: var(--fs-13); }
+.st:first-child { border-top: 0; }
+.st input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; }
+.st .name { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .st .key { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted); } .st svg.i { color: var(--text-muted); }
+.st.off { color: var(--text-muted); } .st.off .name { color: var(--text-muted); font-weight: var(--fw-regular); }
+.st-form { padding: var(--sp-3); border-top: var(--bw) solid var(--border); background: var(--surface-sunken); display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.type { font: var(--fs-11) var(--font-mono); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); }
+.summary { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--danger-soft); border: var(--bw) solid color-mix(in srgb, var(--danger) 50%, transparent); font-size: var(--fs-12); }
+.summary svg.i { color: var(--danger); margin-top: 2px; }
+.menu-pop { position: absolute; width: 270px; padding: var(--sp-1); background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-2); z-index: var(--z-drawer); }
+.menu-pop div { display: flex; align-items: center; gap: var(--sp-2); height: 32px; padding: 0 var(--sp-2); border-radius: var(--r-sm); font-size: var(--fs-13); }
+.menu-pop div.is-hover { background: var(--accent-soft); } .menu-pop kbd { margin-left: auto; } .menu-pop svg.i { color: var(--text-muted); }
+
+.drawer .body { overflow: auto; }
+.drawer .tabs .tab { font-family: var(--font-ui); }
+.drawer .st { cursor: default; }
+.drawer .st button.expand { all: unset; cursor: pointer; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: var(--r-sm); color: var(--text-muted); }
+.drawer .st button.expand:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.drawer .st label { display: contents; }
+.drawer .checks { display: flex; flex-wrap: wrap; gap: var(--sp-3); font-size: var(--fs-12); }
+.drawer .checks label { display: inline-flex; gap: var(--sp-1); align-items: center; }
+.drawer .checks input, .drawer .field input[type=checkbox] { accent-color: var(--accent); }
+.drawer select.select { color: var(--text-primary); }
+.drawer { padding: 0; } /* live: the preview's drawn-in-place drawer had padding; this one pads its parts */
+/* live: the row menu is Radix's dropdown; its highlighted item takes the mockup's hover. */
+.menu-pop { position: static; }
+.menu-pop [role=menuitem] { cursor: pointer; outline: none; }
+.menu-pop [data-highlighted] { background: var(--accent-soft); }
+.menu-pop [data-disabled] { opacity: .45; cursor: not-allowed; }
+.drawer .field > label { display: flex; gap: var(--sp-2); align-items: center; }
+.st-form > .rjsf { display: contents; } /* live: rjsf's wrapper must not break the two-column grid */

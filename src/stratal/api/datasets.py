@@ -11,6 +11,7 @@ from PIL import Image, ImageOps
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
+from stratal.api import schemas
 from stratal.api.jobs import Db, Limit
 from stratal.core.errors import Conflict, NotFound
 from stratal.core.settings import get_settings
@@ -50,7 +51,7 @@ def _page(items: list[Json], cursor: str | None, limit: int) -> Json:
 # -- datasets ------------------------------------------------------------------
 
 
-@router.post("/datasets", status_code=201)
+@router.post("/datasets", status_code=201, response_model=schemas.Dataset)
 def create_dataset(body: CreateDataset, session: Db) -> Json:
     """Create a dataset. ``409 conflict`` if the slug is taken."""
     with session.begin():
@@ -66,18 +67,18 @@ def create_dataset(body: CreateDataset, session: Db) -> Json:
     return view
 
 
-@router.get("/datasets")
+@router.get("/datasets", response_model=schemas.DatasetList)
 def list_datasets(session: Db, limit: Limit = 50, cursor: str | None = None) -> Json:
     """Datasets with their latest version, most recently updated first."""
     return _page(browse.list_datasets(session), cursor, limit)
 
 
-@router.get("/datasets/{slug}")
+@router.get("/datasets/{slug}", response_model=schemas.Dataset)
 def get_dataset(slug: str, session: Db) -> Json:
     return browse.dataset_view(session, browse.get_dataset(session, slug))
 
 
-@router.get("/datasets/{slug}/versions")
+@router.get("/datasets/{slug}/versions", response_model=schemas.VersionList)
 def dataset_versions(slug: str, session: Db, limit: Limit = 50, cursor: str | None = None) -> Json:
     """A dataset's versions, newest first."""
     browse.get_dataset(session, slug)
@@ -88,18 +89,18 @@ def dataset_versions(slug: str, session: Db, limit: Limit = 50, cursor: str | No
 # -- versions ------------------------------------------------------------------
 
 
-@router.get("/versions/{version_id}")
+@router.get("/versions/{version_id}", response_model=schemas.Version)
 def get_version(version_id: str, session: Db) -> Json:
     return browse.version_view(session, registry.get_version(session, version_id))
 
 
-@router.get("/versions/{version_id}/lineage")
+@router.get("/versions/{version_id}/lineage", response_model=schemas.Lineage)
 def version_lineage(version_id: str, session: Db) -> Json:
     """Ancestors back to raw and descendants (DATA-3.3), plus jobs about to add a child."""
     return browse.lineage_view(session, version_id)
 
 
-@router.get("/versions/{version_id}/rows")
+@router.get("/versions/{version_id}/rows", response_model=schemas.RowPage)
 def version_rows(
     version_id: str,
     session: Db,
@@ -135,7 +136,7 @@ def version_rows(
     }
 
 
-@router.get("/versions/{version_id}/stats")
+@router.get("/versions/{version_id}/stats", response_model=schemas.Stats)
 def version_stats(version_id: str, session: Db) -> Json:
     """Counts by status, reason and deciding stage; size and CLIP-score distributions."""
     version, path = registry.manifest_for(session, get_settings().data_dir, version_id)
@@ -188,7 +189,7 @@ def _file_count(folder: FsPath) -> int:
     return count
 
 
-@router.get("/sources")
+@router.get("/sources", response_model=schemas.SourceList)
 def list_sources() -> Json:
     """Folders directly under the sources mount, with their file counts (SCR-02 drawer)."""
     root = get_settings().sources_dir

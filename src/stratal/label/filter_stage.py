@@ -47,7 +47,9 @@ class FilterConfig(BaseModel):
         description="Pairs whose CLIP cosine is below this are filtered (LABEL-1.4). 0.2, "
         "chosen by the owner from the measured score distribution (OC-5, 2026-11-15).",
     )
-    algorithm_version: int = filtering.ALGORITHM_VERSION
+    algorithm_version: int = Field(
+        default=filtering.ALGORITHM_VERSION, json_schema_extra={"readOnly": True}
+    )
     validate_as: Literal["image_caption"] = Field(
         default="image_caption",
         description="The dataset type the rows left after the rule are validated against "

@@ -694,6 +694,36 @@ export interface components {
              */
             seed?: number | null;
         };
+        /** Dataset */
+        Dataset: {
+            /** Slug */
+            slug: string;
+            /** Display Name */
+            display_name: string | null;
+            /**
+             * Modality
+             * @enum {string}
+             */
+            modality: "image" | "tabular" | "text";
+            /** Source Uri */
+            source_uri: string | null;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Version Count */
+            version_count: number;
+            /** Stored Bytes */
+            stored_bytes: number;
+            latest_version: components["schemas"]["Version"] | null;
+        };
+        /** DatasetList */
+        DatasetList: {
+            /** Items */
+            items: components["schemas"]["Dataset"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** Decision */
         Decision: {
             /**
@@ -703,6 +733,31 @@ export interface components {
             decision: "accept" | "reject";
             /** Note */
             note?: string | null;
+        };
+        /** Distribution */
+        Distribution: {
+            /** Count */
+            count: number;
+            /** Mean */
+            mean: number | null;
+            /** Std */
+            std: number | null;
+            /** Minimum */
+            minimum: number | null;
+            /** Maximum */
+            maximum: number | null;
+            /** Quantiles */
+            quantiles: {
+                [key: string]: number;
+            };
+            /** Edges */
+            edges: number[];
+            /** Histogram */
+            histogram: number[];
+            /** Below */
+            below: number;
+            /** Above */
+            above: number;
         };
         /** Event */
         Event: {
@@ -750,6 +805,22 @@ export interface components {
             items: components["schemas"]["Event"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** ExtendingJob */
+        ExtendingJob: {
+            /** Job Id */
+            job_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled" | "stalled";
+            /** Stage */
+            stage: string;
+            /** Step */
+            step: number | null;
+            /** Total */
+            total: number | null;
         };
         /** FolderSource */
         FolderSource: {
@@ -896,6 +967,17 @@ export interface components {
             finished_at: string | null;
             error: components["schemas"]["JobError"] | null;
         };
+        /** Lineage */
+        Lineage: {
+            /** Version Id */
+            version_id: string;
+            /** Ancestors */
+            ancestors: components["schemas"]["Version"][];
+            /** Descendants */
+            descendants: components["schemas"]["Version"][];
+            /** In Progress */
+            in_progress: components["schemas"]["ExtendingJob"][];
+        };
         /**
          * PipelineRequest
          * @description ``POST /jobs`` with ``kind: pipeline``.
@@ -946,6 +1028,19 @@ export interface components {
              */
             at: string;
         };
+        /** ReasonCount */
+        ReasonCount: {
+            /** Reason Code */
+            reason_code: string;
+            /** Decided At Stage */
+            decided_at_stage: string;
+            /** Status */
+            status: string;
+            /** Rows */
+            rows: number;
+            /** Share */
+            share: number;
+        };
         /**
          * ResourceSample
          * @description One row of ``resource_samples`` (DATA_MODEL.md §4.7). GPU values are null when
@@ -992,6 +1087,138 @@ export interface components {
             disk_read_mb_s: number;
             /** Disk Write Mb S */
             disk_write_mb_s: number;
+        };
+        /**
+         * Row
+         * @description One manifest row (DATA_MODEL.md §5). Columns a stage has not reached are null.
+         */
+        Row: {
+            /** Row Key */
+            row_key: string;
+            /** Sha256 */
+            sha256?: string | null;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Format */
+            format?: string | null;
+            /** Width */
+            width?: number | null;
+            /** Height */
+            height?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "accepted" | "rejected" | "duplicate" | "filtered";
+            /** Decided At Stage */
+            decided_at_stage?: string | null;
+            /** Reason Code */
+            reason_code?: string | null;
+            /** Reason Detail */
+            reason_detail?: string | null;
+            /** Phash */
+            phash?: string | null;
+            /** Dup Kind */
+            dup_kind?: string | null;
+            /** Dup Group Id */
+            dup_group_id?: string | null;
+            /** Dup Of */
+            dup_of?: string | null;
+            /** Derived Sha256 */
+            derived_sha256?: string | null;
+            /** Derived Width */
+            derived_width?: number | null;
+            /** Derived Height */
+            derived_height?: number | null;
+            /** Caption */
+            caption?: string | null;
+            /** Caption Model */
+            caption_model?: string | null;
+            /** Caption Model Revision */
+            caption_model_revision?: string | null;
+            /** Clip Score */
+            clip_score?: number | null;
+            /** Clip Model */
+            clip_model?: string | null;
+            /** Clip Model Revision */
+            clip_model_revision?: string | null;
+            /** Split */
+            split?: string | null;
+            /** Split Group */
+            split_group?: string | null;
+            /** Split Stratum */
+            split_stratum?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RowPage */
+        RowPage: {
+            /** Items */
+            items: components["schemas"]["Row"][];
+            /** Matched */
+            matched: number;
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Source */
+        Source: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            /** Files */
+            files: number;
+        };
+        /** SourceList */
+        SourceList: {
+            /** Items */
+            items: components["schemas"]["Source"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** StageSchema */
+        StageSchema: {
+            /** Name */
+            name: string;
+            /**
+             * Queue
+             * @enum {string}
+             */
+            queue: "cpu" | "gpu";
+            /** Title */
+            title: string;
+        };
+        /** StageSchemaList */
+        StageSchemaList: {
+            /** Items */
+            items: components["schemas"]["StageSchema"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Stats */
+        Stats: {
+            /** Version Id */
+            version_id: string;
+            /** Row Count */
+            row_count: number;
+            /** By Status */
+            by_status: {
+                [key: string]: number;
+            };
+            /** Reasons */
+            reasons: components["schemas"]["ReasonCount"][];
+            /** By Stage */
+            by_stage: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+            /** By Split */
+            by_split: {
+                [key: string]: number;
+            } | null;
+            size_bytes: components["schemas"]["Distribution"];
+            clip_score: components["schemas"]["Distribution"] | null;
         };
         /**
          * StreamMessages
@@ -1073,6 +1300,60 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * Version
+         * @description A dataset version (API.md §3.2). ``counts`` holds rows by status and by reason, and
+         *     the stage's own reports (``validation``, ``split``).
+         */
+        Version: {
+            /** Version Id */
+            version_id: string;
+            /** Dataset */
+            dataset: string;
+            /** Stage */
+            stage: string;
+            /** Parent Version Id */
+            parent_version_id: string | null;
+            /** Content Hash */
+            content_hash: string;
+            /** Config Hash */
+            config_hash: string;
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Dtype */
+            dtype: string | null;
+            /** Row Count */
+            row_count: number;
+            /** Counts */
+            counts: {
+                [key: string]: unknown;
+            };
+            /** Manifest Path */
+            manifest_path: string;
+            /** Manifest Bytes */
+            manifest_bytes: number;
+            /** New Blob Bytes */
+            new_blob_bytes: number;
+            /** Schema Version */
+            schema_version: number;
+            /** Code Version */
+            code_version: string | null;
+            /** Created By Job Id */
+            created_by_job_id: string | null;
+            /** Created By Job State */
+            created_by_job_state: ("queued" | "running" | "paused" | "completed" | "failed" | "cancelled" | "stalled") | null;
+            /** Created At */
+            created_at: string;
+        };
+        /** VersionList */
+        VersionList: {
+            /** Items */
+            items: components["schemas"]["Version"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
     };
     responses: never;
@@ -1538,9 +1819,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["DatasetList"];
                 };
             };
             /** @description Validation Error */
@@ -1573,9 +1852,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Dataset"];
                 };
             };
             /** @description Validation Error */
@@ -1606,9 +1883,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Dataset"];
                 };
             };
             /** @description Validation Error */
@@ -1642,9 +1917,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["VersionList"];
                 };
             };
             /** @description Validation Error */
@@ -1675,9 +1948,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Version"];
                 };
             };
             /** @description Validation Error */
@@ -1708,9 +1979,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Lineage"];
                 };
             };
             /** @description Validation Error */
@@ -1750,9 +2019,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RowPage"];
                 };
             };
             /** @description Validation Error */
@@ -1783,9 +2050,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Stats"];
                 };
             };
             /** @description Validation Error */
@@ -1846,9 +2111,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SourceList"];
                 };
             };
         };
@@ -1888,9 +2151,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["StageSchemaList"];
                 };
             };
         };

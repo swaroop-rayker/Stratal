@@ -87,10 +87,13 @@ class SplitConfig(BaseModel):
     )
     continues_version_id: str | None = Field(
         default=None,
+        json_schema_extra={"readOnly": True},
         description="Set by the stage, not by the user: the earlier split whose assignments "
         "this one keeps (DATA-4.5), or null if there is none.",
     )
-    algorithm_version: int = splitting.ALGORITHM_VERSION
+    algorithm_version: int = Field(
+        default=splitting.ALGORITHM_VERSION, json_schema_extra={"readOnly": True}
+    )
 
     @model_validator(mode="after")
     def _proportions(self) -> "SplitConfig":

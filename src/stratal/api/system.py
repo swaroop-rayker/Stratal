@@ -50,7 +50,7 @@ def system(session: Db, bus: Redis) -> Json:
     }
 
 
-@router.get("/config/schemas", tags=["config"])
+@router.get("/config/schemas", tags=["config"], response_model=schemas.StageSchemaList)
 def config_schemas() -> Json:
     """The stage config models, in pipeline order."""
     items = [

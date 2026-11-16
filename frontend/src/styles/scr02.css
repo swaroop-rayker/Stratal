@@ -1,0 +1,56 @@
+/* SCR-02 datasets and versions, copied from docs/design/screens/SCR-02_v1.html (G2 approved
+   2026-11-15), scoped under .scr02. Tokens only. Changes for a live page are marked "live:". */
+/* live: the screen fills the shell's content region edge to edge (the mockup's .content grid). */
+.content:has(> .scr02) { padding: 0; overflow: hidden; }
+.scr02 { display: grid; grid-template-columns: 248px 1fr; height: 100%; }
+.scr02.single { display: block; padding: var(--sp-6); }
+.scr02 .list { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border-right: var(--bw) solid var(--border); }
+.scr02 .list-head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-4) var(--sp-3) var(--sp-3); }
+.scr02 .list-head h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.scr02 .filter { margin: 0 var(--sp-3) var(--sp-3); position: relative; }
+.scr02 .filter .input { padding-left: 28px; color: var(--text-muted); } .scr02 .filter svg.i { position: absolute; left: var(--sp-2); top: 9px; color: var(--text-muted); } .scr02 .filter kbd { position: absolute; right: var(--sp-2); top: 6px; }
+.scr02 .ds { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-2); padding: var(--sp-2) var(--sp-3); border-top: var(--bw) solid var(--border); cursor: pointer; }
+.scr02 .ds:hover, .scr02 .ds.is-hover { background: var(--accent-soft); }
+.scr02 .ds[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.scr02 .ds .slug { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .scr02 .ds .r { text-align: right; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.scr02 .ds .sub { font-size: var(--fs-12); color: var(--text-muted); display: flex; gap: var(--sp-1); align-items: center; flex-wrap: wrap; } .scr02 .ds .sub .mono { color: var(--text-secondary); font-size: var(--fs-11); }
+.scr02 .ds .pill { height: 16px; font-size: 10px; padding: 0 6px 0 5px; }
+.scr02 .detail { padding: var(--sp-4) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; overflow: hidden; }
+.scr02 .dhead { display: flex; align-items: baseline; gap: var(--sp-3); }
+.scr02 .dhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); }
+.scr02 .dhead .sub { color: var(--text-muted); font-size: var(--fs-12); } .scr02 .dhead .sub .mono { color: var(--text-secondary); }
+.scr02 .facts { display: flex; gap: var(--sp-6); }
+.scr02 .facts > div { display: flex; flex-direction: column; gap: 2px; }
+.scr02 .facts .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.scr02 .facts .v { font: var(--fw-medium) var(--fs-14) var(--font-mono); font-variant-numeric: tabular-nums; }
+.scr02 .stage-tag { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.scr02 .counts { display: flex; align-items: center; gap: var(--sp-1); font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.scr02 .counts .n-acc { color: var(--text-primary); }
+.scr02 .stack { display: flex; width: 48px; height: 6px; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-sunken); flex: none; }
+.scr02 .stack i { display: block; height: 100%; }
+.scr02 .stack .acc { background: var(--success); } .scr02 .stack .rej { background: var(--danger); } .scr02 .stack .dup { background: var(--text-muted); } .scr02 .stack .fil { background: var(--warning); }
+.scr02 .keyrow { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-muted); }
+.scr02 .keyrow span { display: inline-flex; gap: var(--sp-1); align-items: center; } .scr02 .keyrow i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); display: inline-block; }
+.scr02 .made { display: inline-flex; gap: var(--sp-1); align-items: center; color: var(--text-secondary); font-size: var(--fs-12); } .scr02 .made .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.scr02 .made svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.scr02 .parent { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); } .scr02 .parent.raw { color: var(--text-muted); font-family: var(--font-ui); }
+.scr02 .pending td { background: color-mix(in srgb, var(--state-running) 6%, transparent); }
+.scr02 .pending .progress { width: 56px; } .scr02 .pending .what { font-size: var(--fs-12); color: var(--text-secondary); }
+.scr02 .t td.menu { color: var(--text-muted); text-align: center; width: 28px; padding: 0 var(--sp-1); }
+.scr02 .foot-note { margin: 0; font-size: var(--fs-12); color: var(--text-muted); }
+/* live: lists and tables scroll inside their region; rows are links and buttons. */
+.scr02 .list { overflow: auto; }
+.scr02 .detail { overflow: auto; }
+.scr02 .ds { text-align: left; width: 100%; border-left: 0; border-right: 0; border-bottom: 0; background: none; color: inherit; font: inherit; }
+.scr02 .filter input.input { color: var(--text-primary); }
+.scr02 .t tbody tr { cursor: pointer; }
+.scr02 .t td.menu button { all: unset; cursor: pointer; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: var(--r-sm); }
+.scr02 .t td.menu button:hover { background: var(--accent-soft); color: var(--text-primary); }
+.scr02 .t td.menu button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.scr02 .made .bad { color: var(--state-failed); } .scr02 .made .run { color: var(--state-running); }
+@media (max-width: 1279px) { .scr02 { grid-template-columns: 240px 1fr; } .scr02 .col-parent, .scr02 .made .when-job { display: none; } }
+/* The SCR-02 mockup's own table density and field labels (its copy of the components). */
+.scr02 .t th { padding: var(--sp-2) var(--sp-2); }
+.scr02 .t td { padding: 0 var(--sp-2); height: 36px; }
+.scr02 .t td.menu, .scr02 .t th:last-child { padding: 0 var(--sp-1); width: 28px; }
+@media (max-width: 1279px) { .scr02 .wide { display: none; } }
