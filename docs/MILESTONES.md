@@ -254,7 +254,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] `test_LABEL_1_5_*`: N rows sampled; decisions stored and linked to the version (2026-11-16; 4 unit and 4 integration tests, with `test_DATA_4_7_*` for the split on each item)
 - [x] 👤 `test_EVAL_1_1_*`: a report per version with all four parts; the interval checked against known values (2026-11-16; statistics written by the agent at the owner's request; Wilson against Newcombe 1998, table I; a report per version in the integration tests)
 - [x] `test_NFR_4_*`: two runs with the same data, config and seed give the same splits and version IDs (2026-11-16; with the owner's DATA-4 units. The test found E-010, fixed)
-- [ ] Demo: the full pipeline on 1,000 images, a 50-row review, the report
+- [x] Demo: the full pipeline on 1,000 images, a 50-row review, the report (2026-11-16). `job_0012` ran coco1k from its source folder through all seven stages in 35 s, reusing cached work (computed in `job_0006` and `job_0010`). Split `ds_7ffe080f799f`: 788 / 99 / 98, all 12 strata within one group, 0 leaks. Review `rev_0002` (50 rows, seed 143108104) was judged by the agent at the owner's request, from the images: 45 accepted, 90 %, Wilson 95 % interval 78.6–95.7 %; all 5 rejects in train (test 8/8, val 4/4). Report 5 has all four parts, with the review
 - [ ] Docs updated
 - [ ] Owner's OK to merge
 
