@@ -190,7 +190,8 @@ def test_API_jobs_rejects_bad_requests_with_problem_details(runner: Runner, tmp_
     assert config.json()["errors"][0]["loc"] == ["stages", "ingest", "min_size"]
     assert unknown.status_code == 422 and "train" in unknown.json()["detail"]
     assert client.get("/api/v1/jobs/job_9999").json()["code"] == "not_found"
-    assert client.get("/api/v1/jobs").json() == {"items": [], "next_cursor": None}
+    listed = client.get("/api/v1/jobs").json()
+    assert (listed["items"], listed["next_cursor"]) == ([], None), "no job was created"
 
 
 def test_RUN_1_1_transitions_are_logged_and_invalid_ones_rejected(runner: Runner) -> None:

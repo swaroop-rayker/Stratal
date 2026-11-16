@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from stratal.api import schemas
 from stratal.core.bus import LIVE_GLOBAL, Bus
 from stratal.core.errors import ValidationFailed
 from stratal.core.settings import get_settings
@@ -118,7 +119,7 @@ def _page(rows: list[EventRow], limit: int) -> Json:
 # -- jobs ----------------------------------------------------------------------
 
 
-@router.post("/jobs", status_code=202, tags=["jobs"])
+@router.post("/jobs", status_code=202, tags=["jobs"], response_model=schemas.Job)
 def create_job(request: PipelineRequest, session: Db, enqueue: Queue, bus: Redis) -> Json:
     """Start a job. Phase 1 accepts ``kind: pipeline``."""
     with session.begin():
@@ -129,7 +130,7 @@ def create_job(request: PipelineRequest, session: Db, enqueue: Queue, bus: Redis
     return view
 
 
-@router.get("/jobs", tags=["jobs"])
+@router.get("/jobs", tags=["jobs"], response_model=schemas.JobList)
 def list_jobs(
     session: Db,
     state: str | None = None,
@@ -170,12 +171,12 @@ def list_jobs(
     }
 
 
-@router.get("/jobs/{job_id}", tags=["jobs"])
+@router.get("/jobs/{job_id}", tags=["jobs"], response_model=schemas.Job)
 def get_job(job_id: str, session: Db) -> Json:
     return job_service.job_view(session, job_service.get_job(session, job_id))
 
 
-@router.post("/jobs/{job_id}/cancel", status_code=202, tags=["jobs"])
+@router.post("/jobs/{job_id}/cancel", status_code=202, tags=["jobs"], response_model=schemas.Job)
 def cancel_job(job_id: str, session: Db, bus: Redis) -> Json:
     """Request cancellation. ``409`` if the job has already finished."""
     with session.begin():
@@ -187,7 +188,7 @@ def cancel_job(job_id: str, session: Db, bus: Redis) -> Json:
     return view
 
 
-@router.post("/jobs/{job_id}/retry", status_code=202, tags=["jobs"])
+@router.post("/jobs/{job_id}/retry", status_code=202, tags=["jobs"], response_model=schemas.Job)
 def retry_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
     """Requeue a failed job. Finished stages are reused. ``409`` if it is not failed."""
     with session.begin():
@@ -199,7 +200,7 @@ def retry_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
     return view
 
 
-@router.get("/jobs/{job_id}/events", tags=["jobs"])
+@router.get("/jobs/{job_id}/events", tags=["jobs"], response_model=schemas.EventList)
 def job_events(
     job_id: str,
     session: Db,
@@ -245,7 +246,7 @@ def job_telemetry(
 # -- activity log and telemetry ------------------------------------------------
 
 
-@router.get("/events", tags=["monitoring"])
+@router.get("/events", tags=["monitoring"], response_model=schemas.EventList)
 def all_events(
     session: Db,
     level: Level | None = None,
@@ -261,7 +262,7 @@ def all_events(
     return _page(rows, limit)
 
 
-@router.get("/telemetry/latest", tags=["monitoring"])
+@router.get("/telemetry/latest", tags=["monitoring"], response_model=schemas.ResourceSample | None)
 def latest_sample(session: Db, response: Response) -> Json | None:
     """The most recent resource sample; ``204`` if the sampler has not written one yet."""
     row = session.scalars(

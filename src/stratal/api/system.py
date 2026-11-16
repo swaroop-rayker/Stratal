@@ -10,6 +10,7 @@ from typing import Any
 from fastapi import APIRouter
 from sqlalchemy import select
 
+from stratal.api import schemas
 from stratal.api.jobs import Db, Redis
 from stratal.core.errors import NotFound
 from stratal.db.models import ResourceSample
@@ -20,7 +21,7 @@ router = APIRouter()
 Json = dict[str, Any]
 
 
-@router.get("/system", tags=["monitoring"])
+@router.get("/system", tags=["monitoring"], response_model=schemas.System)
 def system(session: Db, bus: Redis) -> Json:
     """GPU name, VRAM and RAM totals, and the VRAM cap jobs run under (ADR-0006).
 
