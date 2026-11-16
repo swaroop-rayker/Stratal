@@ -55,10 +55,12 @@ export function StatePill({ state, label }: { state: JobState; label?: string })
   );
 }
 
-/** "Idle": the queued pill's shape in the muted colour, a word that is not a job state. */
+/** "Idle": the queued pill's shape in a neutral colour, a word that is not a job state.
+ * text-secondary, not the mockup's text-muted, which measured 3.78:1 in light (owner's
+ * decision at SCR-01's G3, 2026-11-16). */
 export function IdlePill() {
   return (
-    <span className="pill queued" style={{ "--c": "var(--text-muted)" } as CSSProperties}>
+    <span className="pill queued" style={{ "--c": "var(--text-secondary)" } as CSSProperties}>
       <Icon name="clock" />
       Idle
     </span>

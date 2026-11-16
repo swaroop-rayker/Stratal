@@ -150,6 +150,7 @@ All are in the preview with their variants and states. States shown where they a
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-14 | First version, for Gate 0 review |
+| v1 (SCR-01 G3) | 2026-11-16 | The Idle pill (a word, not a job state) uses `text-secondary`; `text-muted` on its own tint measured 3.78:1 in light. Approved by the owner at SCR-01's Gate 3 |
 | v1 (SCR-06) | 2026-11-15 | The chart icon joins the set. Approved with the SCR-06 hi-fi mockup |
 | v1 (SCR-05) | 2026-11-15 | The note icon joins the set. Approved with the SCR-05 hi-fi mockup |
 | v1 (SCR-03) | 2026-11-15 | Three icons join the set (eye, report, grid). Filters are a group of small buttons with a pressed state (accent-soft fill, accent border), since there is no chip component. Approved with the SCR-03 hi-fi mockup |

@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-01_v1.html`](../screens/SCR-01_v1.html), G2 approved 2026-11-15 |
 | Built | `frontend/src/shell/`, `frontend/src/styles/{tokens,components,shell,theme}.css`, on branch `m6-phase1-ui` |
 | Checked | 2026-11-16, live against the running stack at 1280 × 760 and 1024 × 640, dark and light |
-| Status | **Waiting for the owner's sign-off** |
+| Status | **Approved by the owner on 2026-11-16** ("Approved, fix Idle pill"); the Idle pill now uses `text-secondary` |
 
 ## Screenshots (in this folder)
 
