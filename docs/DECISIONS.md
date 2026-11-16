@@ -407,6 +407,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The keys are sorted, then sampled with `random.Random(seed).sample`. A server-drawn seed is stored. Close counts the decisions and leaves the rate and the interval to the owner's `review_acceptance`. Until that unit exists, close still succeeds and the summary says what is missing.
 - **Why:** A uniform sample estimates acceptance for the whole version without reweighting. With 80/10/10 a 50-row sample holds about 5 test rows, so the test-split interval will be wide. A larger sample, or sampling the test split on its own, can be added if the owner wants a tighter test figure.
 
+**Evaluate stores a report and makes no version** (M5, EVAL-1.1; agent)
+- **What:** The evaluate stage ends the phase-1 pipeline. It writes one `eval_reports` row and passes its input version on as its output. `POST /versions/{id}/reports` runs it alone as a job of kind `report`.
+- **How:** `stratal.eval.report.assemble_phase1_report` reads the manifest twice (statuses, then scores) and calls the owner's five statistics. Without a named review it uses the version's newest closed review. The histograms share fixed edges, 0 to 0.5 in steps of 0.025.
+- **Why:** A report describes a version and changes no data, so it gets no version of its own. Because the output is passed on, a pipeline's output stays the version the report is about. A new review after the pipeline only needs a new report, never a rerun. A consequence: a pipeline started from the final version now runs only `evaluate`, where before M5 it was refused.
+
 **The split report lives in the version; a leak warns rather than fails** (M5, DATA-4.6, DATA-4.2.AC2; agent)
 - **What:** The report is stored as `counts.split` of the split version. The stage's own all-pairs check compares every cross-split pair. If a pair leaks, the stage emits a WARN with a reason and an action, and the report lists examples.
 - **How:** The check compares pHash values bit by bit and duplicate-group IDs, without using the owner's groups. On 10k rows it compares about 17 million cross-split pairs in plain Python.

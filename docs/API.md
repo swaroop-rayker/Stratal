@@ -205,6 +205,14 @@ Built in M5 (2026-11-16). Details:
 | `GET /versions/{version_id}/reports/latest` | The newest report of a kind (`?kind=`) | `200` Report |
 | `GET /reports/{report_id}` | One report | `200` Report |
 
+Built in M5 (2026-11-16). Details:
+
+- **Jobs.** `POST /versions/{id}/reports` queues a one-stage job of kind `report`, whose only stage is `evaluate` (cpu queue). A pipeline also ends with `evaluate`, after `split`. The stage makes no dataset version. Its output is the version it reported on, so a pipeline's output version is still the split version, and its metrics carry `report_id`.
+- **Review.** With `review_id`, the report uses that review, which must belong to the version (otherwise `422 validation_error`). Without one, it uses the version's newest closed review, or none if there is none.
+- **Report:** `{id, version_id, kind, review_session_id, job_id, created_at, report}`. `report` is `{kind, version_id, stage, algorithm_version, confidence, rows: {total, accepted, by_split}, rejections: {total, accepted, by_stage: {stage: {reason: rows}}}, filter_rate, clip_scores: {edges, labelled, accepted, by_split: {split: …}}, review}`. Each distribution is `{count, mean, std, minimum, maximum, quantiles: {p05…p95}, edges, histogram, below, above}`. `review` is `{review_id, status, sample_size, seed, decided, acceptance: {sampled, undecided, overall, by_split}}`, or null. Each rate is `{decided, accepted, interval: {estimate, low, high, confidence}}`. `by_split` is null for a version that has not been split. The statistics are the owner's (§5), so the stage fails with the usual owner-unit message until they are written.
+- **Config** (`stages.evaluate`): `kind`, `review_id`, `score_edges` (default 0 to 0.5 in steps of 0.025, strictly increasing), `confidence` (0.95).
+- `GET …/reports/latest` gives `404 not_found` until the version has a report.
+
 ### 3.7 Configuration
 
 | Method and path | Purpose | Success |

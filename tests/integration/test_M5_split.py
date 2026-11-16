@@ -59,7 +59,7 @@ def test_DATA_4_1_the_pipeline_runs_through_the_split_as_one_job(
     job = Api(runner).run(_pipeline("m5split", source))
 
     assert job["state"] == "completed", job
-    assert [s["name"] for s in job["stages"]][-2:] == ["filter", "split"]
+    assert [s["name"] for s in job["stages"]][-3:] == ["filter", "split", "evaluate"]
     config, counts, rows = _version(job["output_version_id"])
     assert config["continues_version_id"] is None
     accepted = [r for r in rows.values() if r["status"] == "accepted"]

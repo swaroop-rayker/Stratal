@@ -298,3 +298,26 @@ class ReviewItem(Base):
     decision: Mapped[str | None] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+REPORT_KINDS = ("phase1_dataset",)
+
+
+class EvalReport(Base):
+    """A report describing one dataset version (EVAL-1.1)."""
+
+    __tablename__ = "eval_reports"
+    __table_args__ = (
+        CheckConstraint(_one_of("kind", REPORT_KINDS), name="ck_eval_reports_kind"),
+        Index("ix_eval_reports_version_created", "version_id", text("created_at DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    version_id: Mapped[str] = mapped_column(Text, ForeignKey("dataset_versions.version_id"))
+    kind: Mapped[str] = mapped_column(Text)
+    report: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    review_session_id: Mapped[str | None] = mapped_column(Text, ForeignKey("review_sessions.id"))
+    job_id: Mapped[str | None] = mapped_column(
+        Text, ForeignKey("jobs.id", name="fk_eval_reports_job")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

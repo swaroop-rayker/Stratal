@@ -26,7 +26,9 @@ from stratal.data.preprocess import PreprocessConfig, run_preprocess
 from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
 from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitUnits, run_split
 from stratal.data.versioning import derive_version_identity
-from stratal.db.models import Dataset
+from stratal.db.models import Dataset, EvalReport
+from stratal.eval.report import OWNER_STATS, EvaluateConfig, ReportStats, assemble_phase1_report
+from stratal.label import review as reviews
 from stratal.label.filter_stage import FilterConfig, FilterRule, run_filter
 from stratal.label.filtering import filter_decisions
 from stratal.label.stage import OWNER_UNITS as LABEL_UNITS
@@ -415,3 +417,70 @@ def _never(_given: DerivedInput) -> DerivedOutput:
 
 
 register(StageDef("split", "cpu", SplitConfig, make_split_runner(SPLIT_UNITS)))
+
+
+def make_evaluate_runner(stats: ReportStats) -> Callable[[StageRun], StageResult]:
+    """The evaluate stage's runner (EVAL-1.1). Tests register one built with fakes.
+
+    It writes no dataset version: it stores a report in ``eval_reports`` and
+    passes its input version on as its output, so a pipeline's output is still
+    the version the report describes.
+    """
+
+    def _run_evaluate(run: StageRun) -> StageResult:
+        if run.input_version_id is None:
+            raise StratalError(
+                "Stage evaluate needs a version to report on and was given none.",
+                suggested_action="Report on an existing version (POST /versions/{id}/reports).",
+            )
+        config = EvaluateConfig.model_validate(run.config)
+        with Session(run.engine) as session:
+            version, manifest = registry.manifest_for(session, run.data_dir, run.input_version_id)
+            version_id, stage = version.version_id, version.stage
+            review = reviews.review_for_report(session, version_id, config.review_id)
+        with_review = f" with review {review.review_id}" if review is not None else ""
+        run.ctx.emit(
+            stage="evaluate",
+            message=f"Building the phase-1 report of {version_id}{with_review}",
+            metrics={"version_id": version_id},
+        )
+        try:
+            report = assemble_phase1_report(
+                manifest=manifest,
+                version_id=version_id,
+                stage=stage,
+                config=config,
+                review=review,
+                stats=stats,
+            )
+        except NotImplementedError as exc:
+            raise _owner_unit_missing("evaluate", exc) from None
+        with Session(run.engine) as session, session.begin():
+            row = EvalReport(
+                version_id=version_id,
+                kind=config.kind,
+                report=report,
+                review_session_id=review.review_id if review is not None else None,
+                job_id=run.ctx.job_id,
+            )
+            session.add(row)
+            session.flush()
+            report_id = row.id
+        metrics: dict[str, MetricValue] = {
+            "report_id": report_id,
+            "rows": int(report["rows"]["total"]),
+            "accepted": int(report["rows"]["accepted"]),
+        }
+        if report["filter_rate"] is not None:
+            metrics["filter_rate"] = round(float(report["filter_rate"]), 4)
+        if review is not None:
+            metrics["review_id"] = review.review_id
+        run.ctx.emit(
+            stage="evaluate", message=f"Stored report {report_id} for {version_id}", metrics=metrics
+        )
+        return StageResult(output_version_id=version_id, metrics=metrics)
+
+    return _run_evaluate
+
+
+register(StageDef("evaluate", "cpu", EvaluateConfig, make_evaluate_runner(OWNER_STATS)))

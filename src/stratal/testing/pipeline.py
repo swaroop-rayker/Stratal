@@ -17,6 +17,7 @@ from stratal.data.clean import OWNER_UNITS as DEDUPE_UNITS
 from stratal.data.clean import CleanConfig
 from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
 from stratal.data.split_stage import SplitConfig
+from stratal.eval.report import OWNER_STATS, EvaluateConfig
 from stratal.label.filter_stage import FilterConfig
 from stratal.label.filtering import filter_decisions
 from stratal.label.stage import OWNER_UNITS as LABEL_UNITS
@@ -30,6 +31,7 @@ FAKE_MODULES = (
     "stratal.testing.fake_clean",
     "stratal.testing.fake_label",
     "stratal.testing.fake_split",
+    "stratal.testing.fake_eval",
 )
 
 
@@ -48,6 +50,11 @@ def restore_real_units() -> None:
         StageDef("filter", "cpu", FilterConfig, stage_registry.make_filter_runner(filter_decisions))
     )
     register(StageDef("split", "cpu", SplitConfig, stage_registry.make_split_runner(SPLIT_UNITS)))
+    register(
+        StageDef(
+            "evaluate", "cpu", EvaluateConfig, stage_registry.make_evaluate_runner(OWNER_STATS)
+        )
+    )
 
 
 class PipelineApi:

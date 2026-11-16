@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 built in M5 (2026-11-16). §4.11 is still planned |
+| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 and §4.11 built in M5 (2026-11-16) |
 | Detail level | Phase-1 tables are specified. Phase 2+ tables are outlined in [§9](#9-planned-for-later-phases) |
 | Rule | Any schema change updates this file in the same change. Applied migrations are never edited |
 
@@ -241,7 +241,7 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 
 ### 4.11 `eval_reports` (EVAL-1.1)
 
-`id` (bigint identity, PK), `version_id` (FK), `kind` (`phase1_dataset`), `report` (jsonb), `review_session_id` (FK, nullable), `job_id` (FK, nullable), `created_at`. Index: `(version_id, created_at desc)`.
+`id` (bigint identity, PK), `version_id` (FK), `kind` (`phase1_dataset`), `report` (jsonb), `review_session_id` (FK, nullable), `job_id` (FK, nullable), `created_at`. Index: `(version_id, created_at desc)`. Built in M5 (2026-11-16). The `report` document is described in [API.md §3.6](API.md#36-evaluation-eval-11).
 
 ## 5. Manifest schema
 

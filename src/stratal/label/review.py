@@ -24,6 +24,7 @@ from stratal.core.errors import Conflict, NotFound, ValidationFailed
 from stratal.data import registry
 from stratal.db.models import REVIEW_DECISIONS, ReviewItem, ReviewSession
 from stratal.eval import report_stats
+from stratal.eval.report import ReviewInput
 from stratal.eval.report_stats import Acceptance, ReviewedItem
 from stratal.storage.manifest import STATUS_ACCEPTED, iter_rows
 
@@ -176,3 +177,37 @@ def acceptance_summary(
     except NotImplementedError as exc:
         return {"acceptance": None, "acceptance_unavailable": f"owner unit missing: {exc}"}
     return {"acceptance": dataclasses.asdict(result), "acceptance_unavailable": None}
+
+
+def review_for_report(
+    session: Session, version_id: str, review_id: str | None
+) -> ReviewInput | None:
+    """The review a report on ``version_id`` uses (EVAL-1.1, DATA-4.7.AC1).
+
+    The named review, which must belong to the version, or else the version's
+    newest closed review, or ``None`` when it has none.
+    """
+    if review_id is not None:
+        review = get_review(session, review_id)
+        if review.version_id != version_id:
+            raise ValidationFailed(
+                f"Review {review_id} sampled {review.version_id}, not {version_id}.",
+                suggested_action="Name a review of the version being reported on, or none.",
+            )
+    else:
+        query = (
+            select(ReviewSession)
+            .where(ReviewSession.version_id == version_id, ReviewSession.status == "closed")
+            .order_by(ReviewSession.closed_at.desc(), ReviewSession.id.desc())
+        )
+        review = session.scalars(query).first()
+        if review is None:
+            return None
+    items = items_of(session, review.id)
+    return ReviewInput(
+        review_id=review.id,
+        status=review.status,
+        sample_size=review.sample_size,
+        seed=review.seed,
+        items=[ReviewedItem(item.split, item.decision) for item in items],
+    )
