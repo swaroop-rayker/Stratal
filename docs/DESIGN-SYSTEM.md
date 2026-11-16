@@ -150,6 +150,7 @@ All are in the preview with their variants and states. States shown where they a
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-14 | First version, for Gate 0 review |
+| v1 (SCR-02 G3) | 2026-11-16 | Secondary text inside a selected row (accent-soft) uses `text-secondary`, not `text-muted`, which measured 4.45:1 there in dark. Approved by the owner at SCR-02's Gate 3 |
 | v1 (SCR-01 G3) | 2026-11-16 | The Idle pill (a word, not a job state) uses `text-secondary`; `text-muted` on its own tint measured 3.78:1 in light. Approved by the owner at SCR-01's Gate 3 |
 | v1 (SCR-06) | 2026-11-15 | The chart icon joins the set. Approved with the SCR-06 hi-fi mockup |
 | v1 (SCR-05) | 2026-11-15 | The note icon joins the set. Approved with the SCR-05 hi-fi mockup |

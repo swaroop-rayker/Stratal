@@ -54,3 +54,6 @@
 .scr02 .t td { padding: 0 var(--sp-2); height: 36px; }
 .scr02 .t td.menu, .scr02 .t th:last-child { padding: 0 var(--sp-1); width: 28px; }
 @media (max-width: 1279px) { .scr02 .wide { display: none; } }
+/* Owner's decision at SCR-02's G3 (2026-11-16): the selected row's sub-lines use text-secondary;
+   text-muted on the accent-soft selection measured 4.45:1 in dark. */
+.scr02 .ds[aria-selected=true] .sub { color: var(--text-secondary); }

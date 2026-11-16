@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-02_v1.html`](../screens/SCR-02_v1.html), G2 approved 2026-11-15 |
 | Built | `frontend/src/screens/datasets/`, `frontend/src/components/{SchemaForm,Drawer,states}.tsx`, `frontend/src/styles/{scr02,drawer}.css` |
 | Checked | 2026-11-16, live on the real datasets (coco10k, coco2k, coco1k, demo, demo-m3) at 1280 × 760 and 1024 × 640, dark and light |
-| Status | **Waiting for the owner's sign-off** |
+| Status | **Approved by the owner on 2026-11-16** ("Approved, fix selected row"); the selected row's sub-lines now use `text-secondary` |
 
 ## Screenshots (in this folder)
 
