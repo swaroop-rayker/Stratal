@@ -71,7 +71,7 @@ flowchart LR
 | `worker-cpu` | CPU stages: ingest, clean, preprocess, filter, split, evaluate | M2 | no | 2.5 GB |
 | `worker-gpu` | GPU stages, one at a time: label, and later training | M2 | yes | 4.5 GB |
 | `monitor` | Collector (events to Postgres), sampler (psutil + NVML), watchdog (dead and stalled jobs) | M2 | NVML only | 0.25 GB |
-| `frontend` | Dashboard | M6 | no | 0.4 GB |
+| `frontend` | Vite dev server for the web UI (React, SPEC §7.4); proxies `/api` to `api`. Its checks run on demand in `frontend-tools` (1.5 GB, profile `dev`, like `dev`) | M6 | no | 0.4 GB |
 | `beat` | Scheduled maintenance: telemetry downsampling (NFR-12) | M7 | no | 0.2 GB |
 | `inference` | Long-lived process that holds at most one model for `/predict` (REG-1.4) | Phase 2 | yes | to be set |
 | `ollama` | Local LLM serving (LLM-1.1) | Phase 3 | yes | to be set |

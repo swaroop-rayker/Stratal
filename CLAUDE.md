@@ -70,7 +70,7 @@ The full split is in `docs/decisions/ADR-0012-working-model-and-git-workflow.md`
 ## Environment facts
 
 - The project is at `D:\Stratal` on Windows. The shell is PowerShell.
-- Python runs only in containers (3.12). The host's Python is not the project's.
+- Python runs only in containers (3.12). The host's Python is not the project's. Node (24) likewise: the `frontend` service and the on-demand `frontend-tools` (1.5 GB, profile `dev`); `node_modules` lives in the `stratal-node-modules` volume.
 - Data lives on the Docker volume `stratal-data`, not in the repository.
 - Memory: the WSL VM is capped at 10 GB; all containers together stay under 9 GB. VRAM: any job stays under 5.5 GB.
 - One GPU job at a time. Each job runs in its own process (ADR-0003).
@@ -95,6 +95,10 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 | Anything on the GPU | `docker compose run --rm worker-gpu python <script>` |
 | Re-lock after editing `pyproject.toml` | `docker run --rm -v "D:\Stratal:/app" -w /app stratal-base uv lock`, then `docker compose --profile dev --profile gpu build` |
 | Health check | `http://127.0.0.1:8000/api/v1/health` |
+| Web UI (Vite dev server, `/api` proxied) | `http://127.0.0.1:5173` |
+| Frontend checks (typecheck, lint with the raw-hex rule, Vitest, build) | `docker compose run --rm frontend-tools sh -c "npm run typecheck && npm run lint && npm test && npm run build"` |
+| Regenerate the TypeScript API types after changing an endpoint | `docker compose build api; docker compose up -d api; docker compose run --rm frontend-tools npm run api:types` |
+| Add an npm package (ask first) | `docker compose run --rm frontend-tools npm install --save-exact NAME` |
 | Apply database migrations | `docker compose run --rm dev alembic upgrade head` |
 | Create a migration after changing `src/stratal/db/models.py` | `docker compose run --rm dev alembic revision --autogenerate -m "what changed"`, then read the generated file |
 | Command line | `docker compose run --rm dev python -m stratal.cli ingest --dataset NAME --source PATH` (also `versions`, `lineage`) |

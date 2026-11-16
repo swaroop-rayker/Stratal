@@ -1,6 +1,6 @@
-# Run every local quality gate inside the dev container: format check, lint,
-# strict type check, unit + meta tests, then integration tests against the real
-# postgres and redis. Stops at the first failure.
+# Run every local quality gate inside the containers: format check, lint, strict
+# type check, unit + meta tests, the frontend's checks, then integration tests
+# against the real postgres and redis. Stops at the first failure.
 #
 #   .\scripts\check.ps1          # everything
 #   .\scripts\check.ps1 -Fast    # skip integration tests
@@ -21,6 +21,8 @@ Step "format check" { docker compose run --rm --no-deps dev ruff format --check 
 Step "lint"         { docker compose run --rm --no-deps dev ruff check . }
 Step "type check"   { docker compose run --rm --no-deps dev pyright }
 Step "unit + meta"  { docker compose run --rm --no-deps dev pytest -q }
+# Frontend (SPEC §7.5): typecheck, lint with the raw-hex rule, Vitest, production build.
+Step "frontend"     { docker compose run --rm --no-deps frontend-tools sh -c "npm run typecheck && npm run lint && npm test && npm run build" }
 if (-not $Fast) {
     Step "integration" { docker compose run --rm dev pytest -q -m integration }
 }

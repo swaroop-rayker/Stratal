@@ -137,7 +137,7 @@ All are in the preview with their variants and states. States shown where they a
 |---|---|
 | `docs/DESIGN-SYSTEM.md` | this file, v1 |
 | `docs/design/system-preview.html` | v1 |
-| `tokens.css` and the Tailwind theme | written only after approval (M6) |
+| `tokens.css` and the Tailwind theme | written in M6 (2026-11-16): `frontend/src/styles/tokens.css` is the preview's token block copied unchanged; `theme.css` maps Tailwind's colours, spacing, type, radii and shadows onto those variables and removes Tailwind's own; `components.css` is the preview's component CSS. `npm run lint` rejects a raw hex colour anywhere else |
 
 ## Open points for the owner
 

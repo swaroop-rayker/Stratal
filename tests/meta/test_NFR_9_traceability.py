@@ -20,6 +20,8 @@ REQUIREMENT = re.compile(
 )
 TICKED_TEST = re.compile(r"^- \[x\] .*?`(?P<prefix>test_[A-Za-z0-9_]+?)_\*`", re.M)
 TEST_FUNCTION = re.compile(r"^\s*def (test_\w+)\(", re.M)
+FRONTEND = ROOT / "frontend" / "src"
+FRONTEND_TEST = re.compile(r"""\btest\(\s*["'](test_\w+)["']""")
 
 
 def _requirements() -> dict[str, tuple[str, str]]:
@@ -31,6 +33,9 @@ def _test_names() -> set[str]:
     names: set[str] = set()
     for path in TESTS.rglob("test_*.py"):
         names.update(TEST_FUNCTION.findall(path.read_text(encoding="utf-8")))
+    # Vitest tests (M6 on) are named the same way: test("test_MON_4_1_...", ...).
+    for path in FRONTEND.rglob("*.test.ts*"):
+        names.update(FRONTEND_TEST.findall(path.read_text(encoding="utf-8")))
     return names
 
 

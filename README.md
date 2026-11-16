@@ -52,6 +52,9 @@ You need Docker Desktop (WSL2 backend) and git. Python runs only inside containe
 | Start a pipeline job | `POST http://127.0.0.1:8000/api/v1/jobs` (see docs/API.md §3.3); sources go under `.\sources` |
 | Review a sample of a version | `POST http://127.0.0.1:8000/api/v1/versions/{id}/reviews` with `{"sample_size": 50}`, then `PUT …/reviews/{rev}/items/{n}` and `POST …/reviews/{rev}/close` (docs/API.md §3.5) |
 | Build or read a report | `POST http://127.0.0.1:8000/api/v1/versions/{id}/reports`; `GET …/versions/{id}/reports/latest` (docs/API.md §3.6) |
+| Open the web UI | http://127.0.0.1:5173 (the `frontend` service, started with the stack) |
+| Frontend checks (also in `check.ps1`) | `docker compose run --rm frontend-tools sh -c "npm run typecheck && npm run lint && npm test && npm run build"` |
+| Regenerate the frontend's API types after an API change | `docker compose run --rm frontend-tools npm run api:types` |
 | Keep Windows awake while jobs run | `.\host\stratal-host.ps1` |
 
 ## Benchmarks (NFR-3)

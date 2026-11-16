@@ -460,6 +460,26 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `Bus.set_system` / `get_system`; `GpuProbe.name()` through NVML.
 - **Why:** The API container has no GPU and must not get one (API image has no ML libraries). The monitor already holds NVML open.
 
+**Response models describe the API for the generated client** (M6, SPEC §7.3, UI-2.1; agent)
+- **What:** Pydantic response models in `stratal.api.schemas` for the endpoints each screen reads (jobs, events, samples, system so far), and an SSE "messages" model on the two stream routes.
+- **How:** `response_model=` on the routes, which still build dicts; FastAPI validates every response against its model. openapi-typescript turns the document into `frontend/src/api/schema.d.ts`; openapi-fetch calls it. Models are added screen by screen.
+- **Why:** Routes returning `dict[str, Any]` gave the frontend untyped bodies, so the types could drift, which §7.3 rules out. Validation also catches a route that strays from its contract in the existing integration tests.
+
+**Design-system CSS is copied, not rewritten** (M6, UI-2.1, SPEC §9.6; agent)
+- **What:** The frontend uses the approved preview's token block and component CSS unchanged, and the SCR-01 mockup's shell CSS with marked "live:" changes. React components apply those classes; Tailwind adds only layout utilities, mapped onto the same tokens.
+- **How:** `tokens.css`, `components.css`, `shell.css`, `theme.css` (Tailwind without preflight and without its palette); `scripts/no-raw-hex.mjs` in `npm run lint`.
+- **Why:** G3 asks for a visual match with approved mockups; the same rules give the same pixels, and a reimplementation in utility classes would drift. Without its palette, Tailwind has no class for a one-off colour.
+
+**Node in two services, TypeScript 5.9** (M6, SPEC §7.4; agent)
+- **What:** `frontend` runs the Vite dev server (0.4 GB, as budgeted); `frontend-tools` runs typecheck, lint, tests and build on demand (1.5 GB, profile `dev`). TypeScript is pinned at 5.9.3.
+- **How:** One image (`docker/frontend.Dockerfile`, Norton's root through `NODE_EXTRA_CA_CERTS`), the source bind-mounted, `node_modules` in a volume, file watching by polling.
+- **Why:** Type-aware linting ran out of heap at the dev server's limit. Keeping the checks in an on-demand container leaves the always-on stack within NFR-2. openapi-typescript 7 and typescript-eslint 8 do not yet accept TypeScript 6.
+
+**The live stream reopens itself after an HTTP error** (M6, MON-1.4; agent)
+- **What:** The UI's single global EventSource is reopened with backoff (1 s doubling to 15 s) when the browser gives up, resuming with `?after=<last event ID>`; when it comes back, every query is read again.
+- **How:** `Feed` in `frontend/src/api/stream.ts`; tests `test_MON_1_4_*`.
+- **Why:** Browsers retry a dropped SSE connection but give up for good on an HTTP error, which is what the dev proxy returns while the API restarts. A new EventSource cannot send `Last-Event-ID`, so the cursor goes in the query, which API.md §4 already allows.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
