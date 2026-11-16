@@ -50,6 +50,8 @@ You need Docker Desktop (WSL2 backend) and git. Python runs only inside containe
 | Logs | `docker compose logs -f api` (or `worker-cpu`, `monitor`) |
 | Apply database migrations | `docker compose run --rm dev alembic upgrade head` |
 | Start a pipeline job | `POST http://127.0.0.1:8000/api/v1/jobs` (see docs/API.md §3.3); sources go under `.\sources` |
+| Review a sample of a version | `POST http://127.0.0.1:8000/api/v1/versions/{id}/reviews` with `{"sample_size": 50}`, then `PUT …/reviews/{rev}/items/{n}` and `POST …/reviews/{rev}/close` (docs/API.md §3.5) |
+| Build or read a report | `POST http://127.0.0.1:8000/api/v1/versions/{id}/reports`; `GET …/versions/{id}/reports/latest` (docs/API.md §3.6) |
 | Keep Windows awake while jobs run | `.\host\stratal-host.ps1` |
 
 ## Benchmarks (NFR-3)
@@ -62,7 +64,9 @@ Measured on 2026-11-15 on the RTX 4050 Laptop GPU (6 GB) in the M4 demo (`job_00
 | clean | 202 images/s | pHash, exact and near duplicates |
 | preprocess | 139 images/s | COCO images are already ≤ 640 px, so nothing was resized |
 | label | 8.9 images/s overall | captioning about 10 images/s, CLIP scoring about 100 pairs/s; model loads 1.5 s and 0.6 s |
-| filter | under 0.1 s | |
+| filter | under 0.1 s | with schema validation (DATA-5.1), 0.28 s on 994 rows (M5, `job_0008`) |
+| split | 0.17 s for 985 rows | including the all-pairs leakage check over 148,683 cross-split pairs (M5, `job_0010`) |
+| evaluate | 0.03 s | the phase-1 report (M5, `job_0010`) |
 
 - **NFR-3 (captioning ≥ 2 images/s):** met five times over; no change to the target is needed.
 - **Peak VRAM while labelling:** 4.20 GB in use on the card (NVML, the Windows desktop's 0.22 GB included); PyTorch allocated at most 3.55 GB. NFR-1's limit is 5.5 GB.
