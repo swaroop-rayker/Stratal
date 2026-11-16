@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 started: DATA-4 approved 2026-11-15 (drafted by the agent at the owner's request); DATA-4 units written by the agent at the owner's request 2026-11-16; EVAL-1.1 statistics written by the agent at the owner's request 2026-11-16. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -22,7 +22,7 @@
 | M2 | Job and event spine | 1 | L | Done 2026-11-15 |
 | M3 | Cleaning and preprocessing | 1 | M | Done 2026-11-15 |
 | M4 | Labeling | 1 | L | Done 2026-11-15 |
-| M5 | Splits, review, eval report | 1 | M | In progress: DATA-4 approved 2026-11-15 |
+| M5 | Splits, review, eval report | 1 | M | Done 2026-11-16 |
 | M6 | Phase-1 screens | 1 | L | Not started |
 | M7 | Phase-1 acceptance | 1 | M | Not started |
 | M8 | Training runtime and registry | 2 | L | Outline |
@@ -250,13 +250,13 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 **Done when**
 
 - [x] DATA-4 is in SPEC.md with IDs and criteria, approved (2026-11-15, v1)
-- [ ] 👤 `test_DATA_4_*`: one test per criterion in DATA-4. **2026-11-16:** the units were written by the agent at the owner's request. 65 unit and 7 integration `test_DATA_4_*` tests pass, covering every criterion of DATA-4.1 to DATA-4.7. The two criteria worded "on the COCO 10k version" were checked on it (`job_0013`, split `ds_3f6fcc420a27`). DATA-4.1.AC1: all 9,838 accepted rows have one split and no other row has one; 7,870 / 984 / 984 against 7,870.4 / 983.8 / 983.8; all 12 strata within one group. DATA-4.2.AC2: 0 of 16,456,416 cross-split pairs within 12 bits or in one duplicate group. Left open only by DATA-4.8 (P2), which waits for DATA-2.3
+- [x] 👤 `test_DATA_4_*`: one test per criterion in DATA-4. **2026-11-16:** the units were written by the agent at the owner's request. 65 unit and 7 integration `test_DATA_4_*` tests pass, covering every criterion of DATA-4.1 to DATA-4.7. The two criteria worded "on the COCO 10k version" were checked on it (`job_0013`, split `ds_3f6fcc420a27`). DATA-4.1.AC1: all 9,838 accepted rows have one split and no other row has one; 7,870 / 984 / 984 against 7,870.4 / 983.8 / 983.8; all 12 strata within one group. DATA-4.2.AC2: 0 of 16,456,416 cross-split pairs within 12 bits or in one duplicate group. DATA-4.8 (P2) moved to M7 with DATA-2.3, which it needs, by the owner's decision of 2026-11-16
 - [x] `test_LABEL_1_5_*`: N rows sampled; decisions stored and linked to the version (2026-11-16; 4 unit and 4 integration tests, with `test_DATA_4_7_*` for the split on each item)
 - [x] 👤 `test_EVAL_1_1_*`: a report per version with all four parts; the interval checked against known values (2026-11-16; statistics written by the agent at the owner's request; Wilson against Newcombe 1998, table I; a report per version in the integration tests)
 - [x] `test_NFR_4_*`: two runs with the same data, config and seed give the same splits and version IDs (2026-11-16; with the owner's DATA-4 units. The test found E-010, fixed)
 - [x] Demo: the full pipeline on 1,000 images, a 50-row review, the report (2026-11-16). `job_0012` ran coco1k from its source folder through all seven stages in 35 s, reusing cached work (computed in `job_0006` and `job_0010`). Split `ds_7ffe080f799f`: 788 / 99 / 98, all 12 strata within one group, 0 leaks. Review `rev_0002` (50 rows, seed 143108104) was judged by the agent at the owner's request, from the images: 45 accepted, 90 %, Wilson 95 % interval 78.6–95.7 %; all 5 rejects in train (test 8/8, val 4/4). Report 5 has all four parts, with the review
-- [ ] Docs updated
-- [ ] Owner's OK to merge
+- [x] Docs updated (2026-11-16: API, DATA_MODEL, DECISIONS, ERRORS, ARCHITECTURE, README; learning notes)
+- [x] Owner's OK to merge ("Move it, then merge", 2026-11-16)
 
 ## M6 — Phase-1 screens
 
@@ -286,7 +286,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 ## M7 — Phase-1 acceptance
 
-**Size** M · **Branch** `m7-phase1-acceptance` · **Serves** the phase-1 done-definition; NFR-1, NFR-2, NFR-3, NFR-4, NFR-5, NFR-11, NFR-12, NFR-13; DATA-2.3 (P2, if time)
+**Size** M · **Branch** `m7-phase1-acceptance` · **Serves** the phase-1 done-definition; NFR-1, NFR-2, NFR-3, NFR-4, NFR-5, NFR-11, NFR-12, NFR-13; DATA-2.3 and DATA-4.8 (P2, if time)
 
 **Scope**
 
@@ -294,7 +294,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - `beat` and telemetry downsampling.
 - Benchmarks, the kill-test suite, the memory profile.
 - Event backfill from spool files.
-- 👤 Semantic duplicates (DATA-2.3), if time allows.
+- 👤 Semantic duplicates (DATA-2.3), and rows of one semantic cluster joining one split group (DATA-4.8, moved from M5 on 2026-11-16), if time allows.
 - README with the benchmark; phase-2 plan.
 
 **Done when**
@@ -307,6 +307,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [ ] NFR-3 benchmark in the README
 - [ ] Meta-test green: every phase-1 P0 has a passing ID-named test
 - [ ] All seven `test_BUG*` regression tests green
+- [ ] 👤 `test_DATA_4_8_*` (P2, if time): two photos of one scene from different angles land in the same split
 - [ ] M8–M11 detailed and approved by the owner
 - [ ] Owner's OK to merge; tag `phase-1`
 

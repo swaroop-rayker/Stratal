@@ -387,6 +387,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Each review item records its row's split; the phase-1 report gives acceptance overall and for `test`.
 - **Why:** The review estimates label quality with a Wilson interval (EVAL-1.1); editing the data from a sample would bias the very estimate it produces.
 
+**DATA-4.8 moves to M7, with DATA-2.3** (M5, DATA-4.8; the owner's decision, 2026-11-16)
+- **What:** The P2 criterion that rows of one semantic-duplicate cluster join one split group is tested in M7, not M5. The requirement itself is unchanged.
+- **How:** MILESTONES.md lists it in M7's scope and checklist; M5 closed with DATA-4.1 to DATA-4.7 done.
+- **Why:** It cannot be tested before semantic clusters exist (DATA-2.3, "M7 if time"). `group_for_split` already joins rows by any shared group ID, so the clusters will plug into the same mechanism.
+
 **Split units cut into grouping, strata and assignment** (M5, DATA-4.1 to 4.5; agent, stubs for the owner)
 - **What:** Three owner functions in `stratal.data.splitting`: `group_for_split` (DATA-4.2), `strata_for` (DATA-4.3), `assign_splits` (DATA-4.1, 4.4, 4.5). The shell does the carry-over lookup and lists moved rows.
 - **How:** A group counts in its anchor's stratum. "Within one group" means less than the largest group's size, per stratum and for the totals together. A merge goes to the split with more members, ties to the larger proportion, then train, val, test. A root-level file's source folder is `.` (the owner's choice, 2026-11-16, over the source's name).
