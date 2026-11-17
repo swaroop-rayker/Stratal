@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
 | Planning style | Phases 1 and 2 (M0–M11) are planned in detail; phase 2's detail was approved on 2026-11-17. Phases 3–5 (M12–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -24,7 +24,7 @@
 | M4 | Labeling | 1 | L | Done 2026-11-15 |
 | M5 | Splits, review, eval report | 1 | M | Done 2026-11-16 |
 | M6 | Phase-1 screens | 1 | L | Done 2026-11-17 |
-| M7 | Phase-1 acceptance | 1 | M | In progress |
+| M7 | Phase-1 acceptance | 1 | M | Done 2026-11-17 |
 | M8 | Training runtime and registry | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M9 | Model builder | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
@@ -309,7 +309,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] BUG1 to BUG6 regression tests green, BUG3 through `test_NFR_2_*` (2026-11-17: the 23 BUG tests pass, GPU ones included). Reworded by the owner on 2026-11-17 from "all seven": BUG7's guard, the NFR-14 disk audit, needs training and is built in M8
 - Moved to M11 by the owner on 2026-11-17, with [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) accepted: 👤 `test_DATA_4_8_*` (P2), two photos of one scene from different angles land in the same split
 - [x] M8–M11 detailed and approved by the owner (2026-11-17, "Approved"; the eight decisions listed for M8's kickoff stay open until then)
-- [ ] Owner's OK to merge; tag `phase-1`
+- [x] Owner's OK to merge; tag `phase-1` ("OK to merge", 2026-11-17)
 
 ---
 
