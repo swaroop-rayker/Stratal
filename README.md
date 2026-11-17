@@ -78,6 +78,28 @@ Measured on 2026-11-15 on the RTX 4050 Laptop GPU (6 GB) in the M4 demo (`job_00
 - **At 10,000 images** (M5, `job_0013`): 17 minutes end to end. 2,983 images came from the cache (they are also in coco1k and coco2k); the other 6,949 were captioned at 8.7 images/s, with no out-of-memory retry at batch 16. The split took 5.6 s, including its leakage check over 16.5 million cross-split pairs.
 - Spike S-06 has the same captioners at batch sizes 4, 8 and 16 ([docs/RISKS.md](docs/RISKS.md)).
 
+### Phase-1 acceptance (M7, 2026-11-17)
+
+`job_0026` ran **20,000** COCO 2017 images (`coco20k`: coco10k plus 10,000 images never captioned) through all seven stages in **27.4 minutes**, measured by `tests/acceptance` from the stack's own telemetry:
+
+| Stage | Minutes | Notes |
+|---|---|---|
+| ingest | 4.37 | 76 files/s; no per-item cache, so a crash here restarts it (NFR-5 bound: 10 minutes) |
+| clean | 1.00 | 19,873 rows hashed or read from the pHash cache |
+| preprocess | 1.54 | |
+| label | 19.86 | **9,917 new captions, 8.3 images/s** over the whole stage (model loads and CLIP scoring included); 9,926 from the cache; batch 16 throughout |
+| filter, split, evaluate | 0.48 together | 19,644 rows kept; split `ds_005e3e700ee8`; report 13 |
+
+- **NFR-2 (RAM under 9 GB):** the WSL VM's used memory peaked at **3.9 GB**.
+- **NFR-1 (VRAM under 5.5 GB):** the job's PyTorch reserve peaked at **3.87 GB**; the card's total at 4.20 GB.
+- **NFR-3 (captioning ≥ 2 images/s):** 8.3 images/s on uncached images, four times the target.
+- **NFR-5 (no more than 10 minutes lost to a crash):** clean, preprocess and label resume from per-batch caches (the kill tests, `test_NFR_5_*`); the stages without one take at most 4.4 minutes on 20,000 images.
+- **coco10k again** (`job_0025`): the same versions as M5's `job_0013`, from the ingest version to the split, in 2 minutes 21 seconds (ingest reread every file; every later stage was a memoized hit).
+
+### Monitoring overhead (NFR-11, M7)
+
+`check.ps1 -Bench`: a CPU-bound synthetic stage with one event per item (about 50 events a second, far above a real stage), three runs with monitoring off and three on. On a quiet machine: runtime **+0.02 %**; the `monitor` process used **1.58 % of the machine's 16 logical CPUs, which is 25 % of one core**, mostly the collector storing and publishing each event.
+
 ## Documentation
 
 | | |

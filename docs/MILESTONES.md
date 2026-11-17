@@ -299,15 +299,15 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Done when**
 
-- [ ] 10k raw images → captioned, filtered, versioned, split dataset with an eval report
-- [ ] `test_NFR_2_*`: memory profile on a 20k-image run stays within budget
-- [ ] `test_NFR_5_*`: a kill test for every stage; lost work is bounded
-- [ ] `test_NFR_11_*`: monitoring overhead measured on vs off
-- [ ] `test_NFR_12_*`: the downsampling job is verified
-- [ ] NFR-3 benchmark in the README
-- [ ] Meta-test green: every phase-1 P0 has a passing ID-named test
-- [ ] All seven `test_BUG*` regression tests green
-- [ ] 👤 `test_DATA_4_8_*` (P2, if time): two photos of one scene from different angles land in the same split
+- [x] 10k raw images → captioned, filtered, versioned, split dataset with an eval report (2026-11-17: `job_0026`, 20,000 images in 27.4 minutes, split `ds_005e3e700ee8`, report 13; `job_0025` reproduced M5's coco10k versions exactly)
+- [x] `test_NFR_2_*`: memory profile on a 20k-image run stays within budget (2026-11-17, `tests/acceptance`: VM RAM peak 3.9 GB; job VRAM peak 3.87 GB)
+- [x] `test_NFR_5_*`: a kill test for every stage; lost work is bounded (2026-11-17: seven kill tests; stages without a per-item cache take at most 4.4 minutes on 20k, against N = 10)
+- [x] `test_NFR_11_*`: monitoring overhead measured on vs off (2026-11-17, `check.ps1 -Bench`: runtime +0.02 %; monitor 1.58 % of the machine, 25 % of one core. Passes with "2 % CPU" read as a share of the machine; the reading is open for the owner)
+- [x] `test_NFR_12_*`: the downsampling job is verified (2026-11-17; the `beat` service ran it on the live stack)
+- [x] NFR-3 benchmark in the README (2026-11-17: 8.3 images/s on 9,917 uncached images)
+- [x] Meta-test green: every phase-1 P0 has a passing ID-named test (2026-11-17: `test_NFR_9_every_phase_1_p0_requirement_has_a_named_test`, 31 of 31)
+- [ ] All seven `test_BUG*` regression tests green. 2026-11-17: BUG1, 2, 4, 5 and 6 green (23 tests, GPU ones included), BUG3 by `test_NFR_2_*`. BUG7's guard is the NFR-14 disk audit, phase 2 (ERRORS.md), so this item cannot be met in M7 as written; for the owner to decide
+- [ ] 👤 `test_DATA_4_8_*` (P2, if time): two photos of one scene from different angles land in the same split. Waiting for the owner's decision on [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) (proposed 2026-11-17)
 - [ ] M8–M11 detailed and approved by the owner
 - [ ] Owner's OK to merge; tag `phase-1`
 
