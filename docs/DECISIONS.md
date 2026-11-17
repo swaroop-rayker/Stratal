@@ -530,7 +530,12 @@ Newest entries go at the bottom of their section. All entries below date from th
 **NFR-11 is measured as a worst case, with monitoring switchable off** (M7, NFR-11; agent)
 - **What:** `STRATAL_MONITORING_ENABLED=false` gives a job a no-op emitter and no memory reporter; with no `monitor` process that is "monitoring off". The benchmark runs a CPU-bound synthetic stage with one event per item (about 50 a second) three times each way.
 - **How:** `tests/integration/test_M7_monitoring_overhead.py`, marked `benchmark` and run by `check.ps1 -Bench`, not by the normal integration run, since a 1% timing difference needs a quiet machine.
-- **Why:** NFR-11 needs an "off" to compare with. 50 events a second is far above any real stage, so a pass covers them. **Open for the owner:** "2% CPU" is read as 2% of the machine (16 logical CPUs). The first run (during a download) measured 1.42% of the machine, 22.7% of one core; on a quiet machine, 1.58% of the machine, 25.2% of one core, with runtime +0.02%. Read per core, NFR-11 fails at this event rate.
+- **Why:** NFR-11 needs an "off" to compare with. 50 events a second is far above any real stage, so a pass covers them. **Decided by the owner on 2026-11-17 (SPEC OC-6):** "2% CPU" is 2% of the machine (16 logical CPUs). The first run (during a download) measured 1.42% of the machine, 22.7% of one core; on a quiet machine, 1.58% of the machine, 25.2% of one core, with runtime +0.02%. Read per core, NFR-11 fails at this event rate.
+
+**The owner's decisions at M7's close** (2026-11-17)
+- **What:** ADR-0013 accepted, with DATA-2.3 and DATA-4.8 built in M11; NFR-11's "2 % CPU" read as a share of the machine (SPEC OC-6); M7's BUG item reworded to BUG1 to BUG6, with BUG7 tested in M8; events kept at every level, DEBUG included.
+- **How:** MILESTONES.md (M7 and M11), ADR-0013's status, SPEC Appendix B, DATA_MODEL §10.
+- **Why:** Phase 1 closes without its two P2 extras; NFR-11's test needed a fixed meaning; BUG7 needs training to test; the events table is 1.6 MB after 26 jobs, so pruning would buy nothing.
 
 **Telemetry downsampling in tables, run by a one-process `beat`** (M7, NFR-12; agent)
 - **What:** Raw samples older than 7 days become one-minute averages in `resource_samples_1m` and `process_samples_1m` (not Parquet files under `telemetry/1m/`, the other option DATA_MODEL listed). `beat` is a Celery worker on its own `maintenance` queue with the scheduler embedded (`-B`) and the solo pool, running the job hourly.

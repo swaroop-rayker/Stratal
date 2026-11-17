@@ -344,7 +344,7 @@ Outlined only. Each is specified at its phase kickoff, with an ADR where it is a
 | Data | Volume | Policy |
 |---|---|---|
 | `resource_samples`, `process_samples` | about 86,000 rows per day of continuous jobs each | Raw rows kept 7 days, then moved to 1-minute averages in `*_1m` (NFR-12, §4.8a; about 1,440 rows per day each) |
-| `events` | hundreds to a few thousand per job | Kept. Whether DEBUG events are pruned after 7 days is not specified in the input and will be proposed in M7 |
+| `events` | hundreds to a few thousand per job | Kept, every level (the owner's decision, 2026-11-17). No DEBUG events are emitted yet; 3,391 events from 26 jobs took 1.6 MB, and a 20,000-image run writes about 1,300. Revisited if the table passes 1 GB |
 | Manifests | about 1–2 MB per 10k-row version | Kept; removed only with their version |
 | Blobs | the dataset's size, once | Removed only by garbage collection |
 | Per-job files | logs and spools | Kept; in-run checkpoints are deleted on success (REG-2.6) |

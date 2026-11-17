@@ -1,6 +1,6 @@
 # ADR-0013 — Where semantic duplicates are found, and how the split uses them
 
-**Status:** Proposed by the agent on 2026-11-17 (M7). Waiting for the owner. Nothing is built.
+**Status:** Accepted by the owner on 2026-11-17, as proposed. Built in M11 (DATA-2.3 and DATA-4.8 moved there from M7); nothing is built yet.
 
 ## Context
 
@@ -40,6 +40,6 @@
 - Every existing label and split version stays as it is; new runs make new versions once.
 - ARCHITECTURE.md §3's `clean` row is corrected.
 
-## Decision needed from the owner
+## Owner's decision (2026-11-17)
 
-Approve, change, or keep DATA-2.3 and DATA-4.8 for later (they are P2, "if time").
+Approved as proposed, to be built in M11 with the other data features (UI-2.2, DATA-3.5). The threshold's default comes with its measurement, for the owner to choose (as OC-5).

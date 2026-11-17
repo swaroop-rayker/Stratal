@@ -101,7 +101,7 @@ Measured on 2026-11-15 on the RTX 4050 Laptop GPU (6 GB) in the M4 demo (`job_00
 
 ### Monitoring overhead (NFR-11, M7)
 
-`check.ps1 -Bench`: a CPU-bound synthetic stage with one event per item (about 50 events a second, far above a real stage), three runs with monitoring off and three on. On a quiet machine: runtime **+0.02 %**; the `monitor` process used **1.58 % of the machine's 16 logical CPUs, which is 25 % of one core**, mostly the collector storing and publishing each event.
+`check.ps1 -Bench`: a CPU-bound synthetic stage with one event per item (about 50 events a second, far above a real stage), three runs with monitoring off and three on. On a quiet machine: runtime **+0.02 %**; the `monitor` process used **1.58 % of the machine's 16 logical CPUs, which is 25 % of one core**, mostly the collector storing and publishing each event. That is within NFR-11, which the owner reads as a share of the machine (SPEC OC-6).
 
 ## Documentation
 

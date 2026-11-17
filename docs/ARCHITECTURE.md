@@ -86,9 +86,9 @@ A pipeline run is one **job**. It has one **stage** per step, and each stage run
 | # | Stage | Queue | What it does | Requirements | Core logic by |
 |---|---|---|---|---|---|
 | 0 | `ingest` | cpu | Scan the source folder, copy files into the blob store, read metadata, reject corrupt and undersized files | DATA-1.1–1.3 | agent |
-| 1 | `clean` | cpu | Mark exact duplicates and near duplicates (pHash). Semantic duplicates (P2) add a GPU sub-step | DATA-2.1–2.3 | agent for 2.1 and 2.2, at the owner's request (ADR-0012); owner for 2.3 and the thresholds (OC-5) |
+| 1 | `clean` | cpu | Mark exact duplicates and near duplicates (pHash) | DATA-2.1, 2.2 | agent, at the owner's request (ADR-0012); owner for the thresholds (OC-5) |
 | 2 | `preprocess` | cpu | Write resized copies, keep originals | DATA-6.1 | agent |
-| 3 | `label` | gpu | Caption each image, then CLIP-score each pair | LABEL-1.1–1.3 | agent, at the owner's request (ADR-0012) |
+| 3 | `label` | gpu | Caption each image, then CLIP-score each pair. From M11, also semantic-duplicate clusters from the same CLIP vectors ([ADR-0013](decisions/ADR-0013-semantic-duplicates.md)) | LABEL-1.1–1.3, DATA-2.3 | agent, at the owner's request (ADR-0012) |
 | 4 | `filter` | cpu | Mark pairs below the CLIP threshold; validate the image–caption schema | LABEL-1.4, DATA-5.1 | agent for the rule, at the owner's request (ADR-0012); owner for the threshold (OC-5) |
 | 5 | `split` | cpu | Group near-copies (12 bits), stratify, assign train / val / test carrying the previous split over, check for leaks, report | DATA-4.1–4.7 | agent, at the owner's request (ADR-0012); shell, lookup, leakage check and report by the agent |
 | 6 | `evaluate` | cpu | Build the phase-1 report and store it in `eval_reports`; makes no version and passes its input on | EVAL-1.1 | agent for the statistics, at the owner's request (ADR-0012), and for the assembly |

@@ -286,7 +286,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 ## M7 — Phase-1 acceptance
 
-**Size** M · **Branch** `m7-phase1-acceptance` · **Serves** the phase-1 done-definition; NFR-1, NFR-2, NFR-3, NFR-4, NFR-5, NFR-11, NFR-12, NFR-13; DATA-2.3 and DATA-4.8 (P2, if time)
+**Size** M · **Branch** `m7-phase1-acceptance` · **Serves** the phase-1 done-definition; NFR-1, NFR-2, NFR-3, NFR-4, NFR-5, NFR-11, NFR-12, NFR-13; DATA-2.3 and DATA-4.8 (P2, if time; moved to M11 on 2026-11-17)
 
 **Scope**
 
@@ -294,7 +294,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - `beat` and telemetry downsampling.
 - Benchmarks, the kill-test suite, the memory profile.
 - Event backfill from spool files.
-- 👤 Semantic duplicates (DATA-2.3), and rows of one semantic cluster joining one split group (DATA-4.8, moved from M5 on 2026-11-16), if time allows.
+- 👤 Semantic duplicates (DATA-2.3), and rows of one semantic cluster joining one split group (DATA-4.8, moved from M5 on 2026-11-16), if time allows. **Moved to M11 by the owner on 2026-11-17**, with ADR-0013 accepted.
 - README with the benchmark; phase-2 plan.
 
 **Done when**
@@ -302,12 +302,12 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] 10k raw images → captioned, filtered, versioned, split dataset with an eval report (2026-11-17: `job_0026`, 20,000 images in 27.4 minutes, split `ds_005e3e700ee8`, report 13; `job_0025` reproduced M5's coco10k versions exactly)
 - [x] `test_NFR_2_*`: memory profile on a 20k-image run stays within budget (2026-11-17, `tests/acceptance`: VM RAM peak 3.9 GB; job VRAM peak 3.87 GB)
 - [x] `test_NFR_5_*`: a kill test for every stage; lost work is bounded (2026-11-17: seven kill tests; stages without a per-item cache take at most 4.4 minutes on 20k, against N = 10)
-- [x] `test_NFR_11_*`: monitoring overhead measured on vs off (2026-11-17, `check.ps1 -Bench`: runtime +0.02 %; monitor 1.58 % of the machine, 25 % of one core. Passes with "2 % CPU" read as a share of the machine; the reading is open for the owner)
+- [x] `test_NFR_11_*`: monitoring overhead measured on vs off (2026-11-17, `check.ps1 -Bench`: runtime +0.02 %; monitor 1.58 % of the machine, 25 % of one core. Passes, with "2 % CPU" read as a share of the machine: the owner's reading, 2026-11-17, SPEC OC-6)
 - [x] `test_NFR_12_*`: the downsampling job is verified (2026-11-17; the `beat` service ran it on the live stack)
 - [x] NFR-3 benchmark in the README (2026-11-17: 8.3 images/s on 9,917 uncached images)
 - [x] Meta-test green: every phase-1 P0 has a passing ID-named test (2026-11-17: `test_NFR_9_every_phase_1_p0_requirement_has_a_named_test`, 31 of 31)
-- [ ] All seven `test_BUG*` regression tests green. 2026-11-17: BUG1, 2, 4, 5 and 6 green (23 tests, GPU ones included), BUG3 by `test_NFR_2_*`. BUG7's guard is the NFR-14 disk audit, phase 2 (ERRORS.md), so this item cannot be met in M7 as written; for the owner to decide
-- [ ] 👤 `test_DATA_4_8_*` (P2, if time): two photos of one scene from different angles land in the same split. Waiting for the owner's decision on [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) (proposed 2026-11-17)
+- [x] BUG1 to BUG6 regression tests green, BUG3 through `test_NFR_2_*` (2026-11-17: the 23 BUG tests pass, GPU ones included). Reworded by the owner on 2026-11-17 from "all seven": BUG7's guard, the NFR-14 disk audit, needs training and is built in M8
+- Moved to M11 by the owner on 2026-11-17, with [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) accepted: 👤 `test_DATA_4_8_*` (P2), two photos of one scene from different angles land in the same split
 - [x] M8–M11 detailed and approved by the owner (2026-11-17, "Approved"; the eight decisions listed for M8's kickoff stay open until then)
 - [ ] Owner's OK to merge; tag `phase-1`
 
@@ -319,7 +319,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 |---|---|
 | Status | **Approved by the owner on 2026-11-17** ("Approved"). The eight decisions below are still open: they are put to the owner at M8's kickoff, and until then each recommendation is only a recommendation |
 | Done when (SPEC §2) | The user builds a CNN in the UI, trains it on a dataset version and sees its test metrics |
-| Requirements | All 58 phase-2 requirements (32 P0, 23 P1, 3 P2), plus NFR-14 and NFR-15. Each stays in the milestone the outline gave it; nothing is added or dropped |
+| Requirements | All 58 phase-2 requirements (32 P0, 23 P1, 3 P2), plus NFR-14 and NFR-15. Each stays in the milestone the outline gave it; nothing is added or dropped. M11 also carries two phase-1 P2 requirements, DATA-2.3 and DATA-4.8, moved from M7 by the owner on 2026-11-17 |
 
 ### Decisions needed before M8 starts
 
@@ -341,7 +341,7 @@ Each has a recommendation; none is taken until the owner decides.
 7. **HPO trials (M10).** SPEC §7.2 says each trial is a job; ADR-0003 notes that sub-second classical-ML trials would be grouped. *Recommended:* each deep-learning trial is one job; a classical-ML study runs its trials inside one job, each trial still logged as events and stored by Optuna.
 8. **M8's size.** M8 carries 23 requirements, NFR-14, NFR-15, three ADRs and four screens: about twice a phase-1 milestone. *Recommended:* split it into **M8a** (training runtime) and **M8b** (registry, retention and inference), each with its own branch, review and merge. The letters keep M9–M15's numbers. M8 below is written in those two parts either way.
 
-Carried from M7: BUG7's guard is the NFR-14 disk audit, which lands in M8 as `test_BUG7_*`; ADR-0013 (DATA-2.3, DATA-4.8) and the reading of NFR-11's "2 % CPU" are decided in M7.
+Carried from M7, as the owner decided on 2026-11-17: BUG7's guard, the NFR-14 disk audit, lands in M8 as `test_BUG7_*`; ADR-0013 is accepted, and DATA-2.3 and DATA-4.8 are built in M11; NFR-11's "2 % CPU" is a share of the machine (SPEC OC-6), which M11's re-measurement uses.
 
 Still parked by the owner, not scheduled here: the other OC-3 proposals, the M2 loose ends, dedupe only within a version, version IDs shared across datasets, `caption_vram_estimate_mb` in the label identity, Florence relation errors, and `ubuntu-latest` moving to Ubuntu 26.
 
@@ -394,7 +394,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 | G2 | SCR-07 v2, SCR-04 v2, SCR-11, SCR-14 | alongside M8 | M8's screens |
 | G2 | SCR-08, SCR-09 | alongside M8 | M9's screens |
 | G2 | SCR-10, SCR-09's HPO part | alongside M9 | M10's screens |
-| G2 | SCR-13, SCR-03 v2 (distributions and diff), SCR-11 v2 (comparison) | alongside M10 | M11's screens |
+| G2 | SCR-13, SCR-03 v2 (distributions, diff and semantic clusters), SCR-11 v2 (comparison) | alongside M10 | M11's screens |
 | G3 | Each screen compared with its mockup, contrast and keyboard checked | in the milestone that builds it | – |
 
 ## M8 — Training runtime and registry
@@ -534,7 +534,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 ## M11 — Dashboards, monitoring completion, phase-2 acceptance
 
-**Size** L · **Branch** `m11-phase2-acceptance` · **Serves** MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, UI-2.1, UI-2.2, EVAL-1.3, DATA-3.5; the phase-2 done-definition
+**Size** L · **Branch** `m11-phase2-acceptance` · **Serves** MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, UI-2.1, UI-2.2, EVAL-1.3, DATA-3.5; DATA-2.3 and DATA-4.8 (phase 1, P2, moved from M7); the phase-2 done-definition
 
 **Before starting:** G2 for SCR-13, SCR-03 v2 and SCR-11 v2 approved. The alerts and diagnostics add work to `monitor`, so NFR-11 is measured again here.
 
@@ -545,6 +545,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - Load and unload events with VRAM before and after (MON-3.3), from labelling, training and the inference service.
 - Two runs' resource curves overlaid (MON-4.4) and trends across past jobs (MON-4.5, P2, if time) on SCR-13.
 - Raw against cleaned distributions and rejection reasons per stage (UI-2.2), and the diff of two versions (DATA-3.5, P2, if time), on SCR-03.
+- Semantic duplicates (DATA-2.3) and each cluster kept in one split group (DATA-4.8), as [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) sets out. Written by the agent at the owner's request (2026-11-17); the similarity threshold is proposed from a measurement on coco10k and chosen by the owner (as OC-5). Clusters shown on SCR-03.
 - Three or more models on one test split, side by side (EVAL-1.3), on SCR-11.
 - UI-2.1 completed: models and training runs join datasets and pipeline jobs in the dashboard.
 - The phase-2 acceptance run, measured, with a README section; phase 3 (M12, M13) detailed for approval.
@@ -561,6 +562,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] `test_UI_2_2_*`: charts for any dataset version
 - [ ] `test_EVAL_1_3_*`: three or more models compared in one view
 - [ ] `test_DATA_3_5_*` (P2, if time): the diff lists the changes correctly
+- [ ] `test_DATA_2_3_*` (P2): cropped variants are grouped together and a report is generated
+- [ ] 👤 `test_DATA_4_8_*` (P2): two photos of one scene from different angles land in the same split (written by the agent at the owner's request)
 - [ ] G3 for SCR-13, SCR-03 v2 and SCR-11 v2
 - [ ] Phase-2 acceptance (`tests/acceptance`): a CNN built on SCR-08, trained on a dataset version, test metrics on SCR-11; NFR-1, NFR-2, NFR-4 and NFR-5 measured for training
 - [ ] `test_NFR_11_*` rerun with alerts and diagnostics on
