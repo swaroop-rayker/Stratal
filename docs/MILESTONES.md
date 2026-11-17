@@ -410,6 +410,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 | G2 | SCR-13, SCR-03 v2 (distributions, diff and semantic clusters), SCR-11 v2 (comparison) | alongside M10 | M11's screens |
 | G3 | Each screen compared with its mockup, contrast and keyboard checked | in the milestone that builds it | – |
 
+- [x] G1 revision approved (SCREENS.md v2, 2026-11-17)
+
 ## M8 — Training runtime and registry
 
 **Size** L (one milestone, the owner's decision 8) · **Branch** `m8-training-registry` · **Serves** RUN-1.1–1.9, REG-1.1, REG-1.2, REG-1.4, REG-2.1–2.11, NFR-14, NFR-15; BUG7; NFR-1, NFR-4, NFR-5 and NFR-8 for training

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **v2 proposed 2026-11-17** for the Gate 1 revision at phase 2's kickoff: phase-2 screens detailed (§3a), Flow 4 in steps, Flow 3's phase-2 part. v1 approved by the owner on 2026-11-15 |
+| Status | **v2, approved by the owner on 2026-11-17** (Gate 1 revision at phase 2's kickoff: phase-2 screens detailed in §3a, Flow 4 in steps, Flow 3's phase-2 part). v1 approved 2026-11-15. Changes from here on are new versions and need approval |
 | Builds on | [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) v1 (Gate 0, approved 2026-11-15) |
 | Data sources | Endpoints are from [API.md](API.md). Phase-2 screens name the endpoints their milestone adds (*planned*). Phase-3 to phase-5 interfaces are not specified yet, so those screens are outlines and are detailed at their phase kickoff |
 | Approvals | Logged in [design/APPROVALS.md](design/APPROVALS.md) |
@@ -388,4 +388,4 @@ SCR-12: the person types a request in Auto mode → the router classifies it and
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-15 | First version, for Gate 1 review. Approved the same day; open point 1 then decided by the owner as option (a), recorded in place |
-| v2 | 2026-11-17 | Phase-2 kickoff: §3a details SCR-04 v2 (training runs), SCR-07 v2 (pause, resume), SCR-08 to SCR-11, SCR-13, SCR-14 and SCR-03's M11 additions, from the approved phase-2 plan and ADR-0014 to ADR-0016; Flow 4 in steps; Flow 3's phase-2 part. For Gate 1 review |
+| v2 | 2026-11-17 | Phase-2 kickoff: §3a details SCR-04 v2 (training runs), SCR-07 v2 (pause, resume), SCR-08 to SCR-11, SCR-13, SCR-14 and SCR-03's M11 additions, from the approved phase-2 plan and ADR-0014 to ADR-0016; Flow 4 in steps; Flow 3's phase-2 part. Approved by the owner the same day |
