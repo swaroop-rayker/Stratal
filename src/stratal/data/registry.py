@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from stratal.core.errors import Conflict, NotFound, StratalError
@@ -44,13 +45,18 @@ def register_version(
 
     Registering the same version twice is not an error: the same content and
     config always give the same ID (DATA-3.2), so the existing row is returned.
+    That holds when two jobs register it at the same moment too: the insert
+    skips a row that already exists (or that another transaction is inserting,
+    in which case it waits for that one), and the row is then read back. A row
+    under the same ID with a different content hash is a real collision and
+    is refused (BUG1).
     """
     existing = session.get(DatasetVersion, record.version_id)
     if existing is not None:
-        return existing, False
+        return _same_version(existing, record), False
     if record.parent_version_id is not None:
         get_version(session, record.parent_version_id)
-    version = DatasetVersion(
+    values = dict(
         version_id=record.version_id,
         dataset_id=dataset.id,
         stage=record.stage,
@@ -68,9 +74,30 @@ def register_version(
         code_version=code_version,
         created_by_job_id=created_by_job_id,
     )
-    session.add(version)
-    session.flush()
+    inserted = session.execute(
+        pg_insert(DatasetVersion)
+        .values(**values)
+        .on_conflict_do_nothing(index_elements=[DatasetVersion.version_id])
+        .returning(DatasetVersion.version_id)
+    ).scalar_one_or_none()
+    version = session.get(DatasetVersion, record.version_id, populate_existing=True)
+    if version is None:  # pragma: no cover - the row was inserted or already committed
+        raise Conflict(f"Version {record.version_id} could not be registered.")
+    if inserted is None:
+        return _same_version(version, record), False
     return version, True
+
+
+def _same_version(existing: DatasetVersion, record: VersionRecord) -> DatasetVersion:
+    """``existing`` if it is the version ``record`` describes; a collision otherwise."""
+    if existing.content_hash != record.content_hash or existing.config_hash != record.config_hash:
+        raise Conflict(
+            f"Version {record.version_id} is already registered with different content "
+            f"(content {existing.content_hash[:12]} against {record.content_hash[:12]}, "
+            f"config {existing.config_hash[:12]} against {record.config_hash[:12]}).",
+            suggested_action="This should not happen: report it with both jobs' IDs.",
+        )
+    return existing
 
 
 def get_version(session: Session, version_id: str) -> DatasetVersion:

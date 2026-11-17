@@ -505,6 +505,18 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `frontend/src/screens/jobs/JobsScreen.tsx`; `q` (job-ID substring) added to `GET /jobs`; tests `test_RUN_1_1_*`, `test_RUN_1_2_*`.
 - **Why:** Active jobs are few and must never fall onto a later page; finished jobs grow without bound. Reloading on a change of state is simpler than moving rows between cached pages, and changes of state are rare.
 
+## M7: phase-1 acceptance
+
+**The owner's M7 decisions** (2026-11-17)
+- **What:** NFR-5's N is 10 minutes (OC-3's proposal). The NFR-2 profile runs on 20,000 COCO 2017 images, 10,000 more fetched with the coco10k script. The agent writes DATA-2.3 and DATA-4.8 at the owner's request, and fixes E-011.
+- **How:** SPEC NFR-5 and OC-3 updated; the kill tests check every stage against 10 minutes.
+- **Why:** Kill tests need a number to assert. A 20k run is what NFR-2's criterion names; changing it to 10k would have changed a requirement.
+
+**Registering a version is idempotent under concurrency** (M7, BUG1, DATA-3.3; agent, at the owner's request)
+- **What:** Two jobs that make the same version at once both succeed; the version is recorded once. A different version under an existing ID is refused as a collision.
+- **How:** `INSERT … ON CONFLICT (version_id) DO NOTHING`, then the row is read back and its content and config hashes compared, in `registry.register_version`; tests `test_BUG1_two_jobs_registering_the_same_version_at_once_both_succeed`, `test_BUG1_a_different_version_under_the_same_id_is_refused`; E-011.
+- **Why:** Content addressing means identical work gives identical IDs, so a second insert of the same ID is the same version, not an error. A lock or a "one job per input" rule would serialise work that is already safe to repeat.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

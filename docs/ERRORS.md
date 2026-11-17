@@ -35,6 +35,16 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-011 — Two jobs making the same version at once: the second failed
+
+- **Date:** 2026-11-17
+- **Seen:** While checking SCR-07 in M6, two identical demo runs (ingest to preprocess, same source and config) were started together and ran side by side on the CPU workers. Both computed `ds_1fb7a64c25ce`; `job_0022` failed in ingest with `UniqueViolation` on `dataset_versions_pkey`. A retry succeeded, because the version then existed.
+- **Where:** `register_version` (M1, DATA-3.3), reached by every stage's commit; BUG1
+- **Cause:** Registration read the row, found none, and inserted. Two transactions could both read before either committed. Content addressing makes identical work produce identical IDs, so the second insert was the same version, not a conflict in meaning; only the check-then-insert was unsafe.
+- **Fix:** The insert is `ON CONFLICT (version_id) DO NOTHING`. A second transaction waits for the first, inserts nothing, and reads the row back. If the existing row's content or config hash differs, that is a real collision and raises `conflict`. Written by the agent at the owner's request (2026-11-17, M7).
+- **Guard:** `test_BUG1_two_jobs_registering_the_same_version_at_once_both_succeed` (two connections; fails on the old code with this exact error), `test_BUG1_a_different_version_under_the_same_id_is_refused`
+- **Status:** verified
+
 ### E-010 — A version ID depended on where the data folder was
 
 - **Date:** 2026-11-16
