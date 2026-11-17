@@ -5,6 +5,8 @@ exactly as it would to a log, and it answers "should I stop?". Stage code never
 touches Redis, PostgreSQL or Celery.
 """
 
+import os
+import signal
 import time
 from collections.abc import Callable
 
@@ -15,6 +17,36 @@ from stratal.mon.events import Event, EventType, Level, MetricValue
 from stratal.mon.sink import Metrics
 
 log = get_logger("stratal.job")
+
+CRASH_AT_ENV = "STRATAL_TEST_CRASH_AT"
+"""Test-only crash point for the NFR-5 kill tests. ``<stage>:step:<k>`` kills the
+stage process with SIGKILL right after that stage reports progress at or past step
+``k``; ``<stage>:event:<n>`` right after its ``n``-th event. It fires on a job's
+first attempt only, so a retry runs through. Events are spooled before the kill,
+and stages report progress after a batch is cached, so the kill lands just after
+a durable point, as a real crash between batches would."""
+
+
+class _CrashPoint:
+    def __init__(self, spec: str) -> None:
+        stage, kind, number = spec.split(":")
+        if kind not in ("step", "event"):
+            raise ValueError(f"{CRASH_AT_ENV}: kind must be step or event, not {kind!r}")
+        self.stage, self.kind, self.number = stage, kind, int(number)
+        self.events = 0
+
+    def reached(self, event: Event) -> bool:
+        if event.stage != self.stage:
+            return False
+        self.events += 1
+        if self.kind == "event":
+            return self.events >= self.number
+        return event.step is not None and event.step >= self.number
+
+
+def _crash_point(attempt: int) -> _CrashPoint | None:
+    spec = os.environ.get(CRASH_AT_ENV)
+    return _CrashPoint(spec) if spec and attempt == 1 else None
 
 
 class JobCancelled(Exception):
@@ -40,6 +72,7 @@ class JobContext:
         self._should_stop = should_stop
         self._clock = clock
         self._estimators: dict[str | None, EtaEstimator] = {}
+        self._crash = _crash_point(attempt)
 
     def set_version(self, version_id: str) -> None:
         """Tag later events and log lines with the version being produced."""
@@ -127,3 +160,6 @@ class JobContext:
             message, stage=event.stage, substage=substage, type=event_type, step=step, total=total
         )
         self._emitter.emit(event)
+        if self._crash is not None and self._crash.reached(event):
+            log.warning("test_crash_point", stage=event.stage, step=step)
+            os.kill(os.getpid(), signal.SIGKILL)
