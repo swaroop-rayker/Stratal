@@ -182,3 +182,9 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center
 [data-theme="light"] .log .error .lv-ERROR { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
 [data-theme="light"] .log .warn .ts, [data-theme="light"] .log .warn .st,
 [data-theme="light"] .log .error .ts, [data-theme="light"] .log .error .st { color: var(--text-secondary); }
+
+/* Dark theme: state pills on a selected or hovered table row, approved by the owner at
+   SCR-07's G3 (2026-11-17). Behind the row's accent tint the pill's own tint fell to
+   3.61–4.39:1; mixed 70% toward text-primary the lowest is 4.94:1 (80% left Cancelled at 4.46). */
+[data-theme="dark"] .t tr[aria-selected="true"] .pill,
+[data-theme="dark"] .t tbody tr:hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }

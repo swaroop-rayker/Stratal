@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-07_v1.html`](../screens/SCR-07_v1.html), G2 approved 2026-11-15 |
 | Built | `frontend/src/screens/jobs/JobsScreen.tsx`, `frontend/src/styles/scr07.css`; route `/jobs` |
 | Checked | 2026-11-17, live at 1280 × 760 and 1024 × 640, dark and light, on the 21 existing jobs plus `job_0022` and `job_0023`: two demo ingest-to-preprocess runs started for this check |
-| Status | Waiting for the owner's review. One proposed design-system fix needs a decision (see Accessibility) |
+| Status | **Approved by the owner on 2026-11-17**, with the proposed dark-row pill fix applied |
 
 ## Screenshots (in this folder)
 
@@ -52,7 +52,7 @@ Frame D (empty, loading, error) uses the shared states; there is no way to empty
   | Completed | 4.39 |
   | Stalled / Paused | 4.56 / 4.79 (pass) |
 
-  **Proposed fix (needs approval, a design-system change):** on selected and hovered table rows, in dark, mix the pill's text 70% toward `text-primary`: the lowest becomes 4.94 (Cancelled). The 80% mix approved for light at SCR-04 is not enough here (Cancelled 4.46). The same pills on other screens' selected rows would get the same rule.
+  **Fix (approved and applied 2026-11-17, a design-system change):** on selected and hovered table rows, in dark, mix the pill's text 70% toward `text-primary`: the lowest becomes 4.94 (Cancelled). The 80% mix approved for light at SCR-04 is not enough here (Cancelled 4.46). The rule is in `components.css`, so it covers pills on every screen's selected or hovered rows. Rescanned: all 190 text elements pass in both themes; every state's pill on the selected row is at least 4.93:1.
 - **Keyboard:** Tab goes Start a pipeline, the five state buttons, Dataset, Kind, Job ID, then the selected row (one tab stop for the table's rows), then the rows' Cancel and Retry buttons in order. `/` focuses the search, `j` / `k` move between rows, Enter opens the job. Every stop shows the focus ring.
 - **Names:** each state button includes its count ("Failed, 1 job"); row actions are named with their job ("Cancel job_0146").
 - **Live regions:** the table is not live; a job's change of state is announced once, politely ("job_0023 completed"). The retry toast is `status`; a failed retry is an `alert`.
