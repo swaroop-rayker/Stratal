@@ -323,7 +323,20 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 ### Decisions needed before M8 starts
 
-Each has a recommendation; none is taken until the owner decides.
+**Decided by the owner on 2026-11-17, at M8's kickoff:**
+
+| # | Decision |
+|---|---|
+| 1 | CIFAR-10 for the CNN (download approved); scikit-learn's bundled datasets for tabular; COCO captions labelled with their image's category for text |
+| 2 | `/predict` falls back to the CPU while training holds the GPU; models too large for it fail fast |
+| 3 | A `worker-cpu` image target with an `ml-cpu` extra; `api` and `monitor` stay free of ML libraries |
+| 4 | All four defaults as proposed (SPEC OC-3, OC-7) |
+| 5 | Pause and resume for pipeline jobs too (SPEC OC-8) |
+| 6 | Retention settings in the database, edited on SCR-14 (SPEC OC-9) |
+| 7 | Classical-ML trials grouped in one job; each deep-learning trial its own job (SPEC OC-10) |
+| 8 | **Not split:** M8 stays one milestone, one branch and one merge |
+
+The proposals as they were put to the owner:
 
 1. **Phase-2 datasets.**
    - **Labelled images, for the CNN (needed from M8).** (a) *Recommended:* CIFAR-10, about 170 MB from the University of Toronto: 60,000 images of 32×32 px in 10 classes with clean labels. A small CNN's accuracy on it is well known, so a wrong result points at a bug in the training loop rather than at the data. Ingest's 256 px minimum (DATA-1.3) is lowered for this dataset in its config. (b) COCO 2017 classes derived from the annotations already on disk, no download: each image labelled with the category covering most of it. Multi-object photos make those labels noisy, so a low accuracy would prove little.
@@ -399,7 +412,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 ## M8 — Training runtime and registry
 
-**Size** L (decision 8: M8a and M8b, M each) · **Branch** `m8-training-registry` (or `m8a-training-runtime`, `m8b-registry`) · **Serves** RUN-1.1–1.9, REG-1.1, REG-1.2, REG-1.4, REG-2.1–2.11, NFR-14, NFR-15; BUG7; NFR-1, NFR-4, NFR-5 and NFR-8 for training
+**Size** L (one milestone, the owner's decision 8) · **Branch** `m8-training-registry` · **Serves** RUN-1.1–1.9, REG-1.1, REG-1.2, REG-1.4, REG-2.1–2.11, NFR-14, NFR-15; BUG7; NFR-1, NFR-4, NFR-5 and NFR-8 for training
 
 **Before starting:** decisions 1 to 7; ADR-0014, ADR-0015 and ADR-0016 approved; the G1 revision approved; the phase-2 image dataset downloaded if decision 1 is CIFAR-10.
 

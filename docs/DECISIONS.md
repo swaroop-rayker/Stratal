@@ -542,6 +542,13 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `stratal.mon.retention.downsample`, one transaction per six hours of raw data (insert the averages, delete the raw rows); task `stratal.downsample_telemetry`; `GET /jobs/{id}/telemetry` returns both; tests `test_NFR_12_*`.
 - **Why:** In Postgres, the telemetry endpoint serves an old job's charts with the same query and no new reader. Insert and delete in one transaction make a crash or a rerun harmless. A queue of its own keeps maintenance from waiting behind an hour-long stage on `worker-cpu`; the solo pool halved `beat`'s memory (144 to 100 MB of its 200 MB) by not keeping a child process.
 
+## M8: training runtime and registry
+
+**The owner's M8 kickoff decisions** (2026-11-17)
+- **What:** CIFAR-10 for the CNN (download approved), scikit-learn's bundled tables, COCO captions as labelled text; `/predict` falls back to the CPU while training holds the GPU; a `worker-cpu` image with an `ml-cpu` extra; the proposed defaults (stall 300 s, checkpoint every epoch and every 5 minutes, 83 °C / 75 °C, alerts at 90 % VRAM and 85 % RAM); pause for pipelines too; retention settings in the database; classical-ML trials grouped. M8 is not split.
+- **How:** MILESTONES.md (phase-2 decisions table), SPEC Appendix B OC-3 and OC-7 to OC-10.
+- **Why:** The phase-2 plan listed these as open until M8's kickoff; each was put to the owner with a recommendation.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
