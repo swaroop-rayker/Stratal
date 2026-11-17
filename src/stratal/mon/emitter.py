@@ -48,6 +48,22 @@ class ListEmitter:
         del timeout_s
 
 
+class NullEmitter:
+    """Drops everything: monitoring off, for the NFR-11 overhead benchmark only.
+
+    With it a job writes no spool, sends nothing to Redis and so records no events.
+    """
+
+    def emit(self, event: Event) -> None:
+        pass
+
+    def send(self, kind: str, data: str) -> None:
+        pass
+
+    def close(self, timeout_s: float = 5.0) -> None:
+        pass
+
+
 class StreamEmitter:
     """Spool file plus Redis stream, with a bounded queue between job and network."""
 

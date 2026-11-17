@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     watchdog_interval_s: float = 5.0
     # How often a job may be requeued after its worker was lost before it is failed.
     max_attempts: int = 3
+    # NFR-11 benchmark only: false runs a job with no event emitter and no memory reporter.
+    monitoring_enabled: bool = True
     # NFR-12: raw telemetry is kept this many days, then averaged per minute by `beat`.
     telemetry_keep_days: float = 7.0
     downsample_every_s: float = 3600.0

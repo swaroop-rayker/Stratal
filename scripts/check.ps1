@@ -5,8 +5,9 @@
 #   .\scripts\check.ps1          # everything
 #   .\scripts\check.ps1 -Fast    # skip integration tests
 #   .\scripts\check.ps1 -Gpu     # also run the GPU-marked tests in the worker-gpu image
+#   .\scripts\check.ps1 -Bench   # also run the timing benchmarks (NFR-11); needs a quiet machine
 
-param([switch]$Fast, [switch]$Gpu)
+param([switch]$Fast, [switch]$Gpu, [switch]$Bench)
 
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
@@ -24,9 +25,12 @@ Step "unit + meta"  { docker compose run --rm --no-deps dev pytest -q }
 # Frontend (SPEC §7.5): typecheck, lint with the raw-hex rule, Vitest, production build.
 Step "frontend"     { docker compose run --rm --no-deps frontend-tools sh -c "npm run typecheck && npm run lint && npm test && npm run build" }
 if (-not $Fast) {
-    Step "integration" { docker compose run --rm dev pytest -q -m integration }
+    Step "integration" { docker compose run --rm dev pytest -q -m "integration and not benchmark" }
 }
 if ($Gpu) {
     Step "gpu" { docker compose run --rm --no-deps worker-gpu pytest -q -m gpu tests/gpu }
+}
+if ($Bench) {
+    Step "benchmark" { docker compose run --rm dev pytest -q -s -m benchmark }
 }
 Write-Host "All checks passed." -ForegroundColor Green

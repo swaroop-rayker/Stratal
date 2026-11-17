@@ -522,6 +522,16 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `stratal.mon.backfill.backfill_job`, called from `supervisor.run_stage` after `finalize`, in its own transaction, never changing the outcome; tests `test_MON_1_4_*` in `test_M7_event_backfill.py`. `test_NFR_13_kill_the_monitor_mid_job_and_the_job_continues` now proves the monitor's death while the job still runs, since the backfill fills the gap at the stage's end.
 - **Why:** The worker has the data volume and knows when a spool is complete (its child has exited). `monitor` has neither, and giving it the volume only for this would widen its access.
 
+**NFR-5 kill tests use a test-only crash point** (M7, NFR-5; agent)
+- **What:** `STRATAL_TEST_CRASH_AT=<stage>:step:<k>` (or `:event:<n>`) makes a job's stage process SIGKILL itself just after that event is spooled, on the first attempt only. One test per phase-1 stage kills it, retries the job, and checks the version IDs against an uninterrupted run and the cache reuse.
+- **How:** `JobContext.event` in `runtime/context.py`; `tests/integration/test_M7_kill_tests.py`, `test_NFR_5_*`.
+- **Why:** On test data a stage finishes in about a second, so killing it from outside lands at a random point or after the end. Stages report progress right after a batch is cached, so killing just after a progress event is the realistic worst case: a crash between batches. Ingest, filter, split and evaluate have no per-item cache and restart whole; their bound is their duration on the 10k set.
+
+**NFR-11 is measured as a worst case, with monitoring switchable off** (M7, NFR-11; agent)
+- **What:** `STRATAL_MONITORING_ENABLED=false` gives a job a no-op emitter and no memory reporter; with no `monitor` process that is "monitoring off". The benchmark runs a CPU-bound synthetic stage with one event per item (about 50 a second) three times each way.
+- **How:** `tests/integration/test_M7_monitoring_overhead.py`, marked `benchmark` and run by `check.ps1 -Bench`, not by the normal integration run, since a 1% timing difference needs a quiet machine.
+- **Why:** NFR-11 needs an "off" to compare with. 50 events a second is far above any real stage, so a pass covers them. **Open for the owner:** "2% CPU" is read as 2% of the machine (16 logical CPUs). The first run measured 1.42% of the machine, which is 22.7% of one core; read per core, NFR-11 fails at this event rate.
+
 **Telemetry downsampling in tables, run by a one-process `beat`** (M7, NFR-12; agent)
 - **What:** Raw samples older than 7 days become one-minute averages in `resource_samples_1m` and `process_samples_1m` (not Parquet files under `telemetry/1m/`, the other option DATA_MODEL listed). `beat` is a Celery worker on its own `maintenance` queue with the scheduler embedded (`-B`) and the solo pool, running the job hourly.
 - **How:** `stratal.mon.retention.downsample`, one transaction per six hours of raw data (insert the averages, delete the raw rows); task `stratal.downsample_telemetry`; `GET /jobs/{id}/telemetry` returns both; tests `test_NFR_12_*`.
