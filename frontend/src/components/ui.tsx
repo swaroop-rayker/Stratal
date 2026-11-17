@@ -46,9 +46,9 @@ const STATE_WORD: Record<JobState, string> = {
 };
 
 /** A job's state: icon, word and colour, never colour alone (principle 3). */
-export function StatePill({ state, label }: { state: JobState; label?: string }) {
+export function StatePill({ state, label, size }: { state: JobState; label?: string; size?: "lg" }) {
   return (
-    <span className={`pill ${state}`}>
+    <span className={`pill ${state}${size ? ` ${size}` : ""}`}>
       {state === "running" ? <i className="pulse" /> : <Icon name={STATE_ICON[state]} />}
       {label ?? STATE_WORD[state]}
     </span>

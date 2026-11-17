@@ -320,3 +320,21 @@ class StageSchema(_Model):
 class StageSchemaList(_Model):
     items: list[StageSchema]
     next_cursor: str | None
+
+
+class ProcessSample(_Model):
+    """One row of ``process_samples`` (DATA_MODEL.md §4.8): the job's own memory view."""
+
+    id: int
+    ts: str
+    job_id: str
+    stage: str | None
+    rss_mb: float
+    torch_allocated_mb: float | None
+    torch_reserved_mb: float | None
+    torch_max_allocated_mb: float | None
+
+
+class Telemetry(_Model):
+    resource: list[ResourceSample]
+    process: list[ProcessSample]

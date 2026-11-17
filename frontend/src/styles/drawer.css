@@ -7,16 +7,16 @@
 .drawer > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
 .drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); overflow: hidden; flex: 1; }
 .drawer > footer { display: flex; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-top: var(--bw) solid var(--border); }
-.stages { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
-.st { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); height: 36px; border-top: var(--bw) solid var(--border); font-size: var(--fs-13); }
-.st:first-child { border-top: 0; }
-.st input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; }
-.st .name { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .st .key { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted); } .st svg.i { color: var(--text-muted); }
-.st.off { color: var(--text-muted); } .st.off .name { color: var(--text-muted); font-weight: var(--fw-regular); }
-.st-form { padding: var(--sp-3); border-top: var(--bw) solid var(--border); background: var(--surface-sunken); display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
-.type { font: var(--fs-11) var(--font-mono); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); }
-.summary { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--danger-soft); border: var(--bw) solid color-mix(in srgb, var(--danger) 50%, transparent); font-size: var(--fs-12); }
-.summary svg.i { color: var(--danger); margin-top: 2px; }
+.drawer .stages { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.drawer .st { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); height: 36px; border-top: var(--bw) solid var(--border); font-size: var(--fs-13); }
+.drawer .st:first-child { border-top: 0; }
+.drawer .st input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; }
+.drawer .st .name { font: var(--fw-medium) var(--fs-13) var(--font-mono);} .drawer .st .key { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted);} .drawer .st svg.i { color: var(--text-muted); }
+.drawer .st.off { color: var(--text-muted);} .drawer .st.off .name { color: var(--text-muted); font-weight: var(--fw-regular); }
+.drawer .st-form { padding: var(--sp-3); border-top: var(--bw) solid var(--border); background: var(--surface-sunken); display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.drawer .type { font: var(--fs-11) var(--font-mono); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); }
+.drawer .summary { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--danger-soft); border: var(--bw) solid color-mix(in srgb, var(--danger) 50%, transparent); font-size: var(--fs-12); }
+.drawer .summary svg.i { color: var(--danger); margin-top: 2px; }
 .menu-pop { position: absolute; width: 270px; padding: var(--sp-1); background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-2); z-index: var(--z-drawer); }
 .menu-pop div { display: flex; align-items: center; gap: var(--sp-2); height: 32px; padding: 0 var(--sp-2); border-radius: var(--r-sm); font-size: var(--fs-13); }
 .menu-pop div.is-hover { background: var(--accent-soft); } .menu-pop kbd { margin-left: auto; } .menu-pop svg.i { color: var(--text-muted); }
@@ -38,4 +38,4 @@
 .menu-pop [data-highlighted] { background: var(--accent-soft); }
 .menu-pop [data-disabled] { opacity: .45; cursor: not-allowed; }
 .drawer .field > label { display: flex; gap: var(--sp-2); align-items: center; }
-.st-form > .rjsf { display: contents; } /* live: rjsf's wrapper must not break the two-column grid */
+.drawer .st-form > .rjsf { display: contents; } /* live: rjsf's wrapper must not break the two-column grid */

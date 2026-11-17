@@ -127,7 +127,7 @@ Version (abridged):
 | `GET /jobs/{job_id}` | One job with its stages | `200` Job |
 | `POST /jobs/{job_id}/cancel` | Request cancellation | `202` Job; `409` if already finished |
 | `POST /jobs/{job_id}/retry` | Requeue a failed job; finished stages are reused | `202` Job; `409` if not failed |
-| `GET /jobs/{job_id}/events` | Page through events. Filters: `level`, `stage`, `after` (event ID) | `200` list of Event |
+| `GET /jobs/{job_id}/events` | Page through events. Filters: `level`, `stage`, `after` (event ID), `min_level` (that level and above) and `tail` (the newest `limit` matching events, still oldest first; added in M6 for SCR-04) | `200` list of Event |
 | `GET /jobs/{job_id}/telemetry` | Samples for charts. Params: `from`, `to`, `stage`, `max_points` | `200 {"resource": [...], "process": [...]}` |
 | `GET /jobs/{job_id}/stream` | Live feed for one job (SSE, [§4](#4-live-streams)) | `200 text/event-stream` |
 
@@ -188,7 +188,7 @@ Job (abridged):
 
 | Method and path | Purpose | Success |
 |---|---|---|
-| `GET /events` | Events across all jobs (MON-4.3). Filters: `level`, `stage`, `job_id`, `after` | `200` list of Event |
+| `GET /events` | Events across all jobs (MON-4.3). Filters: `level`, `stage`, `job_id`, `after`, `min_level`, `tail` (as for one job) | `200` list of Event |
 | `GET /telemetry/latest` | The most recent resource sample | `200` Sample; `204` before the first sample exists |
 | `GET /stream` | Global live feed: job state changes, alerts, idle telemetry (SSE) | `200 text/event-stream` |
 

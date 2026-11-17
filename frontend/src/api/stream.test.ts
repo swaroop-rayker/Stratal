@@ -1,33 +1,12 @@
 // MON-1.4: the live feed survives an outage and resumes from its last event.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { FakeSource } from "../test/eventsource";
 import { Feed } from "./stream";
 
-class FakeSource {
-  static CLOSED = 2;
-  static made: FakeSource[] = [];
-  readyState = 0;
-  onopen: (() => void) | null = null;
-  onerror: (() => void) | null = null;
-  private readonly handlers = new Map<string, (m: MessageEvent<string>) => void>();
-  constructor(readonly url: string) {
-    FakeSource.made.push(this);
-  }
-  addEventListener(kind: string, handler: (m: MessageEvent<string>) => void) {
-    this.handlers.set(kind, handler);
-  }
-  close() {
-    this.readyState = FakeSource.CLOSED;
-  }
-  emit(kind: string, data: unknown, lastEventId = "") {
-    this.handlers.get(kind)?.({ data: JSON.stringify(data), lastEventId } as MessageEvent<string>);
-  }
-}
-
 beforeEach(() => {
-  FakeSource.made = [];
+  FakeSource.install();
   vi.useFakeTimers();
-  vi.stubGlobal("EventSource", FakeSource);
 });
 afterEach(() => {
   vi.useRealTimers();

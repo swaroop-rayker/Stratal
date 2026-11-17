@@ -97,19 +97,31 @@ def events_after(
     job_id: str | None = None,
     level: str | None = None,
     stage: str | None = None,
+    min_level: str | None = None,
+    tail: bool = False,
 ) -> list[EventRow]:
+    """Events after a cursor, oldest first. With ``tail``, the newest ``limit`` that match
+    (still oldest first), so a log can open on its latest lines (SCR-04, MON-4.3)."""
     query = select(EventRow).where(EventRow.id > after)
     if job_id is not None:
         query = query.where(EventRow.job_id == job_id)
     if level is not None:
         query = query.where(EventRow.level == level)
+    if min_level is not None:
+        query = query.where(EventRow.level.in_(LEVELS[LEVELS.index(min_level) :]))
     if stage is not None:
         query = query.where(EventRow.stage == stage)
+    if tail:
+        newest = list(session.scalars(query.order_by(EventRow.id.desc()).limit(limit)))
+        return newest[::-1]
     return list(session.scalars(query.order_by(EventRow.id).limit(limit)))
 
 
-def _page(rows: list[EventRow], limit: int) -> Json:
-    full = len(rows) == limit
+LEVELS = ["DEBUG", "INFO", "WARN", "ERROR"]
+
+
+def _page(rows: list[EventRow], limit: int, *, tail: bool = False) -> Json:
+    full = len(rows) == limit and not tail  # a tail is already the newest page
     return {
         "items": [event_view(row) for row in rows],
         "next_cursor": str(rows[-1].id) if full else None,
@@ -209,14 +221,25 @@ def job_events(
     after: int = 0,
     limit: Limit = 50,
     cursor: str | None = None,
+    min_level: Annotated[Level | None, Query(description="This level and above.")] = None,
+    tail: Annotated[bool, Query(description="The newest `limit` events, oldest first.")] = False,
 ) -> Json:
     job_service.get_job(session, job_id)
     start = int(cursor) if cursor and cursor.isdigit() else after
-    rows = events_after(session, after=start, limit=limit, job_id=job_id, level=level, stage=stage)
-    return _page(rows, limit)
+    rows = events_after(
+        session,
+        after=start,
+        limit=limit,
+        job_id=job_id,
+        level=level,
+        stage=stage,
+        min_level=min_level,
+        tail=tail,
+    )
+    return _page(rows, limit, tail=tail)
 
 
-@router.get("/jobs/{job_id}/telemetry", tags=["jobs"])
+@router.get("/jobs/{job_id}/telemetry", tags=["jobs"], response_model=schemas.Telemetry)
 def job_telemetry(
     job_id: str,
     session: Db,
@@ -255,11 +278,22 @@ def all_events(
     after: int = 0,
     limit: Limit = 50,
     cursor: str | None = None,
+    min_level: Annotated[Level | None, Query(description="This level and above.")] = None,
+    tail: Annotated[bool, Query(description="The newest `limit` events, oldest first.")] = False,
 ) -> Json:
     """Events across all jobs, oldest first (MON-4.3)."""
     start = int(cursor) if cursor and cursor.isdigit() else after
-    rows = events_after(session, after=start, limit=limit, job_id=job_id, level=level, stage=stage)
-    return _page(rows, limit)
+    rows = events_after(
+        session,
+        after=start,
+        limit=limit,
+        job_id=job_id,
+        level=level,
+        stage=stage,
+        min_level=min_level,
+        tail=tail,
+    )
+    return _page(rows, limit, tail=tail)
 
 
 @router.get("/telemetry/latest", tags=["monitoring"], response_model=schemas.ResourceSample | None)

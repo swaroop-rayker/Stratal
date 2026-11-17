@@ -36,7 +36,7 @@
 
 - **Contrast**, measured on every text element of the live page against its real background:
   - Dark: every element at least 4.5:1.
-  - Light: one failure. The "Idle" pill's word is **3.78:1** (`text-muted` on its own 14 % tint, 11 px). It is drawn exactly as in the approved mockup, so fixing it changes the design. Proposed: draw "Idle" in `text-secondary`, measured at 5.22:1 there. Needs the owner's decision.
+  - Light: one failure. The "Idle" pill's word is **3.78:1** (`text-muted` on its own 14 % tint, 11 px). It is drawn exactly as in the approved mockup, so fixing it changes the design. Proposed: draw "Idle" in `text-secondary`, measured at 5.22:1 there. Needs the owner's decision. **Corrected 2026-11-17:** that scan misread `color-mix()` backgrounds; the true figures are 4.34:1 before and 5.83:1 after, so the fix was still needed.
 - **Keyboard:** Tab goes Datasets → Jobs → Theme → Shortcuts → job indicator, each with the 2 px focus ring. `g d`, `g j`, `g a`, `t`, `?` and Esc work. Focus moves into the help dialog and returns on close.
 - **Landmarks and live regions:** `nav` (Main), `header`, `main`, `footer` (machine resources, `aria-live="off"`, values in its accessible name); health `role="status"` or `role="alert"`; failed toasts `role="alert"`, completed `role="status"`.
 

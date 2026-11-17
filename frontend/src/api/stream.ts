@@ -1,6 +1,6 @@
 // The global live feed (API.md §4, MON-1.4): one EventSource shared by the whole app.
 // EventSource reconnects by itself and sends Last-Event-ID, so the server replays the gap.
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 
 import type { Job, StreamEvent, StreamSample } from "./client";
 
@@ -28,7 +28,13 @@ export class Feed {
   private retryDelay = 1000;
   connection: Connection = "connecting";
 
-  constructor(private readonly url: string) {}
+  /** `after`: start after this event ID (the newest one already loaded), as API.md §4 allows. */
+  constructor(
+    private readonly url: string,
+    after?: string,
+  ) {
+    this.lastEventId = after ?? null;
+  }
 
   private setConnection(next: Connection): void {
     if (this.connection === next) return;
@@ -117,3 +123,18 @@ export function useGlobalFeed(): Connection {
 export function useFeedMessage<K extends Kind>(kind: K, listener: Listener<K>): void {
   useEffect(() => globalFeed.on(kind, listener), [kind, listener]);
 }
+
+/** A job's own live feed (GET /jobs/{id}/stream), open while the caller is mounted. */
+export function useJobFeed(jobId: string, after: string | undefined, enabled: boolean): { feed: Feed | null; connection: Connection } {
+  // A Feed opens nothing until acquired, so creating it during render is safe.
+  const feed = useMemo(() => (enabled ? new Feed(`/api/v1/jobs/${jobId}/stream`, after) : null), [jobId, after, enabled]);
+  useEffect(() => feed?.acquire(), [feed]);
+  const connection = useSyncExternalStore(
+    feed?.subscribeConnection ?? noSubscribe,
+    feed?.getConnection ?? connecting,
+  );
+  return { feed, connection };
+}
+
+const noSubscribe = () => () => undefined;
+const connecting = (): Connection => "connecting";

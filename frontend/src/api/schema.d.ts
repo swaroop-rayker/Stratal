@@ -1028,6 +1028,28 @@ export interface components {
              */
             at: string;
         };
+        /**
+         * ProcessSample
+         * @description One row of ``process_samples`` (DATA_MODEL.md §4.8): the job's own memory view.
+         */
+        ProcessSample: {
+            /** Id */
+            id: number;
+            /** Ts */
+            ts: string;
+            /** Job Id */
+            job_id: string;
+            /** Stage */
+            stage: string | null;
+            /** Rss Mb */
+            rss_mb: number;
+            /** Torch Allocated Mb */
+            torch_allocated_mb: number | null;
+            /** Torch Reserved Mb */
+            torch_reserved_mb: number | null;
+            /** Torch Max Allocated Mb */
+            torch_max_allocated_mb: number | null;
+        };
         /** ReasonCount */
         ReasonCount: {
             /** Reason Code */
@@ -1287,6 +1309,13 @@ export interface components {
             ram_total_mb: number | null;
             /** Cpu Count */
             cpu_count: number | null;
+        };
+        /** Telemetry */
+        Telemetry: {
+            /** Resource */
+            resource: components["schemas"]["ResourceSample"][];
+            /** Process */
+            process: components["schemas"]["ProcessSample"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -1621,6 +1650,10 @@ export interface operations {
                 after?: number;
                 limit?: number;
                 cursor?: string | null;
+                /** @description This level and above. */
+                min_level?: ("DEBUG" | "INFO" | "WARN" | "ERROR") | null;
+                /** @description The newest `limit` events, oldest first. */
+                tail?: boolean;
             };
             header?: never;
             path: {
@@ -1672,9 +1705,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Telemetry"];
                 };
             };
             /** @description Validation Error */
@@ -1697,6 +1728,10 @@ export interface operations {
                 after?: number;
                 limit?: number;
                 cursor?: string | null;
+                /** @description This level and above. */
+                min_level?: ("DEBUG" | "INFO" | "WARN" | "ERROR") | null;
+                /** @description The newest `limit` events, oldest first. */
+                tail?: boolean;
             };
             header?: never;
             path?: never;

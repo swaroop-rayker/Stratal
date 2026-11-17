@@ -77,3 +77,50 @@ def test_RUN_1_1_jobs_filter_by_state_list_and_dataset_with_counts(
 
     bad = client.get(f"{V1}/jobs", params={"state": "running,lost"})
     assert bad.status_code == 422 and bad.json()["code"] == "validation_error"
+
+
+def test_MON_4_3_events_tail_and_minimum_level(runner: Runner) -> None:
+    """The activity log opens on its newest lines and filters by "this level and above"."""
+    from sqlalchemy.orm import Session
+
+    from stratal.db.engine import get_engine
+    from stratal.mon.events import Event
+    from stratal.mon.store import insert_events
+
+    events = [Event(job_id="job_0001", stage="ingest", message=f"step {i}") for i in range(6)]
+    events.insert(
+        2,
+        Event(
+            job_id="job_0001",
+            stage="clean",
+            level="WARN",
+            message="many copies",
+            reason="above 1%",
+            suggested_action="check the source",
+        ),
+    )
+    events.append(
+        Event(
+            job_id="job_0002",
+            stage="label",
+            level="ERROR",
+            message="oom",
+            reason="VRAM full",
+            suggested_action="smaller batch",
+        )
+    )
+    with Session(get_engine()) as session, session.begin():
+        insert_events(session, events)
+    client = PipelineApi(runner).client
+
+    tail = client.get(f"{V1}/events", params={"tail": True, "limit": 3}).json()
+    assert [e["message"] for e in tail["items"]] == ["step 4", "step 5", "oom"]
+    assert tail["next_cursor"] is None, "a tail is the newest page"
+
+    warn_up = client.get(f"{V1}/events", params={"min_level": "WARN"}).json()["items"]
+    assert [e["level"] for e in warn_up] == ["WARN", "ERROR"]
+
+    job = client.get(
+        f"{V1}/jobs/job_0001/events", params={"tail": True, "limit": 2, "min_level": "INFO"}
+    )
+    assert job.status_code == 404, "the job row does not exist; events alone do not make a job"

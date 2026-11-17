@@ -8,6 +8,9 @@ const api = process.env.STRATAL_API_URL ?? "http://127.0.0.1:8000";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // ECharts ships ES modules; pre-bundling it spikes memory past the dev container's 0.4 GB
+  // (ARCHITECTURE.md §2), so the dev server serves it as it is.
+  optimizeDeps: { exclude: ["echarts", "zrender"] },
   server: {
     host: "0.0.0.0",
     port: 5173,

@@ -480,6 +480,16 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `frontend/src/screens/version/LineageStrip.tsx`: ancestors in order, this version, descendants grouped by parent; the strip scrolls sideways and keeps this version in view.
 - **Why:** The approved mockup draws a strip and its accessibility notes ask for "a list of links in order". A React Flow canvas is pannable and its nodes are not links. Nothing in phase 1 needs to drag or connect lineage nodes.
 
+**Event lists can return their newest page** (M6, MON-4.3; agent)
+- **What:** `GET /events` and `GET /jobs/{id}/events` take `tail` (the newest `limit` matching events, still oldest first) and `min_level` (that level and above).
+- **How:** `events_after(..., tail=, min_level=)` orders by ID descending for a tail and reverses; levels are compared by their order DEBUG < INFO < WARN < ERROR.
+- **Why:** SCR-04's log opens on its latest lines and filters "WARN and above". Paging forward from the oldest event would read a job's whole history first; filtering levels on the client would miss older warnings beyond the page.
+
+**ECharts is not pre-bundled by the dev server** (M6, MON-4.2; agent)
+- **What:** `optimizeDeps.exclude` lists `echarts` and `zrender` in `vite.config.ts`.
+- **How:** Vite serves their ES modules as they are in development; the production build bundles them as usual.
+- **Why:** Pre-bundling ECharts pushed the Vite container past its 0.4 GB limit and the kernel killed it. Raising the limit would break the 9 GB budget (ARCHITECTURE.md §2).
+
 **The live stream reopens itself after an HTTP error** (M6, MON-1.4; agent)
 - **What:** The UI's single global EventSource is reopened with backoff (1 s doubling to 15 s) when the browser gives up, resuming with `?after=<last event ID>`; when it comes back, every query is read again.
 - **How:** `Feed` in `frontend/src/api/stream.ts`; tests `test_MON_1_4_*`.
