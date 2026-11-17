@@ -407,3 +407,94 @@ class ReviewClosed(_Model):
     progress: ReviewProgress
     acceptance: Json | None
     acceptance_unavailable: str | None
+
+
+class Interval(_Model):
+    estimate: float | None
+    low: float | None
+    high: float | None
+    confidence: float
+
+
+class AcceptanceRate(_Model):
+    decided: int
+    accepted: int
+    interval: Interval
+
+
+class Acceptance(_Model):
+    sampled: int
+    undecided: int
+    overall: AcceptanceRate
+    by_split: dict[str, AcceptanceRate] | None
+
+
+class ReportReview(_Model):
+    review_id: str
+    status: str
+    sample_size: int
+    seed: int
+    decided: int
+    acceptance: Acceptance | None
+
+
+class ReportRows(_Model):
+    total: int
+    accepted: int
+    by_split: dict[str, int] | None
+
+
+class ReportRejections(_Model):
+    total: int
+    accepted: int
+    by_stage: dict[str, dict[str, int]]
+
+
+class ClipScores(_Model):
+    edges: list[float]
+    labelled: Distribution
+    accepted: Distribution
+    by_split: dict[str, Distribution] | None
+
+
+class ReportBody(BaseModel):
+    """The phase-1 report document (API.md §3.6)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    kind: str
+    version_id: str
+    stage: str
+    algorithm_version: int
+    confidence: float
+    rows: ReportRows
+    rejections: ReportRejections
+    filter_rate: float | None
+    clip_scores: ClipScores | None
+    review: ReportReview | None
+
+
+class Report(_Model):
+    id: int
+    version_id: str
+    kind: str
+    review_session_id: str | None
+    job_id: str | None
+    created_at: str
+    report: ReportBody
+
+
+class ReviewSummary(_Model):
+    id: str
+    version_id: str
+    sample_size: int
+    seed: int
+    status: Literal["open", "closed"]
+    created_at: str
+    closed_at: str | None
+    progress: ReviewProgress
+
+
+class ReviewList(_Model):
+    items: list[ReviewSummary]
+    next_cursor: str | None

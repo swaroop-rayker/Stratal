@@ -65,7 +65,7 @@ function Summary({ review, version }: { review: Review; version: Schemas["Versio
         }),
       ),
     onSuccess: (job) => {
-      void navigate(`/jobs/${(job as { id: string }).id}`);
+      void navigate(`/versions/${review.version_id}/report?job=${job.id}`); // SCR-06 follows the build (frame B)
     },
   });
   const p = review.progress;

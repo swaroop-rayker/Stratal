@@ -221,3 +221,26 @@ def test_UI_2_1_sources_lists_folders_with_file_counts(
 
     assert [(i["name"], i["files"]) for i in items] == [("birds", 3), ("empty", 0)]
     assert items[0]["path"] == f"{root.as_posix()}/birds"
+
+
+def test_LABEL_1_5_a_version_lists_its_reviews_newest_first(runner: Runner, tmp_path: Path) -> None:
+    """SCR-06 names the review a report will use, and notices a newer one."""
+    api = PipelineApi(runner)
+    job = _pipeline(api, tmp_path, "m6revs")
+    client = api.client
+    version = job["output_version_id"]
+
+    first = client.post(
+        f"{V1}/versions/{version}/reviews", json={"sample_size": 3, "seed": 1}
+    ).json()
+    second = client.post(
+        f"{V1}/versions/{version}/reviews", json={"sample_size": 2, "seed": 2}
+    ).json()
+    client.put(f"{V1}/reviews/{first['id']}/items/1", json={"decision": "accept"})
+    client.post(f"{V1}/reviews/{first['id']}/close")
+
+    listed = client.get(f"{V1}/versions/{version}/reviews").json()["items"]
+    assert [r["id"] for r in listed] == [second["id"], first["id"]]
+    assert listed[1]["status"] == "closed" and listed[1]["progress"]["accept"] == 1
+    assert "items" not in listed[0]
+    assert client.get(f"{V1}/versions/ds_000000000000/reviews").json()["code"] == "not_found"

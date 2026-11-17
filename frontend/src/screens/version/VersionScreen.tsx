@@ -284,7 +284,7 @@ function Actions({ version, stats, onContinue, onReview, compact }: {
       ),
     onSuccess: (job) => {
       void client.invalidateQueries({ queryKey: ["versions", version.version_id, "report"] });
-      void navigate(`/jobs/${(job as { id: string }).id}`);
+      void navigate(`/versions/${version.version_id}/report?job=${job.id}`); // SCR-06 follows the build (frame B)
     },
   });
   const allRejected = versionCount(version, "accepted") === 0;

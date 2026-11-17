@@ -533,7 +533,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Version Reviews
+         * @description A version's reviews, newest first, without their items (SCR-06: the review a report
+         *     will use, and whether a newer one exists).
+         */
+        get: operations["version_reviews_api_v1_versions__version_id__reviews_get"];
         put?: never;
         /** Create Review */
         post: operations["create_review_api_v1_versions__version_id__reviews_post"];
@@ -652,6 +657,37 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Acceptance */
+        Acceptance: {
+            /** Sampled */
+            sampled: number;
+            /** Undecided */
+            undecided: number;
+            overall: components["schemas"]["AcceptanceRate"];
+            /** By Split */
+            by_split: {
+                [key: string]: components["schemas"]["AcceptanceRate"];
+            } | null;
+        };
+        /** AcceptanceRate */
+        AcceptanceRate: {
+            /** Decided */
+            decided: number;
+            /** Accepted */
+            accepted: number;
+            interval: components["schemas"]["Interval"];
+        };
+        /** ClipScores */
+        ClipScores: {
+            /** Edges */
+            edges: number[];
+            labelled: components["schemas"]["Distribution"];
+            accepted: components["schemas"]["Distribution"];
+            /** By Split */
+            by_split: {
+                [key: string]: components["schemas"]["Distribution"];
+            } | null;
+        };
         /** CreateDataset */
         CreateDataset: {
             /**
@@ -854,6 +890,17 @@ export interface components {
             };
             /** Version */
             version: string;
+        };
+        /** Interval */
+        Interval: {
+            /** Estimate */
+            estimate: number | null;
+            /** Low */
+            low: number | null;
+            /** High */
+            high: number | null;
+            /** Confidence */
+            confidence: number;
         };
         /** Job */
         Job: {
@@ -1063,6 +1110,84 @@ export interface components {
             /** Share */
             share: number;
         };
+        /** Report */
+        Report: {
+            /** Id */
+            id: number;
+            /** Version Id */
+            version_id: string;
+            /** Kind */
+            kind: string;
+            /** Review Session Id */
+            review_session_id: string | null;
+            /** Job Id */
+            job_id: string | null;
+            /** Created At */
+            created_at: string;
+            report: components["schemas"]["ReportBody"];
+        };
+        /**
+         * ReportBody
+         * @description The phase-1 report document (API.md §3.6).
+         */
+        ReportBody: {
+            /** Kind */
+            kind: string;
+            /** Version Id */
+            version_id: string;
+            /** Stage */
+            stage: string;
+            /** Algorithm Version */
+            algorithm_version: number;
+            /** Confidence */
+            confidence: number;
+            rows: components["schemas"]["ReportRows"];
+            rejections: components["schemas"]["ReportRejections"];
+            /** Filter Rate */
+            filter_rate: number | null;
+            clip_scores: components["schemas"]["ClipScores"] | null;
+            review: components["schemas"]["ReportReview"] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ReportRejections */
+        ReportRejections: {
+            /** Total */
+            total: number;
+            /** Accepted */
+            accepted: number;
+            /** By Stage */
+            by_stage: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+        };
+        /** ReportReview */
+        ReportReview: {
+            /** Review Id */
+            review_id: string;
+            /** Status */
+            status: string;
+            /** Sample Size */
+            sample_size: number;
+            /** Seed */
+            seed: number;
+            /** Decided */
+            decided: number;
+            acceptance: components["schemas"]["Acceptance"] | null;
+        };
+        /** ReportRows */
+        ReportRows: {
+            /** Total */
+            total: number;
+            /** Accepted */
+            accepted: number;
+            /** By Split */
+            by_split: {
+                [key: string]: number;
+            } | null;
+        };
         /**
          * ResourceSample
          * @description One row of ``resource_samples`` (DATA_MODEL.md §4.7). GPU values are null when
@@ -1179,6 +1304,13 @@ export interface components {
             decided_at: string | null;
             row?: components["schemas"]["ReviewRow"] | null;
         };
+        /** ReviewList */
+        ReviewList: {
+            /** Items */
+            items: components["schemas"]["ReviewSummary"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** ReviewProgress */
         ReviewProgress: {
             /** Sampled */
@@ -1225,6 +1357,27 @@ export interface components {
             derived_width?: number | null;
             /** Derived Height */
             derived_height?: number | null;
+        };
+        /** ReviewSummary */
+        ReviewSummary: {
+            /** Id */
+            id: string;
+            /** Version Id */
+            version_id: string;
+            /** Sample Size */
+            sample_size: number;
+            /** Seed */
+            seed: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            /** Created At */
+            created_at: string;
+            /** Closed At */
+            closed_at: string | null;
+            progress: components["schemas"]["ReviewProgress"];
         };
         /**
          * Row
@@ -2371,6 +2524,37 @@ export interface operations {
             };
         };
     };
+    version_reviews_api_v1_versions__version_id__reviews_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_review_api_v1_versions__version_id__reviews_post: {
         parameters: {
             query?: never;
@@ -2525,9 +2709,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Job"];
                 };
             };
             /** @description Validation Error */
@@ -2560,9 +2742,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Report"];
                 };
             };
             /** @description Validation Error */
@@ -2593,9 +2773,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Report"];
                 };
             };
             /** @description Validation Error */

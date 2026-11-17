@@ -199,6 +199,7 @@ Event: the shape in SPEC MON-1, plus `id`, `event_uid`, `type`, `reason`, `sugge
 | Method and path | Purpose | Success |
 |---|---|---|
 | `POST /versions/{version_id}/reviews` | Draw a sample. Body: `{sample_size, seed?}` | `201` ReviewSession with its items |
+| `GET /versions/{version_id}/reviews` | The version's reviews, newest first, each with `progress` and without items (added in M6 for SCR-06: the review a report will use, and whether a newer one exists) | `200` list |
 | `GET /reviews/{review_id}` | Session, items and progress | `200` |
 | `PUT /reviews/{review_id}/items/{position}` | Record a decision. Body: `{decision: "accept" | "reject", note?}` | `200` item |
 | `POST /reviews/{review_id}/close` | Close the session and return the acceptance summary | `200` |

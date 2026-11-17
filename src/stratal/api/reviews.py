@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from stratal.api import schemas
@@ -144,3 +145,20 @@ def close(review_id: str, session: Db) -> Json:
             **reviews.acceptance_summary(items),
         }
     return view
+
+
+@router.get("/versions/{version_id}/reviews", response_model=schemas.ReviewList)
+def version_reviews(version_id: str, session: Db) -> Json:
+    """A version's reviews, newest first, without their items (SCR-06: the review a report
+    will use, and whether a newer one exists)."""
+    registry.get_version(session, version_id)
+    query = (
+        select(ReviewSession)
+        .where(ReviewSession.version_id == version_id)
+        .order_by(ReviewSession.created_at.desc(), ReviewSession.id.desc())
+    )
+    items = [
+        {**_session(r), "progress": reviews.progress(reviews.items_of(session, r.id))}
+        for r in session.scalars(query)
+    ]
+    return {"items": items, "next_cursor": None}

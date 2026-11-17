@@ -1,0 +1,62 @@
+/* SCR-06 eval report, copied from docs/design/screens/SCR-06_v1.html (G2 approved
+   2026-11-15), scoped under .scr06. Tokens only. Changes for a live page: "live:". */
+.content:has(> .scr06) { padding: var(--sp-4) var(--sp-5); overflow: auto; }
+.scr06 { display: flex; flex-direction: column; gap: var(--sp-3); }
+.scr06 .t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.scr06 .t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 32px; white-space: nowrap; }
+.scr06 .t td.code { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr06 .rhead { display: flex; align-items: center; gap: var(--sp-3); }
+.scr06 .rhead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); line-height: var(--lh-tight); } .scr06 .rhead h1 .mono { font-size: var(--fs-16); color: var(--text-secondary); }
+.scr06 .rhead .sub { color: var(--text-muted); font-size: var(--fs-12); display: inline-flex; gap: var(--sp-1); align-items: center; } .scr06 .rhead .sub .mono { color: var(--text-secondary); } .scr06 .rhead .sub svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.scr06 .heads { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+.scr06 .head { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--border)); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: 2px; }
+.scr06 .head .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.scr06 .head .v { font: var(--fw-medium) var(--fs-32)/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.scr06 .head .v small { font-size: var(--fs-14); color: var(--text-muted); font-weight: var(--fw-regular); }
+.scr06 .head .d { font-size: var(--fs-12); color: var(--text-muted); } .scr06 .head .d .mono { color: var(--text-secondary); }
+.scr06 .head.none .v { font-family: var(--font-ui); font-size: var(--fs-20); color: var(--text-muted); }
+.scr06 .ci { position: relative; height: 22px; margin-top: var(--sp-1); }
+.scr06 .ci .axis { position: absolute; left: 0; right: 0; top: 10px; height: 1px; background: var(--border-strong); }
+.scr06 .ci .tick { position: absolute; top: 6px; width: 1px; height: 9px; background: var(--border-strong); }
+.scr06 .ci .range { position: absolute; top: 5px; height: 11px; border-radius: var(--r-xs); background: color-mix(in srgb, var(--success) 30%, transparent); border: var(--bw) solid var(--success); }
+.scr06 .ci .pt { position: absolute; top: 2px; width: 3px; height: 17px; margin-left: -1px; border-radius: var(--r-xs); background: var(--text-primary); }
+.scr06 .ci-scale { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.scr06 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); min-height: 0; }
+.scr06 .panel { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.scr06 .panel > header { display: flex; align-items: center; gap: var(--sp-2); }
+.scr06 .panel > header h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); } .scr06 .panel > header .sub { font-size: var(--fs-11); color: var(--text-muted); }
+.scr06 .funnel { display: flex; flex-direction: column; gap: var(--sp-1); }
+.scr06 .fhead, .scr06 .frow { display: grid; grid-template-columns: 78px 1fr 56px 96px 92px; gap: var(--sp-2); align-items: center; }
+.scr06 .fhead { font-size: var(--fs-11); letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.scr06 .frow { font-size: var(--fs-12); height: 24px; }
+.scr06 .frow .st { color: var(--text-secondary); font-family: var(--font-mono); }
+.scr06 .frow .kept { height: 14px; border-radius: var(--r-xs); background: color-mix(in srgb, var(--success) 35%, transparent); border: var(--bw) solid color-mix(in srgb, var(--success) 60%, transparent); }
+.scr06 .frow .kept.raw { background: var(--surface-raised); border-color: var(--border-strong); }
+.scr06 .frow .num { text-align: right; color: var(--text-primary); }
+.scr06 .frow .rm { height: 10px; border-radius: var(--r-xs); background: var(--c); }
+.scr06 .frow .rmtxt { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); white-space: nowrap; } .scr06 .frow .rmtxt.zero { color: var(--text-muted); }
+.scr06 .fkey { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-muted); } .scr06 .fkey i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); margin-right: var(--sp-1); vertical-align: middle; }
+.scr06 .hist svg { display: block; width: 100%; height: 170px; }
+.scr06 .hx { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.scr06 .ptext { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); } .scr06 .ptext b { color: var(--text-primary); }
+.scr06 .callout { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface-raised); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr06 .callout b { color: var(--text-primary); } .scr06 .callout svg.i { color: var(--accent); }
+.scr06 .callout.warn { background: var(--warning-soft); border-color: color-mix(in srgb, var(--warning) 45%, transparent); } .scr06 .callout.warn svg.i { color: var(--warning); }
+
+/* live: */
+.scr06 .group-btns { display: inline-flex; } .scr06 .group-btns .btn { border-radius: 0; margin-left: -1px; } .scr06 .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .scr06 .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.scr06 .btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.scr06 .hist svg rect.bin:hover { opacity: .8; }
+.scr06 .splits { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.scr06 .splits b { color: var(--text-secondary); font-weight: var(--fw-medium); }
+.scr06 .panel .table-wrap { max-height: 320px; overflow: auto; }
+.scr06 .build { display: flex; flex-direction: column; gap: var(--sp-3); }
+/* Light theme: the design-system rule for colour on its own tint (SCR-04 G3). */
+[data-theme="light"] .scr06 .callout.warn svg.i { color: color-mix(in srgb, var(--warning) 80%, var(--text-primary)); }
+@media (max-width: 1279px) {
+  .scr06 .grid2 { grid-template-columns: 1fr; }
+  .scr06 .head .v { font-size: var(--fs-24); }
+  .scr06 .head .ci, .scr06 .head .ci-scale, .scr06 .head .d.long { display: none; }
+  .scr06 .head .d.short { display: block; }
+}
+@media (min-width: 1280px) { .scr06 .head .d.short { display: none; } }

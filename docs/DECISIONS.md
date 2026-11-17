@@ -495,6 +495,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `Feed` in `frontend/src/api/stream.ts`; tests `test_MON_1_4_*`.
 - **Why:** Browsers retry a dropped SSE connection but give up for good on an HTTP error, which is what the dev proxy returns while the API restarts. A new EventSource cannot send `Last-Event-ID`, so the cursor goes in the query, which API.md §4 already allows.
 
+**A report is built where it is read** (M6, EVAL-1.1; agent)
+- **What:** "Build the eval report" on SCR-03 and SCR-05 opens SCR-06 with `?job=<id>`, which follows the evaluate job on the global stream and shows the new report when it completes. A new `GET /versions/{id}/reviews` lets SCR-06 name the review a build will use and notice a closed review newer than the report's.
+- **How:** `frontend/src/screens/report/ReportScreen.tsx`; `version_reviews` in `src/stratal/api/reviews.py`; tests `test_EVAL_1_1_*`, `test_LABEL_1_5_a_version_lists_its_reviews_newest_first`.
+- **Why:** A build takes seconds; leaving the user on the page that started it means a second trip to find the result. The report stores which review it used, so only the list of reviews was missing to say when it is out of date.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
+from stratal.api import schemas
 from stratal.api.jobs import Db, Queue, Redis
 from stratal.core.errors import NotFound
 from stratal.data import registry
@@ -38,7 +39,7 @@ def report_view(row: EvalReport) -> Json:
     }
 
 
-@router.post("/versions/{version_id}/reports", status_code=202)
+@router.post("/versions/{version_id}/reports", status_code=202, response_model=schemas.Job)
 def create_report(
     version_id: str, body: CreateReport, session: Db, enqueue: Queue, bus: Redis
 ) -> Json:
@@ -53,7 +54,7 @@ def create_report(
     return view
 
 
-@router.get("/versions/{version_id}/reports/latest")
+@router.get("/versions/{version_id}/reports/latest", response_model=schemas.Report)
 def latest_report(
     version_id: str, session: Db, kind: Literal["phase1_dataset"] = "phase1_dataset"
 ) -> Json:
@@ -72,7 +73,7 @@ def latest_report(
     return report_view(row)
 
 
-@router.get("/reports/{report_id}")
+@router.get("/reports/{report_id}", response_model=schemas.Report)
 def get_report(report_id: int, session: Db) -> Json:
     row = session.get(EvalReport, report_id)
     if row is None:
