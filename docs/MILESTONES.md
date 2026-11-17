@@ -23,12 +23,12 @@
 | M3 | Cleaning and preprocessing | 1 | M | Done 2026-11-15 |
 | M4 | Labeling | 1 | L | Done 2026-11-15 |
 | M5 | Splits, review, eval report | 1 | M | Done 2026-11-16 |
-| M6 | Phase-1 screens | 1 | L | Not started |
-| M7 | Phase-1 acceptance | 1 | M | Not started |
-| M8 | Training runtime and registry | 2 | L | Outline |
-| M9 | Model builder | 2 | L | Outline |
-| M10 | Classical ML, HPO, task metrics | 2 | L | Outline |
-| M11 | Dashboards and monitoring completion | 2 | L | Outline |
+| M6 | Phase-1 screens | 1 | L | Done 2026-11-17 |
+| M7 | Phase-1 acceptance | 1 | M | In progress |
+| M8 | Training runtime and registry | 2 | L | Detailed, proposed 2026-11-17 |
+| M9 | Model builder | 2 | L | Detailed, proposed 2026-11-17 |
+| M10 | Classical ML, HPO, task metrics | 2 | L | Detailed, proposed 2026-11-17 |
+| M11 | Dashboards and monitoring completion | 2 | L | Detailed, proposed 2026-11-17 |
 | M12 | LLM serving and RAG | 3 | L | Outline |
 | M13 | Router, tools, caption refinement | 3 | L | Outline |
 | M14 | Text→image and LoRA | 4 | L | Outline |
@@ -313,9 +313,266 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 ---
 
+## Phase 2 in detail (M8–M11)
+
+| | |
+|---|---|
+| Status | **Proposed 2026-11-17, waiting for the owner's approval.** Until it is approved, the outline table under "Later phases" governs |
+| Done when (SPEC §2) | The user builds a CNN in the UI, trains it on a dataset version and sees its test metrics |
+| Requirements | All 58 phase-2 requirements (32 P0, 23 P1, 3 P2), plus NFR-14 and NFR-15. Each stays in the milestone the outline gave it; nothing is added or dropped |
+
+### Decisions needed before M8 starts
+
+Each has a recommendation; none is taken until the owner decides.
+
+1. **Phase-2 datasets.**
+   - **Labelled images, for the CNN (needed from M8).** (a) *Recommended:* CIFAR-10, about 170 MB from the University of Toronto: 60,000 images of 32×32 px in 10 classes with clean labels. A small CNN's accuracy on it is well known, so a wrong result points at a bug in the training loop rather than at the data. Ingest's 256 px minimum (DATA-1.3) is lowered for this dataset in its config. (b) COCO 2017 classes derived from the annotations already on disk, no download: each image labelled with the category covering most of it. Multi-object photos make those labels noisy, so a low accuracy would prove little.
+   - **Tabular (M10).** *Recommended:* scikit-learn's bundled datasets (breast cancer for classification, diabetes for regression, wine). They are installed with the package, so no download.
+   - **Labelled text (M9 schema, M10 ingestion).** *Recommended:* the COCO captions already in `sources/coco10k-meta`, labelled with their image's category. No download.
+2. **Inference while a training job holds the GPU** (the open consequence of ADR-0006). Requests can wait, fail fast, or run on the CPU. *Recommended:* run on the CPU for models small enough for it and say so in the response (`"device": "cpu"`); fail fast with a clear reason otherwise.
+3. **Where CPU training and classical ML run.** *Recommended:* a `worker-cpu` image target with an `ml-cpu` extra (CPU-only PyTorch, scikit-learn, skops, Optuna). `api` and `monitor` keep no ML libraries, as already decided ("API image has no ML libraries", DECISIONS.md). The CPU queue then runs CPU training (RUN-1.9) and classical ML (M10); the image grows by several hundred MB.
+4. **Defaults.**
+   - RUN-1.7: T = 300 s without progress before `stalled` (OC-3's remaining proposal).
+   - RUN-1.3: a checkpoint every epoch and at least every 5 minutes of training, so a crash loses less than NFR-5's 10 minutes.
+   - RUN-1.6: pause at 83 °C, resume below 75 °C. The highest so far is 74 °C, after 20 minutes of captioning in `job_0026`.
+   - MON-2.6: "VRAM > 90 %" read as 90 % of the card (NVML, about NFR-1's 5.5 GB); "RAM > 85 %" as 85 % of the VM's 10 GB.
+5. **Pause and resume for pipeline jobs too** (RUN-1.2 says "jobs"). *Recommended:* yes. Pipeline stages already resume from their per-batch caches, so a pause is a cooperative stop between batches.
+6. **Retention settings.** *Recommended:* stored in the database and edited on SCR-14, reading SPEC's `configs/retention.yaml` example as the shape of the settings rather than a file to edit.
+7. **HPO trials (M10).** SPEC §7.2 says each trial is a job; ADR-0003 notes that sub-second classical-ML trials would be grouped. *Recommended:* each deep-learning trial is one job; a classical-ML study runs its trials inside one job, each trial still logged as events and stored by Optuna.
+8. **M8's size.** M8 carries 23 requirements, NFR-14, NFR-15, three ADRs and four screens: about twice a phase-1 milestone. *Recommended:* split it into **M8a** (training runtime) and **M8b** (registry, retention and inference), each with its own branch, review and merge. The letters keep M9–M15's numbers. M8 below is written in those two parts either way.
+
+Carried from M7: BUG7's guard is the NFR-14 disk audit, which lands in M8 as `test_BUG7_*`; ADR-0013 (DATA-2.3, DATA-4.8) and the reading of NFR-11's "2 % CPU" are decided in M7.
+
+Still parked by the owner, not scheduled here: the other OC-3 proposals, the M2 loose ends, dedupe only within a version, version IDs shared across datasets, `caption_vram_estimate_mb` in the label identity, Florence relation errors, and `ubuntu-latest` moving to Ubuntu 26.
+
+### Architecture to settle first
+
+Each ADR is written at the start of its milestone and approved before anything it covers is built.
+
+| ADR | Covers | Milestone |
+|---|---|---|
+| ADR-0014 Training jobs | Training as a job kind; the model factory (reference models in M8, builder specs from M9); input pipeline; checkpoint contents (model, optimizer, scheduler, random states, data position) and cadence; pause, resume, thermal pause, stall; device choice; the images and queues of decision 3 | M8 |
+| ADR-0015 Model registry and weight retention | Tables (DATA_MODEL §9), weight files as safetensors, version states, retention as a job, atomic deletes (NFR-15) | M8 |
+| ADR-0016 Inference service | One model at a time, the GPU lease, decision 2, verified unloads, its memory limit (ADR-0007 revised, the 9 GB sum kept) | M8 |
+| ADR-0017 Model spec | Layer specs, graph form (BUILD-1.9), compilation to PyTorch, parameter and memory estimates | M9 |
+| ADR-0018 HPO execution | Optuna's storage in its own PostgreSQL schema, trials per decision 7, pruning, the single test evaluation | M10 |
+
+### Owner units in phase 2 (👤)
+
+The agent delivers each unit's typed stub, strict expected-failure tests named with its ID, and a fake for the code around it before the milestone that needs it (ADR-0012).
+
+| Unit | Requirement | Needed in | Stub delivered |
+|---|---|---|---|
+| VRAM manager v2: training models loaded under the cap, unloaded back to baseline | RUN-1.4 | M8 | start of M8 |
+| Out-of-memory in training: clean failure with a suggested smaller batch | RUN-1.5 | M8 | start of M8 |
+| From-scratch attention block, positional encoding and LSTM cell | BUILD-1.8 | M9 | start of M9 |
+| Task metrics by type, CIDEr-D in house (CL-13) | EVAL-1.2 | M10 | start of M8, so the CNN can be scored as soon as the owner has written it |
+
+### New dependencies
+
+Each is named in SPEC §7 and added only when its milestone needs it.
+
+| Package | For | Milestone | Where |
+|---|---|---|---|
+| safetensors | Weights (REG-1.1, NFR-8) | M8 | worker images; already installed with transformers in the GPU image |
+| PyTorch, CPU build (about 200 MB) | CPU training (RUN-1.9) | M8 | `worker-cpu`, if decision 3 |
+| torchinfo | Cross-checking parameter counts (BUILD-1.5), tests only | M9 | `dev` |
+| React Flow (npm; asked for at the time) | SCR-08 canvas | M9 | `frontend` |
+| scikit-learn, skops | ML-1.1 to ML-1.5 | M10 | `worker-cpu` |
+| Optuna | HPO-1.2 | M10 | worker images |
+| sacrebleu, torchmetrics | EVAL-1.2, only if the owner prefers libraries to own code | M10 | worker images |
+
+Not planned: LightGBM (scikit-learn's gradient boosting meets ML-1.1), torchvision (Pillow and PyTorch cover the input pipeline), optuna-dashboard (SCR-10 shows the study).
+
+### Design gates for phase 2
+
+No screen is built before its design is approved (SPEC §9.2). The gates wait on the owner, so they run ahead of the backend, as in phase 1.
+
+| Gate | Deliverable | Starts | Unblocks |
+|---|---|---|---|
+| G1 revision | SCREENS.md §3 detail for SCR-04 (training runs), SCR-07 (pause and resume), SCR-08 to SCR-11, SCR-13 and SCR-14; Flow 4 step by step | M8 kickoff | phase-2 G2 |
+| G2 | SCR-07 v2, SCR-04 v2, SCR-11, SCR-14 | alongside M8 | M8's screens |
+| G2 | SCR-08, SCR-09 | alongside M8 | M9's screens |
+| G2 | SCR-10, SCR-09's HPO part | alongside M9 | M10's screens |
+| G2 | SCR-13, SCR-03 v2 (distributions and diff), SCR-11 v2 (comparison) | alongside M10 | M11's screens |
+| G3 | Each screen compared with its mockup, contrast and keyboard checked | in the milestone that builds it | – |
+
+## M8 — Training runtime and registry
+
+**Size** L (decision 8: M8a and M8b, M each) · **Branch** `m8-training-registry` (or `m8a-training-runtime`, `m8b-registry`) · **Serves** RUN-1.1–1.9, REG-1.1, REG-1.2, REG-1.4, REG-2.1–2.11, NFR-14, NFR-15; BUG7; NFR-1, NFR-4, NFR-5 and NFR-8 for training
+
+**Before starting:** decisions 1 to 7; ADR-0014, ADR-0015 and ADR-0016 approved; the G1 revision approved; the phase-2 image dataset downloaded if decision 1 is CIFAR-10.
+
+**Scope, part A: training runtime**
+
+- Training as a job kind, one child process per run on the GPU or CPU queue, under the GPU lease and the 0.85 cap with a baseline check (ADR-0003, ADR-0006). Until the builder exists (M9), runs use reference models from code: an MLP and a small CNN.
+- Input pipeline from a labelled-images dataset version: the labelled-images part of DATA-5.2, delivered early (the requirement is ticked in M9). Images are read from the blob store, resized once and cached as a derivation; loader workers are derived from the container's memory limit (ADR-0007, decision 4).
+- Live metrics (RUN-1.8): loss, accuracy, learning rate, gradient norm, step time and samples/s as progress metrics; VRAM and RAM from the existing telemetry. Accuracy is the only quality metric until EVAL-1.2 exists.
+- Checkpoints (RUN-1.3) on the decision-4 cadence, holding everything an exact resume needs; only the latest is kept during a run (REG-2.6).
+- Pause and resume (RUN-1.2): the cooperative flag (SPEC §7.2), then a checkpoint, an exit and `paused`; resume queues a new attempt from the checkpoint. Pipeline jobs too, if decision 5.
+- Thermal pause and resume (RUN-1.6) and stall detection (RUN-1.7) in the watchdog.
+- Device choice (RUN-1.9): `auto` times a few steps on each device for small models and picks the faster; `cpu` and `gpu` force it. The choice and its timings are recorded on the run.
+- 👤 VRAM manager v2 (RUN-1.4) and training out-of-memory handling (RUN-1.5).
+- Spike S-08: the reference CNN on the chosen dataset, GPU against CPU: step time, peak VRAM and RAM, checkpoint size and save time. It sets the checkpoint cadence, RUN-1.9's threshold and the memory limits.
+- Screens: SCR-07 v2 (pause, resume, training jobs) and SCR-04 v2 (loss and accuracy charts, checkpoints on the timeline).
+
+**Scope, part B: registry, retention, inference**
+
+- Registry tables (DATA_MODEL §9: lineages, versions, checkpoints, pins, retention settings). Every run registers a version with its resolved config, dataset version, metrics and weights (REG-1.1), and a state: base, partial or trained (REG-1.2).
+- Weights as safetensors under `registry/` (NFR-8). A lineage's original weights are written first and never deleted by retention (REG-2.1).
+- Retention as a job (REG-2.2 to REG-2.9): after every completed run and on demand, with a dry run. It logs each deletion and the bytes freed, never deletes weights in use or a parent's (REG-2.8), and deletes atomically per version: an intent row, then the files, then the metadata (NFR-15). Settings are global and per lineage (REG-2.4); pins exempt a version (REG-2.5); lowering N asks for confirmation with the versions and sizes affected (REG-2.10); a version whose weights were deleted keeps its metadata and can be re-trained (REG-2.7).
+- Inference service (REG-1.4): the `inference` container (SPEC CL-07) holds at most one model, takes the GPU lease, verifies every unload, and serves `/predict` for every registered version, following decision 2.
+- Screens: SCR-11 (versions, states, disk use per lineage, pins, retention dry run and confirmation, a `/predict` try-out) and SCR-14 (retention defaults and overrides, temperature limit, stall timeout).
+
+**Done when**
+
+- [ ] Decisions 1 to 7 recorded; ADR-0014, ADR-0015 and ADR-0016 approved
+- [ ] S-08 report delivered; ADR-0007's limits revised from it if needed, still summing to 9 GB or less
+- [ ] `test_RUN_1_1_*`: a training job moves through every state; invalid transitions are rejected and every transition is logged
+- [ ] `test_RUN_1_2_*`: start, pause, resume and cancel each work on a running job
+- [ ] `test_RUN_1_3_*`: kill mid-training, resume from the checkpoint; the metrics match an uninterrupted run within NFR-4's tolerance
+- [ ] 👤 `test_RUN_1_4_*` (gpu): after a training model is unloaded, `torch.cuda.memory_allocated` is back at baseline
+- [ ] 👤 `test_RUN_1_5_*` (gpu): a deliberately oversized batch fails cleanly with a smaller batch suggested, and nothing crashes
+- [ ] `test_RUN_1_6_*`: a simulated high temperature pauses the job; it resumes when the temperature falls
+- [ ] `test_RUN_1_7_*`: a simulated hang becomes `stalled` after T seconds
+- [ ] `test_RUN_1_8_*`: SCR-04 updates live during a training run
+- [ ] `test_RUN_1_9_*`: a tiny model defaults to the faster device measured by the benchmark; a forced device is used as given
+- [ ] `test_REG_1_1_*`: any trained version traces to its exact dataset version and config
+- [ ] `test_REG_1_2_*`: the three states are shown and filterable
+- [ ] `test_REG_1_4_*`: `/predict` returns a result for a sample input, also while a training job holds the GPU
+- [ ] `test_REG_2_1_*`: base weights are still present after 10 training runs
+- [ ] `test_REG_2_2_*`: default settings, 3 runs: only base and run-3 weights on disk
+- [ ] `test_REG_2_3_*`: N = 2, 5 runs: base, runs 3 and 4, and run 5 on disk
+- [ ] `test_REG_2_4_*`: global N = 0 with lineage X at N = 3: only X keeps intermediates
+- [ ] `test_REG_2_5_*`: a pinned run 2 survives N = 0 cleanup
+- [ ] `test_REG_2_6_*`: a completed run leaves no checkpoint; a paused run is still resumable after cleanup
+- [ ] `test_REG_2_7_*`: a version whose weights were deleted still shows its metrics and offers re-training
+- [ ] `test_REG_2_8_*`: pruning an in-use or parent version is blocked and logged
+- [ ] `test_REG_2_9_*`: the dry run lists what would go; the real run frees the bytes it reported
+- [ ] `test_REG_2_10_*`: the confirmation lists the exact versions and their sizes
+- [ ] `test_REG_2_11_*`: disk use per lineage matches the bytes on disk
+- [ ] `test_NFR_14_*` and `test_BUG7_*`: after 10 runs with default retention, the disk audit matches base + latest + one in-progress checkpoint
+- [ ] `test_NFR_15_*`: a kill during cleanup, then a rerun: no orphaned files and no dangling registry rows
+- [ ] `test_NFR_1_*` (gpu) and `test_NFR_8_*` extended to training: peak VRAM under 5.5 GB; weights only as safetensors, never unpickled
+- [ ] G3 for SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14
+- [ ] Demo: train the reference CNN on the phase-2 image dataset; pause and resume it from the UI; find it in the registry; run retention; get a prediction
+- [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS for BUG7; learning notes)
+- [ ] Owner's OK to merge
+
+## M9 — Model builder
+
+**Size** L · **Branch** `m9-model-builder` · **Serves** BUILD-1.1–1.9, UI-2.3, DATA-5.2, DATA-5.5
+
+**Before starting:** ADR-0017 approved; G2 for SCR-08 and SCR-09 approved; React Flow approved as a frontend dependency (SPEC §7.4 names it).
+
+**Scope**
+
+- Layer specs as Pydantic models with validated ranges and defaults (BUILD-1.1, BUILD-1.2): Linear, Conv2d, MaxPool, BatchNorm, Dropout, Flatten, Embedding, RNN, LSTM, GRU, the attention block and activations. Their JSON schemas generate the forms, so a new parameter needs no UI code (UI-2.3).
+- Shape inference layer by layer, blocking an invalid stack before training (BUILD-1.4), with the input and output locked from the dataset type (BUILD-1.3).
+- Cross-field rules, each with its own test (BUILD-1.6). Live parameter count and memory estimate (weights, gradients, optimizer state), checked against `sum(p.numel())` and torchinfo (BUILD-1.5).
+- Compilation of a spec to a PyTorch module for M8's runtime, so built models train exactly like the reference ones.
+- Templates (BUILD-1.7). Graph specs with skip connections (BUILD-1.9, P2, if time).
+- 👤 The from-scratch attention block, positional encoding and LSTM cell (BUILD-1.8).
+- Dataset types (DATA-5.2): labelled images (from M8), tabular and labelled text schemas. Each type declares its compatible model families and default metrics (DATA-5.5), and the UI offers only compatible combinations.
+- Screens: SCR-08 (canvas) and SCR-09 (training run setup; its HPO part comes in M10).
+
+**Done when**
+
+- [ ] ADR-0017 approved
+- [ ] `test_BUILD_1_1_*`: every layer type can be added and configured
+- [ ] `test_BUILD_1_2_*`: out-of-range values are rejected with a message
+- [ ] `test_BUILD_1_3_*`: changing the dataset updates the input and output
+- [ ] `test_BUILD_1_4_*`: a mismatched linear input is caught at build time
+- [ ] `test_BUILD_1_5_*`: parameter count and memory estimate match `sum(p.numel())` and the formula
+- [ ] `test_BUILD_1_6_*`: one test per cross-field rule (`d_model % num_heads == 0`, a conv stack never below 1×1, …)
+- [ ] `test_BUILD_1_7_*`: a saved template reloads identically
+- [ ] 👤 `test_BUILD_1_8_*`: attention, positional encoding and the LSTM cell match PyTorch's outputs within tolerance
+- [ ] `test_BUILD_1_9_*` (P2, if time): a residual block builds and trains
+- [ ] `test_UI_2_3_*`: a field added to a config schema appears in its form with no UI change
+- [ ] `test_DATA_5_2_*`: each type validates against its schema
+- [ ] `test_DATA_5_5_*`: the UI offers only compatible type and model combinations
+- [ ] G3 for SCR-08 and SCR-09
+- [ ] Demo: build a CNN on the canvas, train it from SCR-09, follow it on SCR-04, find it in SCR-11
+- [ ] Docs updated (learning notes)
+- [ ] Owner's OK to merge
+
+## M10 — Classical ML, HPO, task metrics
+
+**Size** L · **Branch** `m10-ml-hpo-metrics` · **Serves** ML-1.1–1.5, HPO-1.1–1.5, EVAL-1.2, DATA-1.4, DATA-2.4
+
+**Before starting:** ADR-0018 approved; G2 for SCR-10 and SCR-09's HPO part approved; the tabular and labelled-text datasets settled (decision 1).
+
+**Scope**
+
+- Tabular (CSV, Parquet) and text (TXT, JSONL) ingestion into manifests (DATA-1.4). Text cleaning: whitespace and Unicode normalised, empty and over-length rows dropped and logged (DATA-2.4).
+- Classical models (ML-1.1) and k-means, DBSCAN/HDBSCAN and PCA (ML-1.2) as scikit-learn pipelines. Preprocessing is fitted on the train split only (ML-1.3); invalid parameter combinations are refused (ML-1.4); models are saved with skops (ML-1.5, NFR-8). They run on the CPU queue and register like any model.
+- HPO (HPO-1.1 to HPO-1.5): tunable markers on any schema field; Optuna TPE with a trial count and a time budget; median pruning with the stopping step logged; tuning on validation, or cross-validation for classical ML; the test split used once, on the best config; trial table, best config and parameter importance.
+- 👤 Task metrics by type (EVAL-1.2): classification, regression, clustering, LM perplexity, translation BLEU and chrF, captioning CLIP score and CIDEr-D (CL-13). Shown on SCR-11's version page.
+- Spike S-09: Optuna on PostgreSQL, the overhead per trial, grouped against one job per trial.
+- Screens: SCR-09's HPO part and SCR-10.
+
+**Done when**
+
+- [ ] ADR-0018 approved; S-09 report delivered
+- [ ] `test_DATA_1_4_*`: a sample CSV and a sample JSONL ingest without errors
+- [ ] `test_DATA_2_4_*`: planted bad rows are removed and logged
+- [ ] `test_ML_1_1_*`: each listed model trains on a tabular dataset
+- [ ] `test_ML_1_2_*`: k-means, DBSCAN/HDBSCAN and PCA each run and report their metrics
+- [ ] `test_ML_1_3_*`: the scaler's statistics come from the train split
+- [ ] `test_ML_1_4_*`: invalid parameter combinations are rejected
+- [ ] `test_ML_1_5_*`: a skops save and load round-trips; nothing is unpickled
+- [ ] `test_HPO_1_1_*`: the search space builds from the UI's selections
+- [ ] `test_HPO_1_2_*`: a study stops at whichever limit comes first
+- [ ] `test_HPO_1_3_*`: pruned trials are logged with the step they stopped at
+- [ ] `test_HPO_1_4_*`: test metrics are computed exactly once per study
+- [ ] `test_HPO_1_5_*`: the trial table, best config and parameter importance render
+- [ ] 👤 `test_EVAL_1_2_*`: the right metric set appears for each task
+- [ ] G3 for SCR-09 (HPO part) and SCR-10
+- [ ] Demo: tune a random forest on the tabular dataset and the CNN's learning rate; read both studies; one test evaluation each
+- [ ] Docs updated (learning notes)
+- [ ] Owner's OK to merge
+
+## M11 — Dashboards, monitoring completion, phase-2 acceptance
+
+**Size** L · **Branch** `m11-phase2-acceptance` · **Serves** MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, UI-2.1, UI-2.2, EVAL-1.3, DATA-3.5; the phase-2 done-definition
+
+**Before starting:** G2 for SCR-13, SCR-03 v2 and SCR-11 v2 approved. The alerts and diagnostics add work to `monitor`, so NFR-11 is measured again here.
+
+**Scope**
+
+- Alerts (MON-2.6) at the decision-4 thresholds, each shown with the action taken (pause, fail, smaller batch) in the event log (MON-2.7).
+- Bottleneck diagnostics (MON-3.2): the expected and observed resource per stage (the MON-3 table), for example GPU under 30 % with CPU at 100 % gives "data loading is the bottleneck: increase DataLoader workers".
+- Load and unload events with VRAM before and after (MON-3.3), from labelling, training and the inference service.
+- Two runs' resource curves overlaid (MON-4.4) and trends across past jobs (MON-4.5, P2, if time) on SCR-13.
+- Raw against cleaned distributions and rejection reasons per stage (UI-2.2), and the diff of two versions (DATA-3.5, P2, if time), on SCR-03.
+- Three or more models on one test split, side by side (EVAL-1.3), on SCR-11.
+- UI-2.1 completed: models and training runs join datasets and pipeline jobs in the dashboard.
+- The phase-2 acceptance run, measured, with a README section; phase 3 (M12, M13) detailed for approval.
+
+**Done when**
+
+- [ ] `test_MON_2_6_*`: each alert fires in a simulated test
+- [ ] `test_MON_2_7_*`: an alert and its action are shown together in the event log
+- [ ] `test_MON_3_2_*`: the diagnostic fires in a simulated slow-loader test
+- [ ] `test_MON_3_3_*`: an unload event shows VRAM before and after
+- [ ] `test_MON_4_4_*`: two runs' curves overlay
+- [ ] `test_MON_4_5_*` (P2, if time): trends shown for the last N jobs
+- [ ] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included
+- [ ] `test_UI_2_2_*`: charts for any dataset version
+- [ ] `test_EVAL_1_3_*`: three or more models compared in one view
+- [ ] `test_DATA_3_5_*` (P2, if time): the diff lists the changes correctly
+- [ ] G3 for SCR-13, SCR-03 v2 and SCR-11 v2
+- [ ] Phase-2 acceptance (`tests/acceptance`): a CNN built on SCR-08, trained on a dataset version, test metrics on SCR-11; NFR-1, NFR-2, NFR-4 and NFR-5 measured for training
+- [ ] `test_NFR_11_*` rerun with alerts and diagnostics on
+- [ ] Meta-test green: every phase-2 P0 (32) has a passing ID-named test
+- [ ] M12–M13 detailed and approved by the owner
+- [ ] Owner's OK to merge; tag `phase-2`
+
+---
+
 ## Later phases (outline)
 
-Every numbered requirement is assigned to exactly one milestone. Scope and checklists are written at each phase kickoff.
+Every numbered requirement is assigned to exactly one milestone. Scope and checklists are written at each phase kickoff. M8–M11 are detailed above; once that detail is approved, it replaces their rows here.
 
 | | Scope | Requirements |
 |---|---|---|
