@@ -1,0 +1,132 @@
+"""MON-2.1, RUN-1.1 slice, UI-2.1: the endpoints the phase-1 screens need beyond §3.2:
+``GET /system`` (SCR-01), the config schemas (SCR-02's drawer) and the SCR-07 job filters.
+"""
+
+from pathlib import Path
+
+import pytest
+
+from stratal.core.bus import Bus
+from stratal.testing.harness import Runner
+from stratal.testing.pipeline import PipelineApi
+from stratal.testing.synthetic import make_image_folder
+
+pytestmark = pytest.mark.integration
+
+V1 = "/api/v1"
+
+
+def test_MON_2_1_system_reports_totals_and_the_vram_cap(runner: Runner, bus: Bus) -> None:
+    client = PipelineApi(runner).client
+
+    unknown = client.get(f"{V1}/system").json()
+    assert unknown["vram_total_mb"] is None and unknown["vram_cap_mb"] is None, "null, not zero"
+
+    bus.set_system(
+        {
+            "gpu_name": "RTX 4050",
+            "gpu_error": None,
+            "vram_total_mb": 6141.0,
+            "ram_total_mb": 10000.0,
+            "cpu_count": 16,
+        }
+    )
+    known = client.get(f"{V1}/system").json()
+
+    assert known["gpu_name"] == "RTX 4050" and known["ram_total_mb"] == 10000.0
+    assert known["vram_cap_mb"] == pytest.approx(6141.0 * known["vram_cap_fraction"])
+
+
+def test_UI_2_1_config_schemas_and_defaults_cover_every_stage(runner: Runner) -> None:
+    client = PipelineApi(runner).client
+
+    names = [s["name"] for s in client.get(f"{V1}/config/schemas").json()["items"]]
+    assert names[:7] == ["ingest", "clean", "preprocess", "label", "filter", "split", "evaluate"]
+
+    schema = client.get(f"{V1}/config/schemas/preprocess").json()
+    assert schema["type"] == "object" and "max_side" in schema["properties"]
+    defaults = client.get(f"{V1}/config/defaults").json()
+    assert defaults["preprocess"]["max_side"] == schema["properties"]["max_side"]["default"]
+    assert client.get(f"{V1}/config/schemas/nope").json()["code"] == "not_found"
+
+
+@pytest.mark.usefixtures("fake_units")
+def test_RUN_1_1_jobs_filter_by_state_list_and_dataset_with_counts(
+    runner: Runner, tmp_path: Path
+) -> None:
+    api = PipelineApi(runner)
+    source = make_image_folder(tmp_path / "src", valid=6).root
+    body = {
+        "source": {"path": str(source)},
+        "stages": {"ingest": {"min_size": 32}},
+        "until_stage": "ingest",
+    }
+    done = api.run({"dataset": "m6a", **body})
+    queued = api.post({"dataset": "m6b", **body}).json()  # never run: stays queued
+    api.queued.clear()
+    client = api.client
+
+    both = client.get(f"{V1}/jobs", params={"state": "completed,queued"}).json()
+    assert {j["id"] for j in both["items"]} == {done["id"], queued["id"]}
+    assert both["counts"]["completed"] == 1 and both["counts"]["queued"] == 1
+    assert both["counts"]["failed"] == 0
+
+    only_b = client.get(f"{V1}/jobs", params={"dataset": "m6b"}).json()
+    assert [j["id"] for j in only_b["items"]] == [queued["id"]]
+    assert only_b["counts"]["completed"] == 0, "counts honour the other filters"
+
+    by_id = client.get(f"{V1}/jobs", params={"q": queued["id"].removeprefix("job_")}).json()
+    assert [j["id"] for j in by_id["items"]] == [queued["id"]]
+    assert by_id["counts"]["queued"] == 1 and by_id["counts"]["completed"] == 0
+    nothing = client.get(f"{V1}/jobs", params={"q": "job_9999"}).json()
+    assert nothing["items"] == [] and sum(nothing["counts"].values()) == 0
+
+    bad = client.get(f"{V1}/jobs", params={"state": "running,lost"})
+    assert bad.status_code == 422 and bad.json()["code"] == "validation_error"
+
+
+def test_MON_4_3_events_tail_and_minimum_level(runner: Runner) -> None:
+    """The activity log opens on its newest lines and filters by "this level and above"."""
+    from sqlalchemy.orm import Session
+
+    from stratal.db.engine import get_engine
+    from stratal.mon.events import Event
+    from stratal.mon.store import insert_events
+
+    events = [Event(job_id="job_0001", stage="ingest", message=f"step {i}") for i in range(6)]
+    events.insert(
+        2,
+        Event(
+            job_id="job_0001",
+            stage="clean",
+            level="WARN",
+            message="many copies",
+            reason="above 1%",
+            suggested_action="check the source",
+        ),
+    )
+    events.append(
+        Event(
+            job_id="job_0002",
+            stage="label",
+            level="ERROR",
+            message="oom",
+            reason="VRAM full",
+            suggested_action="smaller batch",
+        )
+    )
+    with Session(get_engine()) as session, session.begin():
+        insert_events(session, events)
+    client = PipelineApi(runner).client
+
+    tail = client.get(f"{V1}/events", params={"tail": True, "limit": 3}).json()
+    assert [e["message"] for e in tail["items"]] == ["step 4", "step 5", "oom"]
+    assert tail["next_cursor"] is None, "a tail is the newest page"
+
+    warn_up = client.get(f"{V1}/events", params={"min_level": "WARN"}).json()["items"]
+    assert [e["level"] for e in warn_up] == ["WARN", "ERROR"]
+
+    job = client.get(
+        f"{V1}/jobs/job_0001/events", params={"tail": True, "limit": 2, "min_level": "INFO"}
+    )
+    assert job.status_code == 404, "the job row does not exist; events alone do not make a job"

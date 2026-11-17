@@ -17,6 +17,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from stratal.api.jobs import event_view, events_after
+from stratal.api.schemas import StreamMessages
 from stratal.core.bus import LIVE_GLOBAL, live_channel, subscribe
 from stratal.core.settings import get_settings
 from stratal.db.engine import get_engine
@@ -26,6 +27,13 @@ router = APIRouter(tags=["streams"])
 
 PING_S = 15.0
 _BATCH = 500
+STREAM_DOC: dict[int | str, dict[str, Any]] = {
+    200: {
+        "model": StreamMessages,
+        "description": "text/event-stream. Each SSE message name carries the payload of the "
+        "field of that name (API.md §4).",
+    }
+}
 
 
 def sse(event: str, data: Any, event_id: int | None = None) -> str:
@@ -62,6 +70,9 @@ async def _stream(
     latest_process: dict[str, Any] = {}
     quiet = 0.0
     first = True
+    # A comment line at once, so proxies pass the headers on and clients see the stream
+    # open now, not at the first event or ping (MON-1.4).
+    yield ": connected\n\n"
     async for received in subscribe(get_settings().redis_url, [channel], idle_s=idle_s):
         if await request.is_disconnected():
             break
@@ -110,7 +121,7 @@ def _response(generator: AsyncIterator[str]) -> StreamingResponse:
     )
 
 
-@router.get("/jobs/{job_id}/stream")
+@router.get("/jobs/{job_id}/stream", responses=STREAM_DOC)
 async def job_stream(
     job_id: str,
     request: Request,
@@ -123,7 +134,7 @@ async def job_stream(
     return _response(_stream(request, job_id=job_id, cursor=cursor, idle_s=1.0))
 
 
-@router.get("/stream")
+@router.get("/stream", responses=STREAM_DOC)
 async def global_stream(
     request: Request,
     last_event_id: Annotated[str | None, Header()] = None,

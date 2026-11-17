@@ -68,6 +68,7 @@ class CleanConfig(BaseModel):
     algorithm_version: int = Field(
         default=dedupe.ALGORITHM_VERSION,
         ge=1,
+        json_schema_extra={"readOnly": True},
         description="Version of the owner's dedupe code. A new value gives a new version ID "
         "and recomputes cached pHash values.",
     )

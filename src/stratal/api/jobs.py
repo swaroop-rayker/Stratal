@@ -7,10 +7,12 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from stratal.api import schemas
 from stratal.core.bus import LIVE_GLOBAL, Bus
+from stratal.core.errors import ValidationFailed
 from stratal.core.settings import get_settings
 from stratal.db.engine import get_engine
 from stratal.db.models import Event as EventRow
@@ -19,7 +21,7 @@ from stratal.mon.events import Event, Level
 from stratal.mon.store import insert_events
 from stratal.runtime import jobs as job_service
 from stratal.runtime.jobs import Enqueue, PipelineRequest
-from stratal.runtime.states import ACTIVE
+from stratal.runtime.states import ACTIVE, TRANSITIONS
 
 router = APIRouter()
 
@@ -51,6 +53,7 @@ Db = Annotated[Session, Depends(get_session)]
 Queue = Annotated[EnqueueFn, Depends(get_enqueue)]
 Redis = Annotated[Bus, Depends(get_bus)]
 Limit = Annotated[int, Query(ge=1, le=500)]
+JOB_STATES = frozenset(TRANSITIONS)
 
 
 def _iso(value: datetime) -> str:
@@ -94,19 +97,31 @@ def events_after(
     job_id: str | None = None,
     level: str | None = None,
     stage: str | None = None,
+    min_level: str | None = None,
+    tail: bool = False,
 ) -> list[EventRow]:
+    """Events after a cursor, oldest first. With ``tail``, the newest ``limit`` that match
+    (still oldest first), so a log can open on its latest lines (SCR-04, MON-4.3)."""
     query = select(EventRow).where(EventRow.id > after)
     if job_id is not None:
         query = query.where(EventRow.job_id == job_id)
     if level is not None:
         query = query.where(EventRow.level == level)
+    if min_level is not None:
+        query = query.where(EventRow.level.in_(LEVELS[LEVELS.index(min_level) :]))
     if stage is not None:
         query = query.where(EventRow.stage == stage)
+    if tail:
+        newest = list(session.scalars(query.order_by(EventRow.id.desc()).limit(limit)))
+        return newest[::-1]
     return list(session.scalars(query.order_by(EventRow.id).limit(limit)))
 
 
-def _page(rows: list[EventRow], limit: int) -> Json:
-    full = len(rows) == limit
+LEVELS = ["DEBUG", "INFO", "WARN", "ERROR"]
+
+
+def _page(rows: list[EventRow], limit: int, *, tail: bool = False) -> Json:
+    full = len(rows) == limit and not tail  # a tail is already the newest page
     return {
         "items": [event_view(row) for row in rows],
         "next_cursor": str(rows[-1].id) if full else None,
@@ -116,7 +131,7 @@ def _page(rows: list[EventRow], limit: int) -> Json:
 # -- jobs ----------------------------------------------------------------------
 
 
-@router.post("/jobs", status_code=202, tags=["jobs"])
+@router.post("/jobs", status_code=202, tags=["jobs"], response_model=schemas.Job)
 def create_job(request: PipelineRequest, session: Db, enqueue: Queue, bus: Redis) -> Json:
     """Start a job. Phase 1 accepts ``kind: pipeline``."""
     with session.begin():
@@ -127,35 +142,57 @@ def create_job(request: PipelineRequest, session: Db, enqueue: Queue, bus: Redis
     return view
 
 
-@router.get("/jobs", tags=["jobs"])
+@router.get("/jobs", tags=["jobs"], response_model=schemas.JobList)
 def list_jobs(
     session: Db,
     state: str | None = None,
     kind: str | None = None,
+    dataset: str | None = None,
+    q: str | None = None,
     limit: Limit = 50,
     cursor: str | None = None,
 ) -> Json:
-    """Jobs, newest first."""
-    query = select(Job)
-    if state is not None:
-        query = query.where(Job.state == state)
+    """Jobs, newest first. ``state`` takes a comma-separated list (``running,queued``);
+    ``q`` keeps jobs whose ID contains it; ``counts`` gives jobs per state under the other
+    filters (SCR-07, RUN-1.1 slice)."""
+    states = [s.strip() for s in state.split(",") if s.strip()] if state else []
+    unknown = sorted(set(states) - JOB_STATES)
+    if unknown:
+        raise ValidationFailed(
+            f"Unknown job state {unknown[0]!r}.",
+            suggested_action=f"Use one or more of: {', '.join(sorted(JOB_STATES))}.",
+            errors=[{"loc": ["query", "state"], "msg": "unknown state", "code": "enum"}],
+        )
+    filters: list[Any] = []
     if kind is not None:
-        query = query.where(Job.kind == kind)
+        filters.append(Job.kind == kind)
+    if dataset is not None:
+        filters.append(Job.spec["dataset"].astext == dataset)
+    if q:
+        filters.append(Job.id.contains(q.strip(), autoescape=True))
+    query = select(Job).where(*filters)
+    if states:
+        query = query.where(Job.state.in_(states))
     if cursor is not None:
         query = query.where(Job.id < cursor)
     rows = list(session.scalars(query.order_by(Job.id.desc()).limit(limit)))
+    counted = session.execute(
+        select(Job.state, func.count()).where(*filters).group_by(Job.state)
+    ).all()
+    counts = {s: 0 for s in sorted(JOB_STATES)} | {s: int(n) for s, n in counted}
     return {
         "items": [job_service.job_view(session, job) for job in rows],
         "next_cursor": rows[-1].id if len(rows) == limit else None,
+        "counts": counts,
     }
 
 
-@router.get("/jobs/{job_id}", tags=["jobs"])
+@router.get("/jobs/{job_id}", tags=["jobs"], response_model=schemas.Job)
 def get_job(job_id: str, session: Db) -> Json:
     return job_service.job_view(session, job_service.get_job(session, job_id))
 
 
-@router.post("/jobs/{job_id}/cancel", status_code=202, tags=["jobs"])
+@router.post("/jobs/{job_id}/cancel", status_code=202, tags=["jobs"], response_model=schemas.Job)
 def cancel_job(job_id: str, session: Db, bus: Redis) -> Json:
     """Request cancellation. ``409`` if the job has already finished."""
     with session.begin():
@@ -167,7 +204,7 @@ def cancel_job(job_id: str, session: Db, bus: Redis) -> Json:
     return view
 
 
-@router.post("/jobs/{job_id}/retry", status_code=202, tags=["jobs"])
+@router.post("/jobs/{job_id}/retry", status_code=202, tags=["jobs"], response_model=schemas.Job)
 def retry_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
     """Requeue a failed job. Finished stages are reused. ``409`` if it is not failed."""
     with session.begin():
@@ -179,7 +216,7 @@ def retry_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
     return view
 
 
-@router.get("/jobs/{job_id}/events", tags=["jobs"])
+@router.get("/jobs/{job_id}/events", tags=["jobs"], response_model=schemas.EventList)
 def job_events(
     job_id: str,
     session: Db,
@@ -188,14 +225,25 @@ def job_events(
     after: int = 0,
     limit: Limit = 50,
     cursor: str | None = None,
+    min_level: Annotated[Level | None, Query(description="This level and above.")] = None,
+    tail: Annotated[bool, Query(description="The newest `limit` events, oldest first.")] = False,
 ) -> Json:
     job_service.get_job(session, job_id)
     start = int(cursor) if cursor and cursor.isdigit() else after
-    rows = events_after(session, after=start, limit=limit, job_id=job_id, level=level, stage=stage)
-    return _page(rows, limit)
+    rows = events_after(
+        session,
+        after=start,
+        limit=limit,
+        job_id=job_id,
+        level=level,
+        stage=stage,
+        min_level=min_level,
+        tail=tail,
+    )
+    return _page(rows, limit, tail=tail)
 
 
-@router.get("/jobs/{job_id}/telemetry", tags=["jobs"])
+@router.get("/jobs/{job_id}/telemetry", tags=["jobs"], response_model=schemas.Telemetry)
 def job_telemetry(
     job_id: str,
     session: Db,
@@ -225,7 +273,7 @@ def job_telemetry(
 # -- activity log and telemetry ------------------------------------------------
 
 
-@router.get("/events", tags=["monitoring"])
+@router.get("/events", tags=["monitoring"], response_model=schemas.EventList)
 def all_events(
     session: Db,
     level: Level | None = None,
@@ -234,14 +282,25 @@ def all_events(
     after: int = 0,
     limit: Limit = 50,
     cursor: str | None = None,
+    min_level: Annotated[Level | None, Query(description="This level and above.")] = None,
+    tail: Annotated[bool, Query(description="The newest `limit` events, oldest first.")] = False,
 ) -> Json:
     """Events across all jobs, oldest first (MON-4.3)."""
     start = int(cursor) if cursor and cursor.isdigit() else after
-    rows = events_after(session, after=start, limit=limit, job_id=job_id, level=level, stage=stage)
-    return _page(rows, limit)
+    rows = events_after(
+        session,
+        after=start,
+        limit=limit,
+        job_id=job_id,
+        level=level,
+        stage=stage,
+        min_level=min_level,
+        tail=tail,
+    )
+    return _page(rows, limit, tail=tail)
 
 
-@router.get("/telemetry/latest", tags=["monitoring"])
+@router.get("/telemetry/latest", tags=["monitoring"], response_model=schemas.ResourceSample | None)
 def latest_sample(session: Db, response: Response) -> Json | None:
     """The most recent resource sample; ``204`` if the sampler has not written one yet."""
     row = session.scalars(

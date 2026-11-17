@@ -17,6 +17,7 @@ EVENT_STREAM = "stratal:events"
 COLLECTOR_GROUP = "collector"
 LIVE_GLOBAL = "stratal:live:global"
 ACTIVE_HASH = "stratal:active"
+SYSTEM_KEY = "stratal:system"
 
 
 def live_channel(job_id: str) -> str:
@@ -121,6 +122,15 @@ class Bus:
     def get_active(self) -> dict[str, dict[str, str]]:
         raw: Any = self._client.hgetall(ACTIVE_HASH)
         return {job_id: json.loads(value) for job_id, value in raw.items()}
+
+    # -- machine description: monitor -> API (GET /system) ------------------
+
+    def set_system(self, info: dict[str, Any]) -> None:
+        self._client.set(SYSTEM_KEY, json.dumps(info, separators=(",", ":")))
+
+    def get_system(self) -> dict[str, Any] | None:
+        raw: Any = self._client.get(SYSTEM_KEY)
+        return json.loads(raw) if raw else None
 
     def flush_all(self) -> None:
         """Empty this Redis database. For tests, which use their own database number."""

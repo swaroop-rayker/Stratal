@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
 | Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -272,17 +272,17 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Done when**
 
-- [ ] Each screen built only after its G2 approval is logged
-- [ ] `test_MON_4_1_*`: the live job view renders and updates during a job
-- [ ] `test_MON_4_2_*`: the timeline shows every stage; clicking one shows its events and charts
-- [ ] `test_MON_4_3_*`: filters by level, stage and job work
-- [ ] Per screen: screenshot compared with the approved mockup, differences listed and signed off (G3)
-- [ ] Per screen: contrast and keyboard path checked
-- [ ] No raw hex colours outside the token files (lint)
-- [ ] Frontend typecheck and build pass
-- [ ] Demo: run a pipeline and follow it in the browser
-- [ ] Docs updated
-- [ ] Owner's OK to merge
+- [x] Each screen built only after its G2 approval is logged (all G2 rows 2026-11-15, before any screen code)
+- [x] `test_MON_4_1_*`: the live job view renders and updates during a job (2026-11-17; `test_MON_4_1_live_view_renders_and_updates_during_a_job`, Vitest with a fake event source)
+- [x] `test_MON_4_2_*`: the timeline shows every stage; clicking one shows its events and charts (2026-11-17)
+- [x] `test_MON_4_3_*`: filters by level, stage and job work (2026-11-17; two Vitest tests, and `test_MON_4_3_events_tail_and_minimum_level` against the API)
+- [x] Per screen: screenshot compared with the approved mockup, differences listed and signed off (G3): SCR-01 to SCR-07, 2026-11-16 to 2026-11-17, in `docs/design/g3/` and `docs/design/APPROVALS.md`
+- [x] Per screen: contrast and keyboard path checked. Two design-system contrast rules came out of it: light state text on its tint (SCR-04) and dark pills on selected rows (SCR-07)
+- [x] No raw hex colours outside the token files (lint: `scripts/no-raw-hex.mjs`, in `check.ps1`)
+- [x] Frontend typecheck and build pass (in `check.ps1`; the bundle is 1.5 MB, code-splitting left for later)
+- [x] Demo: run a pipeline and follow it in the browser (2026-11-17). From SCR-02, "Continue the pipeline from here" on demo's preprocess version `ds_be4049a8a755` started `job_0024` (label, filter, split, evaluate); SCR-04 followed it live to completion in 18 s (captions reused from cache), and SCR-06 showed report 11: 1,500 of 1,535 rows kept, acceptance not measured. Earlier, SCR-06 built report 10 and followed `job_0021` in place, and SCR-07 cancelled and retried live jobs. The SCR-07 check found two identical jobs racing to commit one version (`job_0022`, reported to the owner)
+- [x] Docs updated (2026-11-17: API, DATA_MODEL, DECISIONS, ARCHITECTURE, README, CLAUDE.md, SCREENS, DESIGN-SYSTEM, APPROVALS, the G3 records; learning notes)
+- [x] Owner's OK to merge ("OK to merge", 2026-11-17)
 
 ## M7 — Phase-1 acceptance
 

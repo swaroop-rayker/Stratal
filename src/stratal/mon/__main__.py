@@ -71,6 +71,7 @@ def main() -> None:
         stop.wait(settings.watchdog_interval_s)
 
     log.info("monitor_started", gpu_available=probe.gpu.available, gpu_error=probe.gpu.error)
+    publish_system(registry_bus, probe)
     threads = [
         _forever("collector", stop, lambda: void(collector.run_once())),
         _forever("sampler", stop, lambda: sampler.run(stop)),
@@ -81,6 +82,27 @@ def main() -> None:
     for thread in threads:
         thread.join(3.0)
     log.info("monitor_stopped")
+
+
+def publish_system(bus: Bus, probe: MachineProbe) -> None:
+    """Describe the machine once for ``GET /system`` (SCR-01). The API has no NVML."""
+    import os
+
+    import psutil
+
+    gpu = probe.gpu.read()
+    try:
+        bus.set_system(
+            {
+                "gpu_name": probe.gpu.name(),
+                "gpu_error": probe.gpu.error,
+                "vram_total_mb": gpu.vram_total_mb if gpu is not None else None,
+                "ram_total_mb": psutil.virtual_memory().total / 2**20,
+                "cpu_count": os.cpu_count(),
+            }
+        )
+    except Exception as exc:
+        log.warning("system_info_not_published", reason=str(exc)[:200])
 
 
 def void(_value: object) -> None:

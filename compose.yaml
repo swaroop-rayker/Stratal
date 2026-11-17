@@ -128,6 +128,45 @@ services:
     mem_limit: 256m
     restart: unless-stopped
 
+  # The web UI's dev server (SPEC §7.4, UI-2.1): Vite on 127.0.0.1:5173, /api proxied to
+  # the api service. 'docker compose run --rm --no-deps frontend npm run <script>' runs the
+  # frontend's checks with the frontend-tools service below.
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    image: stratal-frontend
+    environment:
+      STRATAL_API_URL: http://api:8000
+    volumes:
+      - ./frontend:/app/frontend
+      - ./assets:/app/assets:ro
+      - stratal-node-modules:/app/frontend/node_modules
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      - api
+    mem_limit: 400m
+    restart: unless-stopped
+
+  # The frontend's checks need more heap than the dev server: run on demand only, like
+  # 'dev'. docker compose run --rm frontend-tools npm run typecheck (lint, test, build)
+  frontend-tools:
+    profiles: ["dev"]
+    image: stratal-frontend
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    environment:
+      STRATAL_API_URL: http://api:8000
+      NODE_OPTIONS: --max-old-space-size=1200
+    volumes:
+      - ./frontend:/app/frontend
+      - ./assets:/app/assets:ro
+      - stratal-node-modules:/app/frontend/node_modules
+    command: ["npm", "run", "typecheck"]
+    mem_limit: 1536m
+
   dev:
     profiles: ["dev"]
     build:
@@ -178,3 +217,4 @@ volumes:
   stratal-pg:
   stratal-redis:
   stratal-data:
+  stratal-node-modules:

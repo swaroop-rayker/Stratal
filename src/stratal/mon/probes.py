@@ -77,6 +77,14 @@ class GpuProbe:
     def available(self) -> bool:
         return self._handle is not None
 
+    def name(self) -> str | None:
+        """The GPU's product name, e.g. 'NVIDIA GeForce RTX 4050 Laptop GPU'."""
+        nvml, handle = self._nvml, self._handle
+        if nvml is None or handle is None:
+            return None
+        value: Any = self._try(lambda: nvml.nvmlDeviceGetName(handle))
+        return value.decode() if isinstance(value, bytes) else value
+
     def _try(self, read: Callable[[], Any]) -> Any:
         try:
             return read()

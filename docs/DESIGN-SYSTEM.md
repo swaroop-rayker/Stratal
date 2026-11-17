@@ -137,7 +137,7 @@ All are in the preview with their variants and states. States shown where they a
 |---|---|
 | `docs/DESIGN-SYSTEM.md` | this file, v1 |
 | `docs/design/system-preview.html` | v1 |
-| `tokens.css` and the Tailwind theme | written only after approval (M6) |
+| `tokens.css` and the Tailwind theme | written in M6 (2026-11-16): `frontend/src/styles/tokens.css` is the preview's token block copied unchanged; `theme.css` maps Tailwind's colours, spacing, type, radii and shadows onto those variables and removes Tailwind's own; `components.css` is the preview's component CSS. `npm run lint` rejects a raw hex colour anywhere else |
 
 ## Open points for the owner
 
@@ -150,6 +150,10 @@ All are in the preview with their variants and states. States shown where they a
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-14 | First version, for Gate 0 review |
+| v1 (SCR-04 G3) | 2026-11-17 | Light theme: text in a state or severity colour that sits on its own tint (status pills, timeline segments, WARN and ERROR words on tinted log rows) is drawn `color-mix(in srgb, <colour> 80%, var(--text-primary))`, and time and stage on tinted log rows use `text-secondary`. Measured against the tint rather than the surface, the plain colours fell to 3.9–4.6:1; now at least 4.98:1. Dark unchanged. Approved by the owner at SCR-04's Gate 3 |
+| v1 (SCR-07 G3) | 2026-11-17 | Dark theme: a status pill on a selected or hovered table row (both drawn in `accent-soft`) is drawn `color-mix(in srgb, <state colour> 70%, var(--text-primary))`. Behind the row tint the plain colours fell to 3.61–4.39:1 for five states; now at least 4.94:1. The 80% mix used in light left Cancelled at 4.46:1. Approved by the owner at SCR-07's Gate 3 |
+| v1 (SCR-02 G3) | 2026-11-16 | Secondary text inside a selected row (accent-soft) uses `text-secondary`, not `text-muted`, which measured 4.45:1 there in dark. Approved by the owner at SCR-02's Gate 3 |
+| v1 (SCR-01 G3) | 2026-11-16 | The Idle pill (a word, not a job state) uses `text-secondary`; `text-muted` on its own tint measured 4.34:1 in light (first reported as 3.78; corrected 2026-11-17). Approved by the owner at SCR-01's Gate 3 |
 | v1 (SCR-06) | 2026-11-15 | The chart icon joins the set. Approved with the SCR-06 hi-fi mockup |
 | v1 (SCR-05) | 2026-11-15 | The note icon joins the set. Approved with the SCR-05 hi-fi mockup |
 | v1 (SCR-03) | 2026-11-15 | Three icons join the set (eye, report, grid). Filters are a group of small buttons with a pressed state (accent-soft fill, accent border), since there is no chip component. Approved with the SCR-03 hi-fi mockup |

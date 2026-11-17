@@ -1,0 +1,79 @@
+/* SCR-03 version detail and lineage, copied from docs/design/screens/SCR-03_v1.html (G2
+   approved 2026-11-15), scoped under .scr03. Tokens only. Changes for a live page: "live:". */
+.content:has(> .scr03) { padding: var(--sp-4) var(--sp-5); overflow: hidden; }
+.scr03 { display: flex; flex-direction: column; gap: var(--sp-3); height: 100%; min-height: 0; }
+.scr03 .vhead { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.scr03 .vhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); display: flex; align-items: center; gap: var(--sp-2); }
+.scr03 .vhead .sub { color: var(--text-muted); font-size: var(--fs-12); margin-top: var(--sp-1); display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; } .scr03 .vhead .sub .mono { color: var(--text-secondary); }
+.scr03 .vhead .sub svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.scr03 .stage-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.scr03 .lineage { display: flex; align-items: center; padding: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.scr03 .node.pending { --c: var(--state-running); border-style: dashed; background: transparent; box-shadow: none; }
+.scr03 .node.done { --c: var(--state-completed); }
+.scr03 .fork { display: flex; flex-direction: column; gap: var(--sp-2); } .scr03 .fork .row { display: flex; align-items: center; }
+.scr03 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
+.scr03 .stile { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c); border-radius: var(--r-md); text-align: left; cursor: pointer; }
+.scr03 .stile:hover, .scr03 .stile.is-hover { border-color: var(--border-strong); border-left-color: var(--c); }
+.scr03 .stile[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); border-left-color: var(--c); }
+.scr03 .stile .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.scr03 .stile .k i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); }
+.scr03 .stile .v { font: var(--fw-medium) var(--fs-20)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.scr03 .stile .d { font-size: var(--fs-11); color: var(--text-muted); }
+.scr03 .toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.scr03 .group-btns { display: inline-flex; }
+.scr03 .group-btns .btn { border-radius: 0; margin-left: -1px; } .scr03 .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .scr03 .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.scr03 .btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.scr03 .search { position: relative; width: 200px; } .scr03 .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.scr03 .search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .scr03 .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.scr03 .thumb { width: 32px; height: 32px; border-radius: var(--r-sm); border: var(--bw) solid var(--border); display: block; background: linear-gradient(135deg, var(--a, var(--seq-3)), var(--b, var(--seq-5))); }
+.scr03 .rs { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-12); } .scr03 .rs i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.scr03 .rs.acc { --c: var(--success); } .scr03 .rs.rej { --c: var(--danger); } .scr03 .rs.dup { --c: var(--text-muted); } .scr03 .rs.fil { --c: var(--warning); }
+.scr03 .reason { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.scr03 .muted { color: var(--text-muted); }
+.scr03 .t td.hash { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); text-align: right; }
+.scr03 .notice { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--warning-soft); border: var(--bw) solid color-mix(in srgb, var(--warning) 45%, transparent); font-size: var(--fs-12); }
+.scr03 .notice svg.i { color: var(--warning); margin-top: 2px; }
+.scr03 .kv { display: grid; grid-template-columns: 150px 1fr; gap: var(--sp-2) var(--sp-3); font-size: var(--fs-12); } .scr03 .kv > span:nth-child(odd) { color: var(--text-muted); } .scr03 .kv .mono { word-break: break-all; font-size: var(--fs-12); }
+.scr03 h3.sec { margin: 0 0 var(--sp-2); font-size: var(--fs-12); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.scr03 .reason-bar { display: inline-block; height: 6px; border-radius: var(--r-pill); background: var(--c); vertical-align: middle; }
+/* The SCR-03 mockup's own table density. */
+.scr03 .t th { padding: var(--sp-2) var(--sp-2); position: sticky; top: 0; z-index: 1; }
+.scr03 .t td { padding: 0 var(--sp-2); height: 44px; }
+/* live: links and buttons drawn as plain elements in the mockup. */
+.scr03 .lineage { overflow-x: auto; }
+.scr03 a.node { color: inherit; text-decoration: none; }
+.scr03 a.node:hover { border-color: var(--border-strong); }
+.scr03 .node.failed { --c: var(--state-failed); } .scr03 .node.running { --c: var(--state-running); }
+.scr03 .node.cancelled { --c: var(--state-cancelled); } .scr03 .node.stalled { --c: var(--state-stalled); }
+.scr03 .stile { font: inherit; color: inherit; }
+.scr03 .search input.input { color: var(--text-primary); width: 100%; }
+.scr03 .panel { display: flex; flex-direction: column; gap: var(--sp-3); flex: 1; min-height: 0; }
+.scr03 .rows-wrap { flex: 1; min-height: 0; overflow: auto; }
+.scr03 .rows-wrap table { table-layout: auto; }
+.scr03 .t tbody tr { cursor: pointer; }
+.scr03 img.thumb { object-fit: cover; background: var(--surface-raised); }
+.scr03 .t td.caption { white-space: normal; max-width: 420px; line-height: 1.35; }
+.scr03 .foot-note { margin: 0; font-size: var(--fs-12); color: var(--text-muted); }
+/* live: the grid view (the mockup has the toggle, not the grid): image cards in rows. */
+.scr03 .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--sp-3); padding: var(--sp-1); }
+.scr03 .gcard { all: unset; display: flex; flex-direction: column; gap: var(--sp-1); cursor: pointer; border-radius: var(--r-md); }
+.scr03 .gcard img, .scr03 .gcard .noimg { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-md); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.scr03 .gcard .noimg { display: grid; place-items: center; color: var(--text-muted); font-size: var(--fs-11); }
+.scr03 .gcard span { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scr03 .gcard[aria-selected=true] img, .scr03 .gcard[aria-selected=true] .noimg { box-shadow: 0 0 0 2px var(--accent); }
+.scr03 .gcard:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+@media (max-width: 1279px) {
+  .scr03 .stile .d { display: none; }
+  .scr03 .vhead h1 { font-size: var(--fs-16); }
+  .scr03 .vhead .sub, .scr03 .wide-action { display: none; }
+  .scr03 .node span { display: none; }
+}
+@media (min-width: 1280px) { .scr03 .narrow-action { display: none; } }
+.scr03 .panel[hidden] { display: none; } /* live: Radix keeps inactive tab panels in the DOM, hidden */
+/* Design-system rule from SCR-02's G3: secondary text on the accent-soft selection uses
+   text-secondary (text-muted measured 4.45:1 there). Applied to selected rows and pressed tiles. */
+.scr03 tr[aria-selected=true] .muted, .scr03 tr[aria-selected=true] .hash, .scr03 tr[aria-selected=true] td.muted { color: var(--text-secondary); }
+.scr03 .stile[aria-pressed=true] .d { color: var(--text-secondary); }
+.scr03 .node, .scr03 .edge { flex: none; } /* live: nodes keep their width; the strip scrolls (frame I) */
+.scr03 .lineage { position: relative; } /* live: offsetLeft is measured from the strip */
+.scr03 .wide-action { display: contents; } @media (max-width: 1279px) { .scr03 .vhead .wide-action { display: none; } }

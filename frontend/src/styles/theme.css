@@ -1,0 +1,78 @@
+/* Tailwind theme on the design-system tokens (DESIGN-SYSTEM.md b). Every utility resolves
+   to a CSS variable from tokens.css, so a class and a variable can never disagree.
+   Tailwind's own palette, spacing and fonts are removed: a one-off value has no class.
+   Preflight is not imported; components.css carries the design system's own base. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme inline {
+  --color-*: initial;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
+  --color-info-soft: var(--info-soft);
+  --color-state-queued: var(--state-queued);
+  --color-state-running: var(--state-running);
+  --color-state-paused: var(--state-paused);
+  --color-state-completed: var(--state-completed);
+  --color-state-failed: var(--state-failed);
+  --color-state-cancelled: var(--state-cancelled);
+  --color-state-stalled: var(--state-stalled);
+  --color-res-cpu: var(--res-cpu);
+  --color-res-ram: var(--res-ram);
+  --color-res-gpu: var(--res-gpu);
+  --color-res-vram: var(--res-vram);
+  --color-res-temp: var(--res-temp);
+
+  --spacing-*: initial;
+  --spacing-0: 0;
+  --spacing-1: var(--sp-1);
+  --spacing-2: var(--sp-2);
+  --spacing-3: var(--sp-3);
+  --spacing-4: var(--sp-4);
+  --spacing-5: var(--sp-5);
+  --spacing-6: var(--sp-6);
+  --spacing-8: var(--sp-8);
+  --spacing-10: var(--sp-10);
+  --spacing-12: var(--sp-12);
+  --spacing-16: var(--sp-16);
+
+  --font-*: initial;
+  --font-ui: var(--font-ui);
+  --font-mono: var(--font-mono);
+  --text-*: initial;
+  --text-11: var(--fs-11);
+  --text-12: var(--fs-12);
+  --text-13: var(--fs-13);
+  --text-14: var(--fs-14);
+  --text-16: var(--fs-16);
+  --text-20: var(--fs-20);
+  --text-24: var(--fs-24);
+  --radius-*: initial;
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-pill: var(--r-pill);
+  --shadow-*: initial;
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+  --shadow-3: var(--shadow-3);
+}

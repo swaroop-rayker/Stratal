@@ -443,6 +443,68 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The check compares pHash values bit by bit and duplicate-group IDs, without using the owner's groups. On 10k rows it compares about 17 million cross-split pairs in plain Python.
 - **Why:** The report then travels with the version, and a reused version keeps it. A failing check is a defect in the grouping, and the version is still inspectable, so the leaks are reported but the version is kept. The fakes join no pairs, so they would leak on folders that have near pairs, and the stage still has to run there.
 
+## M6: phase-1 screens
+
+**Rows are filtered by reading the whole manifest with PyArrow** (M6, DATA-3.1, UI-2.1; agent)
+- **What:** `GET /versions/{id}/rows` reads the version's Parquet file, filters it with PyArrow compute expressions, and returns one page in `row_key` order, with the count of matching rows.
+- **How:** `storage.manifest.select_rows`; the cursor is the last row key of a page, which is stable because manifests are sorted by `row_key` and never change (INV-01).
+- **Why:** A 10k-row manifest is 1–2 MB, read and filtered in milliseconds. DuckDB or an index would add a dependency for no measurable gain at phase-1 sizes; streaming in batches would make `matched` cost a second pass.
+
+**Thumbnails are made per request and cached by the browser** (M6, DATA-3.4, UI-2.1; agent)
+- **What:** `GET /blobs/{sha256}?w=` decodes, turns upright and shrinks the image on each request, and marks the response immutable.
+- **How:** Pillow's JPEG draft mode, then a Lanczos resize to the width; no thumbnail is written to the data volume.
+- **Why:** Blobs are content-addressed, so the URL never serves different bytes and the browser cache does the work. A thumbnail store would be a second copy of the data with its own garbage collection.
+
+**The monitor describes the machine for `GET /system`** (M6, MON-2.1; agent)
+- **What:** At start the monitor writes the GPU name, VRAM and RAM totals and CPU count to the Redis key `stratal:system`; the API reads it, falling back to the latest resource sample.
+- **How:** `Bus.set_system` / `get_system`; `GpuProbe.name()` through NVML.
+- **Why:** The API container has no GPU and must not get one (API image has no ML libraries). The monitor already holds NVML open.
+
+**Response models describe the API for the generated client** (M6, SPEC §7.3, UI-2.1; agent)
+- **What:** Pydantic response models in `stratal.api.schemas` for the endpoints each screen reads (jobs, events, samples, system so far), and an SSE "messages" model on the two stream routes.
+- **How:** `response_model=` on the routes, which still build dicts; FastAPI validates every response against its model. openapi-typescript turns the document into `frontend/src/api/schema.d.ts`; openapi-fetch calls it. Models are added screen by screen.
+- **Why:** Routes returning `dict[str, Any]` gave the frontend untyped bodies, so the types could drift, which §7.3 rules out. Validation also catches a route that strays from its contract in the existing integration tests.
+
+**Design-system CSS is copied, not rewritten** (M6, UI-2.1, SPEC §9.6; agent)
+- **What:** The frontend uses the approved preview's token block and component CSS unchanged, and the SCR-01 mockup's shell CSS with marked "live:" changes. React components apply those classes; Tailwind adds only layout utilities, mapped onto the same tokens.
+- **How:** `tokens.css`, `components.css`, `shell.css`, `theme.css` (Tailwind without preflight and without its palette); `scripts/no-raw-hex.mjs` in `npm run lint`.
+- **Why:** G3 asks for a visual match with approved mockups; the same rules give the same pixels, and a reimplementation in utility classes would drift. Without its palette, Tailwind has no class for a one-off colour.
+
+**Node in two services, TypeScript 5.9** (M6, SPEC §7.4; agent)
+- **What:** `frontend` runs the Vite dev server (0.4 GB, as budgeted); `frontend-tools` runs typecheck, lint, tests and build on demand (1.5 GB, profile `dev`). TypeScript is pinned at 5.9.3.
+- **How:** One image (`docker/frontend.Dockerfile`, Norton's root through `NODE_EXTRA_CA_CERTS`), the source bind-mounted, `node_modules` in a volume, file watching by polling.
+- **Why:** Type-aware linting ran out of heap at the dev server's limit. Keeping the checks in an on-demand container leaves the always-on stack within NFR-2. openapi-typescript 7 and typescript-eslint 8 do not yet accept TypeScript 6.
+
+**The lineage view is HTML, not React Flow** (M6, DATA-3.3, UI-2.1; the owner's approval at SCR-03's G3, 2026-11-16)
+- **What:** SCR-03's lineage is a strip of linked nodes in plain HTML that forks into rows. SPEC §7.4 lists React Flow for "model builder, lineage graph, router view"; React Flow is kept for the model builder (SCR-08).
+- **How:** `frontend/src/screens/version/LineageStrip.tsx`: ancestors in order, this version, descendants grouped by parent; the strip scrolls sideways and keeps this version in view.
+- **Why:** The approved mockup draws a strip and its accessibility notes ask for "a list of links in order". A React Flow canvas is pannable and its nodes are not links. Nothing in phase 1 needs to drag or connect lineage nodes.
+
+**Event lists can return their newest page** (M6, MON-4.3; agent)
+- **What:** `GET /events` and `GET /jobs/{id}/events` take `tail` (the newest `limit` matching events, still oldest first) and `min_level` (that level and above).
+- **How:** `events_after(..., tail=, min_level=)` orders by ID descending for a tail and reverses; levels are compared by their order DEBUG < INFO < WARN < ERROR.
+- **Why:** SCR-04's log opens on its latest lines and filters "WARN and above". Paging forward from the oldest event would read a job's whole history first; filtering levels on the client would miss older warnings beyond the page.
+
+**ECharts is not pre-bundled by the dev server** (M6, MON-4.2; agent)
+- **What:** `optimizeDeps.exclude` lists `echarts` and `zrender` in `vite.config.ts`.
+- **How:** Vite serves their ES modules as they are in development; the production build bundles them as usual.
+- **Why:** Pre-bundling ECharts pushed the Vite container past its 0.4 GB limit and the kernel killed it. Raising the limit would break the 9 GB budget (ARCHITECTURE.md §2).
+
+**The live stream reopens itself after an HTTP error** (M6, MON-1.4; agent)
+- **What:** The UI's single global EventSource is reopened with backoff (1 s doubling to 15 s) when the browser gives up, resuming with `?after=<last event ID>`; when it comes back, every query is read again.
+- **How:** `Feed` in `frontend/src/api/stream.ts`; tests `test_MON_1_4_*`.
+- **Why:** Browsers retry a dropped SSE connection but give up for good on an HTTP error, which is what the dev proxy returns while the API restarts. A new EventSource cannot send `Last-Event-ID`, so the cursor goes in the query, which API.md §4 already allows.
+
+**A report is built where it is read** (M6, EVAL-1.1; agent)
+- **What:** "Build the eval report" on SCR-03 and SCR-05 opens SCR-06 with `?job=<id>`, which follows the evaluate job on the global stream and shows the new report when it completes. A new `GET /versions/{id}/reviews` lets SCR-06 name the review a build will use and notice a closed review newer than the report's.
+- **How:** `frontend/src/screens/report/ReportScreen.tsx`; `version_reviews` in `src/stratal/api/reviews.py`; tests `test_EVAL_1_1_*`, `test_LABEL_1_5_a_version_lists_its_reviews_newest_first`.
+- **Why:** A build takes seconds; leaving the user on the page that started it means a second trip to find the result. The report stores which review it used, so only the list of reviews was missing to say when it is out of date.
+
+**The jobs list keeps active jobs whole and pages the rest** (M6, RUN-1.1 slice; agent)
+- **What:** SCR-07 asks `GET /jobs` twice: every active job (queued, running, stalled, paused) for the pinned Active section, and finished jobs a page at a time. A `job` message on the global stream patches a row in place; a new job or a change of state reloads both lists and is announced once.
+- **How:** `frontend/src/screens/jobs/JobsScreen.tsx`; `q` (job-ID substring) added to `GET /jobs`; tests `test_RUN_1_1_*`, `test_RUN_1_2_*`.
+- **Why:** Active jobs are few and must never fall onto a later page; finished jobs grow without bound. Reloading on a change of state is simpler than moving rows between cached pages, and changes of state are rare.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

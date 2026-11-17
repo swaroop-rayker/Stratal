@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Built: health (M0); jobs, events, telemetry, live streams and host endpoints (M2, 2026-11-14); the clean and preprocess stages and `from_version` (M3, 2026-11-15). Datasets, versions, review, evaluation, configuration and `GET /system` are still planned |
+| Status | Built: health (M0); jobs, events, telemetry, live streams and host endpoints (M2, 2026-11-14); the clean and preprocess stages and `from_version` (M3, 2026-11-15); review and evaluation (M5, 2026-11-16); datasets, versions, blobs, sources, configuration, `GET /system` and the SCR-07 job filters (M6, 2026-11-16) |
 | Detail level | Phase-1 HTTP interface and the internal contracts for owner-implemented logic. Later phases are listed in [§7](#7-later-phases) |
 | Authority | This file states the intended contract. Once code exists, the generated OpenAPI document at `/api/v1/openapi.json` gives field-level detail. If the two disagree, stop and ask |
 
@@ -67,7 +67,9 @@ Jobs that fail carry the same idea in `job.error`. These codes appear there and 
 | Method and path | Purpose | Success |
 |---|---|---|
 | `GET /health` | Liveness and dependency checks | `200 {"status": "ok", "checks": {"postgres": "ok", "redis": "ok", "data_volume": "ok"}, "version": "…"}`; `503` problem if a check fails |
-| `GET /system` | Hardware and limits as Stratal sees them: GPU name, VRAM total, RAM total (the VM's), memory limits, VRAM cap | `200` |
+| `GET /system` | Hardware and limits as Stratal sees them: GPU name, VRAM total, RAM total (the VM's), VRAM cap | `200` |
+
+`GET /system` built in M6 (2026-11-16): `{gpu_name, gpu_error, vram_total_mb, vram_cap_fraction, vram_cap_mb, ram_total_mb, cpu_count}`. The API has no NVML, so the monitor describes the machine when it starts (Redis key `stratal:system`); the latest resource sample fills in the totals if it has not. Unknown values are null, never zero. The cap is the label stage's default `vram_fraction` of the card. Container memory limits are not included: the API can read only its own, and they are fixed in `compose.yaml`.
 
 ### 3.2 Datasets and versions
 
@@ -83,6 +85,17 @@ Jobs that fail carry the same idea in `job.error`. These codes appear there and 
 | `GET /versions/{version_id}/stats` | Counts by status, reason and deciding stage; size and CLIP-score distributions | `200` Stats |
 | `GET /blobs/{sha256}` | The file's bytes. `?w=` returns a thumbnail of that width | `200` image |
 | `GET /sources` | Folders directly under the sources mount (`/sources`), each with its file count, so the Start pipeline drawer (SCR-02) can offer them. Accepted with the SCR-02 wireframe on 2026-11-15 | `200 {"items": [{"name": "coco10k", "path": "/sources/coco10k", "files": 10000}]}` |
+
+Built in M6 (2026-11-16). Details:
+
+- **Dataset:** `{slug, display_name, modality, source_uri, created_at, updated_at, version_count, stored_bytes, latest_version}`. `updated_at` is the latest version's creation time (the dataset's own without versions); `stored_bytes` sums manifest and new-file bytes over its versions (DATA-3.4). `GET /datasets` sorts by `updated_at`, newest first. `POST /datasets` gives `409 conflict` for a slug that exists and `422` for one that does not match `[a-z0-9][a-z0-9_-]{1,62}`.
+- **Version** adds to the example below `manifest_path`, `schema_version`, `code_version` and `created_by_job_state` (the creating job's state, for SCR-02's icon).
+- **Cursors** of `GET /datasets` and `GET /datasets/{slug}/versions` are opaque; both lists are short and sorted in memory.
+- **Lineage:** `{version_id, ancestors, descendants, in_progress}`. `ancestors` run nearest first and end at the raw version; `descendants` are breadth first, each with its `parent_version_id` so the graph can be drawn. `in_progress` lists active jobs whose next version will be a child of this one, `{job_id, state, stage, step, total}` (SCR-03's running child).
+- **Rows** are manifest rows with every column of DATA_MODEL.md §5, in `row_key` order. Filters combine with *and*; `status` and `split` take one value each. The response adds `matched`, the rows that pass the filters across all pages, and `next_cursor` is the last row key of a full page.
+- **Stats:** `{version_id, row_count, by_status, reasons, by_stage, by_split, size_bytes, clip_score}`. `reasons` lists each `(reason_code, decided_at_stage, status)` with `rows` and `share` of all rows, largest first. `by_split` is null before a split. `size_bytes` and `clip_score` are distributions of the accepted rows in the report's shape (§3.6): sizes on fixed doubling edges from 1 KiB to 64 MiB, scores on the report's edges; `clip_score` is null before labelling.
+- **Blobs:** `sha256` must be 64 lowercase hex characters (else `422`); an unknown blob is `404 not_found`. Without `w` the stored file is returned with its image media type; with `w` (16 to 2048) an upright RGB JPEG at most `w` wide. Both are cached as immutable.
+- **Sources:** hidden folders are left out; `files` counts files recursively, hidden ones excluded.
 
 Version (abridged):
 
@@ -110,11 +123,11 @@ Version (abridged):
 | Method and path | Purpose | Success |
 |---|---|---|
 | `POST /jobs` | Start a job. Body is a union on `kind`; phase 1 accepts `pipeline` | `202` Job |
-| `GET /jobs` | List. Filters: `state`, `kind`. Planned additions for SCR-07 (accepted 2026-11-15): `state` as a comma-separated list (`running,queued`), a `dataset` filter, and `counts` (jobs per state under the other filters) beside `items` | `200` list of Job |
+| `GET /jobs` | List. Filters: `state` (one or a comma-separated list, `running,queued`), `kind`, `dataset` (slug), `q` (job-ID substring, for SCR-07's search). `counts` beside `items` gives jobs per state under the other filters, every state present. An unknown state is `422 validation_error`. The SCR-07 additions were accepted 2026-11-15 and built in M6 | `200` list of Job |
 | `GET /jobs/{job_id}` | One job with its stages | `200` Job |
 | `POST /jobs/{job_id}/cancel` | Request cancellation | `202` Job; `409` if already finished |
 | `POST /jobs/{job_id}/retry` | Requeue a failed job; finished stages are reused | `202` Job; `409` if not failed |
-| `GET /jobs/{job_id}/events` | Page through events. Filters: `level`, `stage`, `after` (event ID) | `200` list of Event |
+| `GET /jobs/{job_id}/events` | Page through events. Filters: `level`, `stage`, `after` (event ID), `min_level` (that level and above) and `tail` (the newest `limit` matching events, still oldest first; added in M6 for SCR-04) | `200` list of Event |
 | `GET /jobs/{job_id}/telemetry` | Samples for charts. Params: `from`, `to`, `stage`, `max_points` | `200 {"resource": [...], "process": [...]}` |
 | `GET /jobs/{job_id}/stream` | Live feed for one job (SSE, [§4](#4-live-streams)) | `200 text/event-stream` |
 
@@ -175,7 +188,7 @@ Job (abridged):
 
 | Method and path | Purpose | Success |
 |---|---|---|
-| `GET /events` | Events across all jobs (MON-4.3). Filters: `level`, `stage`, `job_id`, `after` | `200` list of Event |
+| `GET /events` | Events across all jobs (MON-4.3). Filters: `level`, `stage`, `job_id`, `after`, `min_level`, `tail` (as for one job) | `200` list of Event |
 | `GET /telemetry/latest` | The most recent resource sample | `200` Sample; `204` before the first sample exists |
 | `GET /stream` | Global live feed: job state changes, alerts, idle telemetry (SSE) | `200 text/event-stream` |
 
@@ -186,6 +199,7 @@ Event: the shape in SPEC MON-1, plus `id`, `event_uid`, `type`, `reason`, `sugge
 | Method and path | Purpose | Success |
 |---|---|---|
 | `POST /versions/{version_id}/reviews` | Draw a sample. Body: `{sample_size, seed?}` | `201` ReviewSession with its items |
+| `GET /versions/{version_id}/reviews` | The version's reviews, newest first, each with `progress` and without items (added in M6 for SCR-06: the review a report will use, and whether a newer one exists) | `200` list |
 | `GET /reviews/{review_id}` | Session, items and progress | `200` |
 | `PUT /reviews/{review_id}/items/{position}` | Record a decision. Body: `{decision: "accept" | "reject", note?}` | `200` item |
 | `POST /reviews/{review_id}/close` | Close the session and return the acceptance summary | `200` |
@@ -193,7 +207,7 @@ Event: the shape in SPEC MON-1, plus `id`, `event_uid`, `type`, `reason`, `sugge
 Built in M5 (2026-11-16). Details:
 
 - **Sampling.** `sample_size` is 1 to 1,000 and at most the version's accepted rows. The sample is drawn from the accepted row keys, sorted, with `random.Random(seed).sample`, so the same version and seed always give the same rows in the same order. Without `seed` the server draws one below 2³¹ and records it.
-- **ReviewSession:** `{id, version_id, sample_size, seed, status, created_at, closed_at, progress, items}`. `progress` is `{sampled, decided, accept, reject, undecided, by_split: {split: {sampled, accept, reject}}}`. Each item is `{position, row_key, split, decision, note, decided_at, row: {sha256, derived_sha256, caption, clip_score, split_stratum}}`. `row` is read from the manifest so SCR-05 can show the image and caption. `split` is the row's split when it was sampled (DATA-4.7).
+- **ReviewSession:** `{id, version_id, sample_size, seed, status, created_at, closed_at, progress, items}`. `progress` is `{sampled, decided, accept, reject, undecided, by_split: {split: {sampled, accept, reject}}}`. Each item is `{position, row_key, split, decision, note, decided_at, row: {sha256, derived_sha256, caption, clip_score, split_stratum, caption_model, caption_model_revision, width, height, size_bytes, derived_width, derived_height}}` (the last seven added in M6 for SCR-05). `row` is read from the manifest so SCR-05 can show the image and caption. `split` is the row's split when it was sampled (DATA-4.7).
 - **Decisions** can be changed while the session is open. A decision on a closed session gives `409 conflict`, an unknown position `404 not_found`, and a value other than `accept` or `reject` gives `422 validation_error`. No decision changes a manifest, a split or a status.
 - **Close** returns the session without its items, with `progress`, `acceptance` and `acceptance_unavailable`. `acceptance` is the owner's `review_acceptance` result (EVAL-1.1): overall and per split, each with a Wilson interval. While that unit is not written, `acceptance` is null and `acceptance_unavailable` says why. Closing a session twice gives `409 conflict`.
 
@@ -220,6 +234,8 @@ Built in M5 (2026-11-16). Details:
 | `GET /config/schemas` | Names of the config models | `200` list |
 | `GET /config/schemas/{name}` | JSON Schema for one config model, for generated forms | `200` JSON Schema |
 | `GET /config/defaults` | Current defaults | `200` |
+
+Built in M6 (2026-11-16) for the Start pipeline drawer. The names are the stage names, in pipeline order: `GET /config/schemas` gives `{items: [{name, queue, title}]}`, `title` being the config model's class. `GET /config/defaults` gives `{stage: config}`, each as a pipeline with no overrides would resolve it. An unknown name is `404 not_found`.
 
 ### 3.8 Host script
 

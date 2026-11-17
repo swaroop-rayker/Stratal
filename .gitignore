@@ -16,6 +16,7 @@ build/
 # Node / frontend
 node_modules/
 frontend/dist/
+*.tsbuildinfo
 
 # Environment and secrets
 .env

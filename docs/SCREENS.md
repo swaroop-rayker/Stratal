@@ -114,7 +114,7 @@ Each table says which endpoint feeds each piece of data. "Live" marks what updat
 
 - **Continue the pipeline from this version** → *Start pipeline* drawer with `from_version` set.
 - **Start a review** (sample size, optional seed) → `POST /versions/{id}/reviews` → SCR-05. Offered once the version has captions.
-- **Build the eval report** → `POST /versions/{id}/reports` → SCR-04 while it builds, then SCR-06. Open the latest report if one exists.
+- **Build the eval report** → `POST /versions/{id}/reports` → SCR-06, which shows the build in progress (link to SCR-04) and then the report. Open the latest report if one exists. (Changed at SCR-06's G3, 2026-11-17: the mockup sent builds through SCR-04.)
 - Open the creating job; copy IDs.
 
 **Empty.** A version whose rows were all rejected shows the counts and reasons, and the row table opens filtered to `rejected`. **Phase 2 adds** the UI-2.2 distributions (raw vs cleaned, per stage) and the diff with another version (DATA-3.5).
@@ -206,7 +206,7 @@ Each step names the screen, what the person does, and the call behind it. Flows 
 |---|---|---|---|
 | 1 | SCR-03 | opens a labelled and filtered version, clicks *Start a review*, sample 50 | `POST /versions/{id}/reviews` |
 | 2 | SCR-05 | decides 50 items with `a` and `r`, fixes one earlier decision, closes the session | `PUT …/items/{position}`, `POST /reviews/{id}/close` |
-| 3 | SCR-05 | clicks *Build the eval report* in the summary | `POST /versions/{id}/reports` → `202` job |
+| 3 | SCR-05 | clicks *Build the eval report* in the summary, and lands on SCR-06 while it builds | `POST /versions/{id}/reports` → `202` job, followed on `GET /stream` |
 | 4 | SCR-06 | reads rejections per stage, the CLIP distribution with the threshold, the filter rate, acceptance with its interval | `GET /versions/{id}/reports/latest` |
 
 ### Flow 3 — Job failure → diagnose → retry (phase 1; resume in phase 2)

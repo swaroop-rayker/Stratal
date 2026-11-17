@@ -81,8 +81,12 @@ class LabelConfig(BaseModel):
         "included, so 0.44 + 3.9 GB leaves about 0.25 GB of margin.",
     )
     clip_vram_estimate_mb: int = Field(default=1200, ge=1)
-    caption_algorithm_version: int = captioning.ALGORITHM_VERSION
-    scoring_algorithm_version: int = scoring.ALGORITHM_VERSION
+    caption_algorithm_version: int = Field(
+        default=captioning.ALGORITHM_VERSION, json_schema_extra={"readOnly": True}
+    )
+    scoring_algorithm_version: int = Field(
+        default=scoring.ALGORITHM_VERSION, json_schema_extra={"readOnly": True}
+    )
 
 
 class CaptionLoop(Protocol):
