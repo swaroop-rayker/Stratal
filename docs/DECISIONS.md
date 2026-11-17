@@ -517,6 +517,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `INSERT … ON CONFLICT (version_id) DO NOTHING`, then the row is read back and its content and config hashes compared, in `registry.register_version`; tests `test_BUG1_two_jobs_registering_the_same_version_at_once_both_succeed`, `test_BUG1_a_different_version_under_the_same_id_is_refused`; E-011.
 - **Why:** Content addressing means identical work gives identical IDs, so a second insert of the same ID is the same version, not an error. A lock or a "one job per input" rule would serialise work that is already safe to repeat.
 
+**Telemetry downsampling in tables, run by a one-process `beat`** (M7, NFR-12; agent)
+- **What:** Raw samples older than 7 days become one-minute averages in `resource_samples_1m` and `process_samples_1m` (not Parquet files under `telemetry/1m/`, the other option DATA_MODEL listed). `beat` is a Celery worker on its own `maintenance` queue with the scheduler embedded (`-B`) and the solo pool, running the job hourly.
+- **How:** `stratal.mon.retention.downsample`, one transaction per six hours of raw data (insert the averages, delete the raw rows); task `stratal.downsample_telemetry`; `GET /jobs/{id}/telemetry` returns both; tests `test_NFR_12_*`.
+- **Why:** In Postgres, the telemetry endpoint serves an old job's charts with the same query and no new reader. Insert and delete in one transaction make a crash or a rerun harmless. A queue of its own keeps maintenance from waiting behind an hour-long stage on `worker-cpu`; the solo pool halved `beat`'s memory (144 to 100 MB of its 200 MB) by not keeping a child process.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

@@ -41,7 +41,8 @@ from stratal.testing.harness import Runner  # noqa: E402
 get_engine.cache_clear()
 
 _TABLES = (
-    "events, resource_samples, process_samples, job_transitions, job_stages, "
+    "events, resource_samples, process_samples, resource_samples_1m, process_samples_1m, "
+    "job_transitions, job_stages, "
     "review_items, review_sessions, dataset_versions, jobs, datasets, derivations"
 )
 

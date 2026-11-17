@@ -105,6 +105,22 @@ services:
     mem_limit: 2500m
     restart: unless-stopped
 
+  # Scheduled maintenance (NFR-12): a worker on its own queue with the Celery Beat
+  # scheduler embedded, so telemetry downsampling never waits behind a pipeline stage.
+  beat:
+    build: *stratal-build
+    image: stratal-api
+    command: ["celery", "-A", "stratal.runtime.celery_app", "worker", "-Q", "maintenance", "-P", "solo", "-B", "-n", "beat@%h"]
+    environment:
+      <<: *stratal-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 200m
+    restart: unless-stopped
+
   # Collector, sampler and watchdog in one process (ADR-0005). It needs the GPU
   # only to read NVML; it never runs CUDA.
   monitor:

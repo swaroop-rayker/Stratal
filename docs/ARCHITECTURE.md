@@ -229,7 +229,6 @@ Everything Stratal owns lives on one Docker volume, `stratal-data`, on the Linux
 ├── jobs/<job_id>/                per-job log, event spool, in-run checkpoints
 ├── models/<name>/<revision>/     pretrained models from the allow-list, verified by `models pull`
 ├── registry/                     trained weights (phase 2)
-├── telemetry/1m/                 downsampled telemetry archive (NFR-12)
 └── tmp/                          staging area for atomic writes
 ```
 

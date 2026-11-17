@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     watchdog_interval_s: float = 5.0
     # How often a job may be requeued after its worker was lost before it is failed.
     max_attempts: int = 3
+    # NFR-12: raw telemetry is kept this many days, then averaged per minute by `beat`.
+    telemetry_keep_days: float = 7.0
+    downsample_every_s: float = 3600.0
     # Time a cancelled child gets to stop by itself before its process group is killed.
     cancel_grace_s: float = 10.0
     # The job's own reporter thread (process RSS, PyTorch allocator).

@@ -128,7 +128,7 @@ Version (abridged):
 | `POST /jobs/{job_id}/cancel` | Request cancellation | `202` Job; `409` if already finished |
 | `POST /jobs/{job_id}/retry` | Requeue a failed job; finished stages are reused | `202` Job; `409` if not failed |
 | `GET /jobs/{job_id}/events` | Page through events. Filters: `level`, `stage`, `after` (event ID), `min_level` (that level and above) and `tail` (the newest `limit` matching events, still oldest first; added in M6 for SCR-04) | `200` list of Event |
-| `GET /jobs/{job_id}/telemetry` | Samples for charts. Params: `from`, `to`, `stage`, `max_points` | `200 {"resource": [...], "process": [...]}` |
+| `GET /jobs/{job_id}/telemetry` | Samples for charts. Params: `from`, `to`, `stage`, `max_points`. Samples older than 7 days come from the 1-minute averages (NFR-12, DATA_MODEL §4.8a): one point a minute, `cpu_per_core` empty | `200 {"resource": [...], "process": [...]}` |
 | `GET /jobs/{job_id}/stream` | Live feed for one job (SSE, [§4](#4-live-streams)) | `200 text/event-stream` |
 
 Pause and resume (`POST /jobs/{job_id}/pause`, `/resume`) arrive in phase 2 with RUN-1.2.
