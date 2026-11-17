@@ -14,7 +14,7 @@ import { useNow } from "../../lib/useNow";
 import { useCrumbs } from "../../shell/hooks";
 import { useActiveJobs } from "../../shell/JobIndicator";
 import { ActivityLog, type Level, type LogFilters } from "./ActivityLog";
-import { ACTIVE, failedStage, inputVersion, jobSeconds, liveProgress, runningStage, stageSeconds } from "./jobs";
+import { ACTIVE, failedStage, inputVersion, jobSeconds, liveProgress, runningStage, stageSeconds, waitingFor } from "./jobs";
 import { type Point, ResourceTiles } from "./ResourceTiles";
 import { StageDrawer } from "./StageDrawer";
 import { Timeline } from "./Timeline";
@@ -254,14 +254,6 @@ function CancelDialog({ job, open, onOpenChange }: { job: Job; open: boolean; on
       ) : null}
     </Modal>
   );
-}
-
-function waitingFor(job: Job, active: Job[]): string {
-  const stage = runningStage(job) ?? job.stages[0];
-  const queue = stage?.queue ?? "cpu";
-  const holder = queue === "gpu" ? active.find((j) => j.id !== job.id && runningStage(j)?.queue === "gpu" && j.state === "running") : undefined;
-  const hs = holder ? runningStage(holder) : null;
-  return `Waiting for the ${queue} worker${holder ? ` · ${holder.id} holds the GPU (${hs?.name ?? "–"})` : ""}`;
 }
 
 export function JobScreen() {

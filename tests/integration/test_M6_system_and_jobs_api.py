@@ -75,6 +75,12 @@ def test_RUN_1_1_jobs_filter_by_state_list_and_dataset_with_counts(
     assert [j["id"] for j in only_b["items"]] == [queued["id"]]
     assert only_b["counts"]["completed"] == 0, "counts honour the other filters"
 
+    by_id = client.get(f"{V1}/jobs", params={"q": queued["id"].removeprefix("job_")}).json()
+    assert [j["id"] for j in by_id["items"]] == [queued["id"]]
+    assert by_id["counts"]["queued"] == 1 and by_id["counts"]["completed"] == 0
+    nothing = client.get(f"{V1}/jobs", params={"q": "job_9999"}).json()
+    assert nothing["items"] == [] and sum(nothing["counts"].values()) == 0
+
     bad = client.get(f"{V1}/jobs", params={"state": "running,lost"})
     assert bad.status_code == 422 and bad.json()["code"] == "validation_error"
 

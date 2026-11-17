@@ -148,11 +148,13 @@ def list_jobs(
     state: str | None = None,
     kind: str | None = None,
     dataset: str | None = None,
+    q: str | None = None,
     limit: Limit = 50,
     cursor: str | None = None,
 ) -> Json:
     """Jobs, newest first. ``state`` takes a comma-separated list (``running,queued``);
-    ``counts`` gives jobs per state under the other filters (SCR-07, RUN-1.1 slice)."""
+    ``q`` keeps jobs whose ID contains it; ``counts`` gives jobs per state under the other
+    filters (SCR-07, RUN-1.1 slice)."""
     states = [s.strip() for s in state.split(",") if s.strip()] if state else []
     unknown = sorted(set(states) - JOB_STATES)
     if unknown:
@@ -166,6 +168,8 @@ def list_jobs(
         filters.append(Job.kind == kind)
     if dataset is not None:
         filters.append(Job.spec["dataset"].astext == dataset)
+    if q:
+        filters.append(Job.id.contains(q.strip(), autoescape=True))
     query = select(Job).where(*filters)
     if states:
         query = query.where(Job.state.in_(states))

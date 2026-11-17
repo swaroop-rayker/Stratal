@@ -1,0 +1,34 @@
+/* SCR-07 jobs list (phase-1 slice), copied from docs/design/screens/SCR-07_v1.html (G2
+   approved 2026-11-15), scoped under .scr07. Tokens only. Changes for a live page: "live:". */
+.content:has(> .scr07) { padding: var(--sp-4) var(--sp-5); overflow: auto; }
+.scr07 { display: flex; flex-direction: column; gap: var(--sp-3); }
+.scr07 .phead { display: flex; align-items: center; gap: var(--sp-3); } .scr07 .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.scr07 .toolbar { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+/* live: native selects at the toolbar's small height. */
+.scr07 .toolbar .select { width: auto; height: var(--h-sm); font-size: var(--fs-12); }
+.scr07 .search { position: relative; width: 200px; }
+.scr07 .search .input { height: var(--h-sm); padding: 0 var(--sp-6) 0 26px; font-size: var(--fs-12); }
+.scr07 .search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .scr07 .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.scr07 .group-btns .count { margin-left: var(--sp-1); }
+.scr07 .t tbody tr:not(.sec) { cursor: pointer; }
+.scr07 .t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.scr07 .t tr.sec td .count { margin-left: var(--sp-1); }
+.scr07 .t tr.sec:hover { background: var(--surface-raised); cursor: default; }
+.scr07 .now { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr07 .now .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.scr07 .now .stg { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.scr07 .now .progress { width: 72px; }
+.scr07 .now.err .code { color: var(--danger); font-family: var(--font-mono); }
+.scr07 .now.muted { color: var(--text-muted); }
+.scr07 .now svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+/* live: the failure reason can be long; it is cut, and the full text is the cell's title. */
+.scr07 .now .why { display: inline-block; max-width: 30ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.scr07 .acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.scr07 .t td.acts-cell { width: 120px; text-align: right; }
+.scr07 .cap { font-size: var(--fs-12); color: var(--text-muted); margin: 0; }
+.scr07 .toasts { position: fixed; right: var(--sp-4); bottom: calc(28px + var(--sp-4)); z-index: var(--z-toast); }
+
+/* Frame E: at 1024 px the dataset, attempt and created columns fold away. */
+@media (max-width: 1279px) {
+  .scr07 .col-wide { display: none; }
+}

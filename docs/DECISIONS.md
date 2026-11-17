@@ -500,6 +500,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `frontend/src/screens/report/ReportScreen.tsx`; `version_reviews` in `src/stratal/api/reviews.py`; tests `test_EVAL_1_1_*`, `test_LABEL_1_5_a_version_lists_its_reviews_newest_first`.
 - **Why:** A build takes seconds; leaving the user on the page that started it means a second trip to find the result. The report stores which review it used, so only the list of reviews was missing to say when it is out of date.
 
+**The jobs list keeps active jobs whole and pages the rest** (M6, RUN-1.1 slice; agent)
+- **What:** SCR-07 asks `GET /jobs` twice: every active job (queued, running, stalled, paused) for the pinned Active section, and finished jobs a page at a time. A `job` message on the global stream patches a row in place; a new job or a change of state reloads both lists and is announced once.
+- **How:** `frontend/src/screens/jobs/JobsScreen.tsx`; `q` (job-ID substring) added to `GET /jobs`; tests `test_RUN_1_1_*`, `test_RUN_1_2_*`.
+- **Why:** Active jobs are few and must never fall onto a later page; finished jobs grow without bound. Reloading on a change of state is simpler than moving rows between cached pages, and changes of state are rare.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

@@ -27,6 +27,15 @@ export function runningStage(job: Job): JobStage | null {
   );
 }
 
+/** What a queued job waits for: its worker, and the job holding the GPU if one does. */
+export function waitingFor(job: Job, active: Job[]): string {
+  const stage = runningStage(job) ?? job.stages[0];
+  const queue = stage?.queue ?? "cpu";
+  const holder = queue === "gpu" ? active.find((j) => j.id !== job.id && runningStage(j)?.queue === "gpu" && j.state === "running") : undefined;
+  const hs = holder ? runningStage(holder) : null;
+  return `Waiting for the ${queue} worker${holder ? ` · ${holder.id} holds the GPU (${hs?.name ?? "–"})` : ""}`;
+}
+
 export function failedStage(job: Job): JobStage | null {
   return job.stages.find((s) => s.status === "failed") ?? null;
 }

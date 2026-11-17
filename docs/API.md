@@ -123,7 +123,7 @@ Version (abridged):
 | Method and path | Purpose | Success |
 |---|---|---|
 | `POST /jobs` | Start a job. Body is a union on `kind`; phase 1 accepts `pipeline` | `202` Job |
-| `GET /jobs` | List. Filters: `state` (one or a comma-separated list, `running,queued`), `kind`, `dataset` (slug). `counts` beside `items` gives jobs per state under the other filters, every state present. An unknown state is `422 validation_error`. The SCR-07 additions were accepted 2026-11-15 and built in M6 | `200` list of Job |
+| `GET /jobs` | List. Filters: `state` (one or a comma-separated list, `running,queued`), `kind`, `dataset` (slug), `q` (job-ID substring, for SCR-07's search). `counts` beside `items` gives jobs per state under the other filters, every state present. An unknown state is `422 validation_error`. The SCR-07 additions were accepted 2026-11-15 and built in M6 | `200` list of Job |
 | `GET /jobs/{job_id}` | One job with its stages | `200` Job |
 | `POST /jobs/{job_id}/cancel` | Request cancellation | `202` Job; `409` if already finished |
 | `POST /jobs/{job_id}/retry` | Requeue a failed job; finished stages are reused | `202` Job; `409` if not failed |

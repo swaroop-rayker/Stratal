@@ -71,7 +71,8 @@ export interface paths {
         /**
          * List Jobs
          * @description Jobs, newest first. ``state`` takes a comma-separated list (``running,queued``);
-         *     ``counts`` gives jobs per state under the other filters (SCR-07, RUN-1.1 slice).
+         *     ``q`` keeps jobs whose ID contains it; ``counts`` gives jobs per state under the other
+         *     filters (SCR-07, RUN-1.1 slice).
          */
         get: operations["list_jobs_api_v1_jobs_get"];
         put?: never;
@@ -1765,6 +1766,7 @@ export interface operations {
                 state?: string | null;
                 kind?: string | null;
                 dataset?: string | null;
+                q?: string | null;
                 limit?: number;
                 cursor?: string | null;
             };
