@@ -338,3 +338,72 @@ class ProcessSample(_Model):
 class Telemetry(_Model):
     resource: list[ResourceSample]
     process: list[ProcessSample]
+
+
+class ReviewRow(_Model):
+    """The manifest facts of a sampled row (API.md §3.5)."""
+
+    sha256: str | None = None
+    derived_sha256: str | None = None
+    caption: str | None = None
+    clip_score: float | None = None
+    split_stratum: str | None = None
+    caption_model: str | None = None
+    caption_model_revision: str | None = None
+    width: int | None = None
+    height: int | None = None
+    size_bytes: int | None = None
+    derived_width: int | None = None
+    derived_height: int | None = None
+
+
+class ReviewItem(_Model):
+    position: int
+    row_key: str
+    split: str | None
+    decision: Literal["accept", "reject"] | None
+    note: str | None
+    decided_at: str | None
+    row: ReviewRow | None = None
+
+
+class SplitProgress(_Model):
+    sampled: int
+    accept: int
+    reject: int
+
+
+class ReviewProgress(_Model):
+    sampled: int
+    decided: int
+    accept: int
+    reject: int
+    undecided: int
+    by_split: dict[str, SplitProgress]
+
+
+class Review(_Model):
+    id: str
+    version_id: str
+    sample_size: int
+    seed: int
+    status: Literal["open", "closed"]
+    created_at: str
+    closed_at: str | None
+    progress: ReviewProgress
+    items: list[ReviewItem]
+
+
+class ReviewClosed(_Model):
+    """The answer to closing: the session without its items, and the acceptance summary."""
+
+    id: str
+    version_id: str
+    sample_size: int
+    seed: int
+    status: Literal["open", "closed"]
+    created_at: str
+    closed_at: str | None
+    progress: ReviewProgress
+    acceptance: Json | None
+    acceptance_unavailable: str | None

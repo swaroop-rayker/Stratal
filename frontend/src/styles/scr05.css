@@ -1,0 +1,78 @@
+/* SCR-05 labeling review, copied from docs/design/screens/SCR-05_v1.html (G2 approved
+   2026-11-15), scoped under .scr05. Tokens only. Changes for a live page: "live:". */
+.content:has(> .scr05) { padding: var(--sp-4) var(--sp-5); overflow: hidden; }
+.scr05 { display: flex; flex-direction: column; gap: var(--sp-3); height: 100%; min-height: 0; }
+.scr05 .sbar { display: flex; align-items: center; gap: var(--sp-3); }
+.scr05 .sbar h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); }
+.scr05 .sbar .sub { color: var(--text-muted); font-size: var(--fs-12); } .scr05 .sbar .sub .mono { color: var(--text-secondary); }
+.scr05 .pill.open { --c: var(--info); } .scr05 .pill.closed { --c: var(--text-muted); }
+.scr05 .prog { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-4); align-items: center; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.scr05 .prog b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr05 .prog .acc { background: var(--success); } .scr05 .prog .rej { background: var(--danger); }
+.scr05 .prog .k-acc { color: var(--success); } .scr05 .prog .k-rej { color: var(--danger); }
+.scr05 .work { display: grid; grid-template-columns: 1fr 380px; gap: var(--sp-4); min-height: 0; flex: 1; }
+.scr05 .photo { position: relative; border-radius: var(--r-md); border: var(--bw) solid var(--border); overflow: hidden; min-height: 0;   background:     radial-gradient(ellipse 14% 9% at 38% 64%, var(--seq-7) 0 60%, transparent 62%),     radial-gradient(ellipse 12% 8% at 58% 70%, var(--seq-6) 0 60%, transparent 62%),     radial-gradient(circle at 78% 30%, var(--cat-7) 0 7%, transparent 8%),     linear-gradient(180deg, var(--cat-2) 0%, var(--seq-4) 45%, var(--seq-7) 46%, var(--seq-6) 100%); }
+.scr05 .photo .tag { position: absolute; left: var(--sp-3); top: var(--sp-3); display: inline-flex; gap: var(--sp-2); align-items: center; padding: 2px var(--sp-2); border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.scr05 .photo .arrows { position: absolute; right: var(--sp-3); bottom: var(--sp-3); display: flex; gap: var(--sp-2); }
+.scr05 .photo .dims { position: absolute; left: var(--sp-3); bottom: var(--sp-3); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); background: var(--surface-raised); border: var(--bw) solid var(--border); padding: 0 var(--sp-2); border-radius: var(--r-sm); }
+.scr05 .panel { display: flex; flex-direction: column; gap: var(--sp-3); }
+.scr05 .capcard { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+.scr05 .capcard .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.scr05 .capcard p { margin: var(--sp-1) 0 0; font-size: var(--fs-16); line-height: 1.45; color: var(--text-primary); }
+.scr05 .kv { display: grid; grid-template-columns: 96px 1fr; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); align-items: center; } .scr05 .kv > span:nth-child(odd) { color: var(--text-muted); } .scr05 .kv .mono { color: var(--text-primary); }
+.scr05 .scale { display: flex; align-items: center; gap: var(--sp-2); }
+.scr05 .scale .track { position: relative; flex: 1; height: 6px; border-radius: var(--r-pill); background: linear-gradient(90deg, var(--danger-soft) 0 40%, var(--surface-sunken) 40%); border: var(--bw) solid var(--border); }
+.scr05 .scale .thr { position: absolute; top: -5px; width: 2px; height: 14px; background: var(--warning); }
+.scr05 .scale .val { position: absolute; top: -4px; width: 10px; height: 10px; margin-left: -5px; border-radius: var(--r-pill); background: var(--text-primary); border: 2px solid var(--bg); }
+.scr05 .scale-key { display: flex; gap: var(--sp-3); font-size: var(--fs-11); color: var(--text-muted); } .scr05 .scale-key i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); margin-right: var(--sp-1); vertical-align: middle; }
+.scr05 .decide { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.scr05 .dbtn { height: 48px; font-size: var(--fs-14); }
+.scr05 .dbtn .i { width: 16px; height: 16px; }
+.scr05 .dbtn.acc svg { color: var(--success); } .scr05 .dbtn.rej svg { color: var(--danger); }
+.scr05 .dbtn.acc.chosen { background: var(--success-soft); border-color: var(--success); } .scr05 .dbtn.rej.chosen { background: var(--danger-soft); border-color: var(--danger); }
+.scr05 .hint { font-size: var(--fs-11); color: var(--text-muted); margin: 0; }
+.scr05 .strip { display: flex; gap: var(--sp-1); padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); overflow: hidden; }
+.scr05 .cell { width: 21px; height: 28px; flex: none; display: grid; place-items: center; border-radius: var(--r-xs); border: var(--bw) solid var(--border-strong); font: var(--fs-11) var(--font-mono); color: var(--text-muted); background: transparent; }
+.scr05 .cell svg.i { width: 11px; height: 11px; }
+.scr05 .cell.a { background: var(--success-soft); border-color: color-mix(in srgb, var(--success) 50%, transparent); color: var(--success); }
+.scr05 .cell.r { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 50%, transparent); color: var(--danger); }
+.scr05 .cell.cur { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; color: var(--text-primary); }
+.scr05 .cell.unsaved { border-style: dashed; border-color: var(--warning); color: var(--warning); }
+.scr05 .bignum { font: var(--fw-medium) var(--fs-32)/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.scr05 .sumgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+.scr05 .sumcard { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--border)); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+.scr05 .sumcard .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); } .scr05 .sumcard .d { font-size: var(--fs-12); color: var(--text-muted); }
+.scr05 .rejrow { display: flex; gap: var(--sp-3); }
+.scr05 .rejitem { width: 168px; display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-11); color: var(--text-secondary); }
+.scr05 .rejitem .ph { height: 100px; border-radius: var(--r-md); border: var(--bw) solid color-mix(in srgb, var(--danger) 45%, transparent); background: linear-gradient(160deg, var(--seq-3), var(--seq-2)); }
+.scr05 .rejitem .note { color: var(--text-primary); font-style: italic; }
+.scr05 h3.sec { margin: 0; font-size: var(--fs-12); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+
+/* live: the real image instead of the mockup's drawn one, letterboxed in the frame. */
+.scr05 .photo { background: var(--surface-sunken); display: grid; place-items: center; }
+.scr05 .photo img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.scr05 .photo .tag, .scr05 .photo .dims, .scr05 .photo .arrows { z-index: 1; }
+.scr05 .prog .progress { display: flex; }
+.scr05 .prog .progress > i { width: auto; }
+.scr05 .strip { overflow-x: auto; padding-bottom: var(--sp-1); }
+.scr05 .cell { cursor: pointer; font: var(--fs-11) var(--font-mono); padding: 0; }
+.scr05 .cell:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; }
+.scr05 .decide .btn[aria-pressed=true].acc { background: var(--success-soft); border-color: var(--success); }
+.scr05 .decide .btn[aria-pressed=true].rej { background: var(--danger-soft); border-color: var(--danger); }
+.scr05 textarea.input { height: 64px; padding: var(--sp-2); resize: vertical; font-family: var(--font-ui); }
+.scr05 .panel { overflow: auto; }
+.scr05 .rejrow { flex-wrap: wrap; }
+.scr05 .rejitem img.ph { object-fit: cover; width: 100%; }
+.scr05 .readonly { font-size: var(--fs-12); color: var(--text-secondary); }
+/* Light theme: the pill and cell colours on their tints follow the design-system rule (SCR-04 G3). */
+[data-theme="light"] .scr05 .cell.a { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
+[data-theme="light"] .scr05 .cell.r { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+[data-theme="light"] .scr05 .prog .k-acc { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
+[data-theme="light"] .scr05 .prog .k-rej { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+@media (max-width: 1279px) {
+  .scr05 .work { grid-template-columns: 1fr 300px; }
+  .scr05 .sbar .sub-long, .scr05 .panel .detail:not(.open) { display: none; }
+  .scr05 .capcard p { font-size: var(--fs-14); }
+  .scr05 .dbtn { height: 40px; }
+}
+@media (min-width: 1280px) { .scr05 .details-toggle { display: none; } }

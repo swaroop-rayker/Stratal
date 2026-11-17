@@ -1110,6 +1110,122 @@ export interface components {
             /** Disk Write Mb S */
             disk_write_mb_s: number;
         };
+        /** Review */
+        Review: {
+            /** Id */
+            id: string;
+            /** Version Id */
+            version_id: string;
+            /** Sample Size */
+            sample_size: number;
+            /** Seed */
+            seed: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            /** Created At */
+            created_at: string;
+            /** Closed At */
+            closed_at: string | null;
+            progress: components["schemas"]["ReviewProgress"];
+            /** Items */
+            items: components["schemas"]["ReviewItem"][];
+        };
+        /**
+         * ReviewClosed
+         * @description The answer to closing: the session without its items, and the acceptance summary.
+         */
+        ReviewClosed: {
+            /** Id */
+            id: string;
+            /** Version Id */
+            version_id: string;
+            /** Sample Size */
+            sample_size: number;
+            /** Seed */
+            seed: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            /** Created At */
+            created_at: string;
+            /** Closed At */
+            closed_at: string | null;
+            progress: components["schemas"]["ReviewProgress"];
+            /** Acceptance */
+            acceptance: {
+                [key: string]: unknown;
+            } | null;
+            /** Acceptance Unavailable */
+            acceptance_unavailable: string | null;
+        };
+        /** ReviewItem */
+        ReviewItem: {
+            /** Position */
+            position: number;
+            /** Row Key */
+            row_key: string;
+            /** Split */
+            split: string | null;
+            /** Decision */
+            decision: ("accept" | "reject") | null;
+            /** Note */
+            note: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            row?: components["schemas"]["ReviewRow"] | null;
+        };
+        /** ReviewProgress */
+        ReviewProgress: {
+            /** Sampled */
+            sampled: number;
+            /** Decided */
+            decided: number;
+            /** Accept */
+            accept: number;
+            /** Reject */
+            reject: number;
+            /** Undecided */
+            undecided: number;
+            /** By Split */
+            by_split: {
+                [key: string]: components["schemas"]["SplitProgress"];
+            };
+        };
+        /**
+         * ReviewRow
+         * @description The manifest facts of a sampled row (API.md §3.5).
+         */
+        ReviewRow: {
+            /** Sha256 */
+            sha256?: string | null;
+            /** Derived Sha256 */
+            derived_sha256?: string | null;
+            /** Caption */
+            caption?: string | null;
+            /** Clip Score */
+            clip_score?: number | null;
+            /** Split Stratum */
+            split_stratum?: string | null;
+            /** Caption Model */
+            caption_model?: string | null;
+            /** Caption Model Revision */
+            caption_model_revision?: string | null;
+            /** Width */
+            width?: number | null;
+            /** Height */
+            height?: number | null;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Derived Width */
+            derived_width?: number | null;
+            /** Derived Height */
+            derived_height?: number | null;
+        };
         /**
          * Row
          * @description One manifest row (DATA_MODEL.md §5). Columns a stage has not reached are null.
@@ -1197,6 +1313,15 @@ export interface components {
             items: components["schemas"]["Source"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** SplitProgress */
+        SplitProgress: {
+            /** Sampled */
+            sampled: number;
+            /** Accept */
+            accept: number;
+            /** Reject */
+            reject: number;
         };
         /** StageSchema */
         StageSchema: {
@@ -2267,9 +2392,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Review"];
                 };
             };
             /** @description Validation Error */
@@ -2300,9 +2423,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Review"];
                 };
             };
             /** @description Validation Error */
@@ -2338,9 +2459,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ReviewItem"];
                 };
             };
             /** @description Validation Error */
@@ -2371,9 +2490,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ReviewClosed"];
                 };
             };
             /** @description Validation Error */

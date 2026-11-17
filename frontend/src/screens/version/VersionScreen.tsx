@@ -194,6 +194,11 @@ function Config({ version }: { version: Version }) {
   );
 }
 
+/** Half-width in points of a 95% interval for an acceptance near 90% (frame B's hint). */
+function halfWidth(n: number): number {
+  return Math.round(196 * Math.sqrt((0.9 * 0.1) / Math.max(1, n)));
+}
+
 function ReviewModal({ version, open, onOpenChange }: { version: Version; open: boolean; onOpenChange: (o: boolean) => void }) {
   const navigate = useNavigate();
   const accepted = versionCount(version, "accepted");
@@ -219,33 +224,33 @@ function ReviewModal({ version, open, onOpenChange }: { version: Version; open: 
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Start a review"
-      icon={<Icon name="eye" />}
+      title={`Start a review of ${version.version_id}`}
+      icon={<Icon name="eye" style={{ color: "var(--accent)" }} />}
       footer={
         <>
           <ModalClose asChild>
             <Button variant="ghost">Cancel</Button>
           </ModalClose>
           <Button variant="primary" disabled={bad || start.isPending} onClick={() => { start.mutate(); }}>
-            {start.isPending ? (<><span className="spinner" />Drawing…</>) : "Start review"}
+            {start.isPending ? (<><span className="spinner" />Drawing…</>) : (<><Icon name="eye" />Start review</>)}
           </Button>
         </>
       }
     >
-      <p style={{ margin: "0 0 var(--sp-3)" }}>
-        A random sample of the {count(accepted)} accepted rows of <span className="mono">{version.version_id}</span>. Decisions
-        change no data (DATA-4.7).
-      </p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
         <div className={bad ? "field error" : "field"}>
-          <label htmlFor="rv-size">Sample size <span className="type">int</span></label>
+          <label htmlFor="rv-size">Sample size</label>
           <input id="rv-size" className="input mono" value={size} onChange={(e) => { setSize(e.target.value); }} aria-invalid={bad} />
-          <small>{bad ? `1–${count(Math.min(1000, accepted))}` : `1–${count(Math.min(1000, accepted))} · default 50`}</small>
+          <small>
+            {bad
+              ? `A whole number from 1 to ${count(Math.min(1000, accepted))}.`
+              : `Drawn at random from the ${count(accepted)} accepted rows. ${String(n)} gives an interval about ±${String(halfWidth(n))} points wide; ${String(n * 4)} about ±${String(halfWidth(n * 4))}.`}
+          </small>
         </div>
         <div className="field">
-          <label htmlFor="rv-seed">Seed <span className="type">int</span></label>
+          <label htmlFor="rv-seed">Seed, optional</label>
           <input id="rv-seed" className="input mono" value={seed} placeholder="random" onChange={(e) => { setSeed(e.target.value.replace(/\D/g, "")); }} />
-          <small>Optional; the same seed draws the same rows.</small>
+          <small>Set it to draw the same sample again.</small>
         </div>
       </div>
       {problem ? (

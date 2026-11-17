@@ -5,6 +5,7 @@ import { Crash } from "./screens/Crash";
 import { DatasetsScreen } from "./screens/datasets/DatasetsScreen";
 import { JobScreen } from "./screens/job/JobScreen";
 import { Placeholder } from "./screens/Placeholder";
+import { ReviewScreen } from "./screens/review/ReviewScreen";
 import { VersionScreen } from "./screens/version/VersionScreen";
 import { AppShell } from "./shell/AppShell";
 
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
           { path: "versions/:versionId", element: <VersionScreen /> },
           { path: "jobs", element: <Placeholder screen="SCR-07 Jobs list" crumb="Jobs" /> },
           { path: "jobs/:jobId", element: <JobScreen /> },
+          { path: "reviews/:reviewId", element: <ReviewScreen /> },
           { path: "*", element: <Placeholder screen="Not found" crumb="Not found" /> },
         ],
       },

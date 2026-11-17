@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from stratal.api import schemas
 from stratal.api.jobs import Db
 from stratal.core.settings import get_settings
 from stratal.data import registry
@@ -17,7 +18,22 @@ from stratal.storage.manifest import iter_rows
 router = APIRouter(tags=["review"])
 Json = dict[str, Any]
 
-ROW_DETAILS = ["row_key", "sha256", "derived_sha256", "caption", "clip_score", "split_stratum"]
+ROW_DETAILS = [
+    "row_key",
+    "sha256",
+    "derived_sha256",
+    "caption",
+    "clip_score",
+    "split_stratum",
+    # M6: what SCR-05 shows beside the image (caption model, original and copy size).
+    "caption_model",
+    "caption_model_revision",
+    "width",
+    "height",
+    "size_bytes",
+    "derived_width",
+    "derived_height",
+]
 
 
 class CreateReview(BaseModel):
@@ -88,7 +104,7 @@ def _full(session: Session, review: ReviewSession, items: Sequence[ReviewItem]) 
     }
 
 
-@router.post("/versions/{version_id}/reviews", status_code=201)
+@router.post("/versions/{version_id}/reviews", status_code=201, response_model=schemas.Review)
 def create_review(version_id: str, body: CreateReview, session: Db) -> Json:
     with session.begin():
         review = reviews.create_review(
@@ -103,13 +119,13 @@ def create_review(version_id: str, body: CreateReview, session: Db) -> Json:
     return _full(session, review, reviews.items_of(session, review_id))
 
 
-@router.get("/reviews/{review_id}")
+@router.get("/reviews/{review_id}", response_model=schemas.Review)
 def get_review(review_id: str, session: Db) -> Json:
     review = reviews.get_review(session, review_id)
     return _full(session, review, reviews.items_of(session, review_id))
 
 
-@router.put("/reviews/{review_id}/items/{position}")
+@router.put("/reviews/{review_id}/items/{position}", response_model=schemas.ReviewItem)
 def decide(review_id: str, position: int, body: Decision, session: Db) -> Json:
     with session.begin():
         item = reviews.decide(session, review_id, position, decision=body.decision, note=body.note)
@@ -117,7 +133,7 @@ def decide(review_id: str, position: int, body: Decision, session: Db) -> Json:
     return view
 
 
-@router.post("/reviews/{review_id}/close")
+@router.post("/reviews/{review_id}/close", response_model=schemas.ReviewClosed)
 def close(review_id: str, session: Db) -> Json:
     with session.begin():
         review = reviews.close_review(session, review_id)
