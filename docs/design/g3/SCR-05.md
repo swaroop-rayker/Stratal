@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-05_v1.html`](../screens/SCR-05_v1.html), G2 approved 2026-11-15 |
 | Built | `frontend/src/screens/review/`, `frontend/src/styles/scr05.css`; SCR-03's "Start a review" dialog aligned with frame B |
 | Checked | 2026-11-17, live at 1280 × 760 and 1024 × 640, dark and light: `rev_0002`, coco1k's closed review of 50; and `rev_0003`, a new open sample of 20 from demo's split `ds_a0d33211cd07`, drawn through the dialog |
-| Status | **Waiting for the owner's sign-off** |
+| Status | **Approved by the owner on 2026-11-17** |
 
 **No decisions were recorded on real data.** Review decisions are the owner's judgments, so `rev_0003` was left open with nothing decided. It can be used or ignored. Deciding, saving, a failed save and closing are covered by the tests below.
 
