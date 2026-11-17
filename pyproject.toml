@@ -68,8 +68,10 @@ pythonVersion = "3.12"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers -m 'not integration and not gpu'"
+addopts = "-ra --strict-markers -m 'not integration and not gpu and not acceptance'"
 markers = [
     "integration: needs real postgres and redis (run inside Compose)",
     "gpu: needs the GPU; run locally in the worker-gpu image",
+    "benchmark: timing measurement; needs a quiet machine (check.ps1 -Bench)",
+    "acceptance: a full run on the live stack, over an hour (tests/acceptance)",
 ]

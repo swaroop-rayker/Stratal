@@ -48,3 +48,8 @@
 - Pub/sub messages are notifications, not payloads. The SSE endpoint reads events from PostgreSQL when notified, so replay and live delivery are the same query. Samples are the exception: they are forwarded as published.
 - An entry that can never be valid (bad JSON, a WARN without a reason) is logged, acknowledged and dropped, so it cannot block the entries behind it.
 - Measured on the real stack: the monitor killed mid-job, the job completed, and the events that had waited in the stream were stored when the monitor came back (4 stored before, 14 after).
+
+## As built in M7 (2026-11-17)
+
+- **Backfill (decision 2).** After every stage the supervisor reads the job's spool (`jobs/<job_id>/events.jsonl`) and inserts the events PostgreSQL lacks, on the same `event_uid` key the collector uses. A job whose events never reached Redis therefore has them all when the stage ends, and the collector's late copies are stored once. A worker that died is covered by the next attempt's backfill, since the spool is per job. A job failed by the watchdog after its last worker died is backfilled by hand: `python -m stratal.cli events backfill --job ID` (or `--all`). `monitor` does not mount the data volume, so it does not backfill.
+- **Telemetry retention (NFR-12).** The `beat` service averages raw samples older than 7 days into `resource_samples_1m` and `process_samples_1m` hourly (DATA_MODEL.md §4.8a).

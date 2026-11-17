@@ -26,7 +26,7 @@ from stratal.core.settings import Settings, get_settings
 from stratal.db.engine import get_engine
 from stratal.db.models import Job, JobStage
 from stratal.mon import probes
-from stratal.mon.emitter import KIND_PROCESS_SAMPLE, Emitter, StreamEmitter
+from stratal.mon.emitter import KIND_PROCESS_SAMPLE, Emitter, NullEmitter, StreamEmitter
 from stratal.mon.events import MetricValue, utc_now
 from stratal.runtime.context import JobCancelled, JobContext
 from stratal.runtime.stages import StageResult, StageRun, get_stage
@@ -163,10 +163,14 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
         spec, name = dict(job.spec), stage.name
         config, input_version_id = dict(stage.config), stage.input_version_id
 
-    emitter = StreamEmitter(
-        redis_url=settings.redis_url,
-        spool_path=job_dir / "events.jsonl",
-        maxlen=settings.event_stream_maxlen,
+    emitter: Emitter = (
+        StreamEmitter(
+            redis_url=settings.redis_url,
+            spool_path=job_dir / "events.jsonl",
+            maxlen=settings.event_stream_maxlen,
+        )
+        if settings.monitoring_enabled
+        else NullEmitter()
     )
     ctx = JobContext(
         job_id=job_id,
@@ -178,7 +182,8 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
     reporter = ProcessReporter(
         emitter, job_id=job_id, stage=name, interval_s=settings.process_sample_interval_s
     )
-    reporter.start()
+    if settings.monitoring_enabled:
+        reporter.start()
     started = time.monotonic()
     try:
         ctx.event("stage_started", f"Stage {name} started", metrics={"idx": idx})
@@ -242,7 +247,8 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
             },
         )
     finally:
-        reporter.stop()
+        if settings.monitoring_enabled:
+            reporter.stop()
         emitter.close()
         with contextlib.suppress(OSError):
             log_file.close()

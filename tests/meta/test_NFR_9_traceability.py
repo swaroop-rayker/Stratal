@@ -62,6 +62,29 @@ def test_NFR_9_ticked_milestone_items_have_named_tests() -> None:
     assert not missing, f"ticked in MILESTONES.md but no such test exists: {missing}"
 
 
+def test_NFR_9_every_phase_1_p0_requirement_has_a_named_test() -> None:
+    """M7's acceptance check: no phase-1 P0 requirement without a ``test_<ID>_*`` test.
+
+    Whether those tests pass is checked by running the suite; this checks they exist.
+    """
+    requirements = _requirements()
+    names = _test_names()
+    phase_1_p0 = sorted(
+        r for r, (priority, phase) in requirements.items() if (priority, phase) == ("P0", "1")
+    )
+
+    untested = [
+        rid
+        for rid in phase_1_p0
+        if not any(
+            name.startswith(f"test_{rid.replace('-', '_').replace('.', '_')}_") for name in names
+        )
+    ]
+
+    assert len(phase_1_p0) == 31
+    assert not untested, f"phase-1 P0 requirements with no named test: {untested}"
+
+
 def test_NFR_9_test_ids_refer_to_real_requirements() -> None:
     requirements = _requirements()
     known = {rid.replace("-", "_").replace(".", "_") for rid in requirements}

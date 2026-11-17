@@ -128,7 +128,7 @@ Version (abridged):
 | `POST /jobs/{job_id}/cancel` | Request cancellation | `202` Job; `409` if already finished |
 | `POST /jobs/{job_id}/retry` | Requeue a failed job; finished stages are reused | `202` Job; `409` if not failed |
 | `GET /jobs/{job_id}/events` | Page through events. Filters: `level`, `stage`, `after` (event ID), `min_level` (that level and above) and `tail` (the newest `limit` matching events, still oldest first; added in M6 for SCR-04) | `200` list of Event |
-| `GET /jobs/{job_id}/telemetry` | Samples for charts. Params: `from`, `to`, `stage`, `max_points` | `200 {"resource": [...], "process": [...]}` |
+| `GET /jobs/{job_id}/telemetry` | Samples for charts. Params: `from`, `to`, `stage`, `max_points`. Samples older than 7 days come from the 1-minute averages (NFR-12, DATA_MODEL §4.8a): one point a minute, `cpu_per_core` empty | `200 {"resource": [...], "process": [...]}` |
 | `GET /jobs/{job_id}/stream` | Live feed for one job (SSE, [§4](#4-live-streams)) | `200 text/event-stream` |
 
 Pause and resume (`POST /jobs/{job_id}/pause`, `/resume`) arrive in phase 2 with RUN-1.2.
@@ -281,7 +281,7 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 | Stratification | DATA-4.3 | `strata_for(items: Sequence[StratumItem], *, keys: Sequence[StratumKey]) -> dict[row_key, stratum]`: `clip_quartile` (`q1`–`q4`, interpolated boundaries, ties down), `orientation` of the upright image, `source_folder` (first `row_key` component, `.` at the root), joined by `\|` in key order; `all` without keys | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
 | Split assignment | DATA-4.1, 4.4, 4.5 | `assign_splits(groups: Sequence[GroupToAssign], *, proportions: Proportions, seed) -> dict[anchor, split]`: each `GroupToAssign(anchor, stratum, members: Member(row_key, previous))` carries its split where members agree, merges to the side with more members, and new groups fill each stratum's shortfall to within one group, per stratum and in total. The shell looks up `previous` and lists moved rows | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
 | Report statistics | EVAL-1.1 | In `stratal.eval.report_stats`: `rejection_counts(rows: Iterable[RowStatus]) -> RejectionCounts`, `filter_rate(counts) -> float \| None`, `score_distribution(scores, *, edges) -> ScoreDistribution` (type-7 quantiles, fixed bins), `wilson_interval(successes, trials, *, confidence=0.95) -> Interval`, `review_acceptance(items: Sequence[ReviewedItem], *, confidence) -> Acceptance` (overall and per split) | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
-| Semantic-duplicate clustering | DATA-2.3 (P2) | CLIP embeddings → clusters | M7 if time |
+| Semantic-duplicate clustering | DATA-2.3, DATA-4.8 (P2) | CLIP image vectors → clusters in the label stage, joined by the split ([ADR-0013](decisions/ADR-0013-semantic-duplicates.md)) | M11 |
 
 What the plumbing gives each unit: a `JobContext` (emit an event, report progress, ask whether to stop), the derivation cache (`get_many`, `put_many`), `load_version` (stream manifest batches), the blob store (open a file by hash), and a model handle from the VRAM manager.
 

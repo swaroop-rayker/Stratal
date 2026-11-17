@@ -505,6 +505,43 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `frontend/src/screens/jobs/JobsScreen.tsx`; `q` (job-ID substring) added to `GET /jobs`; tests `test_RUN_1_1_*`, `test_RUN_1_2_*`.
 - **Why:** Active jobs are few and must never fall onto a later page; finished jobs grow without bound. Reloading on a change of state is simpler than moving rows between cached pages, and changes of state are rare.
 
+## M7: phase-1 acceptance
+
+**The owner's M7 decisions** (2026-11-17)
+- **What:** NFR-5's N is 10 minutes (OC-3's proposal). The NFR-2 profile runs on 20,000 COCO 2017 images, 10,000 more fetched with the coco10k script. The agent writes DATA-2.3 and DATA-4.8 at the owner's request, and fixes E-011.
+- **How:** SPEC NFR-5 and OC-3 updated; the kill tests check every stage against 10 minutes.
+- **Why:** Kill tests need a number to assert. A 20k run is what NFR-2's criterion names; changing it to 10k would have changed a requirement.
+
+**Registering a version is idempotent under concurrency** (M7, BUG1, DATA-3.3; agent, at the owner's request)
+- **What:** Two jobs that make the same version at once both succeed; the version is recorded once. A different version under an existing ID is refused as a collision.
+- **How:** `INSERT … ON CONFLICT (version_id) DO NOTHING`, then the row is read back and its content and config hashes compared, in `registry.register_version`; tests `test_BUG1_two_jobs_registering_the_same_version_at_once_both_succeed`, `test_BUG1_a_different_version_under_the_same_id_is_refused`; E-011.
+- **Why:** Content addressing means identical work gives identical IDs, so a second insert of the same ID is the same version, not an error. A lock or a "one job per input" rule would serialise work that is already safe to repeat.
+
+**Events are backfilled from the spool by the supervisor** (M7, MON-1.4, ADR-0005 decision 2; agent)
+- **What:** After each stage, the job's spooled events missing from PostgreSQL are inserted; `stratal.cli events backfill` does it by hand.
+- **How:** `stratal.mon.backfill.backfill_job`, called from `supervisor.run_stage` after `finalize`, in its own transaction, never changing the outcome; tests `test_MON_1_4_*` in `test_M7_event_backfill.py`. `test_NFR_13_kill_the_monitor_mid_job_and_the_job_continues` now proves the monitor's death while the job still runs, since the backfill fills the gap at the stage's end.
+- **Why:** The worker has the data volume and knows when a spool is complete (its child has exited). `monitor` has neither, and giving it the volume only for this would widen its access.
+
+**NFR-5 kill tests use a test-only crash point** (M7, NFR-5; agent)
+- **What:** `STRATAL_TEST_CRASH_AT=<stage>:step:<k>` (or `:event:<n>`) makes a job's stage process SIGKILL itself just after that event is spooled, on the first attempt only. One test per phase-1 stage kills it, retries the job, and checks the version IDs against an uninterrupted run and the cache reuse.
+- **How:** `JobContext.event` in `runtime/context.py`; `tests/integration/test_M7_kill_tests.py`, `test_NFR_5_*`.
+- **Why:** On test data a stage finishes in about a second, so killing it from outside lands at a random point or after the end. Stages report progress right after a batch is cached, so killing just after a progress event is the realistic worst case: a crash between batches. Ingest, filter, split and evaluate have no per-item cache and restart whole; their bound is their duration on the 10k set.
+
+**NFR-11 is measured as a worst case, with monitoring switchable off** (M7, NFR-11; agent)
+- **What:** `STRATAL_MONITORING_ENABLED=false` gives a job a no-op emitter and no memory reporter; with no `monitor` process that is "monitoring off". The benchmark runs a CPU-bound synthetic stage with one event per item (about 50 a second) three times each way.
+- **How:** `tests/integration/test_M7_monitoring_overhead.py`, marked `benchmark` and run by `check.ps1 -Bench`, not by the normal integration run, since a 1% timing difference needs a quiet machine.
+- **Why:** NFR-11 needs an "off" to compare with. 50 events a second is far above any real stage, so a pass covers them. **Decided by the owner on 2026-11-17 (SPEC OC-6):** "2% CPU" is 2% of the machine (16 logical CPUs). The first run (during a download) measured 1.42% of the machine, 22.7% of one core; on a quiet machine, 1.58% of the machine, 25.2% of one core, with runtime +0.02%. Read per core, NFR-11 fails at this event rate.
+
+**The owner's decisions at M7's close** (2026-11-17)
+- **What:** ADR-0013 accepted, with DATA-2.3 and DATA-4.8 built in M11; NFR-11's "2 % CPU" read as a share of the machine (SPEC OC-6); M7's BUG item reworded to BUG1 to BUG6, with BUG7 tested in M8; events kept at every level, DEBUG included.
+- **How:** MILESTONES.md (M7 and M11), ADR-0013's status, SPEC Appendix B, DATA_MODEL §10.
+- **Why:** Phase 1 closes without its two P2 extras; NFR-11's test needed a fixed meaning; BUG7 needs training to test; the events table is 1.6 MB after 26 jobs, so pruning would buy nothing.
+
+**Telemetry downsampling in tables, run by a one-process `beat`** (M7, NFR-12; agent)
+- **What:** Raw samples older than 7 days become one-minute averages in `resource_samples_1m` and `process_samples_1m` (not Parquet files under `telemetry/1m/`, the other option DATA_MODEL listed). `beat` is a Celery worker on its own `maintenance` queue with the scheduler embedded (`-B`) and the solo pool, running the job hourly.
+- **How:** `stratal.mon.retention.downsample`, one transaction per six hours of raw data (insert the averages, delete the raw rows); task `stratal.downsample_telemetry`; `GET /jobs/{id}/telemetry` returns both; tests `test_NFR_12_*`.
+- **Why:** In Postgres, the telemetry endpoint serves an old job's charts with the same query and no new reader. Insert and delete in one transaction make a crash or a rerun harmless. A queue of its own keeps maintenance from waiting behind an hour-long stage on `worker-cpu`; the solo pool halved `beat`'s memory (144 to 100 MB of its 200 MB) by not keeping a child process.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

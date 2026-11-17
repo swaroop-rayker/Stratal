@@ -239,6 +239,57 @@ class ProcessSample(Base):
     torch_max_allocated_mb: Mapped[float | None] = mapped_column(REAL)
 
 
+class ResourceSample1m(Base):
+    """One-minute averages of ``resource_samples`` older than the raw retention (NFR-12).
+
+    One row per minute, job and stage. ``samples`` is how many raw rows it averages;
+    the per-core list and the active-job list are not kept.
+    """
+
+    __tablename__ = "resource_samples_1m"
+    __table_args__ = (
+        Index("ix_resource_samples_1m_ts_brin", "ts", postgresql_using="brin"),
+        Index("ix_resource_samples_1m_job_ts", "job_id", "ts"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    job_id: Mapped[str | None] = mapped_column(Text)
+    stage: Mapped[str | None] = mapped_column(Text)
+    samples: Mapped[int] = mapped_column(Integer)
+    interval_s: Mapped[float] = mapped_column(REAL)
+    cpu_percent: Mapped[float] = mapped_column(REAL)
+    ram_used_mb: Mapped[float] = mapped_column(REAL)
+    ram_available_mb: Mapped[float] = mapped_column(REAL)
+    ram_total_mb: Mapped[float] = mapped_column(REAL)
+    swap_used_mb: Mapped[float] = mapped_column(REAL)
+    gpu_util_percent: Mapped[float | None] = mapped_column(REAL)
+    gpu_mem_util_percent: Mapped[float | None] = mapped_column(REAL)
+    vram_used_mb: Mapped[float | None] = mapped_column(REAL)
+    vram_total_mb: Mapped[float | None] = mapped_column(REAL)
+    gpu_temp_c: Mapped[float | None] = mapped_column(REAL)
+    gpu_power_w: Mapped[float | None] = mapped_column(REAL)
+    disk_read_mb_s: Mapped[float] = mapped_column(REAL)
+    disk_write_mb_s: Mapped[float] = mapped_column(REAL)
+
+
+class ProcessSample1m(Base):
+    """One-minute averages of ``process_samples`` (NFR-12); the allocator peak is a maximum."""
+
+    __tablename__ = "process_samples_1m"
+    __table_args__ = (Index("ix_process_samples_1m_job_ts", "job_id", "ts"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    job_id: Mapped[str] = mapped_column(Text)
+    stage: Mapped[str | None] = mapped_column(Text)
+    samples: Mapped[int] = mapped_column(Integer)
+    rss_mb: Mapped[float] = mapped_column(REAL)
+    torch_allocated_mb: Mapped[float | None] = mapped_column(REAL)
+    torch_reserved_mb: Mapped[float | None] = mapped_column(REAL)
+    torch_max_allocated_mb: Mapped[float | None] = mapped_column(REAL)
+
+
 class Derivation(Base):
     """Content-addressed cache of expensive per-item results (ADR-0004, INV-11)."""
 

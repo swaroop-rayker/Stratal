@@ -21,6 +21,8 @@ class SyntheticConfig(BaseModel):
 
     items: int = 20
     seconds_per_item: float = 0.01
+    cpu_seconds_per_item: float = 0.0
+    """Busy work per item, for the NFR-11 overhead benchmark (sleeping costs no CPU)."""
     warn_at: int | None = None
     fail_at: int | None = None
     typed_failure: bool = False
@@ -28,6 +30,14 @@ class SyntheticConfig(BaseModel):
     kill_signal: int = 9
     ignore_cancel: bool = False
     label: str = "synthetic-base"
+
+
+def _busy(seconds: float) -> None:
+    """Spin on the CPU for ``seconds`` of this process's own CPU time."""
+    end = time.process_time() + seconds
+    total = 0
+    while time.process_time() < end:
+        total += sum(range(1000))
 
 
 def _run(run: StageRun) -> StageResult:
@@ -38,6 +48,8 @@ def _run(run: StageRun) -> StageResult:
         if not config.ignore_cancel:
             ctx.raise_if_cancelled()
         time.sleep(config.seconds_per_item)
+        if config.cpu_seconds_per_item:
+            _busy(config.cpu_seconds_per_item)
         if step == config.kill_signal_at:
             os.kill(os.getpid(), config.kill_signal)
         if step == config.fail_at:

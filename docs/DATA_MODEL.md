@@ -213,6 +213,19 @@ Indexes: BRIN on `ts`; `(job_id, ts)`. GPU columns are nullable because a metric
 
 Index: `(job_id, ts)`.
 
+### 4.8a `resource_samples_1m`, `process_samples_1m` (NFR-12, added in M7)
+
+One-minute averages of the two sample tables, for samples older than the raw retention (`telemetry_keep_days`, 7). The `beat` service moves whole minutes hourly: in one transaction per six hours of raw data it inserts the averages and deletes the raw rows they replace, so a minute is never counted twice or half moved.
+
+| Column | Notes |
+|---|---|
+| `id`, `ts` | `ts` is the start of the minute |
+| `job_id`, `stage` | as in the raw table; one row per minute, job and stage |
+| `samples` | how many raw rows the row averages |
+| the raw table's numeric columns | averages; nullable ones stay null when every sample was null. `process_samples_1m.torch_max_allocated_mb` is the maximum |
+
+Not kept: `cpu_per_core` and `active_jobs`. `GET /jobs/{id}/telemetry` returns the averages alongside raw rows, with `cpu_per_core` empty and `active_jobs` null. Indexes: `resource_samples_1m` BRIN on `ts` and `(job_id, ts)`; `process_samples_1m` `(job_id, ts)`.
+
 ### 4.9 `derivations` (content-addressed cache)
 
 | Column | Type | Notes |
@@ -323,7 +336,6 @@ Outlined only. Each is specified at its phase kickoff, with an ADR where it is a
 |---|---|---|
 | 2 | `model_lineages`, `model_versions`, `checkpoints`, `pins`, `retention_settings` | Version state (`base`, `partial`, `trained`), weights status (`present`, `weights_deleted`), parent version, dataset version, config, metrics, size on disk. Retention deletions are logged as events (REG-2.9). Delete order per NFR-15 |
 | 2 | Optuna's own tables, in a separate schema | Studies and trials (HPO) |
-| 2 | `resource_samples_1m` or Parquet under `telemetry/1m/` | NFR-12 downsampling |
 | 3 | `corpora`, `rag_indexes`, `chat_sessions`, `inference_requests` | Index versions for hit@k (LLM-2.2); request latency for NFR-6 |
 | 4 | adapter columns on `model_versions` | LoRA deltas with a parent base (REG-1.3, REG-2.8) |
 
@@ -331,8 +343,8 @@ Outlined only. Each is specified at its phase kickoff, with an ADR where it is a
 
 | Data | Volume | Policy |
 |---|---|---|
-| `resource_samples`, `process_samples` | about 86,000 rows per day of continuous jobs each | Raw rows kept 7 days, then downsampled to 1-minute averages (NFR-12) |
-| `events` | hundreds to a few thousand per job | Kept. Whether DEBUG events are pruned after 7 days is not specified in the input and will be proposed in M7 |
+| `resource_samples`, `process_samples` | about 86,000 rows per day of continuous jobs each | Raw rows kept 7 days, then moved to 1-minute averages in `*_1m` (NFR-12, §4.8a; about 1,440 rows per day each) |
+| `events` | hundreds to a few thousand per job | Kept, every level (the owner's decision, 2026-11-17). No DEBUG events are emitted yet; 3,391 events from 26 jobs took 1.6 MB, and a 20,000-image run writes about 1,300. Revisited if the table passes 1 GB |
 | Manifests | about 1–2 MB per 10k-row version | Kept; removed only with their version |
 | Blobs | the dataset's size, once | Removed only by garbage collection |
 | Per-job files | logs and spools | Kept; in-run checkpoints are deleted on success (REG-2.6) |

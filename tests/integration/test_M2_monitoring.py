@@ -356,12 +356,19 @@ def test_NFR_13_kill_the_monitor_mid_job_and_the_job_continues(
 
     monitor.send_signal(signal.SIGKILL)
     monitor.wait(5)
+    stored = len(_progress_steps(runner, job_id))
+    time.sleep(0.5)
+    assert thread.is_alive() and len(_progress_steps(runner, job_id)) == stored < 150, (
+        "events stopped arriving when it died, while the job ran on"
+    )
     thread.join(30)
 
     assert runner.job(job_id)["state"] == "completed", "the job never noticed"
-    assert len(_progress_steps(runner, job_id)) < 150, "events stopped arriving when it died"
+    # M7: the supervisor backfills the spool when the stage ends (ADR-0005), so nothing
+    # waits for the monitor; its late stream entries are then stored once, not twice.
+    assert _progress_steps(runner, job_id) == list(range(1, 151)), "nothing lost"
     runner.collect()  # the monitor comes back
-    assert _progress_steps(runner, job_id) == list(range(1, 151)), "nothing lost, nothing twice"
+    assert _progress_steps(runner, job_id) == list(range(1, 151)), "nothing twice"
 
 
 def test_NFR_13_kill_the_job_and_the_monitor_continues(

@@ -16,7 +16,13 @@ from stratal.core.errors import ValidationFailed
 from stratal.core.settings import get_settings
 from stratal.db.engine import get_engine
 from stratal.db.models import Event as EventRow
-from stratal.db.models import Job, ProcessSample, ResourceSample
+from stratal.db.models import (
+    Job,
+    ProcessSample,
+    ProcessSample1m,
+    ResourceSample,
+    ResourceSample1m,
+)
 from stratal.mon.events import Event, Level
 from stratal.mon.store import insert_events
 from stratal.runtime import jobs as job_service
@@ -252,10 +258,14 @@ def job_telemetry(
     to: datetime | None = None,
     max_points: Annotated[int, Query(ge=10, le=5000)] = 600,
 ) -> Json:
-    """Samples for charts, thinned evenly to at most ``max_points`` per series."""
+    """Samples for charts, thinned evenly to at most ``max_points`` per series.
+
+    Samples older than the raw retention come from the 1-minute averages (NFR-12),
+    one point per minute, without the per-core list.
+    """
     job_service.get_job(session, job_id)
 
-    def series(model: type[ResourceSample] | type[ProcessSample]) -> list[Json]:
+    def rows(model: Any) -> list[Json]:
         query = select(model).where(model.job_id == job_id)
         if stage is not None:
             query = query.where(model.stage == stage)
@@ -263,11 +273,23 @@ def job_telemetry(
             query = query.where(model.ts >= from_)
         if to is not None:
             query = query.where(model.ts <= to)
-        rows = list(session.scalars(query.order_by(model.ts, model.id)))
-        step = max(1, -(-len(rows) // max_points))
-        return [_columns(row) for row in rows[::step]]
+        return [_columns(row) for row in session.scalars(query.order_by(model.ts, model.id))]
 
-    return {"resource": series(ResourceSample), "process": series(ProcessSample)}
+    def averaged(model: Any, **missing: Any) -> list[Json]:
+        out: list[Json] = []
+        for row in rows(model):
+            row.pop("samples")
+            out.append({**row, **missing})
+        return out
+
+    def series(points: list[Json]) -> list[Json]:
+        points.sort(key=lambda point: datetime.fromisoformat(str(point["ts"])))
+        step = max(1, -(-len(points) // max_points))
+        return points[::step]
+
+    resource = averaged(ResourceSample1m, active_jobs=None, cpu_per_core=[]) + rows(ResourceSample)
+    process = averaged(ProcessSample1m) + rows(ProcessSample)
+    return {"resource": series(resource), "process": series(process)}
 
 
 # -- activity log and telemetry ------------------------------------------------

@@ -31,9 +31,19 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 | BUG4 | Training interrupted when laptop goes into sleep mode and improper handling of this situation | Keep-awake, sleep events, per-batch commits, resume in a fresh process ([ADR-0008](decisions/ADR-0008-sleep-and-suspend-handling.md)) | `test_BUG4_*` | M2 |
 | BUG5 | Stale weights persist in the VRAM after training completion, tests, evals, model transfers or changes during inferencing | Process exit is the unload; verified unload for long-lived processes ([ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)) | `test_BUG5_*` | M4 |
 | BUG6 | Improper handling of VRAM occupancy, bloated by stale weights | One GPU lease; free-VRAM check before every load ([ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)) | `test_BUG6_*` | M4 |
-| BUG7 | Data bloat during model training runs, pauses or checkpoints and poor versioning issues | Retention policy (REG-2), one rolling checkpoint, content-addressed files | NFR-14 disk audit | Phase 2 |
+| BUG7 | Data bloat during model training runs, pauses or checkpoints and poor versioning issues | Retention policy (REG-2), one rolling checkpoint, content-addressed files | `test_NFR_14_*`, `test_BUG7_*` (planned) | M8 (planned) |
 
 ## Log
+
+### E-011 — Two jobs making the same version at once: the second failed
+
+- **Date:** 2026-11-17
+- **Seen:** While checking SCR-07 in M6, two identical demo runs (ingest to preprocess, same source and config) were started together and ran side by side on the CPU workers. Both computed `ds_1fb7a64c25ce`; `job_0022` failed in ingest with `UniqueViolation` on `dataset_versions_pkey`. A retry succeeded, because the version then existed.
+- **Where:** `register_version` (M1, DATA-3.3), reached by every stage's commit; BUG1
+- **Cause:** Registration read the row, found none, and inserted. Two transactions could both read before either committed. Content addressing makes identical work produce identical IDs, so the second insert was the same version, not a conflict in meaning; only the check-then-insert was unsafe.
+- **Fix:** The insert is `ON CONFLICT (version_id) DO NOTHING`. A second transaction waits for the first, inserts nothing, and reads the row back. If the existing row's content or config hash differs, that is a real collision and raises `conflict`. Written by the agent at the owner's request (2026-11-17, M7).
+- **Guard:** `test_BUG1_two_jobs_registering_the_same_version_at_once_both_succeed` (two connections; fails on the old code with this exact error), `test_BUG1_a_different_version_under_the_same_id_is_refused`
+- **Status:** verified
 
 ### E-010 — A version ID depended on where the data folder was
 
@@ -82,7 +92,7 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 - **Where:** `pyproject.toml`; the `api` image, which `worker-cpu` and `monitor` share
 - **Cause:** Celery was declared as plain `celery`. Its Redis transport needs extra packages that only the `celery[redis]` extra declares. The dev image happened to contain `packaging` through a test tool, so every test passed and only the production image failed.
 - **Fix:** Depend on `celery[redis]`.
-- **Guard:** None automated yet. The integration tests run in the dev image, not the image the workers use; the M2 demo on the real stack is what caught it. A smoke test that starts the stack belongs in M7's acceptance.
+- **Guard:** The integration tests run in the dev image, not the image the workers use; the M2 demo on the real stack is what caught it. Since M7, `tests/acceptance` runs a whole pipeline through the running stack, and so through the images `api`, the workers, `monitor` and `beat` use. It runs on request (`-m acceptance`), not in `check.ps1`.
 - **Status:** verified on the running stack
 ### E-005 — Exceeding VRAM does not fail; it silently spills and crawls
 

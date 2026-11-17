@@ -8,7 +8,7 @@ event stream, where a running monitor would consume their events.
 
 import os
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import pytest
 from alembic import command
@@ -36,12 +36,14 @@ get_settings.cache_clear()
 
 from stratal.core.bus import Bus  # noqa: E402
 from stratal.db.engine import get_engine  # noqa: E402
+from stratal.mon.collector import Collector  # noqa: E402
 from stratal.testing.harness import Runner  # noqa: E402
 
 get_engine.cache_clear()
 
 _TABLES = (
-    "events, resource_samples, process_samples, job_transitions, job_stages, "
+    "events, resource_samples, process_samples, resource_samples_1m, process_samples_1m, "
+    "job_transitions, job_stages, "
     "review_items, review_sessions, dataset_versions, jobs, datasets, derivations"
 )
 
@@ -85,6 +87,22 @@ def bus(migrated: None) -> Iterator[Bus]:
 @pytest.fixture
 def runner(bus: Bus) -> Runner:
     return Runner(bus)
+
+
+@pytest.fixture
+def reset_state(bus: Bus, runner: Runner) -> Callable[[], None]:
+    """Empty the database and Redis again mid-test; files in the data folder stay.
+
+    The runner gets a new collector, since flushing Redis removes its consumer group.
+    """
+
+    def reset() -> None:
+        bus.flush_all()
+        with get_engine().begin() as connection:
+            connection.execute(text(f"TRUNCATE {_TABLES} RESTART IDENTITY CASCADE"))
+        runner.collector = Collector(bus, get_engine())
+
+    return reset
 
 
 @pytest.fixture
