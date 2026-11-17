@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-06_v1.html`](../screens/SCR-06_v1.html), G2 approved 2026-11-15 |
 | Built | `frontend/src/screens/report/ReportScreen.tsx`, `frontend/src/styles/scr06.css`; route `/versions/:versionId/report` |
 | Checked | 2026-11-17, live at 1280 × 760 and 1024 × 640, dark and light: coco1k report #5 (`ds_7ffe080f799f`, with `rev_0002`); coco10k report #7 (no review); `ds_db6bcccdb054` with no report, built from the page (`job_0021` → report #10) |
-| Status | Waiting for the owner's review |
+| Status | **Approved by the owner on 2026-11-17** |
 
 ## Screenshots (in this folder)
 
