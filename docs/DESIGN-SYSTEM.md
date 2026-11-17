@@ -150,6 +150,7 @@ All are in the preview with their variants and states. States shown where they a
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-14 | First version, for Gate 0 review |
+| v1 (SCR-04 G3) | 2026-11-17 | Light theme: text in a state or severity colour that sits on its own tint (status pills, timeline segments, WARN and ERROR words on tinted log rows) is drawn `color-mix(in srgb, <colour> 80%, var(--text-primary))`, and time and stage on tinted log rows use `text-secondary`. Measured against the tint rather than the surface, the plain colours fell to 3.9–4.6:1; now at least 4.98:1. Dark unchanged. Approved by the owner at SCR-04's Gate 3 |
 | v1 (SCR-02 G3) | 2026-11-16 | Secondary text inside a selected row (accent-soft) uses `text-secondary`, not `text-muted`, which measured 4.45:1 there in dark. Approved by the owner at SCR-02's Gate 3 |
 | v1 (SCR-01 G3) | 2026-11-16 | The Idle pill (a word, not a job state) uses `text-secondary`; `text-muted` on its own tint measured 4.34:1 in light (first reported as 3.78; corrected 2026-11-17). Approved by the owner at SCR-01's Gate 3 |
 | v1 (SCR-06) | 2026-11-15 | The chart icon joins the set. Approved with the SCR-06 hi-fi mockup |

@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-04_v1.html`](../screens/SCR-04_v1.html), G2 approved 2026-11-15 |
 | Built | `frontend/src/screens/job/`, `frontend/src/components/LiveChart.tsx`, `frontend/src/styles/{scr04,stagedrawer}.css` |
 | Checked | 2026-11-17, live on real jobs, at 1280 × 760 and 1024 × 640, dark and light. job_0017 is demo's label → filter → split → evaluate run on the GPU, started from SCR-03's drawer. job_0020 is a demo re-ingest, job_0019 a demo ingest cancelled from the dialog |
-| Status | **Waiting for the owner's sign-off** |
+| Status | **Approved by the owner on 2026-11-17** ("Approved, apply fixes"); the light-theme contrast fixes are applied |
 
 ## Screenshots (in this folder)
 

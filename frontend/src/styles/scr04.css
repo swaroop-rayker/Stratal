@@ -94,3 +94,4 @@
   .scr04 { height: auto; }
   .scr04 .logbox { flex: none; height: 360px; }
 }
+[data-theme="light"] .scr04 .seg b { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); } /* the owner's light-theme rule (components.css), over this screen's own .seg b */
