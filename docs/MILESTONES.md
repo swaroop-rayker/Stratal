@@ -272,16 +272,16 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 **Done when**
 
-- [ ] Each screen built only after its G2 approval is logged
-- [ ] `test_MON_4_1_*`: the live job view renders and updates during a job
-- [ ] `test_MON_4_2_*`: the timeline shows every stage; clicking one shows its events and charts
-- [ ] `test_MON_4_3_*`: filters by level, stage and job work
-- [ ] Per screen: screenshot compared with the approved mockup, differences listed and signed off (G3)
-- [ ] Per screen: contrast and keyboard path checked
-- [ ] No raw hex colours outside the token files (lint)
-- [ ] Frontend typecheck and build pass
-- [ ] Demo: run a pipeline and follow it in the browser
-- [ ] Docs updated
+- [x] Each screen built only after its G2 approval is logged (all G2 rows 2026-11-15, before any screen code)
+- [x] `test_MON_4_1_*`: the live job view renders and updates during a job (2026-11-17; `test_MON_4_1_live_view_renders_and_updates_during_a_job`, Vitest with a fake event source)
+- [x] `test_MON_4_2_*`: the timeline shows every stage; clicking one shows its events and charts (2026-11-17)
+- [x] `test_MON_4_3_*`: filters by level, stage and job work (2026-11-17; two Vitest tests, and `test_MON_4_3_events_tail_and_minimum_level` against the API)
+- [x] Per screen: screenshot compared with the approved mockup, differences listed and signed off (G3): SCR-01 to SCR-07, 2026-11-16 to 2026-11-17, in `docs/design/g3/` and `docs/design/APPROVALS.md`
+- [x] Per screen: contrast and keyboard path checked. Two design-system contrast rules came out of it: light state text on its tint (SCR-04) and dark pills on selected rows (SCR-07)
+- [x] No raw hex colours outside the token files (lint: `scripts/no-raw-hex.mjs`, in `check.ps1`)
+- [x] Frontend typecheck and build pass (in `check.ps1`; the bundle is 1.5 MB, code-splitting left for later)
+- [x] Demo: run a pipeline and follow it in the browser (2026-11-17). From SCR-02, "Continue the pipeline from here" on demo's preprocess version `ds_be4049a8a755` started `job_0024` (label, filter, split, evaluate); SCR-04 followed it live to completion in 18 s (captions reused from cache), and SCR-06 showed report 11: 1,500 of 1,535 rows kept, acceptance not measured. Earlier, SCR-06 built report 10 and followed `job_0021` in place, and SCR-07 cancelled and retried live jobs. The SCR-07 check found two identical jobs racing to commit one version (`job_0022`, reported to the owner)
+- [x] Docs updated (2026-11-17: API, DATA_MODEL, DECISIONS, ARCHITECTURE, README, CLAUDE.md, SCREENS, DESIGN-SYSTEM, APPROVALS, the G3 records; learning notes)
 - [ ] Owner's OK to merge
 
 ## M7 — Phase-1 acceptance
