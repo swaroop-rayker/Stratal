@@ -196,7 +196,7 @@ Stages have their own simpler status: pending, queued, running, completed, faile
 Stage code calls the job context. It never talks to Redis or Postgres directly.
 
 - **Emit.** The emitter writes each event to the job's local log file and adds it to a Redis Stream from a background thread with a bounded queue. Emitting never blocks the job and never raises into it. If Redis is unreachable the job keeps running and the events remain in the local file (NFR-13).
-- **Collect.** The collector reads the stream in batches, inserts into Postgres (idempotent on the event's unique ID), acknowledges, and publishes each event for live viewers. If the collector is down, events wait in the stream and are picked up when it returns.
+- **Collect.** The collector reads the stream in batches, inserts into Postgres (idempotent on the event's unique ID), acknowledges, and publishes each event for live viewers. If the collector is down, events wait in the stream and are picked up when it returns. Events that never reached the stream (Redis down, or a lost entry) are backfilled from the job's local file by the supervisor after each stage, on the same unique ID, so each is stored once (M7, ADR-0005).
 - **Derive.** From stage events the collector keeps each stage's row current: status, progress, latest activity message, throughput and ETA. The timeline view (MON-4.2) reads those rows instead of replaying events.
 - **Deliver.** The API streams to the browser over SSE. A reconnecting client sends the last event ID it saw; the API replays the gap from Postgres and then switches to live. Live uses the same query: a pub/sub message only tells the API to read Postgres again, so nothing can be missed or sent twice. This meets the 1-second target in MON-1.4.
 

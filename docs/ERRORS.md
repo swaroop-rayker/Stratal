@@ -31,7 +31,7 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 | BUG4 | Training interrupted when laptop goes into sleep mode and improper handling of this situation | Keep-awake, sleep events, per-batch commits, resume in a fresh process ([ADR-0008](decisions/ADR-0008-sleep-and-suspend-handling.md)) | `test_BUG4_*` | M2 |
 | BUG5 | Stale weights persist in the VRAM after training completion, tests, evals, model transfers or changes during inferencing | Process exit is the unload; verified unload for long-lived processes ([ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)) | `test_BUG5_*` | M4 |
 | BUG6 | Improper handling of VRAM occupancy, bloated by stale weights | One GPU lease; free-VRAM check before every load ([ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)) | `test_BUG6_*` | M4 |
-| BUG7 | Data bloat during model training runs, pauses or checkpoints and poor versioning issues | Retention policy (REG-2), one rolling checkpoint, content-addressed files | NFR-14 disk audit | Phase 2 |
+| BUG7 | Data bloat during model training runs, pauses or checkpoints and poor versioning issues | Retention policy (REG-2), one rolling checkpoint, content-addressed files | `test_NFR_14_*`, `test_BUG7_*` (planned) | M8 (planned) |
 
 ## Log
 
@@ -92,7 +92,7 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 - **Where:** `pyproject.toml`; the `api` image, which `worker-cpu` and `monitor` share
 - **Cause:** Celery was declared as plain `celery`. Its Redis transport needs extra packages that only the `celery[redis]` extra declares. The dev image happened to contain `packaging` through a test tool, so every test passed and only the production image failed.
 - **Fix:** Depend on `celery[redis]`.
-- **Guard:** None automated yet. The integration tests run in the dev image, not the image the workers use; the M2 demo on the real stack is what caught it. A smoke test that starts the stack belongs in M7's acceptance.
+- **Guard:** The integration tests run in the dev image, not the image the workers use; the M2 demo on the real stack is what caught it. Since M7, `tests/acceptance` runs a whole pipeline through the running stack, and so through the images `api`, the workers, `monitor` and `beat` use. It runs on request (`-m acceptance`), not in `check.ps1`.
 - **Status:** verified on the running stack
 ### E-005 — Exceeding VRAM does not fail; it silently spills and crawls
 

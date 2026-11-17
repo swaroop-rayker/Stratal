@@ -47,7 +47,10 @@ You need Docker Desktop (WSL2 backend) and git. Python runs only inside containe
 | Quality gates without integration tests | `.\scripts\check.ps1 -Fast` |
 | Check the GPU from a container | `docker compose run --rm worker-gpu python scripts/spikes/s01_gpu_check.py` |
 | Quality gates plus GPU tests | `.\scripts\check.ps1 -Gpu` |
-| Logs | `docker compose logs -f api` (or `worker-cpu`, `monitor`) |
+| Quality gates plus the timing benchmarks (NFR-11) | `.\scripts\check.ps1 -Bench` |
+| Phase-1 acceptance run on the live stack | `docker compose run --rm dev pytest -q -s -m acceptance tests/acceptance` |
+| Store a job's events the database missed | `docker compose run --rm dev python -m stratal.cli events backfill --job job_0042` (or `--all`) |
+| Logs | `docker compose logs -f api` (or `worker-cpu`, `monitor`, `beat`) |
 | Apply database migrations | `docker compose run --rm dev alembic upgrade head` |
 | Start a pipeline job | `POST http://127.0.0.1:8000/api/v1/jobs` (see docs/API.md §3.3); sources go under `.\sources` |
 | Review a sample of a version | `POST http://127.0.0.1:8000/api/v1/versions/{id}/reviews` with `{"sample_size": 50}`, then `PUT …/reviews/{rev}/items/{n}` and `POST …/reviews/{rev}/close` (docs/API.md §3.5) |
