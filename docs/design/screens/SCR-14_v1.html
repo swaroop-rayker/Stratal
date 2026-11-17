@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-14 settings — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.select { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--fs-12); color: var(--text-primary); }
+.select svg.i { width: 12px; height: 12px; color: var(--text-secondary); } .select.is-disabled { opacity: .45; }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 40px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); }
+.pill.cancelled { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 400px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; } .toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.modal { width: 460px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; } .modal > header svg.i { color: var(--danger); }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); } .modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); max-width: 40ch; }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.grp { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-07 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.phead { display: flex; align-items: center; gap: var(--sp-3); } .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.t tr.sec td .count { margin-left: var(--sp-1); }
+.now { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.now .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.now .stg { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.now .progress { width: 72px; }
+.now.err .code { color: var(--danger); font-family: var(--font-mono); }
+.now.muted { color: var(--text-muted); }
+.now svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.t td.acts-cell { width: 120px; text-align: right; }
+.toasts { position: absolute; right: var(--sp-4); bottom: calc(28px + var(--sp-4)); z-index: var(--z-toast); }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+
+
+/* ============================================================================ SCR-01 sidebar foot (approved v1, unchanged) */
+.side .foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.health { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.health svg.i { color: var(--success); }
+
+/* ============================================================================ form field (design-system preview, unchanged) */
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); display: flex; align-items: center; gap: var(--sp-2); }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.field.error > small { color: var(--danger); display: flex; gap: var(--sp-1); align-items: center; }
+.input { height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-13) var(--font-ui); width: 100%; display: flex; align-items: center; }
+.input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.field.error .input { border-color: var(--danger); }
+.badge.info { color: var(--info); background: var(--info-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; } .badge.ok { color: var(--success); background: var(--success-soft); border-color: transparent; }
+
+/* ============================================================================ SCR-14 (tokens only) */
+.pill.paused { --c: var(--state-paused); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.note2 { font-size: var(--fs-12); color: var(--text-muted); margin: 0; } .note2 .mono { color: var(--text-secondary); }
+.typeconfirm { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-3); font-size: var(--fs-12); }
+.typeconfirm .input { font: var(--fs-13) var(--font-mono); }
+.cols { display: grid; grid-template-columns: 168px 1fr; gap: var(--sp-5); min-height: 0; }
+.index { display: flex; flex-direction: column; gap: 2px; }
+.index a { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); text-decoration: none; }
+.index a[aria-current=true] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); }
+.index a[aria-disabled=true] { color: var(--text-muted); }
+.index a .count, .index a .badge { margin-left: auto; }
+.secs { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.sec { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); display: flex; flex-direction: column; }
+.sec > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.sec > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.sec > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.sec > header .aside { font-size: var(--fs-12); color: var(--text-secondary); }
+.frow { display: grid; grid-template-columns: 380px 1fr; gap: var(--sp-6); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); align-items: start; }
+.frow .input.num { width: 132px; }
+.frow .mod { display: flex; align-items: center; gap: var(--sp-2); }
+.applies { display: flex; flex-direction: column; gap: var(--sp-2); padding-top: 22px; font-size: var(--fs-12); color: var(--text-secondary); }
+.applies .badge svg.i { width: 11px; height: 11px; }
+.ctx { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ctx b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ctx .sq { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res-temp); margin-right: var(--sp-1); }
+.fixed { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-4); font-size: var(--fs-12); color: var(--text-secondary); }
+.fixed svg.i { color: var(--text-muted); margin-top: 2px; }
+.savebar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-top: var(--bw) solid var(--border); background: var(--surface-raised); border-radius: 0 0 var(--r-md) var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.savebar b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ovr { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); border-bottom: var(--bw) solid var(--border); }
+.ovr h3 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.t td .input { height: var(--h-sm); width: 72px; font-size: var(--fs-12); }
+.t td.dim { color: var(--text-secondary); }
+.t.dense td { height: 36px; }
+/* Contrast rules approved at G3 since the v1 mockups (in the built app). */
+[data-theme="light"] .pill { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.err { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.info { color: color-mix(in srgb, var(--info) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.warn { color: color-mix(in srgb, var(--warning) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.ok { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
+[data-theme="dark"] .t tr[aria-selected=true] .pill, [data-theme="dark"] .t tr.is-hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+<symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9" stroke-width="2.2"/></symbol>
+<symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+<symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+<symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 16 16"><path d="M6 2.5h4M6.8 2.5v3.8L5 9h6L9.2 6.3V2.5M8 9v4.5"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M2 8h3l1.5-3 3 6L11 8h3"/></symbol>
+  <symbol id="i-keys" viewBox="0 0 16 16"><rect x="1.8" y="4" width="12.4" height="8" rx="1.5"/><path d="M4.5 6.7h.3M7 6.7h.3M9.5 6.7h.3M5 9.4h6"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 16 16"><path d="M2.5 4h2M7.5 4h6M2.5 8h7M12.5 8h1M2.5 12h4M9.5 12h4"/><circle cx="6" cy="4" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="8" cy="12" r="1.5"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-14 — Settings · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-14-lofi_v1.html</span>, approved 2026-11-17) inside the SCR-01 shell, using only design system v1 tokens, components and patterns, plus one proposed icon. Values are the accepted defaults (OC-3) and the three lineages of SCR-11. Open as <span class="mono">SCR-14_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>Fields follow the design system's schema-form pattern (UI-2.3):</b> the label is the property name in mono with its type as a badge; the schema's description, range and default are the helper text below the input; an error from the API replaces the helper. The low-fi's plain-English label is now the start of the helper. One field per row, not the pattern's two columns, because each field has its "applies" note and live context beside it.</li>
+<li><b>When a field applies</b> is a neutral badge beside it: <i>applies at once</i> or <i>new jobs only</i>, from a schema extension <span class="mono">x-applies</span>.</li>
+<li><b>A changed value</b> gets an info badge <i>changed</i> and a <i>Reset to 300</i> button; the save bar names each change as old → new. The index shows the number of unsaved changes as a count, not a coloured dot.</li>
+<li><b>One new icon is proposed: sliders</b>, for Settings, which joins the sidebar's foot above Theme (SCR-01). No icon in the set says "settings".</li>
+<li><b>The thermal context</b> uses the temperature resource colour as a small square, as the status bar does; the numbers carry the meaning.</li>
+<li><b>The global deletion dialog</b> is SCR-11's dialog with a lineage column, and asks for <span class="mono">delete 2 versions</span> to be typed, as approved in the low-fi.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Training section, one unsaved change (dark)</h2>
+<div class="frame" style="height:820px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="grp">Data</div><a class="nav"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="grp">Jobs</div><a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+      <div class="grp">Models</div><a class="nav"><svg class="i"><use href="#i-grid"/></svg>Models<kbd>g m</kbd></a>
+      <div class="foot">
+        <div class="health" role="status"><svg class="i"><use href="#i-heart"/></svg>All systems ok</div>
+        <a class="nav" aria-current="page"><svg class="i"><use href="#i-sliders"/></svg>Settings</a>
+        <a class="nav"><svg class="i"><use href="#i-theme"/></svg>Theme<kbd>t</kbd></a>
+        <a class="nav"><svg class="i"><use href="#i-keys"/></svg>Shortcuts<kbd>?</kbd></a>
+      </div>
+    </nav>
+    <header class="top"><div class="crumbs"><b>Settings</b></div><span class="spacer"></span><span class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0031</span><span class="stage">train</span><span class="num">33%</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content">
+      <div class="phead"><h1>Settings</h1><span class="sub">Defaults and limits for every job, stored in the database (OC-9)</span></div>
+      <div class="cols">
+        <nav class="index" aria-label="Sections"><a href="#" aria-current="true">Training<span class="count">1</span><span class="sr-only">unsaved change</span></a><a href="#">Retention</a><a href="#" aria-disabled="true">Monitoring<span class="badge">M11</span></a><a href="#">Appearance</a></nav>
+        <div class="secs">
+          <section class="sec" aria-labelledby="h-train">
+            <header><h2 id="h-train">Training</h2><span class="req">RUN-1.3 · RUN-1.6 · RUN-1.7</span></header>
+            <div class="frow"><div class="field"><label for="f1"><span class="mono">checkpoint_interval_min</span><span class="badge">integer</span></label><span class="input mono num" id="f1">5</span><small>Longest time between checkpoints, in minutes. 1–60, default 5.</small></div>
+              <div class="applies"><span><span class="badge"><svg class="i"><use href="#i-clock"/></svg>new jobs only</span></span><span>A job's config is fixed when it starts (NFR-4). A checkpoint is also written after every epoch.</span></div></div>
+            <div class="frow"><div class="field"><label for="f2"><span class="mono">thermal_pause_c</span><span class="badge">integer</span></label><span class="input mono num" id="f2">83</span><small>Pause GPU jobs at this temperature, °C. 60 to the card's slowdown point, default 83.</small></div>
+              <div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span><div class="ctx" aria-live="off"><span><i class="sq"></i>now <b>64 °C</b></span><span>7-day high <b>74 °C</b> (job_0026)</span><span>slowdown <b>87 °C</b> (NVML)</span></div></div></div>
+            <div class="frow"><div class="field"><label for="f3"><span class="mono">thermal_resume_c</span><span class="badge">integer</span></label><span class="input mono num" id="f3">75</span><small>Resume below this temperature, °C. At least 5 below <span class="mono">thermal_pause_c</span>, default 75.</small></div>
+              <div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span></div></div>
+            <div class="frow"><div class="field"><label for="f4"><span class="mono">stall_timeout_s</span><span class="badge">integer</span></label><span class="input mono num is-focus" id="f4">600</span><small>Seconds without progress before a job is marked stalled. 60–3600, default 300.</small><span class="mod"><span class="badge info">changed</span><button class="btn sm ghost"><svg class="i"><use href="#i-refresh"/></svg>Reset to 300</button></span></div>
+              <div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span><span>Also to <span class="mono">job_0031</span>, which is running.</span></div></div>
+            <div class="fixed"><svg class="i"><use href="#i-info"/></svg><span>Fixed by the requirements, not settings: a checkpoint after every epoch (RUN-1.3); one GPU job at a time (ADR-0003).</span></div>
+            <div class="savebar" role="status"><b>1 unsaved change</b><span class="mono">stall_timeout_s 300 → 600</span><span class="spacer"></span><button class="btn sm ghost">Discard</button><button class="btn sm primary">Save training</button></div>
+          </section>
+          <section class="sec"><header><h2>Retention</h2><span class="req">REG-2.3 · REG-2.4 · REG-2.10</span></header></section>
+        </div>
+      </div>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>34%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>4.1</b><small>/ 9.7 GB</small></span><span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>88%</b></span><span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>1.9</b><small>/ 6.0 GB</small></span><span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>64 °C</b><small>· 46 W</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+  <span class="n" style="left:214px;top:110px">1</span>
+  <span class="n" style="left:410px;top:122px">2</span>
+  <span class="n" style="left:410px;top:175px">3</span>
+  <span class="n" style="left:822px;top:333px">4</span>
+  <span class="n" style="left:410px;top:651px">5</span>
+  <span class="n" style="left:410px;top:688px">6</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Index</td><td>The sections, with the number of unsaved changes; Monitoring is disabled until M11</td><td>the schema's sections</td><td>–</td></tr>
+<tr><td><span class="n">2</span></td><td>Section</td><td>Title and the requirements it serves</td><td><span class="mono">GET /settings</span> (planned, M8): values, JSON schema per section, a version for saving</td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Fields</td><td>Property name and type, input, description with range and default; <i>changed</i> and Reset when the value differs from the default; when it applies</td><td>same (<span class="mono">description</span>, <span class="mono">minimum</span>, <span class="mono">maximum</span>, <span class="mono">default</span>, <span class="mono">x-applies</span>)</td><td>–</td></tr>
+<tr><td><span class="n">4</span></td><td>Thermal context</td><td>GPU temperature now, the 7-day high and its job, the card's slowdown point (the pause limit's maximum)</td><td><span class="mono">sample</span> messages on <span class="mono">GET /stream</span>; the high from telemetry; slowdown from <span class="mono">GET /system</span> (NVML, planned, M8)</td><td>now: every sample</td></tr>
+<tr><td><span class="n">5</span></td><td>Fixed rules</td><td>What looks like a setting but is a requirement</td><td>static</td><td>–</td></tr>
+<tr><td><span class="n">6</span></td><td>Save bar</td><td>Only when the section has changes: each change as old → new, Discard, Save for this section; a toast confirms</td><td><span class="mono">PUT /settings</span> (planned, M8): this section's values and the version read</td><td>–</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:490px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="foot"><div class="health" role="status"><svg class="i"><use href="#i-heart"/></svg>All systems ok</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-sliders"/></svg>Settings</a><a class="nav"><svg class="i"><use href="#i-theme"/></svg>Theme<kbd>t</kbd></a></div></nav>
+    <header class="top"><div class="crumbs"><b>Settings</b></div></header>
+    <main class="content">
+      <div class="cols">
+        <nav class="index"><a href="#" aria-current="true">Training<span class="count">1</span></a><a href="#">Retention</a><a href="#" aria-disabled="true">Monitoring<span class="badge">M11</span></a><a href="#">Appearance</a></nav>
+        <div class="secs"><section class="sec">
+          <header><h2>Training</h2><span class="req">RUN-1.3 · RUN-1.6 · RUN-1.7</span></header>
+          <div class="frow"><div class="field"><label><span class="mono">thermal_pause_c</span><span class="badge">integer</span></label><span class="input mono num">83</span><small>Pause GPU jobs at this temperature, °C. 60 to the card's slowdown point, default 83.</small></div>
+            <div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span><div class="ctx"><span><i class="sq"></i>now <b>64 °C</b></span><span>7-day high <b>74 °C</b> (job_0026)</span><span>slowdown <b>87 °C</b> (NVML)</span></div></div></div>
+          <div class="frow"><div class="field"><label><span class="mono">stall_timeout_s</span><span class="badge">integer</span></label><span class="input mono num">600</span><small>Seconds without progress before a job is marked stalled. 60–3600, default 300.</small><span class="mod"><span class="badge info">changed</span><button class="btn sm ghost"><svg class="i"><use href="#i-refresh"/></svg>Reset to 300</button></span></div>
+            <div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span><span>Also to <span class="mono">job_0031</span>, which is running.</span></div></div>
+          <div class="fixed"><svg class="i"><use href="#i-info"/></svg><span>Fixed by the requirements, not settings: a checkpoint after every epoch (RUN-1.3); one GPU job at a time (ADR-0003).</span></div>
+          <div class="savebar"><b>1 unsaved change</b><span class="mono">stall_timeout_s 300 → 600</span><span class="spacer"></span><button class="btn sm ghost">Discard</button><button class="btn sm primary">Save training</button></div>
+        </section></div>
+      </div>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>64 °C</b><small>· 46 W</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+</div>
+</div>
+
+<!-- ===================================================================== B -->
+<h2>B · Retention and Appearance, after saving an override (dark)</h2>
+<div class="frame" style="height:800px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="foot"><div class="health" role="status"><svg class="i"><use href="#i-heart"/></svg>All systems ok</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-sliders"/></svg>Settings</a><a class="nav"><svg class="i"><use href="#i-theme"/></svg>Theme<kbd>t</kbd></a></div></nav>
+    <header class="top"><div class="crumbs"><b>Settings</b></div><span class="spacer"></span><span class="jobind idle"><span class="pill" style="--c:var(--text-secondary)"><svg class="i"><use href="#i-clock"/></svg>Idle</span></span></header>
+    <main class="content">
+      <div class="cols">
+        <nav class="index"><a href="#">Training</a><a href="#" aria-current="true">Retention</a><a href="#" aria-disabled="true">Monitoring<span class="badge">M11</span></a><a href="#">Appearance</a></nav>
+        <div class="secs">
+          <section class="sec" aria-labelledby="h-ret">
+            <header><h2 id="h-ret">Retention</h2><span class="req">REG-2.3 · REG-2.4 · REG-2.10</span><span class="spacer"></span><span class="aside">Base and latest weights are always kept (REG-2.1, REG-2.2)</span></header>
+            <div class="frow"><div class="field"><label for="r1"><span class="mono">keep_intermediate</span><span class="badge">integer | "all"</span></label><span style="display:flex;gap:var(--sp-2)"><span class="group-btns" role="group" aria-label="Keep"><button class="btn sm" aria-pressed="true">Number</button><button class="btn sm">All</button></span><span class="input mono" id="r1" style="width:72px;height:var(--h-sm)">0</span></span><small>Intermediate versions each lineage keeps besides base and latest. 0–100, or all; default 0.</small></div>
+              <div class="applies"><span><span class="badge"><svg class="i"><use href="#i-alert"/></svg>asks first when lowered</span></span><span>Lowering it lists the versions and sizes it would delete before anything is saved (REG-2.10). Raising it saves at once.</span></div></div>
+            <div class="ovr">
+              <h3>Per-lineage overrides<span class="req" style="font:var(--fs-11) var(--font-mono);color:var(--text-muted);font-weight:400">REG-2.4</span><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-plus"/></svg>Add override</button></h3>
+              <div class="table-wrap"><table class="t dense">
+                <thead><tr><th>Lineage</th><th>keep_intermediate</th><th class="r">Intermediates now</th><th class="r">Their size</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td class="id">tiny_mlp · cifar10</td><td><span class="input mono">3</span></td><td class="r">0</td><td class="r">0 B</td><td style="text-align:right"><button class="btn sm ghost">Remove</button></td></tr>
+                  <tr><td class="id">small_cnn · cifar10</td><td class="dim">default (0)</td><td class="r">0</td><td class="r">0 B</td><td style="text-align:right"><button class="btn sm ghost">Override…</button></td></tr>
+                  <tr><td class="id">wide_cnn · cifar10</td><td class="dim">default (0)</td><td class="r">0</td><td class="r">0 B</td><td style="text-align:right"><button class="btn sm ghost">Override…</button></td></tr>
+                </tbody></table></div>
+            </div>
+            <div class="fixed"><svg class="i"><use href="#i-info"/></svg><span>Fixed by the requirements: a run's checkpoint is deleted when it completes and kept while it is paused or partial (REG-2.6); pinned versions are never deleted (REG-2.5). A dry run is <i>Preview cleanup</i> on SCR-11.</span></div>
+          </section>
+          <section class="sec" aria-labelledby="h-app">
+            <header><h2 id="h-app">Appearance</h2><span class="spacer"></span><span class="aside">Stored in this browser, not the database</span></header>
+            <div class="frow" style="border-bottom:0"><div class="field"><label><span class="mono">theme</span><span class="badge">enum</span></label><span class="group-btns" role="group" aria-label="Theme"><button class="btn sm" aria-pressed="true">Dark</button><button class="btn sm">Light</button></span><small>Follows the system setting on first visit. <kbd>t</kbd> switches it anywhere.</small></div>
+              <div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span></div></div>
+          </section>
+        </div>
+      </div>
+      <div class="toasts"><div class="toast" role="status" style="--c:var(--success)"><svg class="i"><use href="#i-check"/></svg><div><b>Retention saved</b><span><span class="mono">tiny_mlp · cifar10</span> keeps 3 intermediate versions. Nothing to delete.</span></div></div></div>
+    </main>
+    <footer class="status"><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s idle</span></footer>
+  </div>
+  <span class="n" style="left:410px;top:130px">7</span>
+  <span class="n" style="left:410px;top:236px">8</span>
+  <span class="n" style="left:410px;top:440px">9</span>
+  <span class="n" style="left:410px;top:502px">10</span>
+  <span class="n" style="left:840px;top:648px">11</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">7</span></td><td>Global N</td><td>Number or all; saving a lower value goes through frame C</td><td><span class="mono">GET /settings</span>, then <span class="mono">POST /retention/plan</span> with the new value (planned, M8)</td><td>–</td></tr>
+<tr><td><span class="n">8</span></td><td>Overrides</td><td>Every lineage: its own N or the default, the intermediates it keeps now and their size; add, change or remove an override (removing one that kept more asks first)</td><td><span class="mono">GET /settings</span> and <span class="mono">GET /models</span> (planned, M8)</td><td>after retention runs</td></tr>
+<tr><td><span class="n">9</span></td><td>Fixed rules</td><td>The retention rules that are not settings</td><td>static</td><td>–</td></tr>
+<tr><td><span class="n">10</span></td><td>Appearance</td><td>Theme, stored in the browser at once, so no save bar</td><td>browser storage</td><td>–</td></tr>
+<tr><td><span class="n">11</span></td><td>Toast</td><td>The save's result, including what it deleted, if anything</td><td>the <span class="mono">PUT /settings</span> response</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · Lowering the global N from 2 to 0: the confirmation</h2>
+<div class="frame" style="height:500px">
+  <div class="shell"><nav class="side"></nav><header class="top"><div class="crumbs"><b>Settings</b></div></header><main class="content"></main><footer class="status"></footer></div>
+  <div class="scrim"><div class="modal" role="alertdialog" aria-label="Keep 0 intermediate versions by default?" style="width:560px">
+    <header><svg class="i"><use href="#i-alert"/></svg>Keep 0 intermediate versions by default (now 2)?</header>
+    <div>This deletes the weights of <b>2 versions in 1 lineage, 2.4 MB</b>. Their metadata stays, so each can be re-trained.
+      <div class="table-wrap" style="margin-top:var(--sp-2)"><table class="t dense"><thead><tr><th>Lineage</th><th>Version</th><th class="r">val acc</th><th class="r">Size</th></tr></thead><tbody><tr><td class="id">small_cnn · cifar10</td><td class="id">mv_e4d21c0b9a17</td><td class="r">74.9%</td><td class="r">1.2 MB</td></tr><tr><td></td><td class="id">mv_77a0f3e2b1c6</td><td class="r">71.2%</td><td class="r">1.2 MB</td></tr></tbody></table></div>
+      <p class="note2" style="margin-top:var(--sp-2)">Not affected: <span class="mono">tiny_mlp · cifar10</span> (its override keeps 3) and <span class="mono">wide_cnn · cifar10</span> (base only). Kept in every lineage: the base, the latest and pinned versions.</p>
+      <div class="typeconfirm"><label>Type <b class="mono">delete 2 versions</b> to confirm</label><span class="input">delete 2 ver|</span></div></div>
+    <footer><button class="btn is-focus">Keep them</button><button class="btn danger" disabled><svg class="i"><use href="#i-ban"/></svg>Delete 2 versions' weights</button></footer>
+  </div></div>
+</div>
+<p class="cap">Same data as SCR-11 frame D, reached from the global default instead of the lineage. The list is the dry run's result; if anything changed before the confirmation, it is refused and a new list shown (ADR-0015 rule 7). Confirming saves the setting and starts the retention job. Raising N, or a change that deletes nothing, saves without this dialog.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · The API refuses a save: a field error, and a stale version</h2>
+<div class="frame" style="height:600px">
+  <div class="shell"><nav class="side"></nav><header class="top"><div class="crumbs"><b>Settings</b></div></header>
+    <main class="content">
+      <section class="sec" style="width:860px">
+        <header><h2>Training</h2><span class="req">RUN-1.6</span></header>
+        <div class="frow"><div class="field"><label><span class="mono">thermal_pause_c</span><span class="badge">integer</span></label><span class="input mono num">80</span><small>Pause GPU jobs at this temperature, °C. 60 to the card's slowdown point, default 83.</small><span class="mod"><span class="badge info">changed</span></span></div><div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span></div></div>
+        <div class="frow"><div class="field error"><label><span class="mono">thermal_resume_c</span><span class="badge">integer</span></label><span class="input mono num" aria-invalid="true">78</span><small role="alert"><svg class="i" style="width:12px;height:12px"><use href="#i-alert"/></svg>Must be at most 75: 5 °C below thermal_pause_c (80).</small></div><div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span></div></div>
+        <div class="savebar"><b>2 unsaved changes</b><span>· 1 to fix</span><span class="spacer"></span><button class="btn sm ghost">Discard</button><button class="btn sm primary">Save training</button></div>
+      </section>
+      <div class="toasts"><div class="toast" role="alert" style="--c:var(--warning)"><svg class="i"><use href="#i-alert"/></svg><div><b>Settings changed elsewhere</b><span>Retention was saved in another tab after this page loaded (<span class="mono">conflict</span>). Your training changes are kept.</span><div style="margin-top:var(--sp-2)"><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Reload retention</button></div></div></div></div>
+    </main><footer class="status"></footer></div>
+</div>
+<p class="cap">Ranges are checked in the browser from the schema and again by the API, whose <span class="mono">422 validation_error</span> names the field in <span class="mono">errors[].loc</span>; the message replaces that field's helper. A save sends the version it read; if another tab saved since, the API answers <span class="mono">409 conflict</span> and only the stale section reloads, so unsaved changes elsewhere survive.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Empty, loading and error</h2>
+<div class="frame" style="height:300px">
+  <div class="shell"><nav class="side"></nav><header class="top"><div class="crumbs"><b>Settings</b></div></header>
+    <main class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-4);align-content:start">
+      <div class="state" style="height:190px"><svg class="i"><use href="#i-sliders"/></svg><b>No per-lineage overrides</b><p>Every lineage keeps the default. Models appear here after their first run.</p><button class="btn sm"><svg class="i"><use href="#i-plus"/></svg>Add override</button></div>
+      <div style="display:flex;flex-direction:column;gap:var(--sp-3);padding-top:var(--sp-2)" aria-busy="true"><span class="skeleton" style="width:160px;height:22px"></span><span class="skeleton" style="height:32px"></span><span class="skeleton" style="height:32px"></span><span class="skeleton" style="height:32px"></span></div>
+      <div class="state err" role="alert" style="height:190px"><svg class="i"><use href="#i-alert"/></svg><b>Settings could not be loaded</b><span class="badge err">dependency_unavailable</span><p>Postgres is unreachable. Jobs keep the last values they read. Check the postgres container, then retry.</p><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></div>
+    </main><footer class="status"></footer></div>
+</div>
+<p class="cap">Left: the overrides with none set; the global default is never empty, since it falls back to the schema's default. Middle: loading. Right: the page cannot load, and nothing can be edited until it does.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame compact" style="height:520px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center"><div class="brand" style="padding:0"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav"><svg class="i"><use href="#i-db"/></svg></a><a class="nav"><svg class="i"><use href="#i-list"/></svg></a><a class="nav"><svg class="i"><use href="#i-grid"/></svg></a><div class="foot"><a class="nav" aria-current="page" aria-label="Settings"><svg class="i"><use href="#i-sliders"/></svg></a></div></nav>
+    <header class="top"><div class="crumbs"><b>Settings</b></div></header>
+    <main class="content">
+      <div class="group-btns" role="tablist"><button class="btn sm" aria-pressed="true">Training<span class="count">1</span></button><button class="btn sm">Retention</button><button class="btn sm" disabled>Monitoring</button><button class="btn sm">Appearance</button></div>
+      <section class="sec">
+        <div class="frow" style="grid-template-columns:280px 1fr"><div class="field"><label><span class="mono">checkpoint_interval_min</span><span class="badge">integer</span></label><span class="input mono num">5</span><small>1–60 minutes, default 5.</small></div><div class="applies"><span><span class="badge"><svg class="i"><use href="#i-clock"/></svg>new jobs only</span></span></div></div>
+        <div class="frow" style="grid-template-columns:280px 1fr"><div class="field"><label><span class="mono">thermal_pause_c</span><span class="badge">integer</span></label><span class="input mono num">83</span><small>60 °C to the slowdown point, default 83.</small></div><div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span><div class="ctx"><span><i class="sq"></i>now <b>64 °C</b></span><span>7-day high <b>74 °C</b></span></div></div></div>
+        <div class="frow" style="grid-template-columns:280px 1fr"><div class="field"><label><span class="mono">stall_timeout_s</span><span class="badge">integer</span></label><span class="input mono num">600</span><small>60–3600 seconds, default 300.</small><span class="mod"><span class="badge info">changed</span><button class="btn sm ghost">Reset to 300</button></span></div><div class="applies"><span><span class="badge"><svg class="i"><use href="#i-check"/></svg>applies at once</span></span></div></div>
+        <div class="savebar"><b>1 unsaved change</b><span class="spacer"></span><button class="btn sm ghost">Discard</button><button class="btn sm primary">Save training</button></div>
+      </section>
+    </main><footer class="status"></footer>
+  </div>
+</div>
+<p class="cap">At 1024 px the index becomes a row of buttons above the section, helpers shorten to the range and default, and the NVML slowdown point moves into the field's tooltip.</p>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>Each input is labelled by its property name; the helper (or the error that replaces it) is its description, and an invalid field has <span class="mono">aria-invalid</span>.</li>
+<li>The unsaved-change count in the index has a text name ("1 unsaved change"), not only the number.</li>
+<li>The live temperature does not announce itself (<span class="mono">aria-live="off"</span>); it updates every second and would drown out the form.</li>
+<li>The save bar is a status region; the save's toast is polite, the conflict toast is an alert.</li>
+<li>The deletion dialog focuses "Keep them"; the delete button is disabled, and says why, until the phrase matches.</li>
+<li>Leaving the page with unsaved changes asks first.</li>
+</ul>
+</div>
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body></html>
