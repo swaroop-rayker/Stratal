@@ -25,6 +25,7 @@ from stratal.data.ingest import IngestConfig, run_ingest
 from stratal.data.versioning import derive_version_identity
 from stratal.db.engine import get_engine
 from stratal.db.models import DatasetVersion
+from stratal.mon.backfill import backfill_job
 from stratal.mon.sink import LogSink
 from stratal.pretrained import catalog
 from stratal.pretrained.pull import pull
@@ -72,6 +73,33 @@ def _versions(args: argparse.Namespace) -> list[dict[str, Any]]:
 def _lineage(args: argparse.Namespace) -> list[dict[str, Any]]:
     with Session(get_engine()) as session:
         return [_version_json(v) for v in registry.lineage(session, args.version_id)]
+
+
+def _events_backfill(args: argparse.Namespace) -> list[dict[str, Any]]:
+    """Store spooled events PostgreSQL is missing (ADR-0005, MON-1.4)."""
+    data_dir = get_settings().data_dir
+    if args.all:
+        jobs_dir = data_dir / "jobs"
+        job_ids = (
+            sorted(p.name for p in jobs_dir.iterdir() if p.is_dir()) if jobs_dir.is_dir() else []
+        )
+    elif args.job:
+        job_ids = list(args.job)
+    else:
+        raise ValidationFailed("Name a job with --job, or pass --all.")
+    results: list[dict[str, Any]] = []
+    for job_id in job_ids:
+        with Session(get_engine()) as session, session.begin():
+            done = backfill_job(session, data_dir, job_id)
+        results.append(
+            {
+                "job_id": job_id,
+                "read": done.read,
+                "inserted": done.inserted,
+                "skipped": done.skipped,
+            }
+        )
+    return results
 
 
 def _models_list(_args: argparse.Namespace) -> list[dict[str, Any]]:
@@ -134,6 +162,15 @@ def main(argv: list[str] | None = None) -> int:
     lineage = commands.add_parser("lineage", help="show a version's ancestry back to raw")
     lineage.add_argument("version_id")
     lineage.set_defaults(run=_lineage)
+
+    events = commands.add_parser("events", help="job events (MON-1.4)")
+    event_commands = events.add_subparsers(dest="events_command", required=True)
+    backfilling = event_commands.add_parser(
+        "backfill", help="store spooled events the database is missing"
+    )
+    backfilling.add_argument("--job", action="append", help="a job ID; repeat for several")
+    backfilling.add_argument("--all", action="store_true", help="every job with a folder")
+    backfilling.set_defaults(run=_events_backfill)
 
     models = commands.add_parser("models", help="the pretrained-model allow-list (NFR-8)")
     model_commands = models.add_subparsers(dest="models_command", required=True)

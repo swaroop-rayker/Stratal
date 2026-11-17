@@ -26,6 +26,7 @@ from stratal.core.settings import Settings, get_settings
 from stratal.db.engine import get_engine
 from stratal.db.models import Job, JobStage, ProcessSample
 from stratal.mon import probes
+from stratal.mon.backfill import backfill_job
 from stratal.mon.events import Event, utc_now
 from stratal.mon.store import insert_events, refresh_summary
 from stratal.runtime.child import EXIT_CANCELLED, EXIT_OK
@@ -324,6 +325,7 @@ def run_stage(
         job_id, idx, held, code, cancel_requested=cancel_requested, oom_kills=oom_kills
     )
     log.info("stage_finished", job_id=job_id, stage=held.stage, exit_code=code, outcome=outcome)
+    _backfill(job_id, settings)
     if outcome != "superseded":
         with contextlib.suppress(Exception):
             if following is None:
@@ -334,6 +336,19 @@ def run_stage(
     with contextlib.suppress(Exception):
         bus.close()
     return outcome
+
+
+def _backfill(job_id: str, settings: Settings) -> None:
+    """Store any of the job's spooled events the collector never got (ADR-0005, MON-1.4).
+
+    The child has exited, so its spool is complete. A failure here is logged and
+    never changes the job's outcome; ``stratal.cli events backfill`` can redo it.
+    """
+    try:
+        with Session(get_engine()) as session, session.begin():
+            backfill_job(session, settings.data_dir, job_id)
+    except Exception as exc:
+        log.warning("events_backfill_failed", job_id=job_id, reason=str(exc))
 
 
 def _report_sleep(job_id: str, held: Claim, seconds: float) -> None:

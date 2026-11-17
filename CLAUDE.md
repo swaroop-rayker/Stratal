@@ -101,7 +101,7 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 | Add an npm package (ask first) | `docker compose run --rm frontend-tools npm install --save-exact NAME` |
 | Apply database migrations | `docker compose run --rm dev alembic upgrade head` |
 | Create a migration after changing `src/stratal/db/models.py` | `docker compose run --rm dev alembic revision --autogenerate -m "what changed"`, then read the generated file |
-| Command line | `docker compose run --rm dev python -m stratal.cli ingest --dataset NAME --source PATH` (also `versions`, `lineage`) |
+| Command line | `docker compose run --rm dev python -m stratal.cli ingest --dataset NAME --source PATH` (also `versions`, `lineage`, `events backfill --job ID` or `--all`) |
 | Pull the allowed pretrained models (the only hub access) | `docker compose run --rm dev python -m stratal.cli models pull --all` (`models list` shows what is pulled) |
 | Rebuild the phase-1 source folder (COCO 2017, 10k) | `docker compose run --rm dev python -I scripts/datasets/coco10k.py fetch` (`select` first if `sources/coco10k-meta` is missing) |
 

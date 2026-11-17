@@ -517,6 +517,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `INSERT … ON CONFLICT (version_id) DO NOTHING`, then the row is read back and its content and config hashes compared, in `registry.register_version`; tests `test_BUG1_two_jobs_registering_the_same_version_at_once_both_succeed`, `test_BUG1_a_different_version_under_the_same_id_is_refused`; E-011.
 - **Why:** Content addressing means identical work gives identical IDs, so a second insert of the same ID is the same version, not an error. A lock or a "one job per input" rule would serialise work that is already safe to repeat.
 
+**Events are backfilled from the spool by the supervisor** (M7, MON-1.4, ADR-0005 decision 2; agent)
+- **What:** After each stage, the job's spooled events missing from PostgreSQL are inserted; `stratal.cli events backfill` does it by hand.
+- **How:** `stratal.mon.backfill.backfill_job`, called from `supervisor.run_stage` after `finalize`, in its own transaction, never changing the outcome; tests `test_MON_1_4_*` in `test_M7_event_backfill.py`. `test_NFR_13_kill_the_monitor_mid_job_and_the_job_continues` now proves the monitor's death while the job still runs, since the backfill fills the gap at the stage's end.
+- **Why:** The worker has the data volume and knows when a spool is complete (its child has exited). `monitor` has neither, and giving it the volume only for this would widen its access.
+
 **Telemetry downsampling in tables, run by a one-process `beat`** (M7, NFR-12; agent)
 - **What:** Raw samples older than 7 days become one-minute averages in `resource_samples_1m` and `process_samples_1m` (not Parquet files under `telemetry/1m/`, the other option DATA_MODEL listed). `beat` is a Celery worker on its own `maintenance` queue with the scheduler embedded (`-B`) and the solo pool, running the job hourly.
 - **How:** `stratal.mon.retention.downsample`, one transaction per six hours of raw data (insert the averages, delete the raw rows); task `stratal.downsample_telemetry`; `GET /jobs/{id}/telemetry` returns both; tests `test_NFR_12_*`.
