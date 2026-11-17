@@ -411,6 +411,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 | G3 | Each screen compared with its mockup, contrast and keyboard checked | in the milestone that builds it | – |
 
 - [x] G1 revision approved (SCREENS.md v2, 2026-11-17)
+- [ ] G2: SCR-04 v2 (low-fi v1 approved 2026-11-17; hi-fi pending)
 
 ## M8 — Training runtime and registry
 
