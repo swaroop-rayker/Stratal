@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15 |
-| Planning style | Phase 1 (M0–M7) is planned in detail. Phases 2–5 (M8–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
+| Planning style | Phases 1 and 2 (M0–M11) are planned in detail; phase 2's detail was approved on 2026-11-17. Phases 3–5 (M12–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
 
@@ -25,10 +25,10 @@
 | M5 | Splits, review, eval report | 1 | M | Done 2026-11-16 |
 | M6 | Phase-1 screens | 1 | L | Done 2026-11-17 |
 | M7 | Phase-1 acceptance | 1 | M | In progress |
-| M8 | Training runtime and registry | 2 | L | Detailed, proposed 2026-11-17 |
-| M9 | Model builder | 2 | L | Detailed, proposed 2026-11-17 |
-| M10 | Classical ML, HPO, task metrics | 2 | L | Detailed, proposed 2026-11-17 |
-| M11 | Dashboards and monitoring completion | 2 | L | Detailed, proposed 2026-11-17 |
+| M8 | Training runtime and registry | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M9 | Model builder | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M12 | LLM serving and RAG | 3 | L | Outline |
 | M13 | Router, tools, caption refinement | 3 | L | Outline |
 | M14 | Text→image and LoRA | 4 | L | Outline |
@@ -308,7 +308,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 - [x] Meta-test green: every phase-1 P0 has a passing ID-named test (2026-11-17: `test_NFR_9_every_phase_1_p0_requirement_has_a_named_test`, 31 of 31)
 - [ ] All seven `test_BUG*` regression tests green. 2026-11-17: BUG1, 2, 4, 5 and 6 green (23 tests, GPU ones included), BUG3 by `test_NFR_2_*`. BUG7's guard is the NFR-14 disk audit, phase 2 (ERRORS.md), so this item cannot be met in M7 as written; for the owner to decide
 - [ ] 👤 `test_DATA_4_8_*` (P2, if time): two photos of one scene from different angles land in the same split. Waiting for the owner's decision on [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) (proposed 2026-11-17)
-- [ ] M8–M11 detailed and approved by the owner
+- [x] M8–M11 detailed and approved by the owner (2026-11-17, "Approved"; the eight decisions listed for M8's kickoff stay open until then)
 - [ ] Owner's OK to merge; tag `phase-1`
 
 ---
@@ -317,7 +317,7 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 | | |
 |---|---|
-| Status | **Proposed 2026-11-17, waiting for the owner's approval.** Until it is approved, the outline table under "Later phases" governs |
+| Status | **Approved by the owner on 2026-11-17** ("Approved"). The eight decisions below are still open: they are put to the owner at M8's kickoff, and until then each recommendation is only a recommendation |
 | Done when (SPEC §2) | The user builds a CNN in the UI, trains it on a dataset version and sees its test metrics |
 | Requirements | All 58 phase-2 requirements (32 P0, 23 P1, 3 P2), plus NFR-14 and NFR-15. Each stays in the milestone the outline gave it; nothing is added or dropped |
 
@@ -572,14 +572,10 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 ## Later phases (outline)
 
-Every numbered requirement is assigned to exactly one milestone. Scope and checklists are written at each phase kickoff. M8–M11 are detailed above; once that detail is approved, it replaces their rows here.
+Every numbered requirement is assigned to exactly one milestone. Scope and checklists are written at each phase kickoff. M8–M11 were detailed and approved on 2026-11-17 (above), with the requirements their outline rows gave them; those rows are replaced by the detail.
 
 | | Scope | Requirements |
 |---|---|---|
-| M8 | Training jobs, checkpoints, pause and resume, complete VRAM manager, OOM handling, device choice, registry, retention, inference service | RUN-1.1–1.9; REG-1.1, 1.2, 1.4; REG-2.1–2.11; NFR-14, NFR-15 |
-| M9 | Layer stacking, shape inference, cross-field validation, parameter and memory estimates, templates, 👤 from-scratch layers, schema-generated forms, labeled dataset types | BUILD-1.1–1.9; UI-2.3; DATA-5.2, 5.5 |
-| M10 | Classical ML, clustering, safe persistence, Optuna studies, 👤 task metrics, tabular and text ingestion and cleaning | ML-1.1–1.5; HPO-1.1–1.5; EVAL-1.2; DATA-1.4, 2.4 |
-| M11 | Alerts with actions, bottleneck diagnostics, load/unload VRAM events, job comparison, history, version diff, full dashboard, phase-2 acceptance (a CNN built in the UI, trained, test metrics shown) | MON-2.6, 2.7, 3.2, 3.3, 4.4, 4.5; UI-2.1, 2.2; EVAL-1.3; DATA-3.5 |
 | M12 | Local LLM serving, RAG with citations, hit@k evaluation, abstention, image search | LLM-1.1, 2.1–2.4; DATA-5.3; NFR-6 |
 | M13 | Router and fallback, tool-calling assistant, caption refinement and comparison, QLoRA | LLM-3.1, 3.2, 4.1, 5.1; LABEL-1.6, 1.7 |
 | M14 | Image generation, LoRA fine-tuning, before/after evaluation, remote offload round trip, adapters as deltas | IMG-1.1–1.4; REG-1.3 |
