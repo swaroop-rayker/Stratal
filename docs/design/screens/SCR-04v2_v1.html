@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-04 v2 training runs — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton, .spinner { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover, .btn.danger.is-hover { background: var(--danger); color: var(--on-danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.select { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--fs-12); color: var(--text-primary); }
+.select svg.i { width: 12px; height: 12px; color: var(--text-secondary); }
+.spinner { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: var(--r-pill); animation: spin .7s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 36px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.t tr.total td { background: var(--surface-raised); font-weight: var(--fw-semibold); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); }
+.pill.lg { height: 24px; font-size: var(--fs-12); padding: 0 var(--sp-3) 0 var(--sp-2); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; } .badge.info { color: var(--info); background: var(--info-soft); border-color: transparent; }
+.progress { height: 8px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.tile { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); min-width: 0; border-top: 2px solid var(--res, var(--border)); }
+.tile .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.tile .k i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); }
+.tile .v { font: var(--fw-medium) var(--fs-20)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.tile .v small { font-size: var(--fs-12); color: var(--text-muted); font-weight: var(--fw-regular); }
+.tile .d { font: var(--fs-11) var(--font-mono); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tile svg.ch { display: block; width: 100%; height: 46px; margin-top: var(--sp-2); }
+.tile.unavailable .v { color: var(--text-muted); font-family: var(--font-ui); font-size: var(--fs-14); }
+.ch .grid { stroke: var(--border); stroke-width: 1; }
+.timeline { display: flex; gap: 2px; height: 40px; }
+.seg { flex: var(--w, 1); min-width: 112px; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--sp-2); border-radius: var(--r-sm); background: color-mix(in srgb, var(--c) 18%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 45%, transparent); color: var(--text-primary); font-size: var(--fs-11); line-height: 1.3; cursor: pointer; overflow: hidden; }
+.seg b { display: flex; gap: var(--sp-1); align-items: center; font-weight: var(--fw-medium); color: var(--c); font-size: var(--fs-12); } .seg span { font-family: var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.seg svg.i { width: 12px; height: 12px; }
+.seg.pending { --c: var(--border-strong); border-style: dashed; background: transparent; } .seg[aria-current=true] { box-shadow: 0 0 0 2px var(--focus); }
+.seg.completed { --c: var(--state-completed); } .seg.running { --c: var(--state-running); } .seg.failed { --c: var(--state-failed); }
+.log { background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); font: var(--fs-12)/1.7 var(--font-mono); overflow: hidden; }
+.log > div { display: grid; grid-template-columns: 72px 52px 84px 1fr; gap: var(--sp-3); padding: 0 var(--sp-3); white-space: nowrap; }
+.log > div:hover { background: var(--accent-soft); }
+.log .ts, .log .st { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.log .lv-INFO { color: var(--info); } .log .lv-WARN { color: var(--warning); } .log .lv-ERROR { color: var(--danger); } .log .lv-DEBUG { color: var(--text-muted); }
+.log .why { grid-column: 4; color: var(--text-secondary); white-space: normal; font-family: var(--font-ui); padding-bottom: var(--sp-1); }
+.log .why b { color: var(--text-primary); }
+.log .warn { background: var(--warning-soft); } .log .error { background: var(--danger-soft); }
+.log.jobs > div { grid-template-columns: 72px 72px 52px 84px 1fr; } .log.jobs .why { grid-column: 5; }
+.log.narrow > div { grid-template-columns: 64px 48px 1fr; white-space: normal; } .log.narrow .why { grid-column: 3; }
+.modal { width: 460px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; }
+.modal > header svg.i { color: var(--danger); }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); font-size: var(--fs-13); }
+.modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 520px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.tip { position: absolute; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); box-shadow: var(--shadow-2); z-index: var(--z-tooltip); max-width: 280px; }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; } .crumbs .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); } .jobind .progress { height: 6px; width: 80px; }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-04 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.jhead { display: flex; align-items: center; gap: var(--sp-3); }
+.jhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); }
+.jhead .sub { color: var(--text-muted); font-size: var(--fs-12); white-space: nowrap; } .jhead .sub .mono { color: var(--text-secondary); }
+.activity { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--state-running)); border-radius: var(--r-md); }
+.activity .msg { font: var(--fw-medium) var(--fs-14) var(--font-mono); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activity .msg svg.i { color: var(--state-running); vertical-align: -2px; margin-right: var(--sp-1); }
+.stage-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); flex: none; }
+.prog { display: grid; grid-template-columns: 1fr 48px 220px 140px; gap: var(--sp-4); align-items: center; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.prog b { color: var(--text-primary); font-weight: var(--fw-medium); } .prog .r { text-align: right; }
+.res { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--sp-2); }
+.logbox { display: flex; flex-direction: column; min-height: 0; flex: 1; border: var(--bw) solid var(--border); border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
+.loghead { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); }
+.loghead h2 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); }
+.logbox .log { border: 0; border-radius: 0; flex: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.failure { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--danger-soft); border: var(--bw) solid color-mix(in srgb, var(--danger) 50%, transparent); border-left: 3px solid var(--danger); border-radius: var(--r-md); }
+.failure > svg.i { color: var(--danger); width: 18px; height: 18px; margin-top: 2px; }
+.failure h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.failure p { margin: var(--sp-1) 0 0; font-size: var(--fs-13); color: var(--text-secondary); } .failure p b { color: var(--text-primary); }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); } .kv > span:nth-child(odd) { color: var(--text-muted); } .kv .mono { color: var(--text-primary); }
+.dhead { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); } .dhead h2 { margin: 0; font: var(--fw-semibold) var(--fs-16) var(--font-mono); }
+.dbody { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); overflow: hidden; }
+.chartbox { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); }
+.chartbox svg { display: block; width: 100%; height: 100px; }
+.legend-s { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); margin-bottom: var(--sp-1); } .legend-s i { display: inline-block; width: 10px; height: 2px; margin-right: var(--sp-1); vertical-align: middle; background: var(--c); } .legend-s i.dash { background: repeating-linear-gradient(to right, var(--c) 0 4px, transparent 4px 7px); }
+.note { font-size: var(--fs-12); color: var(--text-muted); margin: 0; }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+
+/* ============================================================================ SCR-04 v2 additions (tokens only)
+   Data-viz categorical 1 and 2 copied unchanged from design system v1 (train = cat-1, validation = cat-2). */
+:root { --cat-1: #5aa9f5; --cat-2: #f29e4c; }
+[data-theme="light"] { --cat-1: #1f6fc4; --cat-2: #b0560a; }
+.pill.paused { --c: var(--state-paused); } .pill.stalled { --c: var(--state-stalled); }
+.jhead .sub .why { color: var(--text-secondary); }
+.epochs { display: flex; gap: 3px; height: 34px; }
+.ep { flex: 1; min-width: 30px; position: relative; border-radius: var(--r-sm); display: flex; align-items: flex-end; padding: 2px 5px; font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); background: color-mix(in srgb, var(--c) 18%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 45%, transparent); }
+.ep.completed { --c: var(--state-completed); } .ep.running { --c: var(--state-running); color: var(--text-primary); border-width: 2px; } .ep.pending { --c: var(--state-queued); background: transparent; border-style: dashed; }
+.ep .ck { position: absolute; top: -5px; right: -4px; width: 9px; height: 9px; transform: rotate(45deg); border: var(--bw) solid var(--text-secondary); background: var(--bg); }
+.ep .ck.kept { background: var(--text-primary); border-color: var(--text-primary); }
+.ep.gap { --c: var(--state-paused); flex: 0 0 52px; border-style: dashed; justify-content: center; align-items: center; color: var(--c); }
+.eplegend { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-muted); }
+.eplegend .ck { display: inline-block; width: 8px; height: 8px; transform: rotate(45deg); border: var(--bw) solid var(--text-secondary); margin-right: var(--sp-2); }
+.eplegend .ck.kept { background: var(--text-primary); border-color: var(--text-primary); }
+.tcharts { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1fr; gap: var(--sp-2); }
+.tchart { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); min-width: 0; }
+.tchart .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.tchart .k .spacer { flex: 1; }
+.tchart .v { font: var(--fw-medium) var(--fs-20)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.tchart .d { font: var(--fs-11) var(--font-mono); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tchart .d b { color: var(--text-secondary); font-weight: var(--fw-medium); }
+.tchart svg.ch { display: block; width: 100%; height: 58px; margin-top: var(--sp-2); }
+.tchart svg .grid, .tile svg .grid { stroke: var(--border); stroke-width: 1; }
+.series { display: flex; gap: var(--sp-3); font-size: var(--fs-11); color: var(--text-secondary); }
+.series i { display: inline-block; width: 10px; height: 2px; margin-right: var(--sp-1); vertical-align: middle; background: var(--c); }
+.series i.dot { width: 6px; height: 6px; border-radius: var(--r-pill); }
+.banner { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3) var(--sp-4); background: color-mix(in srgb, var(--c) 12%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 45%, transparent); border-left: 3px solid var(--c); border-radius: var(--r-md); }
+.banner.paused { --c: var(--state-paused); } .banner.stalled { --c: var(--state-stalled); }
+.banner > svg.i { color: var(--c); width: 18px; height: 18px; flex: none; }
+.banner h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.banner p { margin: 2px 0 0; font-size: var(--fs-13); color: var(--text-secondary); } .banner p b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.bench { display: grid; grid-template-columns: 48px 1fr 120px; gap: var(--sp-2) var(--sp-3); align-items: center; font: var(--fs-12) var(--font-mono); color: var(--text-secondary); max-width: 640px; }
+.bench b { color: var(--text-primary); font-weight: var(--fw-medium); }
+/* Approved at SCR-04's G3 (2026-11-17), in the built app since, missing from the v1 mockups:
+   in light, state-coloured text on its own tint is mixed 80 % toward text-primary. */
+[data-theme="light"] .pill, [data-theme="light"] .seg b, [data-theme="light"] .ep.gap { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); }
+/* PROPOSED in this step, for the owner's approval (a design-system extension):
+   in light, a semantic badge's text on its own soft tint gets the same mix, and labels on a
+   tinted panel use text-secondary, as on tinted log rows. Measured: error badge 3.86 → 5.03:1,
+   failure-panel labels 4.48 → 6.19:1. */
+[data-theme="light"] .badge.err { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.warn { color: color-mix(in srgb, var(--warning) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.info { color: color-mix(in srgb, var(--info) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.ok { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
+[data-theme="light"] .failure .kv > span:nth-child(odd) { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M3.5 10.5h-1v-8h8v1"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9" stroke-width="2.2"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-04 v2 — Live job view, training runs · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-04v2-lofi_v1.html</span>, approved 2026-11-17) and the approved SCR-04 v1 hi-fi, inside the SCR-01 shell, using only design system v1 tokens and components. Charts are static SVG here; the real screen uses ECharts with the same tokens. Open as <span class="mono">SCR-04v2_v1.html#light</span> to start in light. The data: <span class="mono">job_0031</span>, a small CNN on the CIFAR-10 split, epoch 7 of 20.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>Train and validation series</b> use data-viz categorical 1 and 2 (blue and orange): train as a line per step, validation as dots per epoch joined by a dashed line. Each chart names its series in a key, so colour is never the only cue.</li>
+<li><b>Epoch segments</b> reuse the timeline bar's look with job-state colours: completed green, running blue with a thicker edge, pending dashed. The checkpoint diamond is drawn in text colours, filled for the one kept, so it reads in both themes without a new colour.</li>
+<li><b>State banners</b> reuse the activity card's shape with the job-state colour of their state: paused amber, stalled pink. They replace the activity line, as the failure panel does in v1.</li>
+<li><b>Pause</b> is a secondary button beside Cancel (danger); <b>Resume</b> is the primary button when paused. The out-of-memory panel's primary action is <i>Start again with 128</i>.</li>
+<li><b>New icons:</b> none. Pause, play, alert, clock and refresh are already in the set.</li>
+<li><b>Proposed design-system extension (needs approval):</b> checking this mockup found two light-theme contrast failures that the built app has too. The error badge (danger on its soft tint) measures 3.86:1, and the failure panel's muted labels 4.48:1; every screen's error state shows such a badge. Proposed: in light, a semantic badge's text gets the 80 % mix toward text-primary already approved for pills, and labels on a tinted panel use text-secondary, as on tinted log rows. Then 5.03:1 and 6.19:1. If approved, the built app gets the same two rules in M8.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Running: epoch 7 of 20 (dark)</h2>
+<div class="frame" style="height:820px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="group">Data</div><a class="nav"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="group">Jobs</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+    </nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0031</span></div><span class="spacer"></span>
+      <span class="jobind"><span class="pill running"><i class="pulse"></i>Running</span><span class="mono">job_0031</span><span class="stage">train</span><span class="progress"><i style="--p:33%"></i></span><span class="num">33%</span><svg class="i"><use href="#i-chevron"/></svg></span></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0031</h1><span class="pill running lg" role="status"><i class="pulse"></i>Running</span><span class="sub">train · <span class="mono">small_cnn</span> on <span class="mono">ds_c1f4a09e2b77</span> · <span class="why">GPU, auto: 12 ms/step against 41 on the CPU</span> · attempt 1 · <span class="mono">9m 12s</span></span><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-pause"/></svg>Pause</button><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></div>
+      <div class="activity" aria-live="polite"><span class="stage-tag">train</span><span class="msg"><svg class="i"><use href="#i-play"/></svg>Epoch 7/20 · step 140/312 · small_cnn · bs=128 · lr 8.0e-4 · fp32</span></div>
+      <div class="prog"><span class="progress"><i style="--p:33%"></i></span><b class="r">33%</b><span>epoch 7/20 · step 140/312 · <b>10,640</b> samples/s</span><span class="r">ETA <b>18m 40s</b></span></div>
+      <div class="epochs" role="list" aria-label="Epochs">
+        <div class="ep completed" role="listitem">1<i class="ck"></i></div><div class="ep completed" role="listitem">2<i class="ck"></i></div><div class="ep completed" role="listitem">3<i class="ck"></i></div><div class="ep completed" role="listitem">4<i class="ck"></i></div><div class="ep completed" role="listitem">5<i class="ck"></i></div><div class="ep completed" role="listitem">6<i class="ck kept" aria-label="checkpoint kept"></i></div><div class="ep running" role="listitem">7 · 45%</div>
+        <div class="ep pending">8</div><div class="ep pending">9</div><div class="ep pending">10</div><div class="ep pending">11</div><div class="ep pending">12</div><div class="ep pending">13</div><div class="ep pending">14</div><div class="ep pending">15</div><div class="ep pending">16</div><div class="ep pending">17</div><div class="ep pending">18</div><div class="ep pending">19</div><div class="ep pending">20</div>
+      </div>
+      <div class="eplegend"><span><i class="ck"></i>checkpoint (removed)</span><span><i class="ck kept"></i>checkpoint kept</span><span>one every epoch and at least every 5 min</span></div>
+      <div class="tcharts">
+        <div class="tchart"><div class="k">Loss<span class="spacer"></span><span class="series"><span><i style="--c:var(--cat-1)"></i>train</span><span><i class="dot" style="--c:var(--cat-2)"></i>val</span></span></div><div class="v">0.712</div><div class="d">val <b>0.804</b> after epoch 6</div>
+          <svg class="ch" viewBox="0 0 100 58" preserveAspectRatio="none"><line class="grid" x1="0" y1="29" x2="100" y2="29"/><polyline fill="none" stroke="var(--cat-1)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,6 5,14 10,19 15,24 20,27 25,30 30,32 35,34 40,36 45,37 50,38 55,39 60,40 65,41 70,42"/><polyline fill="none" stroke="var(--cat-2)" stroke-width="1.2" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" points="10,22 20,29 30,33 40,36 50,38 60,39"/><g fill="var(--cat-2)"><circle cx="10" cy="22" r="1.8"/><circle cx="20" cy="29" r="1.8"/><circle cx="30" cy="33" r="1.8"/><circle cx="40" cy="36" r="1.8"/><circle cx="50" cy="38" r="1.8"/><circle cx="60" cy="39" r="1.8"/></g></svg></div>
+        <div class="tchart"><div class="k">Accuracy<span class="spacer"></span><span class="series"><span><i style="--c:var(--cat-1)"></i>train</span><span><i class="dot" style="--c:var(--cat-2)"></i>val</span></span></div><div class="v">74.9<small style="font-size:var(--fs-12);color:var(--text-muted)">%</small></div><div class="d">val <b>71.8%</b> after epoch 6</div>
+          <svg class="ch" viewBox="0 0 100 58" preserveAspectRatio="none"><line class="grid" x1="0" y1="29" x2="100" y2="29"/><polyline fill="none" stroke="var(--cat-1)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,52 5,44 10,38 15,33 20,29 25,26 30,24 35,22 40,20 45,19 50,18 55,17 60,16 65,15 70,15"/><polyline fill="none" stroke="var(--cat-2)" stroke-width="1.2" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" points="10,40 20,32 30,27 40,23 50,21 60,20"/><g fill="var(--cat-2)"><circle cx="10" cy="40" r="1.8"/><circle cx="20" cy="32" r="1.8"/><circle cx="30" cy="27" r="1.8"/><circle cx="40" cy="23" r="1.8"/><circle cx="50" cy="21" r="1.8"/><circle cx="60" cy="20" r="1.8"/></g></svg></div>
+        <div class="tchart"><div class="k">Learning rate</div><div class="v" style="font-size:var(--fs-16)">8.0e-4</div><div class="d">cosine, from 1.0e-3</div><svg class="ch" viewBox="0 0 100 58" preserveAspectRatio="none"><line class="grid" x1="0" y1="29" x2="100" y2="29"/><polyline fill="none" stroke="var(--cat-1)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,6 20,7 40,10 60,14 70,17"/></svg></div>
+        <div class="tchart"><div class="k">Grad norm</div><div class="v" style="font-size:var(--fs-16)">1.84</div><div class="d">median 2.10</div><svg class="ch" viewBox="0 0 100 58" preserveAspectRatio="none"><line class="grid" x1="0" y1="29" x2="100" y2="29"/><polyline fill="none" stroke="var(--cat-1)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,12 10,24 20,30 30,27 40,33 50,31 60,34 70,33"/></svg></div>
+        <div class="tchart"><div class="k">Step time</div><div class="v" style="font-size:var(--fs-16)">12 ms</div><div class="d">p95 15 ms</div><svg class="ch" viewBox="0 0 100 58" preserveAspectRatio="none"><line class="grid" x1="0" y1="29" x2="100" y2="29"/><polyline fill="none" stroke="var(--cat-1)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,30 10,31 20,29 30,32 40,30 50,31 60,29 70,31"/></svg></div>
+      </div>
+      <div class="res">
+        <div class="tile" style="--res:var(--res-cpu)"><div class="k"><i></i>CPU</div><div class="v">34<small>%</small></div><div class="d">loader: 4 workers</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-cpu)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,30 20,28 40,31 60,29 80,30 100,28"/></svg></div>
+        <div class="tile" style="--res:var(--res-ram)"><div class="k"><i></i>RAM</div><div class="v">4.1<small> / 9.7 GB</small></div><div class="d">job RSS 1.4 GB</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-ram)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,30 30,28 60,27 100,27"/></svg></div>
+        <div class="tile" style="--res:var(--res-gpu)"><div class="k"><i></i>GPU <svg class="i" style="width:12px;height:12px" aria-label="What GPU utilisation means"><use href="#i-info"/></svg></div><div class="v">88<small>%</small></div><div class="d">memory controller 52%</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-gpu)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,10 10,8 20,12 30,6 40,9 50,7 60,11 70,8 80,9 90,7 100,8"/></svg></div>
+        <div class="tile" style="--res:var(--res-vram)"><div class="k"><i></i>VRAM</div><div class="v">1.9<small> / 6.0 GB</small></div><div class="d">torch alloc 1.2 · rsv 1.6</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-vram)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,32 100,32"/><polyline fill="none" stroke="var(--res-vram)" stroke-width="1.4" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" points="0,35 100,35"/></svg></div>
+        <div class="tile" style="--res:var(--res-temp)"><div class="k"><i></i>GPU temp · power</div><div class="v">71<small> °C</small></div><div class="d">41 W · pauses at 83 °C</div><svg class="ch" viewBox="0 0 100 46" preserveAspectRatio="none"><line class="grid" x1="0" y1="23" x2="100" y2="23"/><polyline fill="none" stroke="var(--res-temp)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,30 30,22 60,18 100,17"/></svg></div>
+      </div>
+      <section class="logbox" aria-label="Activity log">
+        <div class="loghead"><h2>Activity</h2><span class="group-btns"><button class="btn sm" aria-pressed="true">This job</button><button class="btn sm">All jobs</button></span><span class="select">Level: INFO and above<svg class="i"><use href="#i-down"/></svg></span><span class="spacer"></span><button class="btn sm ghost"><svg class="i"><use href="#i-pause"/></svg>Auto-scroll on</button></div>
+        <div class="log" role="log" aria-live="polite">
+          <div><span class="ts">14:21:40</span><span class="lv-INFO">INFO</span><span class="st">train</span><span>Epoch 7/20 · step 140/312 · loss 0.712 · acc 74.9%</span></div>
+          <div><span class="ts">14:20:02</span><span class="lv-INFO">INFO</span><span class="st">train</span><span>Saved checkpoint after epoch 6 (14.8 MB, 0.3 s); removed the one after epoch 5</span></div>
+          <div><span class="ts">14:20:01</span><span class="lv-INFO">INFO</span><span class="st">train</span><span>Epoch 6/20 done · val loss 0.804 · val acc 71.8%</span></div>
+          <div><span class="ts">14:12:31</span><span class="lv-INFO">INFO</span><span class="st">train</span><span>Loaded small_cnn and Adam to GPU (0.1 GB, 0.2 s) · VRAM 0.3 → 0.4 GB</span></div>
+          <div><span class="ts">14:12:30</span><span class="lv-INFO">INFO</span><span class="st">train</span><span>Benchmarked devices: GPU 12 ms/step, CPU 41 ms/step → GPU</span></div>
+        </div>
+      </section>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>34%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>4.1</b><small>/ 9.7 GB</small></span><span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>88%</b></span><span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>1.9</b><small>/ 6.0 GB</small></span><span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>71 °C</b></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+  <span class="n" style="left:226px;top:66px">1</span>
+  <span class="n" style="left:226px;top:112px">2</span>
+  <span class="n" style="left:226px;top:150px">3</span>
+  <span class="n" style="left:226px;top:184px">4</span>
+  <span class="n" style="left:226px;top:250px">5</span>
+  <span class="n" style="left:226px;top:402px">6</span>
+  <span class="n" style="left:226px;top:540px">7</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Header</td><td>Job, state pill, model on dataset version, device and why (RUN-1.9), attempt, elapsed; Pause (secondary) and Cancel (danger)</td><td><span class="mono">GET /jobs/{id}</span> (training fields planned, M8), <span class="mono">job</span> messages; <span class="mono">POST /jobs/{id}/pause</span>, <span class="mono">/cancel</span></td><td>live</td></tr>
+<tr><td><span class="n">2</span></td><td>Activity line</td><td>The run's latest message with its key parameters (MON-1.2)</td><td><span class="mono">event</span> messages</td><td>live</td></tr>
+<tr><td><span class="n">3</span></td><td>Progress</td><td>Whole-run bar, epoch and step, samples/s, ETA; fixed columns, tabular numbers</td><td>stage <span class="mono">step</span>, <span class="mono">total</span>, metrics</td><td>live</td></tr>
+<tr><td><span class="n">4</span></td><td>Epochs</td><td>Epoch segments in job-state colours; checkpoint diamonds, the kept one filled (RUN-1.3, REG-2.6); pauses as dashed amber gaps (frame B)</td><td>events</td><td>live</td></tr>
+<tr><td><span class="n">5</span></td><td>Training charts</td><td>Loss and accuracy (train line, validation dots), learning rate, gradient norm, step time; each opens a table view (RUN-1.8)</td><td>event metrics; <span class="mono">GET /jobs/{id}/events</span> for history</td><td>live, ≤ 1 s</td></tr>
+<tr><td><span class="n">6</span></td><td>Resources</td><td>As v1; CPU names the loader's workers, temperature names the pause limit (RUN-1.6)</td><td><span class="mono">sample</span> messages</td><td>live, 1 s</td></tr>
+<tr><td><span class="n">7</span></td><td>Activity log</td><td>As v1, with epoch, checkpoint, benchmark, load, pause and resume lines</td><td>events</td><td>live</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:330px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="group">Jobs</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0031</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0031</h1><span class="pill running lg"><i class="pulse"></i>Running</span><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-pause"/></svg>Pause</button><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></div>
+      <div class="epochs"><div class="ep completed">5<i class="ck"></i></div><div class="ep completed">6<i class="ck kept"></i></div><div class="ep running">7 · 45%</div><div class="ep pending">8</div><div class="ep pending">9</div><div class="ep pending">10</div></div>
+      <div class="tcharts" style="grid-template-columns:1fr 1fr">
+        <div class="tchart"><div class="k">Loss<span class="spacer"></span><span class="series"><span><i style="--c:var(--cat-1)"></i>train</span><span><i class="dot" style="--c:var(--cat-2)"></i>val</span></span></div><div class="v">0.712</div><div class="d">val <b>0.804</b> after epoch 6</div><svg class="ch" viewBox="0 0 100 58" preserveAspectRatio="none"><line class="grid" x1="0" y1="29" x2="100" y2="29"/><polyline fill="none" stroke="var(--cat-1)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,6 10,19 20,27 30,32 40,36 50,38 60,40 70,42"/><polyline fill="none" stroke="var(--cat-2)" stroke-width="1.2" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" points="10,22 20,29 30,33 40,36 50,38 60,39"/></svg></div>
+        <div class="tchart"><div class="k">Accuracy<span class="spacer"></span><span class="series"><span><i style="--c:var(--cat-1)"></i>train</span><span><i class="dot" style="--c:var(--cat-2)"></i>val</span></span></div><div class="v">74.9%</div><div class="d">val <b>71.8%</b> after epoch 6</div><svg class="ch" viewBox="0 0 100 58" preserveAspectRatio="none"><line class="grid" x1="0" y1="29" x2="100" y2="29"/><polyline fill="none" stroke="var(--cat-1)" stroke-width="1.4" vector-effect="non-scaling-stroke" points="0,52 10,38 20,29 30,24 40,20 50,18 60,16 70,15"/><polyline fill="none" stroke="var(--cat-2)" stroke-width="1.2" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" points="10,40 20,32 30,27 40,23 50,21 60,20"/></svg></div>
+      </div>
+    </main>
+    <footer class="status"><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span></span></footer>
+  </div>
+</div></div>
+
+<!-- ===================================================================== B -->
+<h2>B · Paused by heat, and paused by the person</h2>
+<div class="frame" style="height:320px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0031</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0031</h1><span class="pill paused lg" role="status"><svg class="i"><use href="#i-pause"/></svg>Paused</span><span class="sub">train · <span class="mono">small_cnn</span> · checkpoint after epoch 9, step 201 kept</span><span class="spacer"></span><button class="btn primary"><svg class="i"><use href="#i-play"/></svg>Resume now</button><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></div>
+      <div class="banner paused" role="status"><svg class="i"><use href="#i-alert"/></svg><div><h2>Paused for heat: the GPU reached 84 °C (limit 83 °C)</h2><p>It resumes by itself below <b>75 °C</b>; it is <b>79 °C</b> now. Nothing is lost: the run continues from the checkpoint.</p></div></div>
+      <div class="banner paused"><svg class="i"><use href="#i-pause"/></svg><div><h2>Paused by you at 14:31</h2><p>It waits for <b>Resume</b>. The checkpoint is kept until the run is resumed or cancelled.</p></div></div>
+      <div class="epochs"><div class="ep completed">8<i class="ck"></i></div><div class="ep completed">9<i class="ck kept"></i></div><div class="ep gap">heat</div><div class="ep pending">10</div><div class="ep pending">11</div><div class="ep pending">12</div></div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+</div>
+<p class="cap">Only one banner shows at a time; both are drawn here to compare. "Resume now" during a heat pause asks first while the GPU is above 75 °C.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Stalled</h2>
+<div class="frame" style="height:200px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0031</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0031</h1><span class="pill stalled lg" role="status"><svg class="i"><use href="#i-clock"/></svg>Stalled</span><span class="spacer"></span><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel job</button></div>
+      <div class="banner stalled" role="status"><svg class="i"><use href="#i-clock"/></svg><div><h2>No progress for 5 min 12 s</h2><p>The worker is alive (heartbeat 3 s ago). Last activity: <span class="mono">Epoch 12/20 · step 88/312</span>. It returns to Running by itself when progress resumes.</p></div></div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+</div>
+
+<!-- ===================================================================== D -->
+<h2>D · Failed: out of GPU memory</h2>
+<div class="frame" style="height:230px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0032</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0032</h1><span class="pill failed lg"><svg class="i"><use href="#i-x"/></svg>Failed</span><span class="sub">train · <span class="mono">wide_cnn</span> · bs=256 · epoch 1, step 3</span></div>
+      <div class="failure" role="alert"><svg class="i"><use href="#i-alert"/></svg><div style="flex:1"><h2>GPU out of memory: reduce batch size from 256 → 128 <span class="badge err">gpu_oom</span></h2>
+        <div class="kv" style="margin-top:var(--sp-2)"><span>peak</span><span class="mono">5.0 GB of the 5.1 GB cap</span><span>do</span><span>Set the run's batch_size to 128 and start it again.</span></div></div>
+        <button class="btn primary"><svg class="i"><use href="#i-refresh"/></svg>Start again with 128</button></div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+</div>
+<p class="cap">"Start again with 128" opens SCR-09 prefilled with the same model, data and config. A retry with the same batch would fail the same way, so Retry is not offered for this failure.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Starting: benchmarking devices</h2>
+<div class="frame" style="height:220px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0033</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0033</h1><span class="pill running lg"><i class="pulse"></i>Running</span><span class="sub">train · <span class="mono">tiny_mlp</span> (0.2 M parameters) · device auto</span></div>
+      <div class="activity"><span class="stage-tag">train</span><span class="msg"><svg class="i"><use href="#i-play"/></svg>Benchmarking devices: 20 steps on each</span></div>
+      <div class="bench"><span>GPU</span><span class="progress"><i style="--p:100%"></i></span><span><b>9 ms</b>/step</span><span>CPU</span><span class="progress"><i style="--p:60%"></i></span><span>measuring…</span></div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+</div>
+<p class="cap">Only for small models on auto (under 1 M parameters). If the CPU wins, the job moves to the CPU queue through a checkpoint, and the header says so.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame compact" style="height:300px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center"><div class="brand" style="padding:0"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav"><svg class="i"><use href="#i-db"/></svg></a><a class="nav" aria-current="page"><svg class="i"><use href="#i-list"/></svg></a></nav>
+    <header class="top"><div class="crumbs"><b>Jobs</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">job_0031</span></div></header>
+    <main class="content">
+      <div class="jhead"><h1>job_0031</h1><span class="pill running lg"><i class="pulse"></i>Running</span><span class="spacer"></span><button class="btn"><svg class="i"><use href="#i-pause"/></svg>Pause</button><button class="btn danger"><svg class="i"><use href="#i-ban"/></svg>Cancel</button></div>
+      <div class="activity"><span class="stage-tag">train</span><span class="msg"><svg class="i"><use href="#i-play"/></svg>Epoch 7/20 · step 140/312 · small_cnn · bs=128</span></div>
+      <div class="tcharts" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="tchart"><div class="k">Loss</div><div class="v">0.712</div><div class="d">val <b>0.804</b></div></div>
+        <div class="tchart"><div class="k">Accuracy</div><div class="v">74.9%</div><div class="d">val <b>71.8%</b></div></div>
+        <div class="tchart"><div class="k">LR · grad · step</div><div class="v" style="font-size:var(--fs-14)">8.0e-4 · 1.84 · 12 ms</div><div class="d">table view lists all three</div></div>
+      </div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+</div>
+<p class="cap">At 1024 px the three small charts fold into one tile with three values. Beyond 20 epochs the timeline groups finished ones ("1–10 ✓").</p>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>Every chart has a table view with the same numbers; train and validation are named in each chart's key, never colour alone.</li>
+<li>The epoch timeline is a list; each epoch is announced with its state and whether its checkpoint is kept.</li>
+<li>Banners are <span class="mono">role="status"</span> and announced once when the state changes; the out-of-memory panel is <span class="mono">role="alert"</span>.</li>
+<li>Pause, Resume and Cancel are reachable by keyboard in that order; Cancel keeps v1's confirm dialog.</li>
+</ul>
+</div>
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>
