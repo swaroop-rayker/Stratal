@@ -1,6 +1,6 @@
 # ADR-0015 — Model registry and weight retention
 
-**Status:** Proposed by the agent on 2026-11-17 (M8). Waiting for the owner.
+**Status:** Accepted by the owner on 2026-11-17, as proposed (M8).
 
 ## Context
 

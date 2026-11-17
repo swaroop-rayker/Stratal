@@ -439,7 +439,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] Decisions 1 to 7 recorded; ADR-0014, ADR-0015 and ADR-0016 approved
+- [x] Decisions 1 to 7 recorded; ADR-0014, ADR-0015 and ADR-0016 approved (2026-11-17; decision 8 too: M8 not split)
 - [ ] S-08 report delivered; ADR-0007's limits revised from it if needed, still summing to 9 GB or less
 - [ ] `test_RUN_1_1_*`: a training job moves through every state; invalid transitions are rejected and every transition is logged
 - [ ] `test_RUN_1_2_*`: start, pause, resume and cancel each work on a running job
