@@ -122,7 +122,7 @@ Version (abridged):
 
 | Method and path | Purpose | Success |
 |---|---|---|
-| `POST /jobs` | Start a job. Body is a union on `kind`; phase 1 accepts `pipeline` | `202` Job |
+| `POST /jobs` | Start a job. Body is a union on `kind`: `pipeline`, and since M8 `train` (below) | `202` Job |
 | `GET /jobs` | List. Filters: `state` (one or a comma-separated list, `running,queued`), `kind`, `dataset` (slug), `q` (job-ID substring, for SCR-07's search). `counts` beside `items` gives jobs per state under the other filters, every state present. An unknown state is `422 validation_error`. The SCR-07 additions were accepted 2026-11-15 and built in M6 | `200` list of Job |
 | `GET /jobs/{job_id}` | One job with its stages | `200` Job |
 | `POST /jobs/{job_id}/cancel` | Request cancellation | `202` Job; `409` if already finished |
@@ -132,6 +132,22 @@ Version (abridged):
 | `GET /jobs/{job_id}/stream` | Live feed for one job (SSE, [§4](#4-live-streams)) | `200 text/event-stream` |
 
 Pause and resume (`POST /jobs/{job_id}/pause`, `/resume`) arrive in phase 2 with RUN-1.2.
+
+Training request (M8, RUN-1.1, [ADR-0014](decisions/ADR-0014-training-jobs.md)):
+
+```json
+{
+  "kind": "train",
+  "dataset_version": "ds_f8e67211dd94",
+  "config": {"model": {"name": "small_cnn"}, "epochs": 10, "batch_size": 128, "device": "auto"}
+}
+```
+
+- **`dataset_version`** must be a `split` version of a `labelled_images` dataset; anything else, or an unknown ID, is a `validation_error` at `["dataset_version"]`.
+- **`config`** is the `train` stage's config (`GET /config/schemas/train`): `model` (`mlp` or `small_cnn` until M9), `epochs`, `batch_size`, `optimizer` (`adam`, `sgd`), `learning_rate`, `momentum`, `weight_decay`, `schedule` (`cosine`, `constant`), `seed`, `deterministic`, `device` (`auto`, `cpu`, `gpu`), `loader_workers` (null: 4 on the GPU worker, 1 on the CPU worker), `checkpoint_every_s` (300) and a read-only `algorithm_version`. Every field is recorded in the stage's config.
+- The job has kind `train` and one stage, `train`, on the `gpu` queue for `gpu` and `auto` and the `cpu` queue for `cpu` (CPU training needs the ml-cpu image, ADR-0014 rule 11). The stage makes no dataset version, so the job's `output_version_id` is null; its metrics are `epochs`, `steps`, `parameters`, `device`, `val_accuracy`, `val_loss`, `train_loss`, `checkpoint_bytes`, `weights_bytes`, `seconds` and, on the GPU, `peak_vram_allocated_mb` and `peak_vram_reserved_mb`. Until the registry (M8 part B), the trained weights are in `jobs/<job_id>/weights/`.
+- **Events** (RUN-1.8): `substage` `setup` (model, device, rows), `train` progress reports at most once a second (`step`/`total` are global steps; metrics `epoch`, `loss`, `accuracy`, `learning_rate`, `grad_norm`, `step_ms`, `samples_per_s`), `validate` once per epoch (`train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`), `checkpoint` (`checkpoint_step`, `checkpoint_bytes`), `resume` when a retry continues from a checkpoint (`resumed_at_step`, `resumed_epoch`), and `finish`.
+- `GET /config/schemas` and `/config/defaults` list pipeline stages only, so the Start pipeline drawer does not show `train`.
 
 Pipeline request:
 
@@ -375,6 +391,18 @@ Still planned for phase 1: run a pipeline.
 | Split runner | `stratal.runtime.stages` | `make_split_runner(units)`: looks up the previous split, writes it into the config, then the derived-stage frame |
 | Report statistics (EVAL-1.1) | `stratal.eval.report_stats` | `RowStatus`, `RejectionCounts`, `ScoreDistribution`, `Interval`, `ReviewedItem`, `AcceptanceRate`, `Acceptance`, `QUANTILES` and the five functions in §5 |
 | Test helpers | `stratal.testing` | `fakes`: `singleton_split_groups`, `one_stratum`, `hashed_splits`, `lumped_rejection_counts`, `no_filter_rate`, `crude_score_distribution`, `vacuous_interval`, `overall_only_acceptance`; `fake_split` (registers split with fakes); `stagekit.split(data_dir, parent, units, *, config, previous, sink)` |
+
+### Internal interfaces added in M8
+
+| Interface | Where | Shape |
+|---|---|---|
+| Training config (RUN-1.1) | `stratal.train.config` | `ModelSpec(name: "mlp" | "small_cnn")`, `TrainConfig` (fields in §3.3), `TrainRequest(kind, dataset_version, config)`; torch-free |
+| Reference models | `stratal.train.reference` | `build_model(spec, input_shape: (C, H, W), num_classes) -> nn.Module`, `parameter_count(model)` (PyTorch images only) |
+| Image loader | `stratal.train.data` | `split_items(rows, blobs) -> SplitItems(classes, by_split)`, `LabelledImages(items)`, `EpochOrder(size, *, seed, epoch, start=0)`, `to_tensor(image)` |
+| Checkpoints (RUN-1.3) | `stratal.train.checkpoint` | `Position(epoch, batches_done, global_step)`, `Checkpoint(position, config_hash, history)`, `save(folder, *, model, optimizer, scheduler, checkpoint)`, `latest(folder)`, `load(path) -> Loaded`, `restore(loaded, *, model, optimizer, scheduler)`, `remove_all(folder) -> bytes freed`, `checkpoint_dir(data_dir, job_id)` |
+| Train stage | `stratal.train.stage` | `run_train(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult`; `TrainUnits(state, suggest, oom_error)` are the owner's RUN-1.4 and RUN-1.5 units |
+| Train jobs | `stratal.runtime.jobs` | `create_train_job(session, request) -> (Job, Enqueue)`; `create_job_from_plan` gained `queues` (a stage's queue by name) |
+| Test helpers | `stratal.testing.labelled` | `class_folders(root, *, per_class, size)`, `labelled_split(runner, root, slug) -> version_id` |
 
 ## 7. Later phases
 

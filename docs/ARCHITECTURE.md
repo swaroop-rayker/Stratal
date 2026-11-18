@@ -95,6 +95,8 @@ A pipeline run is one **job**. It has one **stage** per step, and each stage run
 
 A **labelled-images** dataset (DATA-5.2, M8, [ADR-0014](decisions/ADR-0014-training-jobs.md) rule 3) runs `ingest → clean → preprocess → split`: ingest records each image's class from its first folder (`label_from: folder`), there is no label, filter or evaluate stage, and the split takes the preprocess version and stratifies by that folder. The request's `dataset_type` picks the order and these defaults (API.md §3.3); clean, preprocess and split keep their parent's `dtype`.
 
+A **training run** (RUN-1.1, M8, [ADR-0014](decisions/ADR-0014-training-jobs.md)) is a job of kind `train` with one stage, `train`, run by the same supervisor and child process as any pipeline stage. It reads a labelled split, builds a reference model (`stratal.train.reference`), and trains it on the GPU under the lease and the 0.85 cap, or on the CPU. A checkpoint is written after every epoch and every `checkpoint_every_s` (`stratal.train.checkpoint`: safetensors plus JSON, temporary name then rename, only the latest kept); a retry of a killed run resumes from it and replays the rest of the epoch in the same order. PyTorch is imported only inside the stage, so the API and the pipeline workers stay without it.
+
 Manual review (LABEL-1.5) is not a stage. It is a human activity attached to a version (API.md §3.5), and the report uses the version's newest closed review. A report can be built again at any time without a pipeline: `POST /versions/{id}/reports` runs `evaluate` alone, as a job of kind `report`.
 
 **Every stage ends with a commit step**: write the manifest, compute the version ID, record lineage. This is where the "Staging" messages in MON-3 come from (OC-1, accepted by the owner on 2026-11-14).
@@ -228,7 +230,8 @@ Everything Stratal owns lives on one Docker volume, `stratal-data`, on the Linux
 /data
 ├── blobs/sha256/ab/cd/<hash>     immutable files, named by content hash
 ├── manifests/<version_id>.parquet  one immutable manifest per dataset version
-├── jobs/<job_id>/                per-job log, event spool, in-run checkpoints
+├── jobs/<job_id>/                per-job log, event spool; for training, checkpoints/ (in-run, latest only)
+│                                 and weights/ (the trained model, until the registry takes it, M8)
 ├── models/<name>/<revision>/     pretrained models from the allow-list, verified by `models pull`
 ├── registry/                     trained weights (phase 2)
 └── tmp/                          staging area for atomic writes
@@ -306,6 +309,7 @@ Stratal/
 │   ├── data/           ingest, clean, preprocess, split, dataset types, versioning
 │   ├── label/          captioning, CLIP scoring, filter, review
 │   ├── eval/           reports and metrics
+│   ├── train/          training: config, reference models, image loader, checkpoints, the train stage (M8)
 │   ├── runtime/        job model, state machine, supervisor, child, context, GPU lease, VRAM manager
 │   ├── mon/            event schema, emitter, collector, sampler, watchdog
 │   ├── api/            FastAPI app, routers, schemas, SSE

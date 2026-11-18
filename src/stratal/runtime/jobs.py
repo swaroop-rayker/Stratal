@@ -25,6 +25,7 @@ from stratal.db.models import Dataset, Job, JobStage
 from stratal.mon.events import utc_now
 from stratal.runtime import stages as stage_registry
 from stratal.runtime.states import TERMINAL, check_transition, record_creation, transition
+from stratal.train.config import TrainRequest
 
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{1,62}$")
 
@@ -103,10 +104,12 @@ def create_job_from_plan(
     plan: list[tuple[str, dict[str, Any]]],
     dataset_id: int | None = None,
     input_version_id: str | None = None,
+    queues: dict[str, str] | None = None,
 ) -> tuple[Job, Enqueue]:
     """Insert a queued job with one stage per ``(name, config)`` in ``plan``.
 
-    ``input_version_id`` is the version the first stage consumes, if any.
+    ``input_version_id`` is the version the first stage consumes, if any. ``queues``
+    overrides a stage's queue by name (a training run on the CPU, ADR-0014 rule 8).
     """
     job = Job(
         id=next_job_id(session),
@@ -125,14 +128,15 @@ def create_job_from_plan(
         definition = stage_registry.get_stage(name)
         if definition is None:
             raise ValidationFailed(f"Unknown stage {name!r}.")
+        queue = (queues or {}).get(name, definition.queue)
         if idx == 0:
-            first_queue = definition.queue
+            first_queue = queue
         session.add(
             JobStage(
                 job_id=job.id,
                 idx=idx,
                 name=name,
-                queue=definition.queue,
+                queue=queue,
                 status="queued" if idx == 0 else "pending",
                 config=config,
                 config_hash=config_hash(config),
@@ -308,6 +312,50 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
         plan=plan,
         dataset_id=dataset.id,
         input_version_id=input_version_id,
+    )
+
+
+def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqueue]:
+    """Validate a training request and queue a one-stage ``train`` job (RUN-1.1, ADR-0014).
+
+    The dataset version must be a split of a labelled-images dataset. A run on
+    ``device: cpu`` goes to the CPU queue; ``gpu`` and ``auto`` to the GPU queue.
+    """
+    version_id = request.dataset_version
+    loc: list[str | int] = ["dataset_version"]
+    try:
+        version = registry.get_version(session, version_id)
+    except NotFound as exc:
+        raise ValidationFailed(
+            f"dataset_version {version_id!r} is not a known dataset version.",
+            suggested_action="List versions with GET /datasets/{slug}/versions and use one.",
+            errors=[FieldProblem(loc=loc, msg="unknown version", code="not_found")],
+        ) from exc
+    if version.dtype != stage_registry.LABELLED_IMAGES or version.stage != "split":
+        made = f"a {version.stage} version of type {version.dtype or 'none'}"
+        raise ValidationFailed(
+            f"Version {version_id} is {made}; training needs a split of a labelled-images dataset.",
+            suggested_action="Run a labelled_images pipeline through the split stage and "
+            "train on its output version.",
+            errors=[FieldProblem(loc=loc, msg="not a labelled split", code="invalid")],
+        )
+    dataset = session.get(Dataset, version.dataset_id)
+    config = request.config.model_dump(mode="json")
+    plan = [("train", config)]
+    spec: dict[str, Any] = {
+        "kind": "train",
+        "dataset": dataset.slug if dataset is not None else None,
+        "dataset_version": version_id,
+        "stages": {"train": config},
+    }
+    return create_job_from_plan(
+        session,
+        kind="train",
+        spec=spec,
+        plan=plan,
+        dataset_id=version.dataset_id,
+        input_version_id=version_id,
+        queues={"train": "cpu" if request.config.device == "cpu" else "gpu"},
     )
 
 

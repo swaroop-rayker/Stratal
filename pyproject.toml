@@ -72,6 +72,7 @@ addopts = "-ra --strict-markers -m 'not integration and not gpu and not acceptan
 markers = [
     "integration: needs real postgres and redis (run inside Compose)",
     "gpu: needs the GPU; run locally in the worker-gpu image",
+    "torch: needs PyTorch; runs in the worker-gpu image (check.ps1, step 'integration (torch)')",
     "benchmark: timing measurement; needs a quiet machine (check.ps1 -Bench)",
     "acceptance: a full run on the live stack, over an hour (tests/acceptance)",
 ]

@@ -37,6 +37,7 @@ from stratal.mon.events import MetricValue
 from stratal.runtime.context import JobContext
 from stratal.runtime.gpu_lease import gpu_lease
 from stratal.storage.derivations import PgDerivationCache
+from stratal.train.config import TrainConfig
 
 Queue = Literal["cpu", "gpu"]
 
@@ -510,3 +511,19 @@ def make_evaluate_runner(stats: ReportStats) -> Callable[[StageRun], StageResult
 
 
 register(StageDef("evaluate", "cpu", EvaluateConfig, make_evaluate_runner(OWNER_STATS)))
+
+
+def _run_train(run: StageRun) -> StageResult:
+    """The train stage (RUN-1.1, ADR-0014). PyTorch is imported only here, in the worker."""
+    try:
+        from stratal.train import stage as train_stage
+    except ImportError as exc:
+        raise StratalError(
+            f"This worker cannot train: {exc}.",
+            suggested_action="Train with device 'gpu' or 'auto', which run on the GPU worker; "
+            "CPU training needs worker-cpu built with the ml-cpu extra (ADR-0014 rule 11).",
+        ) from exc
+    return train_stage.run_train(run)
+
+
+register(StageDef("train", "gpu", TrainConfig, _run_train))

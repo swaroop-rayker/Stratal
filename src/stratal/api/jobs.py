@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -28,6 +28,7 @@ from stratal.mon.store import insert_events
 from stratal.runtime import jobs as job_service
 from stratal.runtime.jobs import Enqueue, PipelineRequest
 from stratal.runtime.states import ACTIVE, TRANSITIONS
+from stratal.train.config import TrainRequest
 
 router = APIRouter()
 
@@ -137,11 +138,17 @@ def _page(rows: list[EventRow], limit: int, *, tail: bool = False) -> Json:
 # -- jobs ----------------------------------------------------------------------
 
 
+JobRequest = Annotated[PipelineRequest | TrainRequest, Field(discriminator="kind")]
+
+
 @router.post("/jobs", status_code=202, tags=["jobs"], response_model=schemas.Job)
-def create_job(request: PipelineRequest, session: Db, enqueue: Queue, bus: Redis) -> Json:
-    """Start a job. Phase 1 accepts ``kind: pipeline``."""
+def create_job(request: JobRequest, session: Db, enqueue: Queue, bus: Redis) -> Json:
+    """Start a job: ``kind: pipeline``, or ``kind: train`` (M8, RUN-1.1)."""
     with session.begin():
-        job, first = job_service.create_pipeline_job(session, request)
+        if isinstance(request, TrainRequest):
+            job, first = job_service.create_train_job(session, request)
+        else:
+            job, first = job_service.create_pipeline_job(session, request)
         view = job_service.job_view(session, job)
     enqueue(first)
     job_service.after_commit(bus, view["id"])

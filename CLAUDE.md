@@ -86,7 +86,7 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 |---|---|
 | Start postgres, redis, api, worker-cpu, monitor, beat and frontend | `docker compose up -d` (add `--profile gpu` for the GPU worker) |
 | Stop them | `docker compose down` |
-| All quality gates (format, lint, types, tests, integration) | `.\scripts\check.ps1` |
+| All quality gates (format, lint, types, tests, integration; training tests in worker-gpu) | `.\scripts\check.ps1` |
 | Same, without integration tests | `.\scripts\check.ps1 -Fast` |
 | Same, plus GPU-marked tests | `.\scripts\check.ps1 -Gpu` |
 | Same, plus the timing benchmarks (NFR-11; needs a quiet machine) | `.\scripts\check.ps1 -Bench` |
@@ -94,6 +94,7 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 | Keep Windows awake while jobs run; report sleeps | `.\host\stratal-host.ps1` |
 | One tool | `docker compose run --rm --no-deps dev ruff check .` (or `ruff format .`, `pyright`, `pytest -q`) |
 | Integration tests | `docker compose run --rm dev pytest -q -m "integration and not benchmark"` |
+| Training integration tests (need PyTorch; skipped in dev) | `docker compose run --rm -v ./src:/app/src:ro worker-gpu pytest -q -m "integration and torch" tests/integration` |
 | Anything on the GPU | `docker compose run --rm worker-gpu python <script>` |
 | Re-lock after editing `pyproject.toml` | `docker run --rm -v "D:\Stratal:/app" -w /app stratal-base uv lock`, then `docker compose --profile dev --profile gpu build` |
 | Health check | `http://127.0.0.1:8000/api/v1/health` |

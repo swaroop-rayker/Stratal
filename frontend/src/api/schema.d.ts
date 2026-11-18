@@ -78,7 +78,7 @@ export interface paths {
         put?: never;
         /**
          * Create Job
-         * @description Start a job. Phase 1 accepts ``kind: pipeline``.
+         * @description Start a job: ``kind: pipeline``, or ``kind: train`` (M8, RUN-1.1).
          */
         post: operations["create_job_api_v1_jobs_post"];
         delete?: never;
@@ -1030,13 +1030,25 @@ export interface components {
             in_progress: components["schemas"]["ExtendingJob"][];
         };
         /**
+         * ModelSpec
+         * @description A model to train. In M8 it names a reference model; from M9 the builder's graph.
+         */
+        ModelSpec: {
+            /**
+             * Name
+             * @description 'mlp': two hidden layers (256, 128) on the flattened image. 'small_cnn': three blocks of two 3×3 convolutions with batch norm, then a global average pool and one linear layer.
+             * @enum {string}
+             */
+            name: "mlp" | "small_cnn";
+        };
+        /**
          * PipelineRequest
          * @description ``POST /jobs`` with ``kind: pipeline``.
          */
         PipelineRequest: {
             /**
-             * Kind
-             * @constant
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
              */
             kind: "pipeline";
             /**
@@ -1604,6 +1616,109 @@ export interface components {
             /** Process */
             process: components["schemas"]["ProcessSample"][];
         };
+        /**
+         * TrainConfig
+         * @description Settings for the train stage. Every field is recorded with the run (NFR-4).
+         */
+        TrainConfig: {
+            model: components["schemas"]["ModelSpec"];
+            /**
+             * Epochs
+             * @description Passes over the train split.
+             * @default 10
+             */
+            epochs: number;
+            /**
+             * Batch Size
+             * @description Images per step.
+             * @default 128
+             */
+            batch_size: number;
+            /**
+             * Optimizer
+             * @description Adam, or SGD.
+             * @default adam
+             * @enum {string}
+             */
+            optimizer: "adam" | "sgd";
+            /**
+             * Learning Rate
+             * @description Initial learning rate.
+             * @default 0.001
+             */
+            learning_rate: number;
+            /**
+             * Momentum
+             * @description SGD only.
+             * @default 0.9
+             */
+            momentum: number;
+            /**
+             * Weight Decay
+             * @description L2 penalty.
+             * @default 0
+             */
+            weight_decay: number;
+            /**
+             * Schedule
+             * @description 'cosine' anneals the learning rate to zero over the run, step by step.
+             * @default cosine
+             * @enum {string}
+             */
+            schedule: "constant" | "cosine";
+            /**
+             * Seed
+             * @description Initial weights, dropout and each epoch's data order.
+             * @default 0
+             */
+            seed: number;
+            /**
+             * Deterministic
+             * @description Use only deterministic GPU kernels: slower, but a resumed run then matches an uninterrupted one exactly (ADR-0014 rule 5).
+             * @default false
+             */
+            deterministic: boolean;
+            /**
+             * Device
+             * @description 'gpu' and 'cpu' are used as given. 'auto' uses the GPU if there is one (RUN-1.9; timing both devices for small models comes later in M8).
+             * @default auto
+             * @enum {string}
+             */
+            device: "auto" | "cpu" | "gpu";
+            /**
+             * Loader Workers
+             * @description Processes decoding images. Null: 4 on the GPU worker, 1 on the CPU worker (spike S-08).
+             */
+            loader_workers?: number | null;
+            /**
+             * Checkpoint Every S
+             * @description A checkpoint is written after every epoch and whenever this many seconds have passed since the last one (ADR-0014 rule 5, OC-3).
+             * @default 300
+             */
+            checkpoint_every_s: number;
+            /**
+             * Algorithm Version
+             * @default 1
+             */
+            readonly algorithm_version: number;
+        };
+        /**
+         * TrainRequest
+         * @description ``POST /jobs`` with ``kind: train`` (RUN-1.1, ADR-0014 rule 1).
+         */
+        TrainRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "train";
+            /**
+             * Dataset Version
+             * @description A split version of a labelled-images dataset, e.g. ds_f8e67211dd94.
+             */
+            dataset_version: string;
+            config: components["schemas"]["TrainConfig"];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1813,7 +1928,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PipelineRequest"];
+                "application/json": components["schemas"]["PipelineRequest"] | components["schemas"]["TrainRequest"];
             };
         };
         responses: {

@@ -564,6 +564,16 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Split again from the 4-bit preprocess version `ds_bc4811eceb36` with `seed: 1`. No earlier split had that seed, so nothing was carried over. The two seed-0 splits (`ds_83371232f9df` from job_0027, `ds_fc9e7e4ee7a6` from job_0028) are kept, not deleted.
 - **Why:** The seed-0 splits carry job_0027's assignment, made while one 8,814-row group spanned every class: `automobile` had 57 % in train against 80–83 % for the others. Carrying over is right (DATA-4.5 keeps test rows out of train across versions), so the fix is a new lineage, not moving rows. A later seed-0 split of `cifar10` would continue the skewed one.
 
+**The train stage** (M8, RUN-1.1, RUN-1.3, RUN-1.8, ADR-0014)
+- **What:** Training is a `train` job with one `train` stage, on the GPU or CPU queue by `device`; it checkpoints after every epoch and every 5 minutes, resumes from its checkpoint on retry, and reports live metrics at most once a second.
+- **How:** A torch-free request and config (`stratal.train.config`) validated by the API; the stage imports PyTorch lazily. A checkpoint is a pair named by global step, `ckpt-NNNNNNNNN.safetensors` and `.json`, each written under a temporary name and renamed, the JSON last as the completion mark, then older pairs removed. Data loaders get their own generator, so making one never draws from the random state a checkpoint restores. The trained weights go to `jobs/<id>/weights/` until the registry exists. `/config/schemas` lists only pipeline stages.
+- **Why:** One runtime for pipelines and training (ADR-0014 rule 1). Two files with a completion mark keep a crash from leaving a half-written pair as the newest. A loader drawing from the global random state on creation would make a mid-epoch resume diverge. Listing `train` would put it in the Start pipeline drawer.
+
+**Unwritten VRAM manager v2 only warns** (M8, RUN-1.4; the owner left the choice to the agent, 2026-11-18)
+- **What:** If `TrainingState.close` is still the stub when a GPU run ends, the stage emits a WARN and completes, instead of failing.
+- **How:** The stage catches the stub's `NotImplementedError` from `VramManager.unload`. Out-of-memory handling still fails with the "owner unit not written" error, as the label stage does.
+- **Why:** The run's work is done and saved by then, and the child process exits right after, which frees the card (ADR-0006 rule 1). Failing a finished run would only hide its result; the unload check proves itself once the owner writes `close()`. Long-lived processes are different: the inference service (ADR-0016) keeps one model between requests, so there an unwritten `close()` will stop it from serving rather than warn.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
