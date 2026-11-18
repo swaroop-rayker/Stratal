@@ -21,7 +21,7 @@ from stratal.core.errors import StratalError, ValidationFailed
 from stratal.data import registry
 from stratal.data.clean import OWNER_UNITS, CleanConfig, DedupeUnits, run_clean
 from stratal.data.commit import VersionRecord
-from stratal.data.ingest import IngestConfig, run_ingest
+from stratal.data.ingest import LABELLED_IMAGES, IngestConfig, run_ingest
 from stratal.data.preprocess import PreprocessConfig, run_preprocess
 from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
 from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitUnits, run_split
@@ -42,6 +42,22 @@ Queue = Literal["cpu", "gpu"]
 
 # Order of the phase-1 pipeline (ARCHITECTURE.md §3). Only registered stages run.
 PIPELINE_ORDER = ("ingest", "clean", "preprocess", "label", "filter", "split", "evaluate")
+
+IMAGE_CAPTION = "image_caption"
+PIPELINE_ORDERS: dict[str, tuple[str, ...]] = {
+    IMAGE_CAPTION: PIPELINE_ORDER,
+    # No captions or CLIP scores: the labels come from class folders (ADR-0014 rule 3).
+    LABELLED_IMAGES: ("ingest", "clean", "preprocess", "split"),
+}
+"""Each dataset type's stages, in order (DATA-5.2)."""
+TYPE_DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
+    LABELLED_IMAGES: {
+        "ingest": {"label_from": "folder"},
+        # The class is the source folder; there is no CLIP score to stratify on.
+        "split": {"stratum_keys": ["source_folder"]},
+    },
+}
+"""Stage settings a dataset type changes from the stage's own defaults. A request overrides them."""
 
 
 @dataclass(frozen=True)
@@ -206,6 +222,9 @@ def run_derived_stage(
 
     output = body(DerivedInput(parent.version_id, manifest, resolved))
     record = output.record
+    if record.dtype is None and parent.dtype is not None:
+        # A stage that keeps the rows keeps the dataset type (DATA-5.2).
+        record = dataclasses.replace(record, dtype=parent.dtype)
     run.ctx.set_version(record.version_id)
     with Session(run.engine) as session, session.begin():
         dataset = session.get(Dataset, dataset_id)

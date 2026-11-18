@@ -3,13 +3,16 @@
 Every file under the source folder becomes exactly one manifest row. Nothing is
 skipped silently: a file that cannot be read, is not an image, is corrupt or is
 too small still gets a row, with status ``rejected`` and a reason.
+
+With ``label_from: folder`` the first folder of each file's path is its class
+label, and the version is a labelled-images dataset (DATA-5.2, ADR-0014 rule 3).
 """
 
 import time
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, ConfigDict, Field
@@ -37,6 +40,29 @@ class IngestConfig(BaseModel):
         le=16384,
         description="Images whose shorter side is below this many pixels are rejected (DATA-1.3).",
     )
+    label_from: Literal["folder"] | None = Field(
+        default=None,
+        description="Where each image's class label comes from. 'folder': the first folder "
+        "of its path, e.g. 'airplane' for airplane/train-00001.png; a file at the source's "
+        "root is rejected as no_label. Null: no labels (DATA-5.2, ADR-0014).",
+    )
+
+    def resolved(self) -> dict[str, Any]:
+        """The config as recorded in the version.
+
+        Unset optional fields are left out, so versions made before a field
+        existed keep their config, and so their ID (DATA-3.2).
+        """
+        return self.model_dump(mode="json", exclude_none=True)
+
+
+LABELLED_IMAGES = "labelled_images"
+
+
+def folder_label(relpath: str) -> str | None:
+    """The class label of ``relpath`` under ``label_from: folder``: its first folder."""
+    head, sep, _ = relpath.partition("/")
+    return head if sep and head else None
 
 
 @dataclass(frozen=True)
@@ -115,6 +141,8 @@ class _Ingest:
         started = time.monotonic()
         for index, relpath in enumerate(relpaths, start=1):
             row: Row = {"row_key": relpath}
+            if self.config.label_from == "folder":
+                row["label"] = folder_label(relpath)
             try:
                 stored = self.blobs.put_file(self.source / relpath)
             except OSError as exc:
@@ -127,6 +155,10 @@ class _Ingest:
                 self.new_blob_bytes += stored.size_bytes
             row.update(sha256=stored.sha256, size_bytes=stored.size_bytes)
             row = _inspect(self.blobs.path_for(stored.sha256), relpath, row, self.config)
+            if row["status"] == STATUS_ACCEPTED and "label" in row and row["label"] is None:
+                row = _reject(
+                    row, "no_label", "file is at the source's root, so it has no class folder"
+                )
             if row["status"] == STATUS_ACCEPTED:
                 accepted += 1
             else:
@@ -168,14 +200,15 @@ def run_ingest(
         metrics={"files": len(relpaths)},
     )
     ingest = _Ingest(source, BlobStore(data_dir), config, sink)
-    resolved: dict[str, Any] = config.model_dump(mode="json")
     record = commit_version(
         data_dir=data_dir,
         stage=STAGE,
         parent_version_id=None,
         rows=ingest.rows(relpaths),
-        config=resolved,
+        config=config.resolved(),
         derive=derive,
         sink=sink,
     )
+    if config.label_from is not None:
+        record = replace(record, dtype=LABELLED_IMAGES)
     return IngestResult(record, ingest.new_blob_bytes, round(time.monotonic() - started, 3))

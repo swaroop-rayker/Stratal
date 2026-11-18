@@ -60,6 +60,12 @@ class PipelineRequest(BaseModel):
         description="Per-stage overrides of the default config.",
     )
     until_stage: str | None = Field(default=None, description="Stop after this stage.")
+    dataset_type: Literal["image_caption", "labelled_images"] | None = Field(
+        default=None,
+        description="Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest "
+        "to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from "
+        "class folders. Null: the type of 'from_version' if it has one, else image_caption.",
+    )
 
     @model_validator(mode="after")
     def _one_start(self) -> "PipelineRequest":
@@ -150,8 +156,11 @@ def _field_problems(stage: str, exc: ValidationError) -> list[FieldProblem]:
     ]
 
 
-def _start_from_version(session: Session, request: PipelineRequest) -> tuple[str, str, str]:
-    """For ``from_version``: the version ID, its dataset's slug and the stage that made it."""
+def _start_from_version(
+    session: Session, request: PipelineRequest
+) -> tuple[str, str, str, str | None]:
+    """For ``from_version``: the version ID, its dataset's slug, the stage that made it
+    and its dataset type."""
     version_id = str(request.from_version)
     try:
         version = registry.get_version(session, version_id)
@@ -168,18 +177,69 @@ def _start_from_version(session: Session, request: PipelineRequest) -> tuple[str
             f"Version {version_id} belongs to dataset {slug!r}, not {request.dataset!r}.",
             suggested_action="Leave 'dataset' out, or name the version's own dataset.",
         )
-    return version_id, slug, version.stage
+    return version_id, slug, version.stage, version.dtype
+
+
+def _dataset_type(request: PipelineRequest, version_dtype: str | None) -> str:
+    """The pipeline's dataset type: as requested, else the input version's, else image_caption."""
+    if request.dataset_type is None:
+        return version_dtype or stage_registry.IMAGE_CAPTION
+    # Versions of an image–caption pipeline have no type until the filter stage validates it.
+    actual = version_dtype or stage_registry.IMAGE_CAPTION
+    if request.from_version is not None and actual != request.dataset_type:
+        raise ValidationFailed(
+            f"Version {request.from_version} is {actual}, not {request.dataset_type}.",
+            suggested_action="Leave 'dataset_type' out to use the version's own type.",
+            errors=[FieldProblem(loc=["dataset_type"], msg="does not match", code="conflict")],
+        )
+    return request.dataset_type
+
+
+def _stage_overrides(dtype: str, request: PipelineRequest, name: str) -> dict[str, Any]:
+    """The type's defaults for stage ``name`` with the request's overrides on top."""
+    return {
+        **stage_registry.TYPE_DEFAULTS.get(dtype, {}).get(name, {}),
+        **request.stages.get(name, {}),
+    }
+
+
+def _label_problems(dtype: str, plan: list[tuple[str, dict[str, Any]]]) -> list[FieldProblem]:
+    """A labelled-images dataset needs labels from ingest; an image–caption one has none."""
+    for name, config in plan:
+        if name != "ingest":
+            continue
+        wants = dtype == stage_registry.LABELLED_IMAGES
+        if wants != (config.get("label_from") is not None):
+            msg = (
+                "labelled_images needs label_from 'folder'"
+                if wants
+                else "label_from is only for dataset_type labelled_images"
+            )
+            return [FieldProblem(loc=["stages", "ingest", "label_from"], msg=msg, code="invalid")]
+    return []
 
 
 def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job, Enqueue]:
     """Validate a pipeline request, resolve every stage's config and queue the job."""
     available = stage_registry.registered()
-    names = [name for name in stage_registry.PIPELINE_ORDER if name in available]
-    all_names = list(names)
     input_version_id: str | None = None
+    version_dtype: str | None = None
+    made_by: str | None = None
     if request.from_version is not None:
-        input_version_id, slug, made_by = _start_from_version(session, request)
-        order = stage_registry.PIPELINE_ORDER
+        input_version_id, slug, made_by, version_dtype = _start_from_version(session, request)
+    else:
+        slug = str(request.dataset)
+    dtype = _dataset_type(request, version_dtype)
+    order = stage_registry.PIPELINE_ORDERS[dtype]
+    names = [name for name in order if name in available]
+    all_names = list(names)
+    if made_by is not None:
+        if made_by not in order:
+            raise ValidationFailed(
+                f"Version {input_version_id} was made by {made_by!r}, which a {dtype} "
+                "pipeline does not run.",
+                suggested_action=f"A {dtype} pipeline runs: {', '.join(order)}.",
+            )
         names = [n for n in names if order.index(n) > order.index(made_by)]
         if not names:
             raise ValidationFailed(
@@ -187,8 +247,6 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
                 "there is nothing after it to run.",
                 suggested_action=f"Stages available now: {', '.join(all_names)}.",
             )
-    else:
-        slug = str(request.dataset)
     if not _SLUG.match(slug):
         raise ValidationFailed(
             f"Dataset name {slug!r} is not a valid slug.",
@@ -218,11 +276,14 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
     problems: list[FieldProblem] = []
     for name in names:
         try:
-            model = available[name].config_model.model_validate(request.stages.get(name, {}))
+            model = available[name].config_model.model_validate(
+                _stage_overrides(dtype, request, name)
+            )
         except ValidationError as exc:
             problems.extend(_field_problems(name, exc))
             continue
         plan.append((name, model.model_dump(mode="json")))
+    problems.extend(_label_problems(dtype, plan))
     if problems:
         raise ValidationFailed(
             "A stage config did not pass validation.",
@@ -238,6 +299,7 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
     )
     spec = request.model_dump(mode="json")
     spec["dataset"] = slug
+    spec["dataset_type"] = dtype
     spec["stages"] = dict(plan)
     return create_job_from_plan(
         session,

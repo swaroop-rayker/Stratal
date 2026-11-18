@@ -1,6 +1,6 @@
 """Stratal command line.
 
-  python -m stratal.cli ingest --dataset NAME --source /path [--min-size 256]
+  python -m stratal.cli ingest --dataset NAME --source /path [--min-size 256] [--label-from folder]
   python -m stratal.cli versions --dataset NAME
   python -m stratal.cli lineage VERSION_ID
   python -m stratal.cli models list
@@ -51,7 +51,7 @@ def _ingest(args: argparse.Namespace) -> dict[str, Any]:
     result = run_ingest(
         source=Path(args.source),
         data_dir=settings.data_dir,
-        config=IngestConfig(min_size=args.min_size),
+        config=IngestConfig(min_size=args.min_size, label_from=args.label_from),
         derive=derive_version_identity,
         sink=LogSink(),
     )
@@ -153,6 +153,12 @@ def main(argv: list[str] | None = None) -> int:
     ingest.add_argument("--dataset", required=True)
     ingest.add_argument("--source", required=True)
     ingest.add_argument("--min-size", type=int, default=IngestConfig().min_size)
+    ingest.add_argument(
+        "--label-from",
+        choices=["folder"],
+        default=None,
+        help="take each image's class label from its first folder (DATA-5.2)",
+    )
     ingest.set_defaults(run=_ingest)
 
     versions = commands.add_parser("versions", help="list a dataset's versions, newest first")

@@ -59,6 +59,9 @@ from stratal.storage.manifest import (
 
 STAGE = "split"
 PARENT_STAGE = "filter"
+PARENT_STAGES: dict[str, str] = {"image_caption": PARENT_STAGE, "labelled_images": "preprocess"}
+"""The stage whose version the split takes, per dataset type (DATA-5.2: labelled images
+have no label or filter stage)."""
 PROPORTION_TOLERANCE = 1e-9
 EXAMPLES = 10
 """How many leaking pairs the report names; the count is always complete."""
@@ -514,17 +517,19 @@ def run_split(
     checkpoint: Callable[[], None] = lambda: None,
     dtype: str | None = None,
 ) -> SplitResult:
-    """Split the accepted rows of a ``filter`` version and commit a ``split`` version.
+    """Split the accepted rows of a ``filter`` version (``preprocess`` for labelled images)
+    and commit a ``split`` version.
 
     ``dtype`` is the parent's dataset type; the split keeps the rows and so the type.
     """
     started = time.monotonic()
     made_by = read_metadata(parent_manifest).get("stratal.stage")
-    if made_by != PARENT_STAGE:
+    wanted = PARENT_STAGES.get(dtype or "image_caption", PARENT_STAGE)
+    if made_by != wanted:
         raise StratalError(
-            f"The split runs on a version made by {PARENT_STAGE!r}; {parent_version_id} was made "
+            f"The split runs on a version made by {wanted!r}; {parent_version_id} was made "
             f"by {made_by!r}.",
-            suggested_action="Run the pipeline through the filter stage first (DATA-4.1).",
+            suggested_action=f"Run the pipeline through the {wanted} stage first (DATA-4.1).",
         )
     expected = previous.version_id if previous is not None else None
     if config.continues_version_id != expected:

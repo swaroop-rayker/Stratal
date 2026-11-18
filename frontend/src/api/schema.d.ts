@@ -171,6 +171,9 @@ export interface paths {
         /**
          * Job Telemetry
          * @description Samples for charts, thinned evenly to at most ``max_points`` per series.
+         *
+         *     Samples older than the raw retention come from the 1-minute averages (NFR-12),
+         *     one point per minute, without the per-core list.
          */
         get: operations["job_telemetry_api_v1_jobs__job_id__telemetry_get"];
         put?: never;
@@ -1062,6 +1065,11 @@ export interface components {
              * @description Stop after this stage.
              */
             until_stage?: string | null;
+            /**
+             * Dataset Type
+             * @description Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from class folders. Null: the type of 'from_version' if it has one, else image_caption.
+             */
+            dataset_type?: ("image_caption" | "labelled_images") | null;
         };
         /** PowerEvent */
         PowerEvent: {

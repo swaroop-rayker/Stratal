@@ -148,7 +148,7 @@ Pipeline request:
 }
 ```
 
-Every key under `stages` is optional and overrides the stage's defaults. As of M4 the stages are `ingest`, `clean`, `preprocess`, `label` (GPU queue) and `filter`; a key that names any other stage is rejected with `validation_error`. `until_stage` stops the pipeline after the named stage (`"ingest"` runs ingestion alone); `null` runs every available stage.
+Every key under `stages` is optional and overrides the stage's defaults. As of M4 the stages are `ingest`, `clean`, `preprocess`, `label` (GPU queue) and `filter`; M5 added `split` and `evaluate`. Which of them a request runs depends on its `dataset_type` (below); a key that names any other stage is rejected with `validation_error`. `until_stage` stops the pipeline after the named stage (`"ingest"` runs ingestion alone); `null` runs every available stage.
 
 Give exactly one of `source` and `from_version`:
 
@@ -156,6 +156,15 @@ Give exactly one of `source` and `from_version`:
 - **`"from_version": "ds_…"`**: continue from an existing version. The stages after the one that made it run, and its output is the first stage's input. `dataset` may be left out; if given it must be the version's dataset. A version made by the last available stage has nothing after it and is rejected. An unknown version is a `validation_error` with `loc: ["from_version"]`.
 
 With either, a key under `stages` or an `until_stage` that names a stage the request would not run is rejected. A stage whose input and config match an existing version reuses it (`cache_hit: true`) instead of running again.
+
+**`dataset_type`** (M8, DATA-5.2) decides which stages run and some of their defaults:
+
+| `dataset_type` | Stages | Defaults it changes |
+|---|---|---|
+| `image_caption` | `ingest`, `clean`, `preprocess`, `label`, `filter`, `split`, `evaluate` | none |
+| `labelled_images` | `ingest`, `clean`, `preprocess`, `split` | `ingest.label_from: "folder"` (each image's class is its first folder); `split.stratum_keys: ["source_folder"]`, so the split stratifies by class |
+
+Left out or null, it is the `from_version`'s type if that version has one, else `image_caption`. A request's own `stages` override the type's defaults. `label_from` set with `image_caption`, or unset with `labelled_images`, is a `validation_error` at `["stages", "ingest", "label_from"]`; continuing a version with another type is a `validation_error` at `["dataset_type"]`. The job's spec records the resolved type. CIFAR-10 at 32 px also needs `"ingest": {"min_size": 32}`.
 
 Job (abridged):
 
@@ -294,7 +303,7 @@ The CLI calls the same domain functions as the workers. It prints its result as 
 
 | Command | Does | Since |
 |---|---|---|
-| `python -m stratal.cli ingest --dataset NAME --source PATH [--min-size N]` | Ingests a folder as a raw version and registers it | M1 |
+| `python -m stratal.cli ingest --dataset NAME --source PATH [--min-size N] [--label-from folder]` | Ingests a folder as a raw version and registers it; `--label-from folder` records each image's class from its first folder (M8, DATA-5.2) | M1 |
 | `python -m stratal.cli versions --dataset NAME` | Lists a dataset's versions, newest first | M1 |
 | `python -m stratal.cli lineage VERSION_ID` | Shows a version's ancestry back to raw | M1 |
 

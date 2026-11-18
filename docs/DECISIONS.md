@@ -549,6 +549,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** MILESTONES.md (phase-2 decisions table), SPEC Appendix B OC-3 and OC-7 to OC-10.
 - **Why:** The phase-2 plan listed these as open until M8's kickoff; each was put to the owner with a recommendation.
 
+**Labelled images: a pipeline per dataset type** (M8, DATA-5.2, ADR-0014 rule 3)
+- **What:** A pipeline request names its `dataset_type`; `labelled_images` runs ingest, clean, preprocess and split, with labels from class folders and the split stratified by class.
+- **How:** `label_from: folder` in ingest fills a new nullable `label` column and sets `dtype`; per-type stage orders and default overrides in the stage registry; derived stages keep their parent's `dtype`; the split takes a preprocess version for this type. Ingest's unset options are left out of the recorded config.
+- **Why:** CIFAR-10 has no captions; one runtime and one split (with its leakage check) for every type. Leaving unset options out, and the hash treating null as absent, keeps every existing version ID unchanged.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

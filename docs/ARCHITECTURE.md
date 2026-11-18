@@ -93,6 +93,8 @@ A pipeline run is one **job**. It has one **stage** per step, and each stage run
 | 5 | `split` | cpu | Group near-copies (12 bits), stratify, assign train / val / test carrying the previous split over, check for leaks, report | DATA-4.1–4.7 | agent, at the owner's request (ADR-0012); shell, lookup, leakage check and report by the agent |
 | 6 | `evaluate` | cpu | Build the phase-1 report and store it in `eval_reports`; makes no version and passes its input on | EVAL-1.1 | agent for the statistics, at the owner's request (ADR-0012), and for the assembly |
 
+A **labelled-images** dataset (DATA-5.2, M8, [ADR-0014](decisions/ADR-0014-training-jobs.md) rule 3) runs `ingest → clean → preprocess → split`: ingest records each image's class from its first folder (`label_from: folder`), there is no label, filter or evaluate stage, and the split takes the preprocess version and stratifies by that folder. The request's `dataset_type` picks the order and these defaults (API.md §3.3); clean, preprocess and split keep their parent's `dtype`.
+
 Manual review (LABEL-1.5) is not a stage. It is a human activity attached to a version (API.md §3.5), and the report uses the version's newest closed review. A report can be built again at any time without a pipeline: `POST /versions/{id}/reports` runs `evaluate` alone, as a job of kind `report`.
 
 **Every stage ends with a commit step**: write the manifest, compute the version ID, record lineage. This is where the "Staging" messages in MON-3 come from (OC-1, accepted by the owner on 2026-11-14).

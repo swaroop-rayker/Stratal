@@ -88,7 +88,7 @@ Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 | `content_hash` | text | no | 64 hex |
 | `config_hash` | text | no | 64 hex |
 | `config` | jsonb | no | fully resolved stage config |
-| `dtype` | text | yes | dataset type this version validates against, e.g. `image_caption` (DATA-5); null before it qualifies. Set to `image_caption` by the filter stage, which validates the schema (DATA-5.1, since M5); split versions keep it |
+| `dtype` | text | yes | dataset type this version validates against, `image_caption` or `labelled_images` (DATA-5); null before it qualifies. Set to `image_caption` by the filter stage, which validates the schema (DATA-5.1, since M5); set to `labelled_images` by ingest with `label_from: folder` (DATA-5.2, since M8). A stage that keeps the rows (clean, preprocess, split) keeps its parent's type |
 | `manifest_path` | text | no | relative to the data root |
 | `manifest_bytes` | bigint | no | |
 | `row_count` | integer | no | |
@@ -281,11 +281,12 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 | `caption_model`, `caption_model_revision` | string | label | LABEL-1.1.AC1 |
 | `clip_score` | float32 | label | |
 | `clip_model`, `clip_model_revision` | string | label | |
+| `label` | string | ingest | the class label of a labelled-images row (DATA-5.2): with `label_from: folder`, the first folder of `row_key`, e.g. `airplane`; null in every other dataset type. Added in M8 as a nullable column, so no existing version ID changed (DATA-3.2: a null value and an absent column hash the same) |
 | `split` | string | split | `train`, `val` or `test` on every accepted row, null on all others (DATA-4.1). Built in M5 |
 | `split_group` | string | split | content hash (`sha256`) of the split group's anchor, its member with the smallest `sha256`; rows sharing a duplicate group or within the leakage distance share it (DATA-4.2). Built in M5 |
 | `split_stratum` | string | split | the row's stratum, its keys joined by `\|`, e.g. `q3\|landscape\|train2017`, or `q3\|landscape\|.` for a file at the source's root, as in the flat COCO sources (DATA-4.3; `.` chosen by the owner 2026-11-16). Built in M5 |
 
-Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`.
+Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`. M8 adds `no_label` (ingest with `label_from: folder`, for a file at the source's root) and `missing_label` (the labelled-images validator).
 
 `corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. In clean and preprocess, a file missing from the blob store is not a reason code: it fails the stage (BUG1). The filter stage is the exception: its schema validation (DATA-5.1) marks a row whose original or preprocessed file is missing `rejected` with `missing_file`, warns, and lists it in `counts.validation` (the owner's choice, 2026-11-16).
 
