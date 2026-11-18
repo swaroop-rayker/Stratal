@@ -53,8 +53,13 @@ PIPELINE_ORDERS: dict[str, tuple[str, ...]] = {
 TYPE_DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
     LABELLED_IMAGES: {
         "ingest": {"label_from": "folder"},
+        # pHash on small images (CIFAR-10's 32 px) is coarse: at the COCO thresholds, 11 %
+        # (clean, 8 bits) and 53 % (split, 12 bits) of matched pairs crossed classes, and the
+        # split's groups chained into one of 8,814 rows. At 4 and 6 bits: 1.0 % and 2.8 %,
+        # largest group 27 (measured on CIFAR-10; the owner's choice, 2026-11-18, OC-5).
+        "clean": {"phash_max_distance": 4},
         # The class is the source folder; there is no CLIP score to stratify on.
-        "split": {"stratum_keys": ["source_folder"]},
+        "split": {"stratum_keys": ["source_folder"], "leakage_distance": 6},
     },
 }
 """Stage settings a dataset type changes from the stage's own defaults. A request overrides them."""

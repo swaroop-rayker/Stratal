@@ -554,6 +554,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `label_from: folder` in ingest fills a new nullable `label` column and sets `dtype`; per-type stage orders and default overrides in the stage registry; derived stages keep their parent's `dtype`; the split takes a preprocess version for this type. Ingest's unset options are left out of the recorded config.
 - **Why:** CIFAR-10 has no captions; one runtime and one split (with its leakage check) for every type. Leaving unset options out, and the hash treating null as absent, keeps every existing version ID unchanged.
 
+**pHash thresholds for small images: clean 4 bits, split 6 bits** (M8, DATA-2.2, DATA-4.2, OC-5; the owner's choice, 2026-11-18)
+- **What:** Labelled-images pipelines default to near duplicates within 4 bits and split groups within 6, instead of COCO's 8 and 12.
+- **How:** Type defaults in the stage registry; a request can still override them. Measured on CIFAR-10's 60,000 pHash values by comparing every pair.
+- **Why:** At 8 and 12 bits, 11 % and 53 % of matched 32-px pairs crossed classes, and single linkage chained 8,814 accepted rows of every class into one split group, all in train: `automobile` ended with 56 % in train against 81–86 % for the others. At 4 and 6 bits the cross-class shares are 1.0 % and 2.8 % and the largest group has 27 rows.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

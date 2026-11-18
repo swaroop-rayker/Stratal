@@ -61,6 +61,9 @@ def test_DATA_5_2_a_labelled_pipeline_runs_ingest_clean_preprocess_split(
         assert dtype == "labelled_images", stage["name"]
     _, config, rows = _version_rows(job["output_version_id"])
     assert config["stratum_keys"] == ["source_folder"]
+    assert config["leakage_distance"] == 6, "small images: the owner's 6 bits (OC-5)"
+    clean = next(s for s in job["stages"] if s["name"] == "clean")
+    assert _version_rows(clean["output_version_id"])[1]["phash_max_distance"] == 4
     accepted = [r for r in rows if r["status"] == "accepted"]
     assert len(accepted) == 12
     assert {r["label"] for r in accepted} == {"cat", "dog"}

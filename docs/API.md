@@ -162,7 +162,7 @@ With either, a key under `stages` or an `until_stage` that names a stage the req
 | `dataset_type` | Stages | Defaults it changes |
 |---|---|---|
 | `image_caption` | `ingest`, `clean`, `preprocess`, `label`, `filter`, `split`, `evaluate` | none |
-| `labelled_images` | `ingest`, `clean`, `preprocess`, `split` | `ingest.label_from: "folder"` (each image's class is its first folder); `split.stratum_keys: ["source_folder"]`, so the split stratifies by class |
+| `labelled_images` | `ingest`, `clean`, `preprocess`, `split` | `ingest.label_from: "folder"` (each image's class is its first folder); `clean.phash_max_distance: 4` and `split.leakage_distance: 6`, since pHash on small images is coarse (OC-5, the owner's choice 2026-11-18); `split.stratum_keys: ["source_folder"]`, so the split stratifies by class |
 
 Left out or null, it is the `from_version`'s type if that version has one, else `image_caption`. A request's own `stages` override the type's defaults. `label_from` set with `image_caption`, or unset with `labelled_images`, is a `validation_error` at `["stages", "ingest", "label_from"]`; continuing a version with another type is a `validation_error` at `["dataset_type"]`. The job's spec records the resolved type. CIFAR-10 at 32 px also needs `"ingest": {"min_size": 32}`.
 
