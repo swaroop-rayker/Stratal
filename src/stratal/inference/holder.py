@@ -320,7 +320,7 @@ class ModelHolder:
             error = CudaUnavailable if unavailable and "CUDA" in unavailable else GpuBusy
             raise error(
                 f"{lineage.name} has {lineage.parameters / 1e6:.1f} M parameters, at or above "
-                f"the {limit / 1e6:.0f} M that run on the CPU, and {reason}.",
+                f"the {limit / 1e6:g} M that run on the CPU, and {reason}.",
                 suggested_action="Wait for the GPU job to finish, or pause it, and try again.",
             )
         if loaded is not None and loaded.version_id == version_id and loaded.device == "cpu":

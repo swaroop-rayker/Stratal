@@ -89,7 +89,8 @@ class Registry:
         return {p.name for p in folder.iterdir()} if folder.is_dir() else set()
 
     def settings(self) -> dict[str, Any]:
-        return self.get("/settings")["sections"][0]
+        sections = self.get("/settings")["sections"]
+        return next(s for s in sections if s["name"] == "retention")
 
     def save(self, values: dict[str, Any], *, confirm: bool = True) -> Any:
         """PUT the retention section; confirms the plan if asked to."""
@@ -506,3 +507,20 @@ def test_NFR_15_a_kill_during_cleanup_then_a_rerun_leaves_a_consistent_registry(
     assert reg.on_disk(lineage) == {reg.base(lineage), runs[2]}, "no orphaned files"
     report = reg.disk(lineage)
     assert report["matches"] and report["missing"] == [], "no dangling rows"
+
+
+def test_REG_2_10_a_save_asks_only_about_the_deletions_it_causes(reg: Registry) -> None:
+    pending = reg.train(model={"name": "small_cnn"})
+    y = reg.lineage_of(pending)
+    reg.keep(y, "all")
+    reg.train(model={"name": "small_cnn"})
+    with get_engine().begin() as connection:  # Y's override vanishes with no cleanup after it
+        connection.execute(text("DELETE FROM retention_settings WHERE lineage_id = :l"), {"l": y})
+    x = reg.lineage_of(reg.train())
+    assert pending in reg.on_disk(y), "pending: the current settings would delete it"
+
+    raised = reg.keep(x, 2, confirm=False)
+
+    assert raised.status_code == 200, "raising X's N deletes nothing, so nothing asks"
+    assert raised.json()["job_id"] is None
+    assert pending in reg.on_disk(y), "the save leaves Y to its own next cleanup"

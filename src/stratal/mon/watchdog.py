@@ -49,6 +49,7 @@ class Watchdog:
         thermal_pause_c: float = 83.0,
         thermal_resume_c: float = 75.0,
         temperature: Callable[[], float | None] | None = None,
+        limits: Callable[[], tuple[float, float, float]] | None = None,
         wall: Callable[[], float] = time.time,
         mono: Callable[[], float] = time.monotonic,
     ) -> None:
@@ -61,6 +62,8 @@ class Watchdog:
         self.thermal_pause_c = thermal_pause_c
         self.thermal_resume_c = thermal_resume_c
         self._temperature = temperature or self._latest_gpu_temperature
+        self._limits = limits
+        """``(stall, pause, resume)`` read before every check: the settings saved on SCR-14."""
         self._wall = wall
         self._mono = mono
         self._last = (wall(), mono())
@@ -75,6 +78,11 @@ class Watchdog:
 
     def run_once(self) -> list[str]:
         """Check every running job once. Returns the IDs of jobs it acted on."""
+        if self._limits is not None:
+            try:
+                self.stall_after_s, self.thermal_pause_c, self.thermal_resume_c = self._limits()
+            except Exception as exc:  # keep the last limits read; a blip must not stop checks
+                log.warning("limits_not_read", reason=str(exc)[:200])
         slept = self._slept()
         if slept:
             # Every heartbeat is stale by the length of the sleep. That is not a dead

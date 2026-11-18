@@ -457,7 +457,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_RUN_1_8_*`: SCR-04 updates live during a training run (2026-11-18: progress events carry the metrics, `Training.test.tsx` derives the charts from them; checked live at SCR-04 v2's Gate 3)
 - [x] `test_RUN_1_9_*`: a tiny model defaults to the faster device measured by the benchmark; a forced device is used as given (2026-11-18, `test_M8_training.py`: planted timings send a run to either device, a real measurement keeps the faster and is cached, a forced device skips the benchmark)
 - [x] `test_REG_1_1_*`: any trained version traces to its exact dataset version and config (2026-11-18, `test_M8_registry.py`: the version's dataset version, config and hash match the run's; its safetensors load; later runs start from the base; a retry after registration trains nothing; job_0030–0032 backfilled)
-- [ ] `test_REG_1_2_*`: the three states are shown and filterable (API part 2026-11-18, `test_M8_registry.py`: a paused run is `partial`, then `trained`, and both list filters work; "shown" is ticked with SCR-11's Gate 3)
+- [x] `test_REG_1_2_*`: the three states are shown and filterable (2026-11-18, `test_M8_registry.py`: a paused run is `partial`, then `trained`, and both list filters work; 2026-11-19, `Models.test.tsx`: SCR-11 shows the three labels and filters by state and weights; checked live)
 - [x] `test_REG_1_4_*`: `/predict` returns a result for a sample input, also while a training job holds the GPU (2026-11-18, `test_M8_inference.py`: on the CPU while a job holds the lease, `gpu_busy` for a model over the limit, one model at a time, unloads verified and the lease given back, on a fake card; checked live with job_0032's model. The GPU path on the real card waits for RUN-1.4: `tests/gpu/test_REG_1_4_inference_gpu.py`, a strict expected failure)
 - [x] `test_REG_2_1_*`: base weights are still present after 10 training runs (2026-11-18, `test_M8_retention.py`: byte-identical after 10 runs)
 - [x] `test_REG_2_2_*`: default settings, 3 runs: only base and run-3 weights on disk (2026-11-18, `test_M8_retention.py`; each deletion logged with its bytes)
@@ -473,7 +473,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_NFR_14_*` and `test_BUG7_*`: after 10 runs with default retention, the disk audit matches base + latest + one in-progress checkpoint (2026-11-18, `test_M8_retention.py`; BUG7's guard adds a cancelled pause and a crash with retry)
 - [x] `test_NFR_15_*`: a kill during cleanup, then a rerun: no orphaned files and no dangling registry rows (2026-11-18, `test_M8_retention.py`: killed after marking `deleting`, plus an orphan folder; the retry recovers both)
 - [ ] `test_NFR_1_*` (gpu) and `test_NFR_8_*` extended to training: peak VRAM under 5.5 GB; weights only as safetensors, never unpickled
-- [ ] G3 for SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 (SCR-07 v2 and SCR-04 v2 approved 2026-11-18; SCR-11 and SCR-14 with part B)
+- [ ] G3 for SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 (SCR-07 v2 and SCR-04 v2 approved 2026-11-18; SCR-11, SCR-14 and the two addenda built and checked live 2026-11-19, waiting for the owner's review: `docs/design/g3/SCR-11.md`, `SCR-14.md`, the addenda in `SCR-07.md` and `SCR-04.md`)
 - [ ] Demo: train the reference CNN on the phase-2 image dataset; pause and resume it from the UI; find it in the registry; run retention; get a prediction
 - [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS for BUG7; learning notes)
 - [ ] Owner's OK to merge

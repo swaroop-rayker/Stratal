@@ -12,7 +12,7 @@ import { useFeedMessage } from "../../api/stream";
 import { Modal, ModalClose } from "../../components/Modal";
 import { EmptyState, ErrorState } from "../../components/states";
 import { Button, Icon, Kbd, Progress, Skeleton, StatePill } from "../../components/ui";
-import { clock, duration, errorDetail, stagePercent } from "../../lib/format";
+import { bytes, clock, duration, errorDetail, stagePercent } from "../../lib/format";
 import { useNow } from "../../lib/useNow";
 import { useCrumbs, useShortcuts } from "../../shell/hooks";
 import { StartPipelineDrawer } from "../datasets/StartPipelineDrawer";
@@ -206,14 +206,27 @@ function Now({ job, context }: { job: Job; context: Context }) {
         );
       }
       if (training) {
-        // The registered model version and its link to SCR-11 arrive with the registry (M8 part B).
         const accuracy = valAccuracy(job);
         return (
           <span className="now why">
+            {job.model_version_id && job.model_lineage_id ? (
+              <>
+                <Icon name="chevron" />
+                <Link
+                  className="mono"
+                  to={`/models/${job.model_lineage_id}?version=${job.model_version_id}`}
+                  onClick={(event) => { event.stopPropagation(); }}
+                >
+                  {job.model_version_id}
+                </Link>{" "}
+                ·{" "}
+              </>
+            ) : null}
             {accuracy !== null ? <>val acc <b>{(100 * accuracy).toFixed(1)}%</b></> : "trained"}
           </span>
         );
       }
+      if (job.kind === "retention") return <span className="now">{retentionOutcome(job)}</span>;
       return job.output_version_id ? (
         <span className="now">
           <Icon name="chevron" />
@@ -223,6 +236,20 @@ function Now({ job, context }: { job: Job; context: Context }) {
         <span className="now muted">no new version</span>
       );
   }
+}
+
+/** "retention · freed 412 MB from 3 versions" (SCR-07 v2 frame A); a dry run says what it
+ * would have deleted. */
+export function retentionOutcome(job: Job): string {
+  const m = job.stages[0]?.metrics ?? {};
+  const n = (key: string) => (typeof m[key] === "number" ? m[key] : 0);
+  if (n("dry_run")) return `retention dry run · would delete ${String(n("would_delete"))} versions, ${bytes(n("bytes_to_free"))}`;
+  const versions = n("versions_deleted");
+  const checkpoints = n("checkpoints_removed");
+  if (!versions && !checkpoints && !n("bytes_freed")) return "retention · nothing to delete";
+  const parts = [`${String(versions)} version${versions === 1 ? "" : "s"}`];
+  if (checkpoints) parts.push(`${String(checkpoints)} checkpoint${checkpoints === 1 ? "" : "s"}`);
+  return `retention · freed ${bytes(n("bytes_freed"))} from ${parts.join(" and ")}`;
 }
 
 /** The time a job was made: today as "14:03", earlier as "Nov 14". */
@@ -704,6 +731,7 @@ export function JobsScreen() {
           <option value="pipeline">Kind: pipeline</option>
           <option value="report">Kind: report</option>
           <option value="train">Kind: train</option>
+          <option value="retention">Kind: retention</option>
         </select>
         <span className="spacer" />
         <span className="search">

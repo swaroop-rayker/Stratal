@@ -1229,6 +1229,8 @@ export interface components {
             output_version_id: string | null;
             /** Model Version Id */
             model_version_id?: string | null;
+            /** Model Lineage Id */
+            model_lineage_id?: string | null;
             error: components["schemas"]["JobError"] | null;
             /** Summary */
             summary: {
@@ -2146,10 +2148,13 @@ export interface components {
         SaveSettings: {
             /**
              * Section
-             * @constant
+             * @enum {string}
              */
-            section: "retention";
-            values: components["schemas"]["RetentionValues"];
+            section: "retention" | "training";
+            /** Values */
+            values: {
+                [key: string]: unknown;
+            };
             /**
              * Version
              * @description The section's version as read; a stale one is refused.
@@ -2194,9 +2199,9 @@ export interface components {
         SettingsSection: {
             /**
              * Name
-             * @constant
+             * @enum {string}
              */
-            name: "retention";
+            name: "retention" | "training";
             /** Title */
             title: string;
             /** Requirements */
@@ -2212,7 +2217,8 @@ export interface components {
             /** Version */
             version: string;
             /** Lineages */
-            lineages: components["schemas"]["SettingsLineage"][];
+            lineages: components["schemas"]["SettingsLineage"][] | null;
+            context: components["schemas"]["TrainingContext"] | null;
         };
         /** Source */
         Source: {
@@ -2350,6 +2356,8 @@ export interface components {
             ram_total_mb: number | null;
             /** Cpu Count */
             cpu_count: number | null;
+            /** Gpu Slowdown C */
+            gpu_slowdown_c?: number | null;
             /** Thermal Pause C */
             thermal_pause_c: number;
             /** Thermal Resume C */
@@ -2363,6 +2371,15 @@ export interface components {
             resource: components["schemas"]["ResourceSample"][];
             /** Process */
             process: components["schemas"]["ProcessSample"][];
+        };
+        /** TemperatureHigh */
+        TemperatureHigh: {
+            /** Celsius */
+            celsius: number;
+            /** Job Id */
+            job_id: string | null;
+            /** At */
+            at: string | null;
         };
         /**
          * TrainConfig
@@ -2466,6 +2483,17 @@ export interface components {
              */
             dataset_version: string;
             config: components["schemas"]["TrainConfig"];
+        };
+        /**
+         * TrainingContext
+         * @description What SCR-14 shows beside the thermal limits.
+         */
+        TrainingContext: {
+            /** Gpu Slowdown C */
+            gpu_slowdown_c: number | null;
+            gpu_temp_high_7d: components["schemas"]["TemperatureHigh"] | null;
+            /** Running Jobs */
+            running_jobs: string[];
         };
         /** ValidationError */
         ValidationError: {

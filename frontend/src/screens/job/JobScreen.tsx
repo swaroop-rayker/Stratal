@@ -158,6 +158,15 @@ function Header({ job, now, onCancel, device }: { job: Job; now: number; onCance
           Open {job.output_version_id}
         </Button>
       ) : null}
+      {job.state === "completed" && job.model_version_id && job.model_lineage_id ? (
+        <Button
+          variant="primary"
+          onClick={() => void navigate(`/models/${job.model_lineage_id ?? ""}?version=${job.model_version_id ?? ""}`)}
+        >
+          <Icon name="grid" />
+          Open {job.model_version_id}
+        </Button>
+      ) : null}
       {error instanceof ApiError ? <Badge tone="err">{error.problem.code}</Badge> : null}
     </div>
   );

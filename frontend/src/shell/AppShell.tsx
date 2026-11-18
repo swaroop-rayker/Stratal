@@ -15,12 +15,14 @@ import { Toasts } from "./Toasts";
 const NAV: { group: string; to: string; label: string; icon: IconName; keys: string }[] = [
   { group: "Data", to: "/datasets", label: "Datasets", icon: "db", keys: "g d" },
   { group: "Jobs", to: "/jobs", label: "Jobs", icon: "list", keys: "g j" },
+  { group: "Models", to: "/models", label: "Models", icon: "grid", keys: "g m" },
 ];
 
 const SHORTCUTS: [string, ReactNode][] = [
   ["g d", "Datasets"],
   ["/", "Filter this list"],
   ["g j", "Jobs"],
+  ["g m", "Models"],
   ["j", <>Next row (<kbd>k</kbd> previous)</>],
   ["g a", "Active job"],
   ["Enter", "Open the row"],
@@ -86,6 +88,7 @@ export function AppShell() {
     () => ({
       "g d": () => void navigate("/datasets"),
       "g j": () => void navigate("/jobs"),
+      "g m": () => void navigate("/models"),
       "g a": () => {
         const job = active.data?.items[0];
         if (job) void navigate(`/jobs/${job.id}`);
@@ -122,6 +125,13 @@ export function AppShell() {
           ))}
           <div className="foot">
             <HealthDot />
+            <NavLink className="nav" to="/settings" aria-label="Settings">
+              <Icon name="sliders" />
+              <span className="label">Settings</span>
+              <span className="tip rail-tip" aria-hidden="true">
+                Settings
+              </span>
+            </NavLink>
             <button type="button" className="nav" onClick={toggleTheme} aria-label="Switch theme">
               <Icon name="theme" />
               <span className="label">Theme</span>

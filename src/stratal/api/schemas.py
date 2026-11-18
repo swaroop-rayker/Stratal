@@ -73,6 +73,8 @@ class Job(_Model):
     output_version_id: str | None
     model_version_id: str | None = None
     """A training job's registry version, partial or trained (REG-1.1); null otherwise."""
+    model_lineage_id: str | None = None
+    """That version's lineage, for a link to SCR-11."""
     error: JobError | None
     summary: Json | None
     created_at: str
@@ -177,8 +179,10 @@ class System(_Model):
     vram_cap_mb: float | None
     ram_total_mb: float | None
     cpu_count: int | None
+    gpu_slowdown_c: float | None = None
+    """The card slows itself down at this temperature (NVML); the most thermal_pause_c may be."""
     thermal_pause_c: float
-    """GPU jobs pause at this temperature (RUN-1.6)."""
+    """GPU jobs pause at this temperature (RUN-1.6), as saved on SCR-14."""
     thermal_resume_c: float
     """Jobs paused for heat resume below this temperature."""
     stall_timeout_s: float
@@ -687,14 +691,33 @@ class SettingsLineage(_Model):
     intermediates_bytes: int
 
 
+class TemperatureHigh(_Model):
+    celsius: float
+    job_id: str | None
+    at: str | None
+
+
+class TrainingContext(_Model):
+    """What SCR-14 shows beside the thermal limits."""
+
+    gpu_slowdown_c: float | None
+    """The card's slowdown point (NVML): the most thermal_pause_c may be."""
+    gpu_temp_high_7d: TemperatureHigh | None
+    running_jobs: list[str]
+    """Jobs a changed stall timeout applies to at once."""
+
+
 class SettingsSection(_Model):
-    name: Literal["retention"]
+    name: Literal["retention", "training"]
     title: str
     requirements: list[str]
     values: Json
     schema_: Json = Field(alias="schema")
     version: str
-    lineages: list[SettingsLineage]
+    lineages: list[SettingsLineage] | None
+    """Retention only: each lineage's keep_intermediate and current intermediates."""
+    context: TrainingContext | None
+    """Training only."""
 
 
 class SettingsList(_Model):

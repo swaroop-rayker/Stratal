@@ -73,3 +73,13 @@ Backgrounds, borders and dark are unchanged. This is a design-system change: G0 
 - `test_UI_2_1_*`: the failed and queued states.
 
 Also `tests/integration/test_M6_system_and_jobs_api.py::test_MON_4_3_events_tail_and_minimum_level` against the real database.
+
+## Addendum: SCR-04 v2 with the registry (M8 part B, 2026-11-19)
+
+The accepted difference "no model version link on finished training runs" is now built. **Waiting for the owner's review.**
+
+| File | What it shows |
+|---|---|
+| `live-v2-open-version.jpg` | job_0047, completed: "Open mv_e56a61b2e5af" in the header, opening SCR-11 with that version's drawer |
+
+The job view gained `model_lineage_id` for this link (API.md §3.3).

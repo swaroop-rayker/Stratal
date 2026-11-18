@@ -16,6 +16,7 @@ from stratal.core.errors import NotFound
 from stratal.core.settings import get_settings
 from stratal.db.models import ResourceSample
 from stratal.label.stage import LabelConfig
+from stratal.runtime import limits
 from stratal.runtime import stages as stage_registry
 
 router = APIRouter()
@@ -41,6 +42,7 @@ def system(session: Db, bus: Redis) -> Json:
     vram_total = info.get("vram_total_mb") or (sample.vram_total_mb if sample else None)
     ram_total = info.get("ram_total_mb") or (sample.ram_total_mb if sample else None)
     fraction = LabelConfig().vram_fraction
+    training = limits.read(session, settings)
     return {
         "gpu_name": info.get("gpu_name"),
         "gpu_error": info.get("gpu_error"),
@@ -49,9 +51,10 @@ def system(session: Db, bus: Redis) -> Json:
         "vram_cap_mb": vram_total * fraction if vram_total is not None else None,
         "ram_total_mb": ram_total,
         "cpu_count": info.get("cpu_count"),
-        "thermal_pause_c": settings.thermal_pause_c,
-        "thermal_resume_c": settings.thermal_resume_c,
-        "stall_timeout_s": settings.stall_timeout_s,
+        "gpu_slowdown_c": info.get("gpu_slowdown_c"),
+        "thermal_pause_c": training.thermal_pause_c,
+        "thermal_resume_c": training.thermal_resume_c,
+        "stall_timeout_s": training.stall_timeout_s,
     }
 
 

@@ -193,7 +193,7 @@ Stages have their own simpler status: pending, queued, running, paused (M8), com
 | Child crashes | Supervisor records `failed` with the reason. Finished stages and cached batches are kept |
 | Worker container dies | The watchdog in `monitor` sees the heartbeat go stale and either requeues the job (work is resumable) or marks it failed |
 | No progress for T seconds (M8, RUN-1.7) | The watchdog marks the job `stalled` when its running stage has reported no progress or activity for `stall_timeout_s` (300 s, OC-3) while the heartbeat is fresh, so the worker is alive. Progress or activity moves it back to `running`; if the stage ends meanwhile, the supervisor finishes it as usual. The supervisor keeps heartbeating a stalled job, and a stalled job with a stale heartbeat is requeued like a running one. Cancel works as for a running job |
-| GPU too hot (M8, RUN-1.6) | The watchdog reads the GPU temperature from the monitor's newest sample. At `thermal_pause_c` (83 °C) it pauses the running GPU job as a user pause would, with `pause_reason: thermal`. Below `thermal_resume_c` (75 °C) it resumes the jobs paused for heat, and only those; between the two nothing changes, so the job does not flap |
+| GPU too hot (M8, RUN-1.6) | The watchdog reads the GPU temperature from the monitor's newest sample. At `thermal_pause_c` (83 °C) it pauses the running GPU job as a user pause would, with `pause_reason: thermal`. Below `thermal_resume_c` (75 °C) it resumes the jobs paused for heat, and only those; between the two nothing changes, so the job does not flap. The three limits are the `training` settings saved on SCR-14 (DATA_MODEL §4.13), read before every check |
 | Laptop sleeps | See [§8](#8-sleep-and-suspend) |
 
 ## 5. Events and telemetry

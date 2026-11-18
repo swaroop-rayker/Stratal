@@ -317,6 +317,36 @@ def build_plan(
     }
 
 
+def caused_by(
+    new: dict[str, Any], current: dict[str, Any], *, values: RetentionValues
+) -> dict[str, Any]:
+    """The part of ``new``'s deletions that the change itself causes: versions the new
+    settings delete and the current ones keep (REG-2.10). What the current settings would
+    delete anyway is not the change's doing, and is left to the next cleanup; so a save
+    asks only about its own effect, and its confirmed job deletes only that."""
+    pending = {d["version_id"] for item in current["lineages"] for d in item["delete"]}
+    lineages: list[dict[str, Any]] = []
+    deletions: list[tuple[str, int]] = []
+    for item in new["lineages"]:
+        own = [d for d in item["delete"] if d["version_id"] not in pending]
+        deletions += [(d["version_id"], d["weights_bytes"]) for d in own]
+        lineages.append(
+            {
+                **item,
+                "delete": own,
+                "checkpoints": [],
+                "bytes_to_free": sum(d["weights_bytes"] for d in own),
+            }
+        )
+    return {
+        **new,
+        "lineages": lineages,
+        "versions_to_delete": len(deletions),
+        "bytes_to_free": sum(size for _, size in deletions),
+        "token": plan_token(values, deletions),
+    }
+
+
 def decisions(session: Session, lineage_id: str, use: InUse) -> dict[str, tuple[str, str]]:
     """Per version: ``(action, reason)`` under the saved settings, for the registry views.
     ``action`` is ``keep``, ``delete`` (at the next cleanup) or ``blocked``."""

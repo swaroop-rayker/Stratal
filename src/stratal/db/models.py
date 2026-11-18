@@ -521,3 +521,14 @@ class RetentionSetting(Base):
     lineage_id: Mapped[str | None] = mapped_column(Text, ForeignKey("model_lineages.id"))
     keep_intermediate: Mapped[int | None] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SettingsSection(Base):
+    """One section of the settings edited on SCR-14 (OC-9): its values as JSON. Retention
+    has its own table (``retention_settings``), keyed by lineage."""
+
+    __tablename__ = "settings"
+
+    section: Mapped[str] = mapped_column(Text, primary_key=True)
+    values: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

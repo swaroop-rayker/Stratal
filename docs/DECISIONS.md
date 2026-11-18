@@ -669,6 +669,21 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Queued after the run's outcome is committed, in its own transaction. If that fails, the run's outcome stands and the next run cleans up.
 - **Why:** REG-2.2 deletes the previous latest "after a run completes"; a cancelled run's checkpoint is garbage at once (REG-2.6). Queuing as a job gives the deletions an activity log and a history for free (REG-2.9).
 
+**The training limits live in the database** (M8, RUN-1.3, RUN-1.6, RUN-1.7, OC-9; the owner's choice, 2026-11-18)
+- **What:** `checkpoint_interval_min`, `thermal_pause_c`, `thermal_resume_c` and `stall_timeout_s` are the `training` section of the settings, edited on SCR-14. The environment's values stay their default until the section is saved.
+- **How:** A `settings` table, one row per section (`stratal.runtime.limits`). The watchdog reads it before every check, so a change applies at once; `checkpoint_interval_min` is written into a new run's config when the request leaves `checkpoint_every_s` out, so a running job never changes (NFR-4). Ranges come from the schema; `thermal_resume_c` must be 5 °C below the pause, and the pause at most the card's NVML slowdown point, which the monitor now publishes in `/system`.
+- **Why:** The owner chose database settings edited on a screen (OC-9) for retention; the training limits follow, so one page holds every limit. Reading on each check is cheap and needs no restart.
+
+**A settings save asks only about the deletions it causes** (M8, REG-2.10; found during SCR-14's Gate 3, 2026-11-19)
+- **What:** The confirmation lists versions the new settings delete and the current ones keep. Deletions the current settings would make anyway are left to that lineage's next cleanup.
+- **How:** `retention.caused_by(new_plan, current_plan)` removes the current plan's deletions from the new one and recomputes the token; the confirmed job deletes only what is left.
+- **Why:** `small_cnn · cifar10` had two deletions pending (no retention had run there since registration), so raising another lineage's N asked to confirm them, and confirming would have deleted them as a side effect of an unrelated change.
+
+**SCR-11 and SCR-14 as built** (M8, Gate 3; differences listed in `docs/design/g3/SCR-11.md`, `SCR-14.md`)
+- **What:** Each screen's CSS is copied from its approved mockup and scoped under `.scr11` / `.scr14`, without the mockup's own copies of shared components, so earlier contrast fixes keep applying. Below 1280 px SCR-11 turns its right column into tabs and SCR-14 its index into a row, as frames G and F show.
+- **How:** Dialogs render outside the page, so their content is wrapped in the screen's class. The deletion dialog is one component for both screens (the lineage name on SCR-11, "delete N versions" on SCR-14). A drawer opened from the URL names where focus returns (`Drawer.returnFocus`).
+- **Why:** The mockups are the approved design; scoping keeps a screen's rules from leaking into others. Tailwind's `fixed` utility collided with a mockup class (`fixed` → `rules-note`), which is why screen classes are checked against utility names.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

@@ -354,7 +354,16 @@ def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqu
             errors=[FieldProblem(loc=loc, msg="not a labelled split", code="invalid")],
         )
     dataset = session.get(Dataset, version.dataset_id)
-    config = request.config.model_dump(mode="json")
+    resolved = request.config
+    if "checkpoint_every_s" not in resolved.model_fields_set:
+        # The default comes from the settings saved on SCR-14 (OC-9), fixed into the
+        # run's config now, so a later change never alters a running job (NFR-4).
+        from stratal.core.settings import get_settings
+        from stratal.runtime import limits
+
+        minutes = limits.read(session, get_settings()).checkpoint_interval_min
+        resolved = resolved.model_copy(update={"checkpoint_every_s": 60 * minutes})
+    config = resolved.model_dump(mode="json")
     plan = [("train", config)]
     spec: dict[str, Any] = {
         "kind": "train",
@@ -519,6 +528,7 @@ def job_view(session: Session, job: Job) -> dict[str, Any]:
     """A job with its stages, as the API returns it."""
     stages = stages_of(session, job.id)
     current = next((s.name for s in stages if s.idx == job.current_stage_idx), None)
+    version = model_registry.run_version(session, job.id) if job.kind == "train" else None
     return {
         "id": job.id,
         "kind": job.kind,
@@ -531,9 +541,8 @@ def job_view(session: Session, job: Job) -> dict[str, Any]:
         "current_stage": current if job.state not in TERMINAL else None,
         "stages": [stage_view(stage) for stage in stages],
         "output_version_id": job.output_version_id,
-        "model_version_id": (
-            model_registry.model_version_for_job(session, job.id) if job.kind == "train" else None
-        ),
+        "model_version_id": version.id if version is not None else None,
+        "model_lineage_id": version.lineage_id if version is not None else None,
         "error": job.error,
         "summary": job.summary,
         "created_at": _iso(job.created_at),

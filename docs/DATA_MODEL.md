@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 and §4.11 built in M5 (2026-11-16); §4.12 built in M8 (2026-11-18) |
+| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 and §4.11 built in M5 (2026-11-16); §4.12 and §4.13 built in M8 (2026-11-18, 2026-11-19) |
 | Detail level | Phase-1 tables are specified. Phase 2+ tables are outlined in [§9](#9-planned-for-later-phases) |
 | Rule | Any schema change updates this file in the same change. Applied migrations are never edited |
 
@@ -312,6 +312,10 @@ Constraints: state and weights status check constraints; `present` needs a path 
 **`pins`**: `version_id` (PK, FK), `pinned_at`. Only trained versions with weights on disk are pinned (REG-2.5).
 
 **`retention_settings`**: `id` (identity), `lineage_id` (FK, null for the global row; unique with nulls not distinct, so one global row), `keep_intermediate` (integer ≥ 0, null for "all"), `updated_at`. The migration inserts the global row with 0 (REG-2.3's default). Saved through `PUT /settings` (API.md §3.10).
+
+### 4.13 `settings` (M8, OC-9, SCR-14)
+
+`section` (text, PK), `values` (jsonb), `updated_at`. One row per section of SCR-14 other than retention, which has its own table above. In M8 the only row is `training`: `{checkpoint_interval_min, thermal_pause_c, thermal_resume_c, stall_timeout_s}` (`stratal.runtime.limits.TrainingValues`). Until it is saved the environment's `STRATAL_THERMAL_PAUSE_C`, `STRATAL_THERMAL_RESUME_C` and `STRATAL_STALL_TIMEOUT_S` are the values, so a fresh install behaves as before. The watchdog reads it before every check; `checkpoint_interval_min` becomes `checkpoint_every_s` of new training runs that do not set it.
 
 ## 5. Manifest schema
 

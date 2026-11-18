@@ -73,7 +73,7 @@ Jobs that fail carry the same idea in `job.error`. These codes appear there and 
 | `GET /health` | Liveness and dependency checks | `200 {"status": "ok", "checks": {"postgres": "ok", "redis": "ok", "data_volume": "ok"}, "version": "…"}`; `503` problem if a check fails |
 | `GET /system` | Hardware and limits as Stratal sees them: GPU name, VRAM total, RAM total (the VM's), VRAM cap | `200` |
 
-`GET /system` built in M6 (2026-11-16): `{gpu_name, gpu_error, vram_total_mb, vram_cap_fraction, vram_cap_mb, ram_total_mb, cpu_count}`. The API has no NVML, so the monitor describes the machine when it starts (Redis key `stratal:system`); the latest resource sample fills in the totals if it has not. Unknown values are null, never zero. The cap is the label stage's default `vram_fraction` of the card. Container memory limits are not included: the API can read only its own, and they are fixed in `compose.yaml`. M8 adds `thermal_pause_c`, `thermal_resume_c` and `stall_timeout_s`, the limits the watchdog applies (RUN-1.6, RUN-1.7), so SCR-07 and SCR-04 can say when a paused job resumes.
+`GET /system` built in M6 (2026-11-16): `{gpu_name, gpu_error, vram_total_mb, vram_cap_fraction, vram_cap_mb, ram_total_mb, cpu_count}`. The API has no NVML, so the monitor describes the machine when it starts (Redis key `stratal:system`); the latest resource sample fills in the totals if it has not. Unknown values are null, never zero. The cap is the label stage's default `vram_fraction` of the card. Container memory limits are not included: the API can read only its own, and they are fixed in `compose.yaml`. M8 adds `thermal_pause_c`, `thermal_resume_c` and `stall_timeout_s`, the limits the watchdog applies (RUN-1.6, RUN-1.7; as saved on SCR-14, §3.10), so SCR-07 and SCR-04 can say when a paused job resumes, and `gpu_slowdown_c`, the card's slowdown temperature from NVML (null without a GPU).
 
 ### 3.2 Datasets and versions
 
@@ -219,7 +219,7 @@ Job (abridged):
 }
 ```
 
-A job's and a stage's `error` is `{code, reason, suggested_action, detail}`; `detail` is text or an object of facts, such as `{"signal": "SIGKILL", "peak_rss_mb": 2410, "limit_mb": 2560}` for a killed process (E-013). A training job also has `model_version_id` (§3.9), null for other kinds.
+A job's and a stage's `error` is `{code, reason, suggested_action, detail}`; `detail` is text or an object of facts, such as `{"signal": "SIGKILL", "peak_rss_mb": 2410, "limit_mb": 2560}` for a killed process (E-013). A training job also has `model_version_id` and `model_lineage_id` (§3.9), null for other kinds.
 
 ### 3.4 Activity log and telemetry
 
@@ -295,7 +295,8 @@ Built in M5 (2026-11-16). Details:
 | `GET /settings` | Every section: `{sections: [{name, title, requirements, values, schema, version, lineages}]}` | `200` |
 | `PUT /settings` | Save one section. Body `{section, values, version, confirm?}` | `200 {section, job_id}` |
 
-- **Retention** (`retention`, REG-2.3, REG-2.4, REG-2.10): `values` is `{keep_intermediate: 0–100 | "all", overrides: {lineage_id: 0–100 | "all"}}`; `schema` is its JSON Schema, with `x-applies` on each field; `lineages` lists each lineage's `keep_intermediate` in force, its `source` and its current `intermediates` and `intermediates_bytes`. The training limits join as a `training` section with SCR-14's Gate 3.
+- **Retention** (`retention`, REG-2.3, REG-2.4, REG-2.10): `values` is `{keep_intermediate: 0–100 | "all", overrides: {lineage_id: 0–100 | "all"}}`; `schema` is its JSON Schema, with `x-applies` on each field; `lineages` lists each lineage's `keep_intermediate` in force, its `source` and its current `intermediates` and `intermediates_bytes`. 
+- **Training** (`training`, RUN-1.3, RUN-1.6, RUN-1.7): `values` is `{checkpoint_interval_min: 1–60, thermal_pause_c: 60–100, thermal_resume_c, stall_timeout_s: 60–3600}`; `thermal_resume_c` must be at least 5 below `thermal_pause_c`, and `thermal_pause_c` at most the card's slowdown point. A field's problem is `422 validation_error` with `errors[].loc` = `["values", field]`. `context` is `{gpu_slowdown_c, gpu_temp_high_7d: {celsius, job_id, at} | null, running_jobs}`; `lineages` is null. The section is the retention section's sibling in `sections`; retention's `context` is null. The watchdog applies a saved section from its next check; the checkpoint interval applies to new runs (NFR-4).
 - `version` must be the one read; otherwise `409 conflict` with the current `version`.
 - A save that would delete weights is refused with `409 confirmation_required` and the `plan`; the same body with `confirm: plan.token` saves it and queues a retention job that deletes only that plan's versions (`job_id`). If anything changed in between, the token no longer matches and a new plan is returned the same way (ADR-0015 rule 7).
 - An unknown lineage in `overrides` is `422 validation_error`.
