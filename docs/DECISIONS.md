@@ -559,6 +559,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Type defaults in the stage registry; a request can still override them. Measured on CIFAR-10's 60,000 pHash values by comparing every pair.
 - **Why:** At 8 and 12 bits, 11 % and 53 % of matched 32-px pairs crossed classes, and single linkage chained 8,814 accepted rows of every class into one split group, all in train: `automobile` ended with 56 % in train against 81–86 % for the others. At 4 and 6 bits the cross-class shares are 1.0 % and 2.8 % and the largest group has 27 rows.
 
+**CIFAR-10's training split: seed 1, `ds_f8e67211dd94`** (M8, DATA-4.5; the owner's choice, 2026-11-18)
+- **What:** M8 trains on the seed-1 split of `cifar10`: 59,630 accepted rows, every class exactly 80 / 10 / 10, largest split group 6 rows, no leaks (job_0029).
+- **How:** Split again from the 4-bit preprocess version `ds_bc4811eceb36` with `seed: 1`. No earlier split had that seed, so nothing was carried over. The two seed-0 splits (`ds_83371232f9df` from job_0027, `ds_fc9e7e4ee7a6` from job_0028) are kept, not deleted.
+- **Why:** The seed-0 splits carry job_0027's assignment, made while one 8,814-row group spanned every class: `automobile` had 57 % in train against 80–83 % for the others. Carrying over is right (DATA-4.5 keeps test rows out of train across versions), so the fix is a new lineage, not moving rows. A later seed-0 split of `cifar10` would continue the skewed one.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
