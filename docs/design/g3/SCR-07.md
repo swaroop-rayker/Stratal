@@ -79,7 +79,7 @@ Frame D (empty, loading, error) uses the shared states; there is no way to empty
 
 ## Addendum: SCR-07 v2 with the registry (M8 part B, 2026-11-19)
 
-The two differences accepted at SCR-07 v2's Gate 3 (2026-11-18) are now built. **Waiting for the owner's review.**
+The two differences accepted at SCR-07 v2's Gate 3 (2026-11-18) are now built. **Approved by the owner on 2026-11-19.**
 
 | File | What it shows |
 |---|---|

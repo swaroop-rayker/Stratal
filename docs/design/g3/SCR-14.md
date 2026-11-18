@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-14_v1.html`](../screens/SCR-14_v1.html), G2 approved 2026-11-18 |
 | Built | `frontend/src/screens/settings/SettingsScreen.tsx`, `frontend/src/styles/scr14.css`; route `/settings`, Settings in the sidebar foot with the sliders icon. Backend: `settings` table and `stratal.runtime.limits` (the training section), `GET`/`PUT /settings` |
 | Checked | 2026-11-19, live at 1280 × 760 and 1024 × 640, dark and light. The training values were changed on the page and discarded, never saved. Retention was changed through the page and restored afterwards (global 0, no overrides); the only deletion was one demo version in `mlp · cifar10` |
-| Status | **Waiting for the owner's review** |
+| Status | **Approved by the owner on 2026-11-19** ("Approved"), with the five listed differences |
 
 ## Screenshots (in this folder)
 

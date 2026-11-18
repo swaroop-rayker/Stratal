@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-11_v1.html`](../screens/SCR-11_v1.html), G2 approved 2026-11-17 |
 | Built | `frontend/src/screens/models/` (`ModelsScreen`, `LineageScreen`, `VersionDrawer`, `DiskCard`, `RetentionCard`, `TryIt`, `parts`), `frontend/src/api/registry.ts`, `frontend/src/styles/scr11.css`; routes `/models`, `/models/:lineage` (`?version=` opens the drawer) |
 | Checked | 2026-11-19, live at 1280 × 760 and 1024 × 640, dark and light, on the real registry: `small_cnn · cifar10` (job_0030–0032, untouched) and the demo lineage `mlp · cifar10` (job_0033 to job_0047, made for this check, with the owner's OK to delete its weights) |
-| Status | **Waiting for the owner's review** |
+| Status | **Approved by the owner on 2026-11-19** ("Approved"), with the nine listed differences |
 
 ## Screenshots (in this folder)
 

@@ -76,7 +76,7 @@ Also `tests/integration/test_M6_system_and_jobs_api.py::test_MON_4_3_events_tail
 
 ## Addendum: SCR-04 v2 with the registry (M8 part B, 2026-11-19)
 
-The accepted difference "no model version link on finished training runs" is now built. **Waiting for the owner's review.**
+The accepted difference "no model version link on finished training runs" is now built. **Approved by the owner on 2026-11-19.**
 
 | File | What it shows |
 |---|---|

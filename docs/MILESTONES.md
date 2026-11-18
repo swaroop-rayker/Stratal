@@ -473,7 +473,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_NFR_14_*` and `test_BUG7_*`: after 10 runs with default retention, the disk audit matches base + latest + one in-progress checkpoint (2026-11-18, `test_M8_retention.py`; BUG7's guard adds a cancelled pause and a crash with retry)
 - [x] `test_NFR_15_*`: a kill during cleanup, then a rerun: no orphaned files and no dangling registry rows (2026-11-18, `test_M8_retention.py`: killed after marking `deleting`, plus an orphan folder; the retry recovers both)
 - [ ] `test_NFR_1_*` (gpu) and `test_NFR_8_*` extended to training: peak VRAM under 5.5 GB; weights only as safetensors, never unpickled
-- [ ] G3 for SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 (SCR-07 v2 and SCR-04 v2 approved 2026-11-18; SCR-11, SCR-14 and the two addenda built and checked live 2026-11-19, waiting for the owner's review: `docs/design/g3/SCR-11.md`, `SCR-14.md`, the addenda in `SCR-07.md` and `SCR-04.md`)
+- [x] G3 for SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 (SCR-07 v2 and SCR-04 v2 approved 2026-11-18; SCR-11, SCR-14 and the registry additions to SCR-07 v2 and SCR-04 v2 approved 2026-11-19: `docs/design/g3/SCR-11.md`, `SCR-14.md`, the addenda in `SCR-07.md` and `SCR-04.md`)
 - [ ] Demo: train the reference CNN on the phase-2 image dataset; pause and resume it from the UI; find it in the registry; run retention; get a prediction
 - [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS for BUG7; learning notes)
 - [ ] Owner's OK to merge
