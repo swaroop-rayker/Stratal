@@ -482,7 +482,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Size** L · **Branch** `m9-model-builder` · **Serves** BUILD-1.1–1.9, UI-2.3, DATA-5.2, DATA-5.5
 
-**Before starting:** ADR-0017 approved; G2 for SCR-08 and SCR-09 approved; React Flow approved as a frontend dependency (SPEC §7.4 names it).
+**Before starting:** ADR-0017 approved, including the tabular input width and categorical embeddings (M10's open points 8 and 10); G2 for SCR-08 and SCR-09 approved; React Flow approved as a frontend dependency (SPEC §7.4 names it).
 
 **Scope**
 
@@ -519,7 +519,22 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Size** L · **Branch** `m10-ml-hpo-metrics` · **Serves** ML-1.1–1.5, HPO-1.1–1.5, EVAL-1.2, DATA-1.4, DATA-2.4
 
-**Before starting:** ADR-0018 approved; G2 for SCR-10 and SCR-09's HPO part approved; the tabular and labelled-text datasets settled (decision 1).
+**Before starting:** ADR-0018 approved; G2 for SCR-10 and SCR-09's HPO part approved; the tabular and labelled-text datasets settled (decision 1); and these open points decided, in an ADR of their own or an addendum to ADR-0016 (raised by the owner on 2026-11-18):
+
+- **Serving tabular models** (REG-1.4, ML-1.5):
+  1. Which process serves skops models. `inference` is built from the `worker-gpu` image, which has neither scikit-learn nor skops (ADR-0014 rule 11 puts them in `ml-cpu`). They run on the CPU, so they never need the GPU lease.
+  2. The `/predict` request and response for a table. In: one record of named fields, checked against the dataset's column schema. Out, by task: a class with probabilities, a value, a cluster ID or a PCA projection.
+  3. The registry storing skops files beside safetensors (ADR-0015): storage, disk use per lineage (REG-2.11) and retention.
+  4. Whether batch prediction (a CSV in, predictions out) and serving cluster assignments are in scope.
+- **Neural networks on tabular data** (BUILD-1.3, ML-1.3, RUN-1.1):
+  5. `train` requests accepting a tabular split, with a loader that turns rows into a feature tensor and a target. Today only `labelled_images` splits are accepted.
+  6. How the target column is named: in the request or in the dataset's metadata.
+  7. Preprocessing for networks (scaling, encoding, imputation) fitted on the train split only, as ML-1.3 requires of pipelines. It is stored with the weights (for example as JSON beside the safetensors) and applied again by `/predict`.
+  8. The input width taken after encoding, since one-hot encoding widens it, so the builder can lock it (BUILD-1.3).
+  9. Regression in the training runtime: MSE loss and regression metrics. Today it trains classifiers only.
+  10. Categorical columns through `Embedding`: a tabular input block, or graph specs (BUILD-1.9, P2).
+
+  Points 8 and 10 shape the model spec, so they belong in ADR-0017, before M9.
 
 **Scope**
 
