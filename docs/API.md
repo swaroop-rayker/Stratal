@@ -69,7 +69,7 @@ Jobs that fail carry the same idea in `job.error`. These codes appear there and 
 | `GET /health` | Liveness and dependency checks | `200 {"status": "ok", "checks": {"postgres": "ok", "redis": "ok", "data_volume": "ok"}, "version": "…"}`; `503` problem if a check fails |
 | `GET /system` | Hardware and limits as Stratal sees them: GPU name, VRAM total, RAM total (the VM's), VRAM cap | `200` |
 
-`GET /system` built in M6 (2026-11-16): `{gpu_name, gpu_error, vram_total_mb, vram_cap_fraction, vram_cap_mb, ram_total_mb, cpu_count}`. The API has no NVML, so the monitor describes the machine when it starts (Redis key `stratal:system`); the latest resource sample fills in the totals if it has not. Unknown values are null, never zero. The cap is the label stage's default `vram_fraction` of the card. Container memory limits are not included: the API can read only its own, and they are fixed in `compose.yaml`.
+`GET /system` built in M6 (2026-11-16): `{gpu_name, gpu_error, vram_total_mb, vram_cap_fraction, vram_cap_mb, ram_total_mb, cpu_count}`. The API has no NVML, so the monitor describes the machine when it starts (Redis key `stratal:system`); the latest resource sample fills in the totals if it has not. Unknown values are null, never zero. The cap is the label stage's default `vram_fraction` of the card. Container memory limits are not included: the API can read only its own, and they are fixed in `compose.yaml`. M8 adds `thermal_pause_c`, `thermal_resume_c` and `stall_timeout_s`, the limits the watchdog applies (RUN-1.6, RUN-1.7), so SCR-07 and SCR-04 can say when a paused job resumes.
 
 ### 3.2 Datasets and versions
 
@@ -135,7 +135,7 @@ Version (abridged):
 
 A paused job can be cancelled (`paused → cancelled`, at once). Pausing a queued job is refused: cancel it instead.
 
-The Job carries `pause_reason` (M8, RUN-1.6): `user` for a pause asked through the API, `thermal` for one the watchdog made when the GPU reached `thermal_pause_c` (83 °C); null when the job is not paused. The watchdog resumes `thermal` pauses below `thermal_resume_c` (75 °C) and never a `user` one. A job whose stage is alive but silent for `stall_timeout_s` (300 s) is `stalled` (RUN-1.7) and returns to `running` when the stage reports again; it can be cancelled like a running job. Each of these actions is an `action` event with `metrics.code` `thermal_pause`, `thermal_resume` or `stalled`.
+The Job also carries `heartbeat_at`, the supervisor's last heartbeat, and each stage `last_progress_at`, its last progress or activity; a stage's `status` can be `paused` (M8). The Job carries `pause_reason` (M8, RUN-1.6): `user` for a pause asked through the API, `thermal` for one the watchdog made when the GPU reached `thermal_pause_c` (83 °C); null when the job is not paused. The watchdog resumes `thermal` pauses below `thermal_resume_c` (75 °C) and never a `user` one. A job whose stage is alive but silent for `stall_timeout_s` (300 s) is `stalled` (RUN-1.7) and returns to `running` when the stage reports again; it can be cancelled like a running job. Each of these actions is an `action` event with `metrics.code` `thermal_pause`, `thermal_resume` or `stalled`.
 
 Training request (M8, RUN-1.1, [ADR-0014](decisions/ADR-0014-training-jobs.md)):
 
@@ -195,6 +195,7 @@ Job (abridged):
   "state": "running",
   "desired_state": null,
   "pause_reason": null,
+  "heartbeat_at": "2026-11-14T13:58:02Z",
   "attempt": 1,
   "dataset": "coco10k",
   "current_stage": "label",

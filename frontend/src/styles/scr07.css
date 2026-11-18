@@ -32,3 +32,17 @@
 @media (max-width: 1279px) {
   .scr07 .col-wide { display: none; }
 }
+
+/* SCR-07 v2 (G2 approved 2026-11-17, docs/design/screens/SCR-07v2_v1.html): pause, resume,
+   training jobs. Denser cells (8 px sides), so a row with Pause and Cancel fits at 1280 px. */
+.scr07 .t th, .scr07 .t td { padding-left: var(--sp-2); padding-right: var(--sp-2); }
+.scr07 .t td.acts-cell { width: 1%; white-space: nowrap; }
+.scr07 .acts .btn.primary { color: var(--on-accent); }
+.scr07 .now .why b, .scr07 .now.why b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr07 .t td.m2 { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr07 .t td.m2 b { color: var(--text-primary); font-weight: var(--fw-regular); }
+/* Frame D: at 1024 px Pause and Resume keep only their icon; the job-named label stays the
+   accessible name and the tooltip. */
+@media (max-width: 1279px) {
+  .scr07 .acts .btn .lbl { display: none; }
+}

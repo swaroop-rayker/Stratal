@@ -20,7 +20,7 @@ import json
 import os
 import statistics
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -140,22 +140,29 @@ def choose(
     num_classes: int,
     batch: int,
     batches: Sequence[tuple[torch.Tensor, torch.Tensor]],
+    on_start: Callable[[], None] | None = None,
+    on_measured: Callable[[Device, float], None] | None = None,
 ) -> DeviceChoice:
     """The faster device for this model and batch: from the cache, or measured now.
 
     ``batches`` holds :data:`WARMUP` + :data:`TIMED` batches of the run's own data;
-    the caller holds the GPU lease.
+    the caller holds the GPU lease. When it measures, ``on_start`` is called first and
+    ``on_measured`` after each device, so the job view can show the benchmark
+    in progress (SCR-04 v2, frame E).
     """
     key = cache_key(spec, shape, batch, num_classes)
     found = cached(data_dir, key)
     if found is not None:
         return found
+    if on_start is not None:
+        on_start()
     planted = _from_env()
-    if planted is not None:
-        gpu_ms, cpu_ms = planted
-    else:
-        gpu_ms = _time_steps(spec, shape, num_classes, batches, "cuda")
-        cpu_ms = _time_steps(spec, shape, num_classes, batches, "cpu")
+    gpu_ms = planted[0] if planted else _time_steps(spec, shape, num_classes, batches, "cuda")
+    if on_measured is not None:
+        on_measured("cuda", gpu_ms)
+    cpu_ms = planted[1] if planted else _time_steps(spec, shape, num_classes, batches, "cpu")
+    if on_measured is not None:
+        on_measured("cpu", cpu_ms)
     choice = DeviceChoice("cpu" if cpu_ms < gpu_ms else "cuda", gpu_ms, cpu_ms)
     _store(data_dir, key, choice)
     return choice

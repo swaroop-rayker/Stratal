@@ -963,6 +963,8 @@ export interface components {
             desired_state: ("paused" | "cancelled") | null;
             /** Pause Reason */
             pause_reason?: ("user" | "thermal") | null;
+            /** Heartbeat At */
+            heartbeat_at?: string | null;
             /** Attempt */
             attempt: number;
             /** Dataset */
@@ -1027,7 +1029,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "queued" | "running" | "completed" | "failed" | "skipped" | "cancelled";
+            status: "pending" | "queued" | "running" | "paused" | "completed" | "failed" | "skipped" | "cancelled";
             /** Config */
             config: {
                 [key: string]: unknown;
@@ -1048,6 +1050,8 @@ export interface components {
             eta_seconds: number | null;
             /** Activity */
             activity: string | null;
+            /** Last Progress At */
+            last_progress_at?: string | null;
             /** Metrics */
             metrics: {
                 [key: string]: unknown;
@@ -1652,6 +1656,12 @@ export interface components {
             ram_total_mb: number | null;
             /** Cpu Count */
             cpu_count: number | null;
+            /** Thermal Pause C */
+            thermal_pause_c: number;
+            /** Thermal Resume C */
+            thermal_resume_c: number;
+            /** Stall Timeout S */
+            stall_timeout_s: number;
         };
         /** Telemetry */
         Telemetry: {

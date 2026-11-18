@@ -59,6 +59,9 @@ def test_RUN_1_2_a_running_stage_pauses_at_a_safe_point_and_resumes(runner: Runn
     assert job["stages"][0]["status"] == "paused"
     assert _transitions(job_id)[-1] == ("running", "paused", "supervisor")
     assert runner.bus.get_control(job_id) is None, "the flag is cleared, so a resume runs"
+    shown = client.get(f"/api/v1/jobs/{job_id}")
+    assert shown.status_code == 200, shown.text  # the response model knows the paused stage
+    assert shown.json()["stages"][0]["status"] == "paused"
 
     resumed = client.post(f"/api/v1/jobs/{job_id}/resume")
     assert resumed.status_code == 202, resumed.text

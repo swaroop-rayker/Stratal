@@ -13,7 +13,9 @@ from pydantic import BaseModel, ConfigDict
 
 Json = dict[str, Any]
 JobState = Literal["queued", "running", "paused", "completed", "failed", "cancelled", "stalled"]
-StageStatus = Literal["pending", "queued", "running", "completed", "failed", "skipped", "cancelled"]
+StageStatus = Literal[
+    "pending", "queued", "running", "paused", "completed", "failed", "skipped", "cancelled"
+]
 
 
 class _Model(BaseModel):
@@ -45,6 +47,8 @@ class JobStage(_Model):
     throughput: float | None
     eta_seconds: float | None
     activity: str | None
+    last_progress_at: str | None = None
+    """The stage's last progress or activity (RUN-1.7)."""
     metrics: Json | None
     peaks: Json | None
     started_at: str | None
@@ -59,6 +63,8 @@ class Job(_Model):
     desired_state: Literal["paused", "cancelled"] | None
     pause_reason: Literal["user", "thermal"] | None = None
     """Why a paused job is paused (RUN-1.6); null when it is not paused."""
+    heartbeat_at: str | None = None
+    """The supervisor's last heartbeat: shows a stalled job's worker is alive (RUN-1.7)."""
     attempt: int
     dataset: str | None
     current_stage: str | None
@@ -168,6 +174,12 @@ class System(_Model):
     vram_cap_mb: float | None
     ram_total_mb: float | None
     cpu_count: int | None
+    thermal_pause_c: float
+    """GPU jobs pause at this temperature (RUN-1.6)."""
+    thermal_resume_c: float
+    """Jobs paused for heat resume below this temperature."""
+    stall_timeout_s: float
+    """A silent stage is marked stalled after this long (RUN-1.7)."""
 
 
 class Version(_Model):

@@ -2,7 +2,10 @@
 // invalidate everything a finished stage may have changed (datasets, versions).
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
-import { ApiError, api, call } from "./client";
+import { useCallback, useState } from "react";
+
+import { ApiError, api, call, type StreamSample } from "./client";
+import { useFeedMessage } from "./stream";
 
 export const keys = {
   datasets: ["datasets"] as const,
@@ -155,4 +158,29 @@ export function useLatestReport(id: string, enabled: boolean) {
     },
     enabled,
   });
+}
+
+/** The machine and the limits jobs run under (GET /system): VRAM cap, thermal limits. */
+export function useSystem() {
+  return useQuery({
+    queryKey: ["system"],
+    queryFn: () => call(() => api.GET("/api/v1/system")),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** The GPU's temperature: the latest stored sample, then live `sample` messages (RUN-1.6). */
+export function useGpuTemperature(): number | null {
+  const latest = useQuery({
+    queryKey: ["telemetry", "latest"],
+    queryFn: () => call(() => api.GET("/api/v1/telemetry/latest")),
+  });
+  const [live, setLive] = useState<number | null>(null);
+  useFeedMessage(
+    "sample",
+    useCallback((sample: StreamSample) => {
+      if (typeof sample.gpu_temp_c === "number") setLive(sample.gpu_temp_c);
+    }, []),
+  );
+  return live ?? latest.data?.gpu_temp_c ?? null;
 }

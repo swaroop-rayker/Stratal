@@ -13,6 +13,7 @@ from sqlalchemy import select
 from stratal.api import schemas
 from stratal.api.jobs import Db, Redis
 from stratal.core.errors import NotFound
+from stratal.core.settings import get_settings
 from stratal.db.models import ResourceSample
 from stratal.label.stage import LabelConfig
 from stratal.runtime import stages as stage_registry
@@ -36,6 +37,7 @@ def system(session: Db, bus: Redis) -> Json:
     sample = session.scalars(
         select(ResourceSample).order_by(ResourceSample.id.desc()).limit(1)
     ).first()
+    settings = get_settings()
     vram_total = info.get("vram_total_mb") or (sample.vram_total_mb if sample else None)
     ram_total = info.get("ram_total_mb") or (sample.ram_total_mb if sample else None)
     fraction = LabelConfig().vram_fraction
@@ -47,6 +49,9 @@ def system(session: Db, bus: Redis) -> Json:
         "vram_cap_mb": vram_total * fraction if vram_total is not None else None,
         "ram_total_mb": ram_total,
         "cpu_count": info.get("cpu_count"),
+        "thermal_pause_c": settings.thermal_pause_c,
+        "thermal_resume_c": settings.thermal_resume_c,
+        "stall_timeout_s": settings.stall_timeout_s,
     }
 
 

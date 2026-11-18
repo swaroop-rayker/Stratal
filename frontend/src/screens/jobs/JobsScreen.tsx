@@ -1,12 +1,13 @@
 // SCR-07 jobs list, phase-1 slice (SCREENS.md §3; mockup SCR-07_v1; RUN-1.1, RUN-1.2 slice):
 // every job with its state and what it is doing or what it made; filters by state, dataset,
-// kind and job ID; open, cancel and retry. Pause and resume arrive with RUN-1.2 in phase 2.
+// kind and job ID; open, cancel and retry. v2 (M8, mockup SCR-07v2_v1): pause and resume
+// (RUN-1.2), training jobs, and the reasons a job is paused or stalled (RUN-1.6, RUN-1.7).
 import { type InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { ApiError, api, call, type Job, type JobState, type Schemas } from "../../api/client";
-import { useDatasets } from "../../api/queries";
+import { useDatasets, useGpuTemperature, useSystem } from "../../api/queries";
 import { useFeedMessage } from "../../api/stream";
 import { Modal, ModalClose } from "../../components/Modal";
 import { EmptyState, ErrorState } from "../../components/states";
@@ -15,7 +16,7 @@ import { clock, duration, stagePercent } from "../../lib/format";
 import { useNow } from "../../lib/useNow";
 import { useCrumbs, useShortcuts } from "../../shell/hooks";
 import { StartPipelineDrawer } from "../datasets/StartPipelineDrawer";
-import { failedStage, jobSeconds, runningStage, waitingFor } from "../job/jobs";
+import { failedStage, jobSeconds, runningStage, trainingModel, trainingPosition, valAccuracy, waitingFor } from "../job/jobs";
 
 type JobList = Schemas["JobList"];
 type View = "all" | "active" | "failed" | "completed" | "cancelled";
@@ -101,22 +102,40 @@ function useJobLists(filters: Filters) {
   return { active: showActive ? active : null, finished: filters.view !== "active" ? finished : null };
 }
 
-function Now({ job, active }: { job: Job; active: Job[] }) {
+interface Context {
+  active: Job[];
+  now: number;
+  /** The GPU's temperature now, for jobs paused for heat (RUN-1.6). */
+  gpuTemp: number | null;
+  resumeBelow: number | null;
+}
+
+function Now({ job, context }: { job: Job; context: Context }) {
   const stage = runningStage(job);
+  const training = job.kind === "train";
+  const position = training ? trainingPosition(stage) : null;
   switch (job.state) {
-    case "running":
-    case "stalled": {
+    case "running": {
+      if (job.desired_state === "paused") {
+        return (
+          <span className="now why">
+            {training && stage?.step ? `stopping after step ${String(position?.step ?? stage.step)} · writing a checkpoint` : "stopping at the next safe point"}
+          </span>
+        );
+      }
       const p = stagePercent(stage?.step, stage?.total);
       return (
         <span className="now">
-          <span className="stg">{stage?.name ?? "starting"}</span>
+          <span className="stg">
+            {position?.epoch && position.epochs ? `epoch ${String(position.epoch)}/${String(position.epochs)}` : (stage?.name ?? "starting")}
+          </span>
           {p !== null ? (
             <>
               <Progress value={p} state={job.state} />
               <span className="num">{Math.floor(p)}%</span>
             </>
           ) : null}
-          {job.state === "stalled" ? "· no progress" : stage?.eta_seconds ? (
+          {stage?.eta_seconds ? (
             <>
               · ETA <span className="num">{duration(stage.eta_seconds)}</span>
             </>
@@ -124,12 +143,32 @@ function Now({ job, active }: { job: Job; active: Job[] }) {
         </span>
       );
     }
-    case "queued":
-      return <span className="now muted">{waitingFor(job, active)}</span>;
-    case "paused":
+    case "stalled": {
+      const since = stage?.last_progress_at ? (context.now - new Date(stage.last_progress_at).getTime()) / 1000 : null;
       return (
-        <span className="now muted">
-          paused in <span className="stg">{stage?.name ?? "–"}</span>
+        <span className="now why">
+          no progress{since !== null ? <> for <b>{duration(since)}</b></> : null}
+        </span>
+      );
+    }
+    case "queued":
+      return <span className="now muted">{waitingFor(job, context.active)}</span>;
+    case "paused":
+      if (job.pause_reason === "thermal") {
+        return (
+          <span className="now why">
+            heat · resumes below {context.resumeBelow !== null ? `${String(context.resumeBelow)} °C` : "the limit"}
+            {context.gpuTemp !== null ? <> (<b>{Math.round(context.gpuTemp)} °C</b> now)</> : null}
+          </span>
+        );
+      }
+      return training ? (
+        <span className="now why">
+          by you{position?.epoch ? ` at epoch ${String(position.epoch)}` : ""} · checkpoint kept
+        </span>
+      ) : (
+        <span className="now why">
+          by you in <span className="stg">{stage?.name ?? "–"}</span>
         </span>
       );
     case "failed": {
@@ -163,6 +202,15 @@ function Now({ job, active }: { job: Job; active: Job[] }) {
           <span className="now">
             <Icon name="report" />
             report for <span className="mono">{version ?? "–"}</span>
+          </span>
+        );
+      }
+      if (training) {
+        // The registered model version and its link to SCR-11 arrive with the registry (M8 part B).
+        const accuracy = valAccuracy(job);
+        return (
+          <span className="now why">
+            {accuracy !== null ? <>val acc <b>{(100 * accuracy).toFixed(1)}%</b></> : "trained"}
           </span>
         );
       }
@@ -262,6 +310,55 @@ function RetryToast({ job, onClose }: { job: Job; onClose: () => void }) {
   );
 }
 
+/** Frame B: a job reached its safe point and paused. Training names the step and keeps its
+ * checkpoint; a pipeline names the stage it stopped in. */
+function PausedToast({ job, onResume, onClose }: { job: Job; onResume: () => void; onClose: () => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onClose, 10000);
+    return () => { window.clearTimeout(timer); };
+  }, [onClose]);
+  const stage = runningStage(job);
+  const position = job.kind === "train" ? trainingPosition(stage) : null;
+  const where = position?.epoch
+    ? `at epoch ${String(position.epoch)}${position.step ? `, step ${String(position.step)}` : ""}`
+    : `in ${stage?.name ?? "its stage"}`;
+  return (
+    <div className="toasts">
+      <div className="toast" role="status" style={{ "--c": "var(--state-paused)" } as CSSProperties}>
+        <Icon name="pause" />
+        <div>
+          <b>
+            <span className="mono">{job.id}</span> paused {where}
+            {job.pause_reason === "thermal" ? " · the GPU is too hot" : ""}
+          </b>
+          <span>
+            {job.kind === "train"
+              ? "The checkpoint is kept until you resume or cancel."
+              : "Its finished work is kept; resuming continues from there."}
+          </span>
+          <div style={{ marginTop: "var(--sp-2)" }}>
+            <Button size="sm" variant="primary" aria-label={`Resume ${job.id}`} onClick={onResume}>
+              <Icon name="play" />
+              Resume
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A running job asked to pause, until it reaches its safe point (frame B). */
+function pausing(job: Job): boolean {
+  return job.state === "running" && job.desired_state === "paused";
+}
+
+function pillLabel(job: Job): string | undefined {
+  if (job.state === "completed" || job.state === "failed" || job.state === "cancelled") return undefined;
+  if (job.desired_state === "cancelled") return "Cancelling…";
+  return pausing(job) ? "Pausing…" : undefined;
+}
+
 function plural(n: number): string {
   return `${String(n)} ${n === 1 ? "job" : "jobs"}`;
 }
@@ -277,7 +374,10 @@ export function JobsScreen() {
   const [drawer, setDrawer] = useState(false);
   const [cancelling, setCancelling] = useState<Job | null>(null);
   const [retried, setRetried] = useState<Job | null>(null);
+  const [paused, setPaused] = useState<Job | null>(null);
   const [announce, setAnnounce] = useState("");
+  const system = useSystem();
+  const gpuTemp = useGpuTemperature();
   const [selected, setSelected] = useState(0);
   const rows = useRef<(HTMLTableRowElement | null)[]>([]);
   const search = useRef<HTMLInputElement>(null);
@@ -306,6 +406,7 @@ export function JobsScreen() {
         return;
       }
       if (known) setAnnounce(`${job.id} ${job.state}`);
+      if (known && job.state === "paused") setPaused(job);
       void client.invalidateQueries({ queryKey: ["jobs", "list"] });
     },
     [client],
@@ -319,6 +420,17 @@ export function JobsScreen() {
       void client.invalidateQueries({ queryKey: ["jobs"] });
     },
   });
+  // Pause and resume (RUN-1.2). A pause shows "Pausing…" until the job reaches its safe point.
+  const pause = useMutation({
+    mutationFn: (id: string) => call(() => api.POST("/api/v1/jobs/{job_id}/pause", { params: { path: { job_id: id } } })),
+    onSettled: () => { void client.invalidateQueries({ queryKey: ["jobs"] }); },
+  });
+  const resume = useMutation({
+    mutationFn: (id: string) => call(() => api.POST("/api/v1/jobs/{job_id}/resume", { params: { path: { job_id: id } } })),
+    onSuccess: () => { setPaused(null); },
+    onSettled: () => { void client.invalidateQueries({ queryKey: ["jobs"] }); },
+  });
+  const actionError = [retry, pause, resume].find((m) => m.error instanceof ApiError) ?? null;
 
   // Older finished jobs load as the end of the table scrolls into view.
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = finished ?? {};
@@ -355,6 +467,7 @@ export function JobsScreen() {
   const filtered = filters.dataset !== null || filters.kind !== null || filters.q !== null || filters.view !== "all";
   const pending = (active?.isPending ?? false) || (finished?.isPending ?? false);
   const error = active?.error ?? finished?.error ?? null;
+  const context: Context = { active: activeJobs, now, gpuTemp, resumeBelow: system.data?.thermal_resume_c ?? null };
 
   const row = (job: Job, i: number) => (
     <tr
@@ -374,17 +487,48 @@ export function JobsScreen() {
         </Link>
       </td>
       <td>
-        <StatePill state={job.state} label={job.desired_state === "cancelled" && job.state !== "cancelled" ? "Cancelling…" : undefined} />
+        <StatePill state={pausing(job) ? "paused" : job.state} label={pillLabel(job)} />
       </td>
-      <td className="id col-wide">{job.dataset ?? "—"}</td>
+      {trainingModel(job) ? (
+        <td className="m2 col-wide">
+          <b>{trainingModel(job)}</b> on {job.dataset ?? "—"}
+        </td>
+      ) : (
+        <td className="id col-wide">{job.dataset ?? "—"}</td>
+      )}
       <td>
-        <Now job={job} active={activeJobs} />
+        <Now job={job} context={context} />
       </td>
       <td className="r col-wide">{job.attempt}</td>
       <td className="col-wide">{created(job.created_at, now)}</td>
       <td className="r">{duration(jobSeconds(job, now))}</td>
       <td className="acts-cell">
         <span className="acts">
+          {job.state === "running" && job.desired_state !== "cancelled" ? (
+            <Button
+              size="sm"
+              title={`Pause ${job.id}`}
+              aria-label={`Pause ${job.id}`}
+              disabled={job.desired_state === "paused" || (pause.isPending && pause.variables === job.id)}
+              onClick={(e) => { e.stopPropagation(); pause.mutate(job.id); }}
+            >
+              <Icon name="pause" />
+              <span className="lbl">Pause</span>
+            </Button>
+          ) : null}
+          {job.state === "paused" ? (
+            <Button
+              size="sm"
+              variant="primary"
+              title={`Resume ${job.id}`}
+              aria-label={`Resume ${job.id}`}
+              disabled={resume.isPending && resume.variables === job.id}
+              onClick={(e) => { e.stopPropagation(); resume.mutate(job.id); }}
+            >
+              <Icon name="play" />
+              <span className="lbl">Resume</span>
+            </Button>
+          ) : null}
           {ACTIVE_STATES.includes(job.state) && job.desired_state !== "cancelled" ? (
             <Button size="sm" variant="danger" aria-label={`Cancel ${job.id}`} onClick={(e) => { e.stopPropagation(); setCancelling(job); }}>
               <Icon name="ban" />
@@ -559,6 +703,7 @@ export function JobsScreen() {
           <option value="">Kind: any</option>
           <option value="pipeline">Kind: pipeline</option>
           <option value="report">Kind: report</option>
+          <option value="train">Kind: train</option>
         </select>
         <span className="spacer" />
         <span className="search">
@@ -587,14 +732,23 @@ export function JobsScreen() {
       </span>
       {cancelling ? <CancelDialog job={cancelling} onClose={() => { setCancelling(null); }} /> : null}
       {retried ? <RetryToast job={retried} onClose={() => { setRetried(null); }} /> : null}
-      {retry.error instanceof ApiError ? (
+      {paused ? (
+        <PausedToast
+          job={paused}
+          onResume={() => { resume.mutate(paused.id); }}
+          onClose={() => { setPaused(null); }}
+        />
+      ) : null}
+      {actionError?.error instanceof ApiError ? (
         <div className="toasts">
           <div className="toast" role="alert" style={{ "--c": "var(--danger)" } as CSSProperties}>
             <Icon name="alert" />
             <div>
-              <b>Retry of {retry.variables} failed</b>
+              <b>
+                {actionError === retry ? "Retry" : actionError === pause ? "Pause" : "Resume"} of {actionError.variables} failed
+              </b>
               <span>
-                {retry.error.problem.code}: {retry.error.problem.detail}
+                {actionError.error.problem.code}: {actionError.error.problem.detail}
               </span>
             </div>
           </div>

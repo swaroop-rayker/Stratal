@@ -234,8 +234,13 @@ def test_RUN_1_9_auto_trains_a_small_model_on_the_gpu_when_the_benchmark_says_so
     assert (metrics["device"], metrics["device_choice"]) == ("gpu", "gpu")
     assert (metrics["device_gpu_step_ms"], metrics["device_cpu_step_ms"]) == (2.0, 9.0)
     assert metrics["device_benchmark_cached"] == 0
-    [chosen] = [e for e in runner.events(job["id"]) if e["substage"] == "device"]
-    assert "GPU is faster" in chosen["message"]
+    device = [e["message"] for e in runner.events(job["id"]) if e["substage"] == "device"]
+    assert device[0].startswith("Benchmarking devices"), "frame E shows the benchmark running"
+    assert device[1:3] == [
+        "Benchmarked the GPU: 2.0 ms per step",
+        "Benchmarked the CPU: 9.0 ms per step",
+    ]
+    assert "GPU is faster" in device[3]
 
 
 @pytest.mark.gpu

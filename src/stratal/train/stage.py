@@ -340,7 +340,8 @@ class _Run:
                         stage=STAGE,
                         substage="train",
                         message=f"Epoch {epoch + 1}/{config.epochs} · step "
-                        f"{batch_index + 1}/{self.steps_per_epoch}",
+                        f"{batch_index + 1}/{self.steps_per_epoch} · {config.model.name} · "
+                        f"bs={config.batch_size} · lr {scheduler.get_last_lr()[0]:.1e} · fp32",
                         step=global_step,
                         total=self.total_steps,
                         metrics={
@@ -431,6 +432,19 @@ class _Run:
                 num_classes=len(self.classes),
                 batch=config.batch_size,
                 batches=batches,
+                on_start=lambda: self.ctx.emit(
+                    stage=STAGE,
+                    substage="device",
+                    message=f"Benchmarking devices: {device.TIMED} steps on each",
+                    metrics={"device_benchmark_steps": device.TIMED},
+                ),
+                on_measured=lambda which, ms: self.ctx.emit(
+                    stage=STAGE,
+                    substage="device",
+                    message=f"Benchmarked the {'GPU' if which == 'cuda' else 'CPU'}: "
+                    f"{ms:.1f} ms per step",
+                    metrics={f"device_{'gpu' if which == 'cuda' else 'cpu'}_step_ms": round(ms, 2)},
+                ),
             )
         choice = self.choice
         winner = "GPU" if choice.device == "cuda" else "CPU"

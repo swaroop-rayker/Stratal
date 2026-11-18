@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { ApiError, api, call, type Job, type StreamEvent, type StreamSample } from "../../api/client";
+import { useGpuTemperature } from "../../api/queries";
 import { useJobFeed } from "../../api/stream";
 import { Modal, ModalClose } from "../../components/Modal";
 import { copy, ErrorState } from "../../components/states";
@@ -14,10 +15,11 @@ import { useNow } from "../../lib/useNow";
 import { useCrumbs } from "../../shell/hooks";
 import { useActiveJobs } from "../../shell/JobIndicator";
 import { ActivityLog, type Level, type LogFilters } from "./ActivityLog";
-import { ACTIVE, failedStage, inputVersion, jobSeconds, liveProgress, runningStage, stageSeconds, waitingFor } from "./jobs";
+import { ACTIVE, failedStage, inputVersion, jobSeconds, liveProgress, runningStage, stageSeconds, trainingModel, trainingPosition, waitingFor } from "./jobs";
 import { type Point, ResourceTiles } from "./ResourceTiles";
 import { StageDrawer } from "./StageDrawer";
 import { Timeline } from "./Timeline";
+import { BenchPanel, deriveTraining, Epochs, StateBanner, type TrainingData, TrainingCharts, useTrainingEvents } from "./Training";
 
 const POINTS = 240;
 
@@ -29,7 +31,7 @@ function useJob(id: string) {
   });
 }
 
-function Header({ job, now, onCancel }: { job: Job; now: number; onCancel: () => void }) {
+function Header({ job, now, onCancel, device }: { job: Job; now: number; onCancel: () => void; device: string | null }) {
   const navigate = useNavigate();
   const client = useQueryClient();
   const retry = useMutation({
@@ -39,13 +41,29 @@ function Header({ job, now, onCancel }: { job: Job; now: number; onCancel: () =>
       void client.invalidateQueries({ queryKey: ["jobs"] });
     },
   });
-  const cancelling = job.desired_state === "cancelled" && ACTIVE.has(job.state);
+  // Pause and resume (RUN-1.2): Pause is secondary beside Cancel; Resume is the primary
+  // action of a paused job (SCR-04 v2).
+  const pause = useMutation({
+    mutationFn: () => call(() => api.POST("/api/v1/jobs/{job_id}/pause", { params: { path: { job_id: job.id } } })),
+    onSuccess: (next) => { client.setQueryData(["jobs", job.id], next); },
+  });
+  const resume = useMutation({
+    mutationFn: () => call(() => api.POST("/api/v1/jobs/{job_id}/resume", { params: { path: { job_id: job.id } } })),
+    onSuccess: (next) => {
+      client.setQueryData(["jobs", job.id], next);
+      void client.invalidateQueries({ queryKey: ["jobs"] });
+    },
+  });
+  const cancelling = job.desired_state === "cancelled" && (ACTIVE.has(job.state) || job.state === "paused");
+  const pausing = job.desired_state === "paused" && job.state === "running";
   const input = inputVersion(job);
   const seconds = jobSeconds(job, now);
   const sub =
     job.state === "queued"
       ? `created ${clock(job.created_at)} · waiting ${duration((now - new Date(job.created_at).getTime()) / 1000)}`
       : `attempt ${String(job.attempt)} · ${job.finished_at ? `ran ${duration(seconds)} · finished ${clock(job.finished_at)}` : `started ${clock(job.started_at)} · ${duration(seconds)}`}`;
+  const model = trainingModel(job);
+  const error = [retry, pause, resume].find((m) => m.error instanceof ApiError)?.error;
   return (
     <div className="jhead">
       <h1>{job.id}</h1>
@@ -54,21 +72,45 @@ function Header({ job, now, onCancel }: { job: Job; now: number; onCancel: () =>
           <span className="spinner" />
           Cancelling…
         </span>
+      ) : pausing ? (
+        <span className="pill paused lg" role="status">
+          <Icon name="pause" />
+          Pausing…
+        </span>
       ) : (
         <span role={job.state === "failed" ? "alert" : "status"} style={{ display: "inline-flex" }}>
           <StatePill state={job.state} size="lg" />
         </span>
       )}
-      <span className="sub">
-        {job.kind} · {job.dataset ?? "–"}
-        {input ? (
-          <>
-            {" · from "}
-            <span className="mono">{input}</span>
-          </>
-        ) : null}{" "}
-        · {sub}
-      </span>
+      {model ? (
+        <span className="sub">
+          train · <span className="mono">{model}</span>
+          {input ? (
+            <>
+              {" on "}
+              <span className="mono">{input}</span>
+            </>
+          ) : null}
+          {device ? (
+            <>
+              {" · "}
+              <span className="why">{device}</span>
+            </>
+          ) : null}{" "}
+          · {sub}
+        </span>
+      ) : (
+        <span className="sub">
+          {job.kind} · {job.dataset ?? "–"}
+          {input ? (
+            <>
+              {" · from "}
+              <span className="mono">{input}</span>
+            </>
+          ) : null}{" "}
+          · {sub}
+        </span>
+      )}
       <span className="spacer" />
       <span className="wide-action">
         <Button size="sm" variant="ghost" onClick={() => void copy(job.id)}>
@@ -76,7 +118,19 @@ function Header({ job, now, onCancel }: { job: Job; now: number; onCancel: () =>
           Copy ID
         </Button>
       </span>
-      {ACTIVE.has(job.state) ? (
+      {job.state === "running" && job.desired_state !== "cancelled" ? (
+        <Button disabled={pausing || pause.isPending} onClick={() => { pause.mutate(); }}>
+          <Icon name="pause" />
+          Pause
+        </Button>
+      ) : null}
+      {job.state === "paused" ? (
+        <Button variant="primary" disabled={resume.isPending} onClick={() => { resume.mutate(); }}>
+          <Icon name="play" />
+          {job.pause_reason === "thermal" ? "Resume now" : "Resume"}
+        </Button>
+      ) : null}
+      {ACTIVE.has(job.state) || job.state === "paused" ? (
         <Button variant="danger" onClick={onCancel} disabled={cancelling}>
           <Icon name="ban" />
           Cancel job
@@ -104,7 +158,7 @@ function Header({ job, now, onCancel }: { job: Job; now: number; onCancel: () =>
           Open {job.output_version_id}
         </Button>
       ) : null}
-      {retry.error instanceof ApiError ? <Badge tone="err">{retry.error.problem.code}</Badge> : null}
+      {error instanceof ApiError ? <Badge tone="err">{error.problem.code}</Badge> : null}
     </div>
   );
 }
@@ -256,6 +310,41 @@ function CancelDialog({ job, open, onOpenChange }: { job: Job; open: boolean; on
   );
 }
 
+/** The header's device clause for a training run: what it trains on and, under `auto`, why
+ * (RUN-1.9): "GPU, auto: 12 ms/step against 41 on the CPU". */
+function deviceText(job: Job, data: TrainingData): string | null {
+  const bench = data.bench;
+  if (bench?.choice && bench.gpu !== null && bench.cpu !== null) {
+    const [mine, other] = bench.choice === "gpu" ? [bench.gpu, bench.cpu] : [bench.cpu, bench.gpu];
+    const name = bench.choice === "gpu" ? "GPU" : "CPU";
+    return `${name}, auto: ${mine.toFixed(0)} ms/step against ${other.toFixed(0)} on the ${bench.choice === "gpu" ? "CPU" : "GPU"}`;
+  }
+  if (bench) return "device auto";
+  const device = job.stages[0]?.metrics?.device;
+  return device === "gpu" ? "GPU" : device === "cpu" ? "CPU" : null;
+}
+
+/** The training run's loader workers, from its setup event's metrics. */
+function loaderWorkers(job: Job): number | null {
+  const value = job.stages[0]?.metrics?.loader_workers;
+  return typeof value === "number" ? value : null;
+}
+
+/** Region 3 for training: "epoch 7/20 · step 140/312 · 10,640 samples/s". */
+function TrainingProgress({ job, data }: { job: Job; data: TrainingData }) {
+  const stage = runningStage(job);
+  const position = trainingPosition(stage);
+  const perEpoch = stage?.total && position.epochs ? Math.round(stage.total / position.epochs) : null;
+  const rate = data.steps[data.steps.length - 1]?.samplesPerS ?? null;
+  return (
+    <>
+      {position.epoch && position.epochs ? `epoch ${String(position.epoch)}/${String(position.epochs)} · ` : ""}
+      {position.step !== null && perEpoch ? `step ${String(position.step)}/${String(perEpoch)} · ` : ""}
+      <b>{rate === null ? "—" : count(Math.round(rate))}</b> samples/s
+    </>
+  );
+}
+
 export function JobScreen() {
   const { jobId = "" } = useParams();
   const navigate = useNavigate();
@@ -333,7 +422,13 @@ export function JobScreen() {
   const points = [...history, ...(livePoints.key === (selected ?? "all") ? livePoints.points : [])].slice(-POINTS);
 
   const live = job.data ? ACTIVE.has(job.data.state) : false;
-  const { feed, connection } = useJobFeed(jobId, undefined, job.isSuccess && live);
+  // A paused job keeps its feed, so a resume (by the person or the watchdog) shows at once.
+  const watching = live || job.data?.state === "paused";
+  const { feed, connection } = useJobFeed(jobId, undefined, job.isSuccess && watching);
+  const isTraining = job.data?.kind === "train";
+  const trainingEvents = useTrainingEvents(jobId, feed, job.isSuccess && isTraining);
+  const training = useMemo(() => deriveTraining(trainingEvents), [trainingEvents]);
+  const gpuTemp = useGpuTemperature();
   useEffect(() => {
     if (!feed) return;
     const offJob = feed.on("job", (next: Job) => {
@@ -398,14 +493,27 @@ export function JobScreen() {
   const pct = progress.total ? Math.min(100, ((progress.step ?? 0) / progress.total) * 100) : null;
   const drawerStage = selected ? j.stages.find((s) => s.name === selected) ?? null : null;
   const reconnecting = live && connection === "reconnecting";
+  const trains = j.kind === "train";
+  const banner = trains && (j.state === "paused" || j.state === "stalled");
+  const benchmarking = trains && j.state === "running" && training.bench !== null && training.bench.choice === null;
 
   return (
     <div className={live ? "scr04" : "scr04 done"}>
-      <Header job={j} now={now} onCancel={() => { setCancelOpen(true); }} />
+      <Header job={j} now={now} onCancel={() => { setCancelOpen(true); }} device={trains ? deviceText(j, training) : null} />
 
       {j.state === "failed" ? <Failure job={j} onOpenStage={onOpenStage} /> : null}
 
-      {live ? (
+      {banner ? (
+        <StateBanner
+          job={j}
+          data={training}
+          now={now}
+          gpuTemp={gpuTemp}
+          limits={{ pause: system.data?.thermal_pause_c ?? null, resume: system.data?.thermal_resume_c ?? null }}
+        />
+      ) : null}
+
+      {live && !banner ? (
         <>
           <div className="activity" aria-live="polite" style={j.state === "queued" ? ({ "--c": "var(--state-queued)" } as React.CSSProperties) : undefined}>
             {stage ? <span className="stage-tag">{stage.name}</span> : null}
@@ -423,14 +531,21 @@ export function JobScreen() {
             </span>
             {reconnecting ? <span className="muted" style={{ marginLeft: "auto" }}>Reconnecting…</span> : null}
           </div>
-          {j.state !== "queued" ? (
-            <div className="prog">
+          {benchmarking && training.bench ? <BenchPanel bench={training.bench} /> : null}
+          {j.state !== "queued" && !benchmarking ? (
+            <div className={trains ? "prog train" : "prog"}>
               <Progress value={pct} state={j.state} />
               <b className="r">{pct === null ? "—" : `${String(Math.round(pct))}%`}</b>
-              <span className="items">
-                {progress.total ? `${count(progress.step)} / ${count(progress.total)} · ` : ""}
-                <b>{progress.rate === null ? "—" : progress.rate.toFixed(1)}</b>/s
-              </span>
+              {trains ? (
+                <span className="items">
+                  <TrainingProgress job={j} data={training} />
+                </span>
+              ) : (
+                <span className="items">
+                  {progress.total ? `${count(progress.step)} / ${count(progress.total)} · ` : ""}
+                  <b>{progress.rate === null ? "—" : progress.rate.toFixed(1)}</b>/s
+                </span>
+              )}
               <span className="r">
                 ETA <b>{duration(progress.eta)}</b>
               </span>
@@ -439,7 +554,14 @@ export function JobScreen() {
         </>
       ) : null}
 
-      <Timeline job={j} now={now} selected={selected} onSelect={(name) => { select(selected === name ? null : name); }} />
+      {trains ? (
+        <>
+          <Epochs job={j} data={training} />
+          <TrainingCharts job={j} data={training} />
+        </>
+      ) : (
+        <Timeline job={j} now={now} selected={selected} onSelect={(name) => { select(selected === name ? null : name); }} />
+      )}
 
       {selected ? (
         <p className="note stage-note">
@@ -453,7 +575,12 @@ export function JobScreen() {
 
       {!live && j.state === "completed" ? <Summary job={j} now={now} /> : null}
 
-      <ResourceTiles points={points} cores={system.data?.cpu_count ?? null} gpuError={system.data?.gpu_error ?? null} />
+      <ResourceTiles
+        points={points}
+        cores={system.data?.cpu_count ?? null}
+        gpuError={system.data?.gpu_error ?? null}
+        training={trains ? { loaderWorkers: loaderWorkers(j), pauseAt: system.data?.thermal_pause_c ?? null } : undefined}
+      />
 
       <ActivityLog jobId={j.id} stages={stageNames} feed={feed} filters={filters} onFilters={setFilters} />
 
