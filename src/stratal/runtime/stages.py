@@ -75,6 +75,8 @@ class StageRun:
     input_version_id: str | None
     data_dir: Path
     engine: Engine
+    queue: str = "cpu"
+    """The queue this stage was claimed from, so a stage can tell which worker it is on."""
 
 
 @dataclass(frozen=True)

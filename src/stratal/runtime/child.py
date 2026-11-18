@@ -28,7 +28,7 @@ from stratal.db.models import Job, JobStage
 from stratal.mon import probes
 from stratal.mon.emitter import KIND_PROCESS_SAMPLE, Emitter, NullEmitter, StreamEmitter
 from stratal.mon.events import MetricValue, utc_now
-from stratal.runtime.context import JobCancelled, JobContext, JobPaused
+from stratal.runtime.context import JobCancelled, JobContext, JobPaused, StageHandoff
 from stratal.runtime.stages import StageResult, StageRun, get_stage
 
 EXIT_OK = 0
@@ -36,6 +36,8 @@ EXIT_FAILED = 1
 EXIT_CANCELLED = 3
 EXIT_PAUSED = 4
 """The stage stopped at a safe point because the job was paused (RUN-1.2)."""
+EXIT_HANDOFF = 5
+"""The stage asks to run again on another queue; it recorded which (RUN-1.9)."""
 
 log = get_logger(__name__)
 
@@ -165,6 +167,7 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
             return EXIT_FAILED
         spec, name = dict(job.spec), stage.name
         config, input_version_id = dict(stage.config), stage.input_version_id
+        queue = stage.queue
 
     emitter: Emitter = (
         StreamEmitter(
@@ -204,6 +207,7 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
                 input_version_id=input_version_id,
                 data_dir=settings.data_dir,
                 engine=get_engine(),
+                queue=queue,
             )
         )
         if result.output_version_id is not None:
@@ -225,6 +229,14 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
     except JobPaused:
         ctx.event("activity", f"Stage {name} paused at a safe point")
         return EXIT_PAUSED
+    except StageHandoff as handoff:
+        _record(job_id, idx, queue=handoff.queue)
+        ctx.event(
+            "action",
+            f"Stage {name} moves to the {handoff.queue.upper()} queue: {handoff.reason}",
+            metrics={"code": "device_handoff", "queue": handoff.queue},
+        )
+        return EXIT_HANDOFF
     except StratalError as exc:
         return _fail(
             ctx,

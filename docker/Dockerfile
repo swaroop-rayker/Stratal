@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
-# One Dockerfile, three targets:
+# One Dockerfile, four targets:
 #   api         FastAPI service. No ML libraries.
 #   dev         api + lint, type-check and test tools. Source is bind-mounted.
 #   worker-gpu  adds PyTorch. Used for GPU jobs and the GPU spikes.
+#   worker-cpu  api + PyTorch's CPU build (ml-cpu extra), for CPU training (ADR-0014 rule 11).
 
 FROM ghcr.io/astral-sh/uv:0.9.30 AS uv
 
@@ -57,3 +58,14 @@ COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --group test --extra gpu
 CMD ["python", "-c", "import torch; print(torch.cuda.is_available())"]
+
+FROM base AS worker-cpu
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --extra ml-cpu --no-install-project
+COPY alembic.ini ./
+COPY migrations ./migrations
+COPY src ./src
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --extra ml-cpu
+CMD ["celery", "-A", "stratal.runtime.celery_app", "worker", "-Q", "cpu", "-n", "cpu@%h"]

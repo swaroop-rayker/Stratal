@@ -29,11 +29,13 @@ from stratal.mon import probes
 from stratal.mon.backfill import backfill_job
 from stratal.mon.events import Event, utc_now
 from stratal.mon.store import insert_events, refresh_summary
-from stratal.runtime.child import EXIT_CANCELLED, EXIT_OK, EXIT_PAUSED
+from stratal.runtime.child import EXIT_CANCELLED, EXIT_HANDOFF, EXIT_OK, EXIT_PAUSED
 from stratal.runtime.jobs import Enqueue, after_commit, cancel_unfinished_stages
 from stratal.runtime.states import transition
 
-Outcome = Literal["completed", "failed", "cancelled", "paused", "not_claimed", "superseded"]
+Outcome = Literal[
+    "completed", "failed", "cancelled", "paused", "handed_off", "not_claimed", "superseded"
+]
 EnqueueFn = Callable[[Enqueue], None]
 
 # A wall-clock jump this much larger than the monotonic clock's means the machine slept.
@@ -219,7 +221,21 @@ def finalize(
                     session, job, "completed", reason="all stages completed", actor="supervisor"
                 )
                 outcome = "completed"
-        elif code == EXIT_PAUSED and not cancel_requested:
+        elif code == EXIT_HANDOFF and not cancel_requested and not pause_requested:
+            # The child recorded the stage's new queue; run it again there (RUN-1.9).
+            session.refresh(stage)
+            stage.status = "queued"
+            stage.finished_at = None
+            transition(
+                session,
+                job,
+                "queued",
+                reason=f"moved to the {stage.queue} queue: faster there (RUN-1.9)",
+                actor="supervisor",
+            )
+            enqueue = Enqueue(job_id, idx, stage.queue)
+            outcome = "handed_off"
+        elif code in (EXIT_PAUSED, EXIT_HANDOFF) and not cancel_requested:  # a pause wins
             stage.status = "paused"
             job.desired_state = None
             transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")

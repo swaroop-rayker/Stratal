@@ -455,7 +455,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_RUN_1_6_*`: a simulated high temperature pauses the job; it resumes when the temperature falls (2026-11-18, `test_M8_watchdog.py`: 84 °C pauses the GPU job, 78 °C keeps it paused, 72 °C resumes it; CPU jobs and user pauses are left alone)
 - [x] `test_RUN_1_7_*`: a simulated hang becomes `stalled` after T seconds (2026-11-18, `test_M8_watchdog.py`, T shortened to 1 s; it becomes running again when progress returns)
 - [ ] `test_RUN_1_8_*`: SCR-04 updates live during a training run
-- [ ] `test_RUN_1_9_*`: a tiny model defaults to the faster device measured by the benchmark; a forced device is used as given
+- [x] `test_RUN_1_9_*`: a tiny model defaults to the faster device measured by the benchmark; a forced device is used as given (2026-11-18, `test_M8_training.py`: planted timings send a run to either device, a real measurement keeps the faster and is cached, a forced device skips the benchmark)
 - [ ] `test_REG_1_1_*`: any trained version traces to its exact dataset version and config
 - [ ] `test_REG_1_2_*`: the three states are shown and filterable
 - [ ] `test_REG_1_4_*`: `/predict` returns a result for a sample input, also while a training job holds the GPU

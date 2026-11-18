@@ -62,6 +62,16 @@ class JobPaused(Exception):
     """
 
 
+class StageHandoff(Exception):
+    """Raised by a stage that should run on another queue instead (RUN-1.9): a training run
+    whose device benchmark found the CPU faster moves from the GPU queue to the CPU queue."""
+
+    def __init__(self, queue: Literal["cpu", "gpu"], reason: str) -> None:
+        super().__init__(reason)
+        self.queue = queue
+        self.reason = reason
+
+
 StopRequest = Literal["cancel", "pause"]
 
 

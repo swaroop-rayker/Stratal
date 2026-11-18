@@ -54,8 +54,9 @@ class TrainConfig(BaseModel):
     )
     device: Literal["auto", "cpu", "gpu"] = Field(
         default="auto",
-        description="'gpu' and 'cpu' are used as given. 'auto' uses the GPU if there is "
-        "one (RUN-1.9; timing both devices for small models comes later in M8).",
+        description="'gpu' and 'cpu' are used as given. 'auto' uses the GPU, except that a "
+        "model under 1 M parameters times 20 steps on each device and trains on the faster "
+        "(RUN-1.9); the result is cached per model, input shape and batch size.",
     )
     loader_workers: int | None = Field(
         default=None,

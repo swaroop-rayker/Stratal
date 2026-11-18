@@ -46,3 +46,8 @@
 - `worker-cpu`'s image grows by about 700 MB installed (the CPU wheel is about 200 MB).
 - The `stalled` state is used for the first time; the M6 screens already have its colour and icon.
 - Spike S-08 checks the numbers this ADR assumes: step time on each device, peak VRAM and RAM, checkpoint size and save time.
+
+## As built (2026-11-18)
+
+- Rule 8: the move to the CPU queue happens before any training step, so it needs no checkpoint: the stage asks for a handoff (exit code 5) and the supervisor requeues it on the CPU queue. The benchmark result is cached in `cache/device_choice/` on the data volume.
+- Rule 11: the `worker-cpu` image is 1.97 GB, not about 700 MB more than `api`'s 650 MB: PyTorch's CPU build also brings sympy and networkx. The download itself was 200 MB.

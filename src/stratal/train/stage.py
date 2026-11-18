@@ -36,12 +36,13 @@ from stratal.data import registry
 from stratal.data.dataset_types import validate_labelled_images
 from stratal.label.models import ModelInfo
 from stratal.mon.events import MetricValue
-from stratal.runtime.context import JobCancelled, JobContext, JobPaused
+from stratal.runtime.context import JobCancelled, JobContext, JobPaused, StageHandoff
 from stratal.runtime.gpu_lease import gpu_lease
 from stratal.runtime.jobs import config_hash
 from stratal.runtime.stages import StageResult, StageRun
 from stratal.storage.blobs import BlobStore
 from stratal.train import checkpoint as ckpt
+from stratal.train import device
 from stratal.train.config import TrainConfig
 from stratal.train.data import EpochOrder, Item, LabelledImages, split_items
 from stratal.train.memory import TrainingState, suggest_batch_size, training_oom_error
@@ -191,6 +192,9 @@ class _Run:
     def execute(self) -> StageResult:
         started = time.monotonic()
         config = self.config
+        self.choice: device.DeviceChoice | None = None
+        if config.device == "auto":
+            self._choose_device()
         random.seed(config.seed)
         torch.manual_seed(config.seed)
         if config.deterministic:
@@ -216,7 +220,7 @@ class _Run:
         )
         if self.device != "cuda":
             optimizer = _optimizer(model, config)
-            return self._train(model, optimizer, started)
+            return self._with_choice(self._train(model, optimizer, started))
 
         from stratal.label.hf import TorchGpu
         from stratal.label.vram import VramManager
@@ -241,7 +245,7 @@ class _Run:
                 return self.units.state(on_card, _optimizer(on_card, config), info=info)
 
             state = manager.load(load, name=config.model.name, estimate_mb=estimate)
-            result = self._train(state.model, state.optimizer, started)
+            result = self._with_choice(self._train(state.model, state.optimizer, started))
             try:
                 manager.unload()
             except NotImplementedError:
@@ -399,6 +403,76 @@ class _Run:
             metrics["peak_vram_allocated_mb"] = round(torch.cuda.max_memory_allocated() / MB, 1)
             metrics["peak_vram_reserved_mb"] = round(torch.cuda.max_memory_reserved() / MB, 1)
         return StageResult(metrics=metrics)
+
+    # ------------------------------------------------------------------ RUN-1.9
+    def _choose_device(self) -> None:
+        """For ``device: auto``: time both devices on a small model, and move to the CPU
+        worker if it wins (ADR-0014 rule 8). Large models stay on the GPU untimed."""
+        config = self.config
+        probe = build_model(config.model, self.shape, len(self.classes))
+        small = parameter_count(probe) < device.MAX_PARAMETERS
+        del probe
+        if not small:
+            return
+        key = device.cache_key(config.model, self.shape, config.batch_size, len(self.classes))
+        if self.run.queue == "cpu" or self.device != "cuda":
+            # Moved here by an earlier benchmark (or no GPU): train on the CPU, and report
+            # the timings that decided it.
+            self._use_cpu()
+            self.choice = device.cached(self.run.data_dir, key)
+            return
+        batches = self._sample_batches(device.WARMUP + device.TIMED)
+        with gpu_lease(self.run.engine, holder=f"{self.ctx.job_id}/{STAGE}", wait_s=60):
+            torch.cuda.set_per_process_memory_fraction(VRAM_FRACTION)
+            self.choice = device.choose(
+                data_dir=self.run.data_dir,
+                spec=config.model,
+                shape=self.shape,
+                num_classes=len(self.classes),
+                batch=config.batch_size,
+                batches=batches,
+            )
+        choice = self.choice
+        winner = "GPU" if choice.device == "cuda" else "CPU"
+        how = "cached benchmark" if choice.cached else "benchmark"
+        self.ctx.emit(
+            stage=STAGE,
+            substage="device",
+            message=f"Device auto: the {winner} is faster for {config.model.name} at batch "
+            f"{config.batch_size} ({how}: GPU {choice.gpu_step_ms:.1f} ms, "
+            f"CPU {choice.cpu_step_ms:.1f} ms per step)",
+            metrics=dict(choice.metrics()),
+        )
+        if choice.device == "cpu":
+            raise StageHandoff(
+                "cpu",
+                f"the CPU trains {config.model.name} faster ({choice.cpu_step_ms:.1f} ms "
+                f"against {choice.gpu_step_ms:.1f} ms per step)",
+            )
+
+    def _use_cpu(self) -> None:
+        self.device = "cpu"
+        if self.config.loader_workers is None:
+            self.workers = 1
+
+    def _sample_batches(self, count: int) -> list[tuple[torch.Tensor, torch.Tensor]]:
+        """``count`` batches of the run's own training data, repeating if it is small."""
+        sampler = EpochOrder(len(self.train), seed=self.config.seed, epoch=0)
+        loader = _loader(
+            self.train, batch=self.config.batch_size, sampler=sampler, workers=0, cuda=False
+        )
+        batches: list[tuple[torch.Tensor, torch.Tensor]] = []
+        while len(batches) < count:
+            for x, y in loader:
+                batches.append((x, y))
+                if len(batches) == count:
+                    break
+        return batches
+
+    def _with_choice(self, result: StageResult) -> StageResult:
+        if self.choice is not None:
+            result.metrics.update(self.choice.metrics())
+        return result
 
     # ------------------------------------------------------------------ helpers
     def _stop_if_asked(

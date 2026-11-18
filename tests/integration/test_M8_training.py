@@ -24,6 +24,7 @@ from stratal.runtime.context import CRASH_AT_ENV  # noqa: E402
 from stratal.testing.harness import Runner, wait_until  # noqa: E402
 from stratal.testing.labelled import labelled_split  # noqa: E402
 from stratal.testing.pipeline import PipelineApi  # noqa: E402
+from stratal.train.device import TIMINGS_ENV  # noqa: E402
 
 pytestmark = [pytest.mark.integration, pytest.mark.torch, pytest.mark.usefixtures("fake_units")]
 
@@ -207,3 +208,92 @@ def test_RUN_1_1_a_training_job_runs_on_the_gpu_under_the_cap(
     metrics = job["stages"][0]["metrics"]
     assert metrics["device"] == "gpu"
     assert metrics["peak_vram_reserved_mb"] < 5.5 * 1024, "NFR-1"
+
+
+def _auto_run(runner: Runner, tmp_path: Path, slug: str, **config: Any) -> dict[str, Any]:
+    version = labelled_split(runner, tmp_path / "src", slug)
+    api = PipelineApi(runner)
+    job_id = _start(api, version, device="auto", epochs=1, **config)
+    return _run(api, job_id)
+
+
+@pytest.mark.gpu
+def test_RUN_1_9_auto_trains_a_small_model_on_the_gpu_when_the_benchmark_says_so(
+    runner: Runner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if not torch.cuda.is_available():
+        pytest.skip("no CUDA device")
+    monkeypatch.setenv(TIMINGS_ENV, "gpu=2.0,cpu=9.0")
+
+    job = _auto_run(runner, tmp_path, "m8autogpu", batch_size=6)
+
+    assert job["state"] == "completed", job
+    [stage] = job["stages"]
+    assert stage["queue"] == "gpu"
+    metrics = stage["metrics"]
+    assert (metrics["device"], metrics["device_choice"]) == ("gpu", "gpu")
+    assert (metrics["device_gpu_step_ms"], metrics["device_cpu_step_ms"]) == (2.0, 9.0)
+    assert metrics["device_benchmark_cached"] == 0
+    [chosen] = [e for e in runner.events(job["id"]) if e["substage"] == "device"]
+    assert "GPU is faster" in chosen["message"]
+
+
+@pytest.mark.gpu
+def test_RUN_1_9_auto_moves_to_the_cpu_queue_when_the_cpu_is_faster(
+    runner: Runner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if not torch.cuda.is_available():
+        pytest.skip("no CUDA device")
+    monkeypatch.setenv(TIMINGS_ENV, "gpu=9.0,cpu=2.0")
+
+    job = _auto_run(runner, tmp_path, "m8autocpu", batch_size=5)
+
+    assert job["state"] == "completed", job
+    [stage] = job["stages"]
+    assert stage["queue"] == "cpu", "the stage moved to the CPU queue"
+    metrics = stage["metrics"]
+    assert (metrics["device"], metrics["device_choice"]) == ("cpu", "cpu")
+    assert (metrics["device_gpu_step_ms"], metrics["device_cpu_step_ms"]) == (9.0, 2.0)
+    assert metrics["device_benchmark_cached"] == 1, "the CPU run reports the timings that sent it"
+    with get_engine().connect() as connection:
+        moves = connection.execute(
+            text("SELECT to_state, reason FROM job_transitions WHERE job_id = :j ORDER BY id"),
+            {"j": job["id"]},
+        ).all()
+    assert [m[0] for m in moves] == ["queued", "running", "queued", "running", "completed"]
+    assert "cpu queue" in moves[2][1]
+
+
+@pytest.mark.gpu
+def test_RUN_1_9_auto_keeps_the_faster_device_by_real_measurement_and_caches_it(
+    runner: Runner, tmp_path: Path
+) -> None:
+    if not torch.cuda.is_available():
+        pytest.skip("no CUDA device")
+    version = labelled_split(runner, tmp_path / "src", "m8autoreal")
+    api = PipelineApi(runner)
+
+    first = _run(api, _start(api, version, device="auto", epochs=1, batch_size=7))
+    second = _run(api, _start(api, version, device="auto", epochs=1, batch_size=7))
+
+    for job in (first, second):
+        assert job["state"] == "completed", job
+    a, b = first["stages"][0]["metrics"], second["stages"][0]["metrics"]
+    faster = "cpu" if a["device_cpu_step_ms"] < a["device_gpu_step_ms"] else "gpu"
+    assert a["device_choice"] == a["device"] == faster, "RUN-1.9.AC1: the faster device"
+    assert b["device_benchmark_cached"] == 1, "an identical run skips the benchmark"
+    assert b["device_gpu_step_ms"] == a["device_gpu_step_ms"]
+
+
+def test_RUN_1_9_a_forced_device_is_used_as_given_without_a_benchmark(
+    runner: Runner, tmp_path: Path
+) -> None:
+    version = labelled_split(runner, tmp_path / "src", "m8forced")
+    api = PipelineApi(runner)
+
+    job = _run(api, _start(api, version, device="cpu", epochs=1))
+
+    assert job["state"] == "completed", job
+    assert job["stages"][0]["metrics"]["device"] == "cpu"
+    assert "device_choice" not in job["stages"][0]["metrics"]
+    assert not [e for e in runner.events(job["id"]) if e["substage"] == "device"]
