@@ -55,6 +55,10 @@ def system(session: Db, bus: Redis) -> Json:
     }
 
 
+OWN_KINDS = ("train", "retention")
+"""Stages that are job kinds of their own, not pipeline stages: not listed for the drawer."""
+
+
 def _pipeline_stages() -> list[tuple[str, stage_registry.StageDef]]:
     """Registered pipeline stages in pipeline order. ``train`` is its own job kind, not a
     pipeline stage, so the Start pipeline drawer does not list it; its schema is still at
@@ -62,7 +66,7 @@ def _pipeline_stages() -> list[tuple[str, stage_registry.StageDef]]:
     available = stage_registry.registered()
     order = stage_registry.PIPELINE_ORDER
     named = [(n, s) for n, s in available.items() if n in order]
-    extra = [(n, s) for n, s in available.items() if n not in order and n != "train"]
+    extra = [(n, s) for n, s in available.items() if n not in order and n not in OWN_KINDS]
     return sorted(named, key=lambda item: order.index(item[0])) + extra
 
 

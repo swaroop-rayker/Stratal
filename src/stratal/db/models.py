@@ -467,6 +467,10 @@ class ModelVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     trained_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     weights_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    weights_deleted_by_job_id: Mapped[str | None] = mapped_column(
+        Text, ForeignKey("jobs.id", name="fk_model_versions_deleted_by_job")
+    )
+    """The retention job that deleted the weights (REG-2.9)."""
 
 
 class Checkpoint(Base):

@@ -672,6 +672,7 @@ class _Run:
         """Write the trained weights, then mark the version ``trained`` (REG-1.1). The
         row is committed only once the files are in place; checkpoints go after."""
         with Session(self.run.engine) as session, session.begin():
+            store.lock_lineage(session, self.lineage_id)
             existing = store.run_version(session, self.ctx.job_id)
             version_id = existing.id if existing is not None else store.new_version_id()
             size = weights.write(

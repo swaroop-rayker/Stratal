@@ -30,7 +30,12 @@ from stratal.mon.backfill import backfill_job
 from stratal.mon.events import Event, utc_now
 from stratal.mon.store import insert_events, refresh_summary
 from stratal.runtime.child import EXIT_CANCELLED, EXIT_HANDOFF, EXIT_OK, EXIT_PAUSED
-from stratal.runtime.jobs import Enqueue, after_commit, cancel_unfinished_stages
+from stratal.runtime.jobs import (
+    Enqueue,
+    after_commit,
+    cancel_unfinished_stages,
+    retention_after_run,
+)
 from stratal.runtime.states import transition
 
 Outcome = Literal[
@@ -370,6 +375,7 @@ def run_stage(
     )
     log.info("stage_finished", job_id=job_id, stage=held.stage, exit_code=code, outcome=outcome)
     _backfill(job_id, settings)
+    cleanup = _retention_after(job_id) if outcome in ("completed", "cancelled") else None
     if outcome != "superseded":
         with contextlib.suppress(Exception):
             if following is None or outcome == "paused":
@@ -377,9 +383,24 @@ def run_stage(
         after_commit(bus, job_id)
         if following is not None:
             enqueue(following)
+        if cleanup is not None:
+            after_commit(bus, cleanup.job_id)
+            enqueue(cleanup)
     with contextlib.suppress(Exception):
         bus.close()
     return outcome
+
+
+def _retention_after(job_id: str) -> Enqueue | None:
+    """Queue retention for a training run's lineage once the run has ended (REG-2.2,
+    REG-2.6). A failure here never changes the run's outcome; the next run cleans up."""
+    try:
+        with Session(get_engine()) as session, session.begin():
+            job = session.get(Job, job_id)
+            return retention_after_run(session, job) if job is not None else None
+    except Exception as exc:
+        log.warning("retention_not_queued", job_id=job_id, reason=str(exc))
+        return None
 
 
 def _backfill(job_id: str, settings: Settings) -> None:

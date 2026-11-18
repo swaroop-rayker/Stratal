@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
@@ -529,3 +529,61 @@ def _run_train(run: StageRun) -> StageResult:
 
 
 register(StageDef("train", "gpu", TrainConfig, _run_train))
+
+
+class RetentionConfig(BaseModel):
+    """A retention run (REG-2.9, ADR-0015 rule 4)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    lineage_ids: list[str] | None = Field(
+        default=None, description="The lineages to clean; null for every lineage."
+    )
+    dry_run: bool = Field(default=False, description="List what would go; change nothing.")
+    confirmed: list[str] | None = Field(
+        default=None,
+        description="Delete only these versions: the plan the owner confirmed (REG-2.10).",
+    )
+    reason: str = Field(default="requested", description="Why the run was started.")
+
+
+def _run_retention(run: StageRun) -> StageResult:
+    """The retention stage (REG-2.2 to REG-2.9). Torch-free; runs on the CPU queue."""
+    from stratal.core.bus import Bus
+    from stratal.core.settings import get_settings
+    from stratal.registry import retention
+
+    config = RetentionConfig.model_validate(run.config)
+    bus = Bus(get_settings().redis_url, timeout_s=2.0)
+    try:
+        loaded, redis_ok = retention.loaded_from(bus.get_inference_loaded)
+    finally:
+        bus.close()
+    if not redis_ok:
+        run.ctx.emit(
+            stage="retention",
+            level="WARN",
+            message="Redis is unreachable: versions the policy would delete are kept, since "
+            "the one loaded for inference cannot be told apart",
+            reason="Redis did not answer.",
+            suggested_action="Check Redis (GET /health) and run retention again.",
+        )
+
+    def emit(**fields: Any) -> None:
+        run.ctx.emit(stage="retention", **fields)
+
+    metrics = retention.run(
+        run.engine,
+        run.data_dir,
+        emit,
+        job_id=run.ctx.job_id,
+        lineage_ids=config.lineage_ids,
+        dry_run=config.dry_run,
+        confirmed=config.confirmed,
+        loaded=loaded,
+        redis_ok=redis_ok,
+    )
+    return StageResult(metrics=metrics)
+
+
+register(StageDef("retention", "cpu", RetentionConfig, _run_retention))

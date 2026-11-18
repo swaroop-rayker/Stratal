@@ -28,7 +28,7 @@ from stratal.core.errors import (
     ValidationFailed,
 )
 from stratal.data import registry
-from stratal.db.models import Dataset, Job, JobStage
+from stratal.db.models import Checkpoint, Dataset, Job, JobStage
 from stratal.mon.events import utc_now
 from stratal.registry import store as model_registry
 from stratal.runtime import stages as stage_registry
@@ -39,7 +39,7 @@ from stratal.runtime.states import (
     record_creation,
     transition,
 )
-from stratal.train.config import TrainRequest
+from stratal.train.config import TrainConfig, TrainRequest
 
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{1,62}$")
 
@@ -570,3 +570,64 @@ def create_report_job(
         dataset_id=version.dataset_id,
         input_version_id=version_id,
     )
+
+
+# -- registry jobs (M8, REG-2.2 to REG-2.10, ADR-0015) -----------------------------
+
+
+def create_retention_job(
+    session: Session,
+    *,
+    lineage_ids: list[str] | None = None,
+    dry_run: bool = False,
+    confirmed: list[str] | None = None,
+    reason: str = "requested",
+) -> tuple[Job, Enqueue]:
+    """Queue a one-stage ``retention`` job on the CPU queue (REG-2.9)."""
+    config = stage_registry.RetentionConfig(
+        lineage_ids=lineage_ids, dry_run=dry_run, confirmed=confirmed, reason=reason
+    ).model_dump(mode="json")
+    spec: dict[str, Any] = {
+        "kind": "retention",
+        "lineage_ids": lineage_ids,
+        "dry_run": dry_run,
+        "reason": reason,
+        "stages": {"retention": config},
+    }
+    return create_job_from_plan(session, kind="retention", spec=spec, plan=[("retention", config)])
+
+
+def retention_after_run(session: Session, job: Job) -> Enqueue | None:
+    """After a training run completes or is cancelled, clean its lineage (REG-2.2, REG-2.6).
+    ``None`` when the run never reached a lineage."""
+    if job.kind != "train" or job.state not in ("completed", "cancelled"):
+        return None
+    version = model_registry.run_version(session, job.id)
+    lineage_id = version.lineage_id if version is not None else None
+    if lineage_id is None:
+        checkpoint = session.get(Checkpoint, job.id)
+        lineage_id = checkpoint.lineage_id if checkpoint is not None else None
+    if lineage_id is None:
+        return None
+    _, enqueue = create_retention_job(
+        session, lineage_ids=[lineage_id], reason=f"after {job.id} {job.state}"
+    )
+    return enqueue
+
+
+def create_retrain_job(session: Session, version_id: str) -> tuple[Job, Enqueue]:
+    """A new run with a version's exact config and dataset version (REG-2.7)."""
+    version = model_registry.get_version(session, version_id)
+    if version.state != "trained" or version.dataset_version_id is None:
+        raise Conflict(
+            f"{version_id} is a {version.state} version; only trained versions are re-trained.",
+            suggested_action="Re-train a trained version, or start a new run.",
+        )
+    request = TrainRequest(
+        kind="train",
+        dataset_version=version.dataset_version_id,
+        config=TrainConfig.model_validate(version.config),
+    )
+    job, enqueue = create_train_job(session, request)
+    job.spec = {**job.spec, "retrain_of": version_id}
+    return job, enqueue

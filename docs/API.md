@@ -39,7 +39,8 @@ Every error response uses RFC 9457 problem details with media type `application/
 | `validation_error` | 422 | The request body or a config value failed validation |
 | `not_found` | 404 | No such dataset, version, job, review or report |
 | `invalid_state_transition` | 409 | The requested action is not allowed in the job's current state |
-| `conflict` | 409 | The resource already exists, e.g. a dataset slug |
+| `conflict` | 409 | The resource already exists, e.g. a dataset slug; or settings changed since they were read (the problem then carries `version`) |
+| `confirmation_required` | 409 | The change would delete data. The problem carries `plan`; send the request again with `confirm` set to `plan.token` (REG-2.10, §3.10) |
 | `source_not_found` | 422 | The source folder does not exist or is not readable from the workers |
 | `dependency_unavailable` | 503 | Postgres, Redis or the data volume is unreachable |
 | `model_not_allowed` | 422 | A model name that is not on the allow-list (NFR-8) |
@@ -48,6 +49,8 @@ Every error response uses RFC 9457 problem details with media type `application/
 | `gpu_busy` | 409 | Another process holds the GPU lease; the detail names it (BUG6) |
 | `model_not_pulled` | 409 | An allowed model that has not been downloaded; run time never downloads (NFR-7) |
 | `internal_error` | 500 | Anything unexpected. The detail carries the request ID, not a stack trace |
+
+A problem may carry extension members (RFC 9457 §3.2) beside the standard ones, such as `plan` or `version` above; each is named where the error is described.
 
 Jobs that fail carry the same idea in `job.error`. These codes appear there and in ERROR events, never as HTTP statuses:
 
@@ -267,11 +270,32 @@ Built in M5 (2026-11-16). Details:
 | `GET /models?state=&task=&q=` | Lineages, most recently updated first. `state` (`base`, `partial`, `trained`) keeps lineages with a version in that state; `q` matches the name | `200 {items, next_cursor}` |
 | `GET /models/{lineage_id}?state=&weights=` | One lineage and its versions, newest first. `weights` is `present` or `deleted` | `200` lineage with `versions` |
 | `GET /model-versions/{version_id}` | Everything that made a version (REG-1.1) | `200` version detail |
+| `GET /models/{lineage_id}/disk` | Disk use measured on disk (REG-2.11) | `200 {lineage_id, parts: {base, latest, intermediate, pinned, checkpoints}, disk_bytes, registry_bytes, matches, orphans, missing}` |
+| `POST /model-versions/{version_id}/pin` | Exempt from retention (REG-2.5); `409 conflict` unless trained with weights on disk | `200` version detail |
+| `DELETE /model-versions/{version_id}/pin` | Unpin; deletes nothing now | `200` version detail |
+| `POST /model-versions/{version_id}/retrain` | A run with the version's exact config and dataset version (REG-2.7); `409 conflict` for a base or partial version | `202` Job |
+| `POST /retention/plan` | The dry run, answered at once (REG-2.9). Body `{lineage_id?, values?}`; `values` plans with other settings than the saved ones | `200` plan |
+| `POST /retention/run` | Queue a retention job with the saved settings. Body `{lineage_id?, dry_run?}` | `202` Job |
 
 - **Lineage:** `{id, name, task, model, dataset, input_shape, classes, parameters, counts: {base, partial, trained}, latest_version_id, latest_state, main_metric, weights_bytes, checkpoint_bytes, created_at, updated_at}`. `latest` is the newest trained version, or the base before any run completes (REG-2.2). `main_metric` is its `val_accuracy` until EVAL-1.2. `weights_bytes` sums the registry's records of weights on disk; `checkpoint_bytes` the lineage's in-run checkpoints. The measured disk use (REG-2.11) comes with retention.
 - **Version (in a lineage's list):** `{id, lineage_id, state, is_latest, weights_status, weights_bytes, pinned, parent_version_id, job_id, job_state, dataset_version_id, config_hash, main_metric, note, created_at, trained_at}`. A partial version has no `weights_bytes`: its weights are its run's checkpoint.
 - **Version detail** adds `{lineage_name, config, metrics, history, weights_path, weights_deleted_at}`.
-- Unknown IDs are `404 not_found`. Pins, retention (`/retention/plan`, `/retention/run`) and `POST /models/{version}/predict` follow in M8's next steps.
+- Each version also carries `weights_deleted_by_job_id`, `retention_action` (`keep`, `delete` at the next cleanup, `blocked`, or `none` once deleted) and `retention_reason`, under the saved settings. A lineage's detail adds `retention: {keep_intermediate, source: global | lineage, last_run: {job_id, finished_at, versions_deleted, bytes_freed} | null}`.
+- **Plan:** `{lineages: [{lineage_id, name, keep_intermediate, source, latest_version_id, delete, keep, blocked, checkpoints, bytes_to_free}], versions_to_delete, bytes_to_free, token, settings_version}`. Each decision is `{version_id, reason, weights_bytes, main_metric, created_at}`; `blocked` lists versions the policy would delete that are in use or a parent (REG-2.8); `checkpoints` those of completed and cancelled runs (`{job_id, bytes, reason}`). `token` names this exact plan.
+- **Retention jobs** have kind `retention` and one `retention` stage on the CPU queue. The supervisor queues one for a run's lineage after every training run that completes or is cancelled; cancelling a paused run through the API does too. Events: `plan` (per lineage, and each would-be deletion in a dry run), `blocked` (WARN, with `reason` and `suggested_action`), `deleting` and `delete` (`version_id`, `lineage_id`, `bytes_freed`), `checkpoint` (`checkpoint_job_id`, `bytes_freed`), `recover` and `orphan` (WARN). Metrics: `lineages`, `dry_run`, and `versions_deleted`, `bytes_freed`, `checkpoints_removed`, `blocked`, `orphans_removed`, `recovered`, or for a dry run `would_delete` and `bytes_to_free`.
+- Unknown IDs are `404 not_found`. `POST /models/{version}/predict` follows in M8's next step.
+
+### 3.10 Settings (M8, OC-9; SCR-14)
+
+| Method and path | Purpose | Success |
+|---|---|---|
+| `GET /settings` | Every section: `{sections: [{name, title, requirements, values, schema, version, lineages}]}` | `200` |
+| `PUT /settings` | Save one section. Body `{section, values, version, confirm?}` | `200 {section, job_id}` |
+
+- **Retention** (`retention`, REG-2.3, REG-2.4, REG-2.10): `values` is `{keep_intermediate: 0–100 | "all", overrides: {lineage_id: 0–100 | "all"}}`; `schema` is its JSON Schema, with `x-applies` on each field; `lineages` lists each lineage's `keep_intermediate` in force, its `source` and its current `intermediates` and `intermediates_bytes`. The training limits join as a `training` section with SCR-14's Gate 3.
+- `version` must be the one read; otherwise `409 conflict` with the current `version`.
+- A save that would delete weights is refused with `409 confirmation_required` and the `plan`; the same body with `confirm: plan.token` saves it and queues a retention job that deletes only that plan's versions (`job_id`). If anything changed in between, the token no longer matches and a new plan is returned the same way (ADR-0015 rule 7).
+- An unknown lineage in `overrides` is `422 validation_error`.
 
 ### 3.7 Configuration
 
@@ -429,6 +453,11 @@ Still planned for phase 1: run a pipeline.
 | Registry files | `stratal.train.weights` | `write(folder, model, meta) -> bytes` (temporary folder, then rename), `load_into(model, folder)`, `size(folder)` (PyTorch images only) |
 | Backfill | `stratal.train.backfill` | `backfill(engine, data_dir, *, dry_run) -> list[report]` |
 | Crash point | `stratal.runtime.context` | `STRATAL_TEST_CRASH_AT` also takes `<stage>:substage:<name>` |
+| Keep rule (REG-2) | `stratal.registry.policy` | `plan_lineage(versions: [VersionFacts], keep_intermediate: int | None) -> LineagePlan(latest, delete, keep, blocked)`; pure |
+| Retention | `stratal.registry.retention` | `RetentionValues`, `read_values`, `write_values`, `values_version`, `effective_keep`; `in_use(session, loaded, *, redis_ok) -> InUse`; `build_plan(session, *, use, lineage_ids, values)`; `run(engine, data_dir, emit, *, job_id, lineage_ids, dry_run, confirmed, loaded, redis_ok)`; `disk_report`, `last_run`, `decisions` |
+| Lineage lock | `stratal.registry.store` | `lock_lineage(session, id)` (transaction), `holding_lineage(engine, id)` (a block): one Postgres advisory lock per lineage, taken by every writer of registry files and by retention |
+| Registry jobs | `stratal.runtime.jobs` | `create_retention_job(session, *, lineage_ids, dry_run, confirmed, reason)`, `retention_after_run(session, job)`, `create_retrain_job(session, version_id)` |
+| Inference holdings | `stratal.core.bus` | `set_inference_loaded({version_id, device, since} | None)`, `get_inference_loaded()`: Redis key `stratal:inference:loaded`, written by the inference service (ADR-0016 rule 6), read by retention |
 
 ## 7. Later phases
 
@@ -436,7 +465,7 @@ Listed so the phase-1 design leaves room. Each is specified at its phase kickoff
 
 | Phase | Interfaces |
 |---|---|
-| 2 | `hpo_study` and `eval` jobs; model specs and templates; pins, retention preview and run; `POST /models/{version}/predict` (REG-1.4); comparison views. Train jobs, pause and resume (§3.3) and the registry reads (§3.9) are built |
+| 2 | `hpo_study` and `eval` jobs; model specs and templates; `POST /models/{version}/predict` (REG-1.4); comparison views. Train jobs, pause and resume (§3.3), the registry and retention (§3.9) and settings (§3.10) are built |
 | 3 | Chat with token streaming over SSE; RAG corpora and indexes; router decisions; image search |
 | 4 | Image generation; LoRA jobs; export and import of remote bundles |
 | 5 | Translation; full chat with manual and auto mode |

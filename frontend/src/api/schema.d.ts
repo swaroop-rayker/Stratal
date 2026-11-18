@@ -115,7 +115,8 @@ export interface paths {
         put?: never;
         /**
          * Cancel Job
-         * @description Request cancellation. ``409`` if the job has already finished.
+         * @description Request cancellation. ``409`` if the job has already finished. Cancelling a paused
+         *     training run also queues retention, which removes its checkpoint (REG-2.6).
          */
         post: operations["cancel_job_api_v1_jobs__job_id__cancel_post"];
         delete?: never;
@@ -728,9 +729,29 @@ export interface paths {
         };
         /**
          * Get Model
-         * @description One lineage and its versions, newest first, filtered by state and weights.
+         * @description One lineage and its versions, newest first, each with what retention does to it.
          */
         get: operations["get_model_api_v1_models__lineage_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/{lineage_id}/disk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lineage Disk
+         * @description Disk use measured on disk, by part, against the registry's records (REG-2.11).
+         */
+        get: operations["lineage_disk_api_v1_models__lineage_id__disk_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -749,10 +770,122 @@ export interface paths {
         /**
          * Get Model Version
          * @description Everything that made a version: config, dataset version, job, parent, metrics and
-         *     the per-epoch history (REG-1.1).
+         *     the per-epoch history (REG-1.1); and what retention does to it.
          */
         get: operations["get_model_version_api_v1_model_versions__version_id__get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-versions/{version_id}/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pin Version
+         * @description Exempt a version from retention (REG-2.5). ``409`` unless it is trained with its
+         *     weights on disk.
+         */
+        post: operations["pin_version_api_v1_model_versions__version_id__pin_post"];
+        /**
+         * Unpin Version
+         * @description Unpin. Nothing is deleted now: ``retention_action`` says whether the next cleanup
+         *     will delete it.
+         */
+        delete: operations["unpin_version_api_v1_model_versions__version_id__pin_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-versions/{version_id}/retrain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retrain Version
+         * @description Start a run with the version's exact config and dataset version (REG-2.7). Its
+         *     metrics match within NFR-4's tolerance, not exactly.
+         */
+        post: operations["retrain_version_api_v1_model_versions__version_id__retrain_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/retention/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retention Plan
+         * @description The dry run (REG-2.9): what retention would delete, keep and refuse. Changes nothing.
+         */
+        post: operations["retention_plan_api_v1_retention_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/retention/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retention Run
+         * @description Queue a retention job (REG-2.9). It applies the saved settings, as after a run.
+         */
+        post: operations["retention_run_api_v1_retention_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Settings Sections
+         * @description Each section's values, its JSON schema and a version to send back when saving.
+         */
+        get: operations["get_settings_sections_api_v1_settings_get"];
+        /**
+         * Save Settings
+         * @description Save one section. ``409 conflict`` if it changed since it was read;
+         *     ``409 confirmation_required`` with ``plan`` if saving would delete weights.
+         */
+        put: operations["save_settings_api_v1_settings_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -876,6 +1009,42 @@ export interface components {
             decision: "accept" | "reject";
             /** Note */
             note?: string | null;
+        };
+        /** DiskOrphan */
+        DiskOrphan: {
+            /** Path */
+            path: string;
+            /** Bytes */
+            bytes: number;
+        };
+        /** DiskParts */
+        DiskParts: {
+            /** Base */
+            base: number;
+            /** Latest */
+            latest: number;
+            /** Intermediate */
+            intermediate: number;
+            /** Pinned */
+            pinned: number;
+            /** Checkpoints */
+            checkpoints: number;
+        };
+        /** DiskReport */
+        DiskReport: {
+            /** Lineage Id */
+            lineage_id: string;
+            parts: components["schemas"]["DiskParts"];
+            /** Disk Bytes */
+            disk_bytes: number;
+            /** Registry Bytes */
+            registry_bytes: number;
+            /** Matches */
+            matches: boolean;
+            /** Orphans */
+            orphans: components["schemas"]["DiskOrphan"][];
+            /** Missing */
+            missing: string[];
         };
         /** Distribution */
         Distribution: {
@@ -1142,6 +1311,43 @@ export interface components {
             /** In Progress */
             in_progress: components["schemas"]["ExtendingJob"][];
         };
+        /** LineagePlan */
+        LineagePlan: {
+            /** Lineage Id */
+            lineage_id: string;
+            /** Name */
+            name: string;
+            /** Keep Intermediate */
+            keep_intermediate: number | "all";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "global" | "lineage";
+            /** Latest Version Id */
+            latest_version_id: string | null;
+            /** Delete */
+            delete: components["schemas"]["PlanDecision"][];
+            /** Keep */
+            keep: components["schemas"]["PlanDecision"][];
+            /** Blocked */
+            blocked: components["schemas"]["PlanDecision"][];
+            /** Checkpoints */
+            checkpoints: components["schemas"]["PlanCheckpoint"][];
+            /** Bytes To Free */
+            bytes_to_free: number;
+        };
+        /** LineageRetention */
+        LineageRetention: {
+            /** Keep Intermediate */
+            keep_intermediate: number | "all";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "global" | "lineage";
+            last_run: components["schemas"]["RetentionLastRun"] | null;
+        };
         /** ModelLineage */
         ModelLineage: {
             /** Id */
@@ -1215,6 +1421,7 @@ export interface components {
             updated_at: string;
             /** Versions */
             versions: components["schemas"]["ModelVersion"][];
+            retention: components["schemas"]["LineageRetention"];
         };
         /** ModelLineageList */
         ModelLineageList: {
@@ -1275,6 +1482,15 @@ export interface components {
             created_at: string;
             /** Trained At */
             trained_at: string | null;
+            /** Weights Deleted By Job Id */
+            weights_deleted_by_job_id: string | null;
+            /**
+             * Retention Action
+             * @enum {string}
+             */
+            retention_action: "keep" | "delete" | "blocked" | "none";
+            /** Retention Reason */
+            retention_reason: string;
         };
         /** ModelVersionDetail */
         ModelVersionDetail: {
@@ -1316,6 +1532,15 @@ export interface components {
             created_at: string;
             /** Trained At */
             trained_at: string | null;
+            /** Weights Deleted By Job Id */
+            weights_deleted_by_job_id: string | null;
+            /**
+             * Retention Action
+             * @enum {string}
+             */
+            retention_action: "keep" | "delete" | "blocked" | "none";
+            /** Retention Reason */
+            retention_reason: string;
             /** Lineage Name */
             lineage_name: string;
             /** Config */
@@ -1376,6 +1601,38 @@ export interface components {
              * @description Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from class folders. Null: the type of 'from_version' if it has one, else image_caption.
              */
             dataset_type?: ("image_caption" | "labelled_images") | null;
+        };
+        /** PlanCheckpoint */
+        PlanCheckpoint: {
+            /** Job Id */
+            job_id: string;
+            /** Bytes */
+            bytes: number;
+            /** Reason */
+            reason: string;
+        };
+        /** PlanDecision */
+        PlanDecision: {
+            /** Version Id */
+            version_id: string;
+            /** Reason */
+            reason: string;
+            /** Weights Bytes */
+            weights_bytes: number;
+            /** Main Metric */
+            main_metric: number | null;
+            /** Created At */
+            created_at: string | null;
+        };
+        /** PlanRequest */
+        PlanRequest: {
+            /**
+             * Lineage Id
+             * @description One lineage; null for all.
+             */
+            lineage_id?: string | null;
+            /** @description Settings to plan with instead of the saved ones. */
+            values?: components["schemas"]["RetentionValues"] | null;
         };
         /** PowerEvent */
         PowerEvent: {
@@ -1549,6 +1806,49 @@ export interface components {
             disk_read_mb_s: number;
             /** Disk Write Mb S */
             disk_write_mb_s: number;
+        };
+        /** RetentionLastRun */
+        RetentionLastRun: {
+            /** Job Id */
+            job_id: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Versions Deleted */
+            versions_deleted: number;
+            /** Bytes Freed */
+            bytes_freed: number;
+        };
+        /** RetentionPlan */
+        RetentionPlan: {
+            /** Lineages */
+            lineages: components["schemas"]["LineagePlan"][];
+            /** Versions To Delete */
+            versions_to_delete: number;
+            /** Bytes To Free */
+            bytes_to_free: number;
+            /** Token */
+            token: string;
+            /** Settings Version */
+            settings_version: string;
+        };
+        /**
+         * RetentionValues
+         * @description The retention section of the settings (REG-2.3, REG-2.4; SCR-14).
+         */
+        RetentionValues: {
+            /**
+             * Keep Intermediate
+             * @description Intermediate versions each lineage keeps besides base and latest. 0–100, or "all"; default 0.
+             * @default 0
+             */
+            keep_intermediate: number | "all";
+            /**
+             * Overrides
+             * @description keep_intermediate for single lineages, by lineage ID (REG-2.4).
+             */
+            overrides?: {
+                [key: string]: number | "all";
+            };
         };
         /** Review */
         Review: {
@@ -1765,6 +2065,92 @@ export interface components {
             matched: number;
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** RunRequest */
+        RunRequest: {
+            /**
+             * Lineage Id
+             * @description One lineage; null for all.
+             */
+            lineage_id?: string | null;
+            /**
+             * Dry Run
+             * @description Log what would go; change nothing.
+             * @default false
+             */
+            dry_run: boolean;
+        };
+        /** SaveSettings */
+        SaveSettings: {
+            /**
+             * Section
+             * @constant
+             */
+            section: "retention";
+            values: components["schemas"]["RetentionValues"];
+            /**
+             * Version
+             * @description The section's version as read; a stale one is refused.
+             */
+            version: string;
+            /**
+             * Confirm
+             * @description The token of the plan shown by a confirmation_required reply.
+             */
+            confirm?: string | null;
+        };
+        /** SettingsLineage */
+        SettingsLineage: {
+            /** Lineage Id */
+            lineage_id: string;
+            /** Name */
+            name: string;
+            /** Keep Intermediate */
+            keep_intermediate: number | "all";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "global" | "lineage";
+            /** Intermediates */
+            intermediates: number;
+            /** Intermediates Bytes */
+            intermediates_bytes: number;
+        };
+        /** SettingsList */
+        SettingsList: {
+            /** Sections */
+            sections: components["schemas"]["SettingsSection"][];
+        };
+        /** SettingsSaved */
+        SettingsSaved: {
+            section: components["schemas"]["SettingsSection"];
+            /** Job Id */
+            job_id: string | null;
+        };
+        /** SettingsSection */
+        SettingsSection: {
+            /**
+             * Name
+             * @constant
+             */
+            name: "retention";
+            /** Title */
+            title: string;
+            /** Requirements */
+            requirements: string[];
+            /** Values */
+            values: {
+                [key: string]: unknown;
+            };
+            /** Schema */
+            schema: {
+                [key: string]: unknown;
+            };
+            /** Version */
+            version: string;
+            /** Lineages */
+            lineages: components["schemas"]["SettingsLineage"][];
         };
         /** Source */
         Source: {
@@ -3286,7 +3672,7 @@ export interface operations {
     list_models_api_v1_models_get: {
         parameters: {
             query?: {
-                /** @description The state of the lineage's latest version. */
+                /** @description Lineages with a version in this state. */
                 state?: ("base" | "partial" | "trained") | null;
                 task?: string | null;
                 /** @description Name substring. */
@@ -3355,6 +3741,37 @@ export interface operations {
             };
         };
     };
+    lineage_disk_api_v1_models__lineage_id__disk_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lineage_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiskReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_model_version_api_v1_model_versions__version_id__get: {
         parameters: {
             query?: never;
@@ -3373,6 +3790,218 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelVersionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pin_version_api_v1_model_versions__version_id__pin_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unpin_version_api_v1_model_versions__version_id__pin_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retrain_version_api_v1_model_versions__version_id__retrain_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retention_plan_api_v1_retention_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retention_run_api_v1_retention_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_sections_api_v1_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsList"];
+                };
+            };
+        };
+    };
+    save_settings_api_v1_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsSaved"];
                 };
             };
             /** @description Validation Error */

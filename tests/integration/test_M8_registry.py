@@ -254,6 +254,13 @@ def _unregister(lineage_id: str) -> None:
             {"l": lineage_id},
         ).all()
         connection.execute(
+            text(
+                "DELETE FROM pins WHERE version_id IN "
+                "(SELECT id FROM model_versions WHERE lineage_id = :l)"
+            ),
+            {"l": lineage_id},
+        )
+        connection.execute(
             text("DELETE FROM model_versions WHERE lineage_id = :l"), {"l": lineage_id}
         )
         connection.execute(text("DELETE FROM model_lineages WHERE id = :l"), {"l": lineage_id})
@@ -271,6 +278,8 @@ def test_REG_1_1_backfill_registers_runs_from_before_the_registry(
     version = labelled_split(runner, tmp_path / "src", "m8regbackfill")
     api = PipelineApi(runner)
     first = _run(api, _start(api, version))
+    pinned = api.client.post(f"/api/v1/model-versions/{first['model_version_id']}/pin")
+    assert pinned.status_code == 200, "kept through the second run's retention (REG-2.5)"
     second = _run(api, _start(api, version, seed=5, epochs=1))
     lineage_id = _get(api, f"/model-versions/{first['model_version_id']}")["lineage_id"]
     _unregister(lineage_id)

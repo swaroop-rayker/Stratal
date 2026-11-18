@@ -459,19 +459,19 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_REG_1_1_*`: any trained version traces to its exact dataset version and config (2026-11-18, `test_M8_registry.py`: the version's dataset version, config and hash match the run's; its safetensors load; later runs start from the base; a retry after registration trains nothing; job_0030–0032 backfilled)
 - [ ] `test_REG_1_2_*`: the three states are shown and filterable (API part 2026-11-18, `test_M8_registry.py`: a paused run is `partial`, then `trained`, and both list filters work; "shown" is ticked with SCR-11's Gate 3)
 - [ ] `test_REG_1_4_*`: `/predict` returns a result for a sample input, also while a training job holds the GPU
-- [ ] `test_REG_2_1_*`: base weights are still present after 10 training runs
-- [ ] `test_REG_2_2_*`: default settings, 3 runs: only base and run-3 weights on disk
-- [ ] `test_REG_2_3_*`: N = 2, 5 runs: base, runs 3 and 4, and run 5 on disk
-- [ ] `test_REG_2_4_*`: global N = 0 with lineage X at N = 3: only X keeps intermediates
-- [ ] `test_REG_2_5_*`: a pinned run 2 survives N = 0 cleanup
-- [ ] `test_REG_2_6_*`: a completed run leaves no checkpoint; a paused run is still resumable after cleanup
-- [ ] `test_REG_2_7_*`: a version whose weights were deleted still shows its metrics and offers re-training
-- [ ] `test_REG_2_8_*`: pruning an in-use or parent version is blocked and logged
-- [ ] `test_REG_2_9_*`: the dry run lists what would go; the real run frees the bytes it reported
-- [ ] `test_REG_2_10_*`: the confirmation lists the exact versions and their sizes
-- [ ] `test_REG_2_11_*`: disk use per lineage matches the bytes on disk
-- [ ] `test_NFR_14_*` and `test_BUG7_*`: after 10 runs with default retention, the disk audit matches base + latest + one in-progress checkpoint
-- [ ] `test_NFR_15_*`: a kill during cleanup, then a rerun: no orphaned files and no dangling registry rows
+- [x] `test_REG_2_1_*`: base weights are still present after 10 training runs (2026-11-18, `test_M8_retention.py`: byte-identical after 10 runs)
+- [x] `test_REG_2_2_*`: default settings, 3 runs: only base and run-3 weights on disk (2026-11-18, `test_M8_retention.py`; each deletion logged with its bytes)
+- [x] `test_REG_2_3_*`: N = 2, 5 runs: base, runs 3 and 4, and run 5 on disk (2026-11-18, `test_M8_retention.py`, with the keep rule's unit tests)
+- [x] `test_REG_2_4_*`: global N = 0 with lineage X at N = 3: only X keeps intermediates (2026-11-18, `test_M8_retention.py`: an MLP and a small CNN on one dataset)
+- [x] `test_REG_2_5_*`: a pinned run 2 survives N = 0 cleanup (2026-11-18, `test_M8_retention.py`; unpinning deletes nothing by itself)
+- [x] `test_REG_2_6_*`: a completed run leaves no checkpoint; a paused run is still resumable after cleanup (2026-11-18, `test_M8_retention.py`; a cancelled paused run's checkpoint is removed)
+- [x] `test_REG_2_7_*`: a version whose weights were deleted still shows its metrics and offers re-training (2026-11-18, `test_M8_retention.py`: the re-train has the same config hash, data and base, and the same val loss on the CPU)
+- [x] `test_REG_2_8_*`: pruning an in-use or parent version is blocked and logged (2026-11-18, `test_M8_retention.py`: loaded for inference, parent of a fine-tune, and Redis unreachable)
+- [x] `test_REG_2_9_*`: the dry run lists what would go; the real run frees the bytes it reported (2026-11-18, `test_M8_retention.py`)
+- [x] `test_REG_2_10_*`: the confirmation lists the exact versions and their sizes (2026-11-18, `test_M8_retention.py`: the API's `confirmation_required`; a changed plan is refused with a new one. SCR-11's dialog comes with its Gate 3)
+- [x] `test_REG_2_11_*`: disk use per lineage matches the bytes on disk (2026-11-18, `test_M8_retention.py`: all five parts, against a walk of the folders)
+- [x] `test_NFR_14_*` and `test_BUG7_*`: after 10 runs with default retention, the disk audit matches base + latest + one in-progress checkpoint (2026-11-18, `test_M8_retention.py`; BUG7's guard adds a cancelled pause and a crash with retry)
+- [x] `test_NFR_15_*`: a kill during cleanup, then a rerun: no orphaned files and no dangling registry rows (2026-11-18, `test_M8_retention.py`: killed after marking `deleting`, plus an orphan folder; the retry recovers both)
 - [ ] `test_NFR_1_*` (gpu) and `test_NFR_8_*` extended to training: peak VRAM under 5.5 GB; weights only as safetensors, never unpickled
 - [ ] G3 for SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 (SCR-07 v2 and SCR-04 v2 approved 2026-11-18; SCR-11 and SCR-14 with part B)
 - [ ] Demo: train the reference CNN on the phase-2 image dataset; pause and resume it from the UI; find it in the registry; run retention; get a prediction

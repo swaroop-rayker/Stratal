@@ -1,5 +1,7 @@
 """RFC 9457 problem details for every error response (ADR-0011, docs/API.md §2)."""
 
+from typing import Any
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -28,11 +30,13 @@ def problem_response(
     detail: str,
     suggested_action: str | None = None,
     errors: list[FieldProblem] | None = None,
+    extensions: dict[str, Any] | None = None,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status,
         media_type=PROBLEM_JSON,
         content={
+            **(extensions or {}),
             "type": f"{_TYPE_BASE}{code}",
             "title": title,
             "status": status,
@@ -55,6 +59,7 @@ async def _handle_stratal_error(request: Request, exc: Exception) -> JSONRespons
         detail=exc.detail,
         suggested_action=exc.suggested_action,
         errors=exc.errors,
+        extensions=exc.extensions,
     )
 
 

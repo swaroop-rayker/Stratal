@@ -303,14 +303,15 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 | `weights_bytes` | bigint | yes | both files |
 | `note` | text | yes | how it came to be, where that is unusual (a base's seed; a backfilled run without a parent) |
 | `created_at`, `trained_at`, `weights_deleted_at` | timestamptz | mixed | a base has no `trained_at` |
+| `weights_deleted_by_job_id` | text | yes | FK → `jobs`; the retention job that deleted the weights (REG-2.9; added with retention, migration `19c70056c3ce`) |
 
 Constraints: state and weights status check constraints; `present` needs a path and size unless `partial`; one base per lineage (partial unique index on `lineage_id` where `state = 'base'`). Indexes `(lineage_id, created_at)`, `(parent_version_id)`.
 
-**`checkpoints`**: a run's in-run checkpoint, the latest only (REG-2.6). `job_id` (PK, FK), `lineage_id` (FK), `path` (the checkpoint's JSON file, relative to the data folder), `bytes` (both files), `global_step`, `epoch`, `updated_at`. Written at every save, removed when the run completes.
+**`checkpoints`**: a run's in-run checkpoint, the latest only (REG-2.6). `job_id` (PK, FK), `lineage_id` (FK), `path` (the checkpoint's JSON file, relative to the data folder), `bytes` (both files), `global_step`, `epoch`, `updated_at`. Written at every save, removed when the run completes; retention removes those of cancelled runs. A failed run keeps its checkpoint, since a retry resumes from it.
 
-**`pins`**: `version_id` (PK, FK), `pinned_at`. Used from REG-2.5.
+**`pins`**: `version_id` (PK, FK), `pinned_at`. Only trained versions with weights on disk are pinned (REG-2.5).
 
-**`retention_settings`**: `id` (identity), `lineage_id` (FK, null for the global row; unique with nulls not distinct, so one global row), `keep_intermediate` (integer ≥ 0, null for "all"), `updated_at`. The migration inserts the global row with 0 (REG-2.3's default). Used from REG-2.3.
+**`retention_settings`**: `id` (identity), `lineage_id` (FK, null for the global row; unique with nulls not distinct, so one global row), `keep_intermediate` (integer ≥ 0, null for "all"), `updated_at`. The migration inserts the global row with 0 (REG-2.3's default). Saved through `PUT /settings` (API.md §3.10).
 
 ## 5. Manifest schema
 
@@ -364,6 +365,7 @@ File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.pa
 | `stratal:job:<job_id>:control` | string | `pause` or `cancel`. Fast path only; `jobs.desired_state` is the durable copy |
 | `stratal:active` | hash | job ID → `{stage, queue, since}`. Read by the sampler to tag samples and pick the interval |
 | `stratal:system` | string | JSON `{gpu_name, gpu_error, vram_total_mb, ram_total_mb, cpu_count}`, written by the monitor when it starts; read by `GET /system` (M6) |
+| `stratal:inference:loaded` | string | JSON `{version_id, device, since}`: the model the inference service holds, absent when it holds none (ADR-0016 rule 6). Retention treats that version as in use; if Redis cannot be read, it deletes nothing the rule does not keep anyway (REG-2.8, M8) |
 | Celery's own keys | – | queues `cpu` and `gpu` |
 
 ## 8. Invariants
@@ -384,6 +386,10 @@ Each of these is to be enforced by a constraint or covered by a test.
 | INV-10 | Every WARN or ERROR event has a `reason` and a `suggested_action` |
 | INV-11 | A derivation is never overwritten: the same `(kind, input_hash, params_hash)` always means the same value |
 | INV-12 | At most one process holds the GPU lease |
+| INV-13 | A lineage has exactly one base, and retention never deletes it (REG-2.1): partial unique index; the keep rule |
+| INV-14 | A version is `present` (not partial) only if its folder is on disk, and every folder under `registry/<lineage>/` belongs to a `present` version: the disk report's `matches`; retention's orphan sweep and recovery restore it after a crash (NFR-15) |
+| INV-15 | Model-version rows are never deleted; deleting weights only changes `weights_status` (REG-2.7) |
+| INV-16 | Every writer of registry files, and retention, holds the lineage's advisory lock while it writes or deletes them |
 
 ## 9. Planned for later phases
 

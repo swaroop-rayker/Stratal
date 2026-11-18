@@ -14,15 +14,17 @@ where they are; it never reads or writes them.
 import hashlib
 import json
 import secrets
-from collections.abc import Sequence
+from collections.abc import Generator, Sequence
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from stratal.core.errors import NotFound
+from stratal.core.errors import Conflict, NotFound
 from stratal.db.models import (
     Checkpoint,
     Dataset,
@@ -74,6 +76,34 @@ def version_folder(lineage_id: str, version_id: str) -> str:
     return f"{REGISTRY_DIR}/{lineage_id}/{version_id}"
 
 
+_LOCK = "SELECT pg_advisory_{kind}(hashtextextended(:key, 0))"
+
+
+def _lock_key(lineage_id: str) -> str:
+    return f"stratal:lineage:{lineage_id}"
+
+
+def lock_lineage(session: Session, lineage_id: str) -> None:
+    """Hold the lineage's lock until the transaction ends. Writers of registry files take
+    it, so retention never sweeps a folder whose row is not committed yet (NFR-15)."""
+    session.execute(text(_LOCK.format(kind="xact_lock")), {"key": _lock_key(lineage_id)})
+
+
+@contextmanager
+def holding_lineage(engine: Engine, lineage_id: str) -> Generator[None]:
+    """The same lock for a whole block that commits several times: retention marks,
+    deletes and records across transactions (ADR-0015 rule 5)."""
+    connection = engine.connect().execution_options(isolation_level="AUTOCOMMIT")
+    try:
+        connection.execute(text(_LOCK.format(kind="lock")), {"key": _lock_key(lineage_id)})
+        try:
+            yield
+        finally:
+            connection.execute(text(_LOCK.format(kind="unlock")), {"key": _lock_key(lineage_id)})
+    finally:
+        connection.close()
+
+
 def ensure_lineage(
     session: Session,
     *,
@@ -93,6 +123,7 @@ def ensure_lineage(
         input_shape=input_shape,
         classes=classes,
     )
+    lock_lineage(session, lineage_id)
     session.execute(
         insert(ModelLineage)
         .values(
@@ -252,13 +283,14 @@ def model_version_for_job(session: Session, job_id: str) -> str | None:
 # -- views (docs/API.md §3.9) ------------------------------------------------------
 
 
-def _iso(value: datetime | None) -> str | None:
+def iso(value: datetime | None) -> str | None:
     return value.isoformat().replace("+00:00", "Z") if value is not None else None
 
 
-def _latest(versions: Sequence[ModelVersion]) -> ModelVersion | None:
-    """The newest trained version; the base when nothing is trained yet (REG-2.2)."""
-    trained = [v for v in versions if v.state == "trained"]
+def latest_of(versions: Sequence[ModelVersion]) -> ModelVersion | None:
+    """The newest trained version with its weights; the base when there is none (REG-2.2).
+    Retention never deletes the latest, so this is the policy's latest too."""
+    trained = [v for v in versions if v.state == "trained" and v.weights_status == "present"]
     if trained:
         return max(trained, key=lambda v: (v.trained_at or v.created_at, v.id))
     return next((v for v in versions if v.state == "base"), None)
@@ -322,8 +354,9 @@ def _version_row(
         "config_hash": version.config_hash,
         "main_metric": _main_metric(version),
         "note": version.note,
-        "created_at": _iso(version.created_at),
-        "trained_at": _iso(version.trained_at),
+        "created_at": iso(version.created_at),
+        "trained_at": iso(version.trained_at),
+        "weights_deleted_by_job_id": version.weights_deleted_by_job_id,
     }
 
 
@@ -341,7 +374,7 @@ def _lineage_summary(
     versions: Sequence[ModelVersion],
     checkpoint_bytes: int,
 ) -> dict[str, Any]:
-    latest = _latest(versions)
+    latest = latest_of(versions)
     counts = {
         state: sum(v.state == state for v in versions) for state in ("base", "partial", "trained")
     }
@@ -361,8 +394,8 @@ def _lineage_summary(
         "main_metric": _main_metric(latest) if latest else None,
         "weights_bytes": sum(_on_disk(v) for v in versions),
         "checkpoint_bytes": checkpoint_bytes,
-        "created_at": _iso(lineage.created_at),
-        "updated_at": _iso(updated),
+        "created_at": iso(lineage.created_at),
+        "updated_at": iso(updated),
     }
 
 
@@ -447,7 +480,7 @@ def version_detail(session: Session, version_id: str) -> dict[str, Any]:
     version = get_version(session, version_id)
     lineage = get_lineage(session, version.lineage_id)
     siblings = _versions_by_lineage(session, [lineage.id])[lineage.id]
-    latest = _latest(siblings)
+    latest = latest_of(siblings)
     pinned, job_states = _context(session, [version])
     return {
         **_version_row(
@@ -461,5 +494,32 @@ def version_detail(session: Session, version_id: str) -> dict[str, Any]:
         "metrics": version.metrics,
         "history": version.history or [],
         "weights_path": version.weights_path,
-        "weights_deleted_at": _iso(version.weights_deleted_at),
+        "weights_deleted_at": iso(version.weights_deleted_at),
     }
+
+
+# -- pins (REG-2.5) ------------------------------------------------------------------
+
+
+def pin(session: Session, version_id: str) -> ModelVersion:
+    """Exempt a version from retention until it is unpinned. Only a trained version with
+    its weights on disk can be pinned: there is nothing else to keep."""
+    version = get_version(session, version_id)
+    if version.state != "trained" or version.weights_status != "present":
+        raise Conflict(
+            f"{version_id} is a {version.state} version with weights {version.weights_status}; "
+            "only trained versions with weights on disk are pinned.",
+            suggested_action="Base and partial versions are never deleted by retention; a "
+            "version whose weights were deleted can be re-trained.",
+        )
+    session.execute(insert(Pin).values(version_id=version_id).on_conflict_do_nothing())
+    session.flush()
+    return version
+
+
+def unpin(session: Session, version_id: str) -> ModelVersion:
+    """Unpin. Nothing is deleted now; the next cleanup applies the policy (REG-2.5)."""
+    version = get_version(session, version_id)
+    session.execute(delete(Pin).where(Pin.version_id == version_id))
+    session.flush()
+    return version

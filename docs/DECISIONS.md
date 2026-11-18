@@ -619,6 +619,36 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The stage builds a model on the CPU right after seeding Python's and PyTorch's random state, so rebuilding it reproduces the initial weights bit for bit. A run gets the base as parent only if its own rebuilt initial weights equal the base's. Weights folders are moved into `registry/`, not copied; a failed registration moves them back.
 - **Why:** Those runs saved no base. Claiming that job_0032 descends from a base it never started from would make its lineage wrong.
 
+**The keep rule is a pure function** (M8, REG-2.1 to REG-2.5, REG-2.8, ADR-0015 rule 4)
+- **What:** `plan_lineage(versions, keep_intermediate)` returns what to delete, keep and refuse, each with a reason. The dry run, the confirmation and the real run all call it.
+- **How:** The caller gathers the facts: pins, children, and what is in use. In order: base, latest, the N before it, pinned; anything else trained with weights on disk is deleted, unless it is in use or a parent, which makes it *blocked*. Partial versions are left to their run.
+- **Why:** One list behind the preview, the confirmation and the deletion means the confirmation shows exactly what will go, and the rule is tested without a database.
+
+**What blocks a delete** (M8, REG-2.8; the owner's choices, 2026-11-18)
+- **What:** A version is *in use* when the inference service reports holding it, or a queued, running or paused run started from it. It is a *parent* when any other version names it as its parent, adapter or full fine-tune alike, following the SPEC's wording rather than ADR-0015's "adapter".
+- **How:** The inference service writes `stratal:inference:loaded` in Redis (ADR-0016 rule 6; the contract is set now, the service writes it in REG-1.4). If Redis cannot be read, every version the rule would delete is blocked. Each refusal is a WARN event with its reason.
+- **Why:** A re-train of a child needs its parent's weights (REG-2.7), whatever kind of child it is. Not knowing what inference holds must never mean deleting it. In M8 only bases are parents, so the parent rule first bites with M9's start-from-a-version option.
+
+**Failed runs keep their checkpoints** (M8, REG-2.6, RUN-1.3; the owner's choice, 2026-11-18)
+- **What:** Retention removes checkpoints of completed and cancelled runs. A failed run keeps its checkpoint until it is retried (the retry resumes from it) or cancelled.
+- **How:** Checkpoints are tracked in the `checkpoints` table and shown as "checkpoints" in the disk report, so the space they take is visible. A cancelled run's partial version keeps its row, with `weights_deleted`.
+- **Why:** Deleting a failed run's checkpoint would turn a resumable crash into a restart from epoch 1.
+
+**Deletes are atomic per version, and retention shares a lock with the writers** (M8, NFR-15, ADR-0015 rule 5)
+- **What:** Mark `deleting` and commit, remove the folder, then record `weights_deleted` with the time and the job. Each run first finishes any `deleting` versions, and ends by sweeping folders under `registry/<lineage>/` that no `present` version accounts for.
+- **How:** One Postgres advisory lock per lineage (`hashtextextended` of its ID). The train stage takes it for the transaction that writes a base or a trained version; retention holds it on its own connection for each lineage it cleans, across the several commits a delete needs.
+- **Why:** Without the lock, a sweep could remove the folder a run has just written but not yet committed, which would leave a row pointing at nothing. Recovery and the sweep make a kill at any point end in a consistent registry after the next run (NFR-15.AC1).
+
+**Confirmation by plan token** (M8, REG-2.10, ADR-0015 rule 7)
+- **What:** A settings save that would delete weights is refused with `409 confirmation_required` and the plan. The same request with `confirm` set to the plan's token saves it and queues a retention job limited to that plan's versions.
+- **How:** The token hashes the new settings and every version to delete with its size, so any change in between (a pin, a new run) gives another token, and the save is refused again with the new plan. Saves also carry the section's `version`, so a stale form gets `409 conflict`. Problem documents gained RFC 9457 extension members for this (`plan`, `version`).
+- **Why:** The owner sees the exact versions and sizes before anything is deleted, and nothing outside what was seen is deleted by that save. Runs after it apply the saved settings without asking, as REG-2.2 expects.
+
+**Retention runs after every run that ends** (M8, REG-2.2, REG-2.6, REG-2.9)
+- **What:** The supervisor queues a `retention` job for a run's lineage when the run completes or is cancelled; cancelling a paused run through the API does the same. It runs on the CPU queue, torch-free.
+- **How:** Queued after the run's outcome is committed, in its own transaction. If that fails, the run's outcome stands and the next run cleans up.
+- **Why:** REG-2.2 deletes the previous latest "after a run completes"; a cancelled run's checkpoint is garbage at once (REG-2.6). Queuing as a job gives the deletions an activity log and a history for free (REG-2.9).
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

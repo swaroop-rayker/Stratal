@@ -206,14 +206,19 @@ def get_job(job_id: str, session: Db) -> Json:
 
 
 @router.post("/jobs/{job_id}/cancel", status_code=202, tags=["jobs"], response_model=schemas.Job)
-def cancel_job(job_id: str, session: Db, bus: Redis) -> Json:
-    """Request cancellation. ``409`` if the job has already finished."""
+def cancel_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
+    """Request cancellation. ``409`` if the job has already finished. Cancelling a paused
+    training run also queues retention, which removes its checkpoint (REG-2.6)."""
     with session.begin():
         job, running = job_service.request_cancel(session, job_id)
+        cleanup = None if running else job_service.retention_after_run(session, job)
         view = job_service.job_view(session, job)
     if running:
         bus.set_control(job_id, "cancel")  # fast path; jobs.desired_state is the durable copy
     job_service.after_commit(bus, job_id)
+    if cleanup is not None:
+        enqueue(cleanup)
+        job_service.after_commit(bus, cleanup.job_id)
     return view
 
 

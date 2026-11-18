@@ -59,6 +59,11 @@ def _job_dir(job_id: str) -> Path:
     return get_settings().data_dir / "jobs" / job_id
 
 
+def _pin(api: PipelineApi, job_id: str) -> None:
+    version = api.client.get(f"/api/v1/jobs/{job_id}").json()["model_version_id"]
+    assert api.client.post(f"/api/v1/model-versions/{version}/pin").status_code == 200
+
+
 def _weights(job_id: str) -> Path:
     """The trained weights the run registered (REG-1.1)."""
     with get_engine().connect() as connection:
@@ -126,6 +131,7 @@ def test_RUN_1_3_a_killed_run_resumes_from_its_checkpoint_and_matches_an_uninter
     api = PipelineApi(runner)
     whole = _start(api, version)
     assert _run(api, whole)["state"] == "completed"
+    _pin(api, whole)  # retention after the next run would delete its weights (REG-2.2)
 
     setup = next(e for e in runner.events(whole) if e["substage"] == "setup")
     steps_per_epoch = -(-int(setup["metrics"]["train_rows"]) // CONFIG["batch_size"])
@@ -175,6 +181,7 @@ def test_RUN_1_2_a_paused_run_checkpoints_and_resumes_where_it_stopped(
     config = {"epochs": 25}
     whole = _start(api, version, **config)
     assert _run(api, whole)["state"] == "completed"
+    _pin(api, whole)  # retention after the next run would delete its weights (REG-2.2)
 
     paused = _start(api, version, **config)
     thread = runner.run_in_thread()

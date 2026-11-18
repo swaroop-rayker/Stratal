@@ -5,7 +5,7 @@ failed jobs store the same ``code`` with a reason and a suggested action.
 Codes are part of the public contract: add new ones, never rename.
 """
 
-from typing import ClassVar, TypedDict
+from typing import Any, ClassVar, TypedDict
 
 
 class FieldProblem(TypedDict):
@@ -29,11 +29,14 @@ class StratalError(Exception):
         *,
         suggested_action: str | None = None,
         errors: list[FieldProblem] | None = None,
+        extensions: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(detail)
         self.detail = detail
         self.suggested_action = suggested_action
         self.errors: list[FieldProblem] = errors if errors is not None else []
+        self.extensions: dict[str, Any] = extensions or {}
+        """Extra members of the problem document (RFC 9457 §3.2), e.g. a plan to confirm."""
 
 
 class ValidationFailed(StratalError):
@@ -51,6 +54,15 @@ class NotFound(StratalError):
 class Conflict(StratalError):
     code = "conflict"
     title = "Conflict"
+    http_status = 409
+
+
+class ConfirmationRequired(StratalError):
+    """A change would delete data: the problem carries what would go, and the request is
+    sent again with its ``token`` to confirm (REG-2.10, ADR-0015 rule 7)."""
+
+    code = "confirmation_required"
+    title = "Confirmation required"
     http_status = 409
 
 

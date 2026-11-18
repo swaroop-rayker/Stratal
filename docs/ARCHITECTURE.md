@@ -244,6 +244,7 @@ Everything Stratal owns lives on one Docker volume, `stratal-data`, on the Linux
 - **Writes are atomic.** A file is written under `tmp/`, flushed, then renamed into place. A crash leaves either the old state or the new one. A version row is inserted in Postgres only after its manifest is in place.
 - **One read path.** All code reads a dataset through `load_version(version_id)`, which streams the manifest in batches. Nothing loads a whole dataset into memory (NFR-2).
 - **Model weights are registered after they are in place** (M8, ADR-0015). The first run of a lineage writes its base before step 1; every later run of the lineage loads it. At the end the stage writes the version's folder, then marks the version `trained` and commits, and only then removes its checkpoints. A crash in between leaves a registered version and stale checkpoints, which the retry removes without training again.
+- **Retention is a job** (M8, ADR-0015 rule 4). After a training run completes or is cancelled, the supervisor queues a `retention` job for its lineage on the CPU queue; `POST /retention/run` queues one on demand. The keep rule (`stratal.registry.policy`) is a pure function, so the dry run, the confirmation of a smaller `keep_intermediate` and the real run work from the same list. Each delete marks the version `deleting` and commits, removes the folder, then records `weights_deleted`; a run first finishes any `deleting` left by a crash and ends by sweeping folders no row accounts for. Writers of registry files and retention share one advisory lock per lineage, so a sweep never removes a folder whose row is still uncommitted.
 
 The version ID is derived from the manifest's content hash and the stage's config hash (DATA-3.2). The exact derivation is the owner's to implement; the contract it must satisfy is in [DATA_MODEL.md](DATA_MODEL.md#3-identifiers).
 
@@ -293,7 +294,7 @@ Spike S-03 (one run, 705 s of Modern Standby) found the job and the GPU unharmed
 | **BUG4** sleep | Keep-awake while jobs run, sleep events on the timeline, per-batch commits, resume in a fresh process ([§8](#8-sleep-and-suspend)) | Freeze/unfreeze test; real sleep test in spike S-03 |
 | **BUG5** stale weights in VRAM | Process exit is the unload for jobs; verified unload plus self-restart for the inference service ([§7](#7-gpu-and-memory-policy)) | `test_RUN_1_4_*` |
 | **BUG6** VRAM bloat | One GPU lease across training, inference and Ollama; free-VRAM check before every load ([§7](#7-gpu-and-memory-policy)) | Lease contention test |
-| **BUG7** disk bloat | REG-2 retention as specified, one rolling in-run checkpoint, content-addressed files never duplicated, orphan sweep with dry-run | NFR-14 disk audit |
+| **BUG7** disk bloat | REG-2 retention as a job after every run, one rolling in-run checkpoint, content-addressed files never duplicated, orphan sweep and crash recovery in every retention run, a dry run | NFR-14 disk audit (`GET /models/{id}/disk`), `test_BUG7_*` |
 
 ## 11. Code layout
 
