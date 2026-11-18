@@ -19,7 +19,14 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from stratal.core.bus import LIVE_GLOBAL, Bus, live_channel
-from stratal.core.errors import FieldProblem, NotFound, SourceNotFound, ValidationFailed
+from stratal.core.errors import (
+    Conflict,
+    FieldProblem,
+    InvalidStateTransition,
+    NotFound,
+    SourceNotFound,
+    ValidationFailed,
+)
 from stratal.data import registry
 from stratal.db.models import Dataset, Job, JobStage
 from stratal.mon.events import utc_now
@@ -373,7 +380,7 @@ def stages_of(session: Session, job_id: str) -> list[JobStage]:
 
 def cancel_unfinished_stages(session: Session, job_id: str) -> None:
     for stage in stages_of(session, job_id):
-        if stage.status in ("pending", "queued", "running"):
+        if stage.status in ("pending", "queued", "running", "paused"):
             stage.status = "cancelled"
             stage.finished_at = stage.finished_at or utc_now()
 
@@ -393,6 +400,47 @@ def request_cancel(session: Session, job_id: str) -> tuple[Job, bool]:
     transition(session, job, "cancelled", reason="cancelled by the user", actor="user")
     cancel_unfinished_stages(session, job_id)
     return job, False
+
+
+def request_pause(session: Session, job_id: str) -> Job:
+    """Ask a running job to pause (RUN-1.2, ADR-0014 rule 6).
+
+    Sets ``desired_state = paused``. The stage stops at its next safe point (a
+    training run writes a checkpoint first) and the supervisor makes the
+    transition; a job between stages pauses before its next stage starts.
+    """
+    job = get_job(session, job_id, lock=True)
+    check_transition(job.id, job.state, "paused")
+    if job.desired_state == "cancelled":
+        raise Conflict(
+            f"Job {job_id} is being cancelled.",
+            suggested_action="Wait for the cancellation to finish.",
+        )
+    job.desired_state = "paused"
+    return job
+
+
+def request_resume(session: Session, job_id: str) -> tuple[Job, Enqueue]:
+    """Requeue a paused job from the stage that was paused (RUN-1.2)."""
+    job = get_job(session, job_id, lock=True)
+    if job.state != "paused":
+        raise InvalidStateTransition(
+            f"Job {job_id} is {job.state}, not paused.",
+            suggested_action="Only a paused job can be resumed; a failed one is retried.",
+        )
+    stages = stages_of(session, job_id)
+    resume = next((s for s in stages if s.status == "paused"), None) or next(
+        (s for s in stages if s.status not in ("completed", "skipped")), None
+    )
+    if resume is None:
+        raise ValidationFailed(f"Job {job_id} has no stage left to resume.")
+    resume.status = "queued"
+    resume.error = None
+    resume.finished_at = None
+    job.current_stage_idx = resume.idx
+    job.desired_state = None
+    transition(session, job, "queued", reason="resumed by the user", actor="user")
+    return job, Enqueue(job.id, resume.idx, resume.queue)
 
 
 def request_retry(session: Session, job_id: str) -> tuple[Job, Enqueue]:

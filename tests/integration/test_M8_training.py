@@ -7,6 +7,7 @@ skipped. The runs are tiny (an MLP on 32-px synthetic images, on the CPU unless
 marked ``gpu``), so they finish in seconds.
 """
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +21,7 @@ from safetensors.torch import load_file  # noqa: E402
 from stratal.core.settings import get_settings  # noqa: E402
 from stratal.db.engine import get_engine  # noqa: E402
 from stratal.runtime.context import CRASH_AT_ENV  # noqa: E402
-from stratal.testing.harness import Runner  # noqa: E402
+from stratal.testing.harness import Runner, wait_until  # noqa: E402
 from stratal.testing.labelled import labelled_split  # noqa: E402
 from stratal.testing.pipeline import PipelineApi  # noqa: E402
 
@@ -141,6 +142,53 @@ def test_RUN_1_3_a_killed_run_resumes_from_its_checkpoint_and_matches_an_uninter
     assert resumed["stages"][0]["metrics"]["val_loss"] == pytest.approx(
         runner.job(whole)["stages"][0]["metrics"]["val_loss"], abs=1e-5
     )
+
+
+def _spooled(job_id: str, substage: str) -> int:
+    """How many events of ``substage`` the job's child has written to its spool so far."""
+    spool = _job_dir(job_id) / "events.jsonl"
+    if not spool.is_file():
+        return 0
+    return sum(
+        1
+        for line in spool.read_text(encoding="utf-8").splitlines()
+        if json.loads(line).get("substage") == substage
+    )
+
+
+def test_RUN_1_2_a_paused_run_checkpoints_and_resumes_where_it_stopped(
+    runner: Runner, tmp_path: Path
+) -> None:
+    version = labelled_split(runner, tmp_path / "src", "m8pause")
+    api = PipelineApi(runner)
+    config = {"epochs": 25}
+    whole = _start(api, version, **config)
+    assert _run(api, whole)["state"] == "completed"
+
+    paused = _start(api, version, **config)
+    thread = runner.run_in_thread()
+    wait_until(lambda: _spooled(paused, "validate") >= 2, timeout_s=60, what="two epochs")
+    assert api.client.post(f"/api/v1/jobs/{paused}/pause").status_code == 202
+    thread.join(60)
+
+    job = runner.job(paused)
+    assert job["state"] == "paused", job
+    assert job["stages"][0]["status"] == "paused"
+    assert list((_job_dir(paused) / "checkpoints").glob("ckpt-*.json")), "kept while paused"
+    assert api.client.post(f"/api/v1/jobs/{paused}/resume").status_code == 202
+    api.runner.queue.extend(api.queued)
+    api.queued.clear()
+    resumed = _run(api, paused)
+
+    assert resumed["state"] == "completed", resumed
+    events = runner.events(paused)
+    pause_saves = [e for e in events if e["substage"] == "checkpoint" and e["attempt"] == 1]
+    [resume] = [e for e in events if e["substage"] == "resume"]
+    assert resume["metrics"]["resumed_at_step"] == pause_saves[-1]["metrics"]["checkpoint_step"]
+    a = load_file(str(_job_dir(whole) / "weights" / "model.safetensors"))
+    b = load_file(str(_job_dir(paused) / "weights" / "model.safetensors"))
+    for name in a:
+        assert torch.allclose(a[name], b[name], atol=1e-6), name  # NFR-4
 
 
 @pytest.mark.gpu

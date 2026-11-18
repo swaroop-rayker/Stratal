@@ -29,11 +29,11 @@ from stratal.mon import probes
 from stratal.mon.backfill import backfill_job
 from stratal.mon.events import Event, utc_now
 from stratal.mon.store import insert_events, refresh_summary
-from stratal.runtime.child import EXIT_CANCELLED, EXIT_OK
+from stratal.runtime.child import EXIT_CANCELLED, EXIT_OK, EXIT_PAUSED
 from stratal.runtime.jobs import Enqueue, after_commit, cancel_unfinished_stages
 from stratal.runtime.states import transition
 
-Outcome = Literal["completed", "failed", "cancelled", "not_claimed", "superseded"]
+Outcome = Literal["completed", "failed", "cancelled", "paused", "not_claimed", "superseded"]
 EnqueueFn = Callable[[Enqueue], None]
 
 # A wall-clock jump this much larger than the monotonic clock's means the machine slept.
@@ -68,6 +68,12 @@ def claim(job_id: str, idx: int, worker: str) -> Claim | None:
             cancel_unfinished_stages(session, job_id)
             return None
         now = utc_now()
+        if job.desired_state == "paused" and job.state == "running":
+            # Paused between stages: this stage waits for the resume (RUN-1.2).
+            stage.status = "paused"
+            job.desired_state = None
+            transition(session, job, "paused", reason="paused by the user", actor="supervisor")
+            return None
         if job.state == "queued":
             job.attempt += 1
             job.started_at = job.started_at or now
@@ -172,13 +178,22 @@ def finalize(
         now = utc_now()
         stage.finished_at = now
         cancel_requested = cancel_requested or job.desired_state == "cancelled"
+        pause_requested = job.desired_state == "paused" and not cancel_requested
         following = session.get(JobStage, (job_id, idx + 1))
         outcome: Outcome
         enqueue: Enqueue | None = None
 
         if code == EXIT_OK:
             stage.status = "completed"
-            if following is not None and not cancel_requested:
+            if following is not None and pause_requested:
+                # Paused between stages: the next one waits for the resume (RUN-1.2).
+                following.status = "paused"
+                following.input_version_id = stage.output_version_id
+                job.current_stage_idx = following.idx
+                job.desired_state = None
+                transition(session, job, "paused", reason="paused by the user", actor="supervisor")
+                outcome = "paused"
+            elif following is not None and not cancel_requested:
                 following.status = "queued"
                 following.input_version_id = stage.output_version_id
                 job.current_stage_idx = following.idx
@@ -196,6 +211,11 @@ def finalize(
                     session, job, "completed", reason="all stages completed", actor="supervisor"
                 )
                 outcome = "completed"
+        elif code == EXIT_PAUSED and not cancel_requested:
+            stage.status = "paused"
+            job.desired_state = None
+            transition(session, job, "paused", reason="paused at a safe point", actor="supervisor")
+            outcome = "paused"
         elif cancel_requested or code == EXIT_CANCELLED:
             stage.status = "cancelled"
             transition(
@@ -328,7 +348,7 @@ def run_stage(
     _backfill(job_id, settings)
     if outcome != "superseded":
         with contextlib.suppress(Exception):
-            if following is None:
+            if following is None or outcome == "paused":
                 bus.clear_control(job_id)
         after_commit(bus, job_id)
         if following is not None:

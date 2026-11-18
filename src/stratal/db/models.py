@@ -68,7 +68,16 @@ class DatasetVersion(Base):
 
 
 JOB_STATES = ("queued", "running", "paused", "completed", "failed", "cancelled", "stalled")
-STAGE_STATUSES = ("pending", "queued", "running", "completed", "failed", "skipped", "cancelled")
+STAGE_STATUSES = (
+    "pending",
+    "queued",
+    "running",
+    "paused",
+    "completed",
+    "failed",
+    "skipped",
+    "cancelled",
+)
 EVENT_LEVELS = ("DEBUG", "INFO", "WARN", "ERROR")
 
 

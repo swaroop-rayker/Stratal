@@ -9,6 +9,7 @@ import os
 import signal
 import time
 from collections.abc import Callable
+from typing import Literal
 
 from stratal.core.logging import bind_job_context, get_logger
 from stratal.mon.emitter import Emitter
@@ -53,6 +54,17 @@ class JobCancelled(Exception):
     """Raised at a safe point when the job has been asked to stop."""
 
 
+class JobPaused(Exception):
+    """Raised at a safe point when the job has been asked to pause (RUN-1.2, ADR-0014 rule 6).
+
+    The stage's work so far is in its caches, or in a checkpoint for training, so
+    resuming runs the stage again and it continues from there.
+    """
+
+
+StopRequest = Literal["cancel", "pause"]
+
+
 class JobContext:
     def __init__(
         self,
@@ -61,7 +73,7 @@ class JobContext:
         attempt: int,
         stage: str,
         emitter: Emitter,
-        should_stop: Callable[[], bool] | None = None,
+        should_stop: Callable[[], bool | str | None] | None = None,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.job_id = job_id
@@ -79,13 +91,27 @@ class JobContext:
         self.version_id = version_id
         bind_job_context(version_id=version_id)
 
+    def stop_request(self) -> StopRequest | None:
+        """Whether the job was asked to stop, and how. ``should_stop`` may answer
+        ``True`` (cancel), ``"cancel"`` or ``"pause"``."""
+        value = self._should_stop() if self._should_stop is not None else None
+        if value is True or value == "cancel":
+            return "cancel"
+        if value == "pause":
+            return "pause"
+        return None
+
     def should_stop(self) -> bool:
-        return self._should_stop() if self._should_stop is not None else False
+        return self.stop_request() is not None
 
     def raise_if_cancelled(self) -> None:
-        """Call at a safe point: between batches, after a commit."""
-        if self.should_stop():
+        """Call at a safe point: between batches, after a commit. Raises
+        :class:`JobCancelled` or :class:`JobPaused` if the job was asked to stop."""
+        request = self.stop_request()
+        if request == "cancel":
             raise JobCancelled(self.job_id)
+        if request == "pause":
+            raise JobPaused(self.job_id)
 
     def emit(
         self,

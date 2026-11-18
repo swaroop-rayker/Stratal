@@ -28,12 +28,14 @@ from stratal.db.models import Job, JobStage
 from stratal.mon import probes
 from stratal.mon.emitter import KIND_PROCESS_SAMPLE, Emitter, NullEmitter, StreamEmitter
 from stratal.mon.events import MetricValue, utc_now
-from stratal.runtime.context import JobCancelled, JobContext
+from stratal.runtime.context import JobCancelled, JobContext, JobPaused
 from stratal.runtime.stages import StageResult, StageRun, get_stage
 
 EXIT_OK = 0
 EXIT_FAILED = 1
 EXIT_CANCELLED = 3
+EXIT_PAUSED = 4
+"""The stage stopped at a safe point because the job was paused (RUN-1.2)."""
 
 log = get_logger(__name__)
 
@@ -102,24 +104,25 @@ class ProcessReporter(threading.Thread):
 
 
 class _StopFlag:
-    """Asks Redis whether the job was told to stop, at most twice a second."""
+    """Asks Redis whether the job was told to stop (cancel or pause), at most twice a second."""
 
     def __init__(self, redis_url: str, job_id: str) -> None:
         self._redis_url = redis_url
         self._job_id = job_id
         self._bus: Bus | None = None
         self._checked_at = 0.0
-        self._stop = False
+        self._stop: str | None = None
 
-    def __call__(self) -> bool:
+    def __call__(self) -> str | None:
         now = time.monotonic()
-        if self._stop or now - self._checked_at < 0.5:
+        if self._stop == "cancel" or now - self._checked_at < 0.5:
             return self._stop
         self._checked_at = now
         try:
             if self._bus is None:
                 self._bus = Bus(self._redis_url, timeout_s=1.0)
-            self._stop = self._bus.get_control(self._job_id) == "cancel"
+            value = self._bus.get_control(self._job_id)
+            self._stop = value if value in ("cancel", "pause") else None
         except Exception:
             self._bus = None  # Redis is down: keep working, the supervisor can still kill us
         return self._stop
@@ -219,6 +222,9 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
     except JobCancelled:
         ctx.event("activity", f"Stage {name} stopped at a safe point on request")
         return EXIT_CANCELLED
+    except JobPaused:
+        ctx.event("activity", f"Stage {name} paused at a safe point")
+        return EXIT_PAUSED
     except StratalError as exc:
         return _fail(
             ctx,

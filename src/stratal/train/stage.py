@@ -36,7 +36,7 @@ from stratal.data import registry
 from stratal.data.dataset_types import validate_labelled_images
 from stratal.label.models import ModelInfo
 from stratal.mon.events import MetricValue
-from stratal.runtime.context import JobContext
+from stratal.runtime.context import JobCancelled, JobContext, JobPaused
 from stratal.runtime.gpu_lease import gpu_lease
 from stratal.runtime.jobs import config_hash
 from stratal.runtime.stages import StageResult, StageRun
@@ -307,7 +307,7 @@ class _Run:
             seen = 0
             grad_norm = torch.zeros((), device=self.device)
             for batch_index, (x, y) in enumerate(loader, start=first):
-                ctx.raise_if_cancelled()
+                self._stop_if_asked(model, optimizer, scheduler, state, position)
                 x = x.to(self.device, non_blocking=True)
                 y = y.to(self.device, non_blocking=True)
                 optimizer.zero_grad(set_to_none=True)
@@ -401,6 +401,25 @@ class _Run:
         return StageResult(metrics=metrics)
 
     # ------------------------------------------------------------------ helpers
+    def _stop_if_asked(
+        self,
+        model: nn.Module,
+        optimizer: Any,
+        scheduler: Any,
+        state: ckpt.Checkpoint,
+        position: ckpt.Position,
+    ) -> None:
+        """At a safe point between steps: stop if cancelled; on a pause, checkpoint first
+        (RUN-1.2, ADR-0014 rule 6), so the resume continues from this very step."""
+        request = self.ctx.stop_request()
+        if request == "cancel":
+            raise JobCancelled(self.ctx.job_id)
+        if request == "pause":
+            self._save(
+                model, optimizer, scheduler, ckpt.Checkpoint(position, self.hash, state.history)
+            )
+            raise JobPaused(self.ctx.job_id)
+
     def _save(
         self, model: nn.Module, optimizer: Any, scheduler: Any, state: ckpt.Checkpoint
     ) -> int:
@@ -432,7 +451,8 @@ class _Run:
         )
         with torch.no_grad():
             for x, y in loader:
-                self.ctx.raise_if_cancelled()
+                if self.ctx.stop_request() == "cancel":  # a pause waits for the epoch's end
+                    raise JobCancelled(self.ctx.job_id)
                 x, y = x.to(self.device), y.to(self.device)
                 logits = model(x)
                 total_loss += float(loss_fn(logits, y)) * len(y)

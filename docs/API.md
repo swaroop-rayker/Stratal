@@ -130,8 +130,10 @@ Version (abridged):
 | `GET /jobs/{job_id}/events` | Page through events. Filters: `level`, `stage`, `after` (event ID), `min_level` (that level and above) and `tail` (the newest `limit` matching events, still oldest first; added in M6 for SCR-04) | `200` list of Event |
 | `GET /jobs/{job_id}/telemetry` | Samples for charts. Params: `from`, `to`, `stage`, `max_points`. Samples older than 7 days come from the 1-minute averages (NFR-12, DATA_MODEL §4.8a): one point a minute, `cpu_per_core` empty | `200 {"resource": [...], "process": [...]}` |
 | `GET /jobs/{job_id}/stream` | Live feed for one job (SSE, [§4](#4-live-streams)) | `200 text/event-stream` |
+| `POST /jobs/{job_id}/pause` | Ask a running job to pause at its next safe point (M8, RUN-1.2, ADR-0014 rule 6). Sets `desired_state: "paused"` and the Redis control flag. A pipeline stage stops at its next safe point and runs again on resume from its caches; a training run writes a checkpoint at its current step first; a job between stages pauses before the next one starts. The supervisor then moves the job to `paused` and the stage to `paused` | `202` Job; `409 invalid_state_transition` if not running, `409 conflict` if being cancelled |
+| `POST /jobs/{job_id}/resume` | Requeue a paused job from its paused stage (M8, RUN-1.2): `paused → queued`, the next attempt continues from the checkpoint or the caches | `202` Job; `409 invalid_state_transition` if not paused |
 
-Pause and resume (`POST /jobs/{job_id}/pause`, `/resume`) arrive in phase 2 with RUN-1.2.
+A paused job can be cancelled (`paused → cancelled`, at once). Pausing a queued job is refused: cancel it instead.
 
 Training request (M8, RUN-1.1, [ADR-0014](decisions/ADR-0014-training-jobs.md)):
 

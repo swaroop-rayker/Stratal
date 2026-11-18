@@ -187,7 +187,7 @@ Stages have their own simpler status: pending, queued, running, completed, faile
 | Situation | What happens |
 |---|---|
 | User cancels | `desired_state` is set and a Redis flag raised. The child stops at the next safe point. If it has not stopped after a grace period, the supervisor kills the child's process group |
-| User pauses (phase 2) | Same flag. The child checkpoints and exits. Resume is a new task that starts from the checkpoint |
+| User pauses (M8, RUN-1.2) | Same flag, set to `pause`. A pipeline stage stops at its next safe point and exits with code 4; a training stage checkpoints at its current step first. The supervisor moves the stage and the job to `paused` and clears the flag. Paused between stages, the next stage waits as `paused`. There is no grace-period kill: the work since the last safe point would be lost. Resume is a new attempt that starts from the checkpoint or the caches |
 | Child crashes | Supervisor records `failed` with the reason. Finished stages and cached batches are kept |
 | Worker container dies | The watchdog in `monitor` sees the heartbeat go stale and either requeues the job (work is resumable) or marks it failed |
 | No progress for T seconds | The watchdog marks the job `stalled` (RUN-1.7, phase 2) |

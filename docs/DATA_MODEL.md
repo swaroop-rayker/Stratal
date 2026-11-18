@@ -131,7 +131,7 @@ Indexes: `(state)`; `(created_at desc)`; partial `(heartbeat_at) where state = '
 | `idx` | integer | no | PK part; order within the job |
 | `name` | text | no | stage name |
 | `queue` | text | no | `cpu` or `gpu` |
-| `status` | text | no | `pending`, `queued`, `running`, `completed`, `failed`, `skipped`, `cancelled` |
+| `status` | text | no | `pending`, `queued`, `running`, `paused` (M8, RUN-1.2: stopped by a pause, or next to run when the job paused between stages), `completed`, `failed`, `skipped`, `cancelled` |
 | `config` | jsonb | no | |
 | `config_hash` | text | no | |
 | `input_version_id`, `output_version_id` | text | yes | FK |

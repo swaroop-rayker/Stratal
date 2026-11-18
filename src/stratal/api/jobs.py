@@ -217,6 +217,31 @@ def cancel_job(job_id: str, session: Db, bus: Redis) -> Json:
     return view
 
 
+@router.post("/jobs/{job_id}/pause", status_code=202, tags=["jobs"], response_model=schemas.Job)
+def pause_job(job_id: str, session: Db, bus: Redis) -> Json:
+    """Ask a running job to pause at its next safe point (RUN-1.2). ``409`` if it is not
+    running, or is being cancelled."""
+    with session.begin():
+        job = job_service.request_pause(session, job_id)
+        view = job_service.job_view(session, job)
+    bus.set_control(job_id, "pause")  # fast path; jobs.desired_state is the durable copy
+    job_service.after_commit(bus, job_id)
+    return view
+
+
+@router.post("/jobs/{job_id}/resume", status_code=202, tags=["jobs"], response_model=schemas.Job)
+def resume_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
+    """Requeue a paused job from the stage that paused (RUN-1.2). ``409`` if it is not
+    paused."""
+    with session.begin():
+        job, resume = job_service.request_resume(session, job_id)
+        view = job_service.job_view(session, job)
+    bus.clear_control(job_id)
+    enqueue(resume)
+    job_service.after_commit(bus, job_id)
+    return view
+
+
 @router.post("/jobs/{job_id}/retry", status_code=202, tags=["jobs"], response_model=schemas.Job)
 def retry_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
     """Requeue a failed job. Finished stages are reused. ``409`` if it is not failed."""

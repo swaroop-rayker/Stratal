@@ -448,7 +448,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] Decisions 1 to 7 recorded; ADR-0014, ADR-0015 and ADR-0016 approved (2026-11-17; decision 8 too: M8 not split)
 - [x] S-08 report delivered (2026-11-18, `docs/spikes/S-08-training.md`): the GPU is faster for both reference models; no tensor cache; checkpoint cadence kept. ADR-0007's limits not revised; per-container RAM with loader workers is measured with the training stage
 - [ ] `test_RUN_1_1_*`: a training job moves through every state; invalid transitions are rejected and every transition is logged
-- [ ] `test_RUN_1_2_*`: start, pause, resume and cancel each work on a running job
+- [x] `test_RUN_1_2_*`: start, pause, resume and cancel each work on a running job (2026-11-18: `test_M8_pause_resume.py` for pipeline jobs, `test_M8_training.py` for a training run, whose resumed weights match an uninterrupted run)
 - [x] `test_RUN_1_3_*`: kill mid-training, resume from the checkpoint; the metrics match an uninterrupted run within NFR-4's tolerance (2026-11-18: the weights match within 1e-6 on the CPU, `test_M8_training.py`)
 - [ ] 👤 `test_RUN_1_4_*` (gpu): after a training model is unloaded, `torch.cuda.memory_allocated` is back at baseline
 - [ ] 👤 `test_RUN_1_5_*` (gpu): a deliberately oversized batch fails cleanly with a smaller batch suggested, and nothing crashes
