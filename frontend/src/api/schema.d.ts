@@ -961,6 +961,8 @@ export interface components {
             state: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled" | "stalled";
             /** Desired State */
             desired_state: ("paused" | "cancelled") | null;
+            /** Pause Reason */
+            pause_reason?: ("user" | "thermal") | null;
             /** Attempt */
             attempt: number;
             /** Dataset */

@@ -48,6 +48,9 @@ def apply_to_stage(session: Session, event: Event) -> None:
         return
     if event.level != "DEBUG" and event.type in ("activity", "stage_progress", "stage_started"):
         stage.activity = event.message
+        # Activity is a sign of life too: long silent phases report activity at least
+        # once a minute, so they are not taken for a hang (RUN-1.7, ADR-0014 rule 7).
+        stage.last_progress_at = event.ts
     if event.metrics:
         stage.metrics = {**(stage.metrics or {}), **event.metrics}
     if event.step is not None:

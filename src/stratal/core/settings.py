@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # NFR-12: raw telemetry is kept this many days, then averaged per minute by `beat`.
     telemetry_keep_days: float = 7.0
     downsample_every_s: float = 3600.0
+    # RUN-1.6 (OC-3): pause GPU jobs at this temperature, resume those below the second.
+    thermal_pause_c: float = 83.0
+    thermal_resume_c: float = 75.0
+    # RUN-1.7 (OC-3): a running stage with no progress or activity for this long is stalled.
+    stall_timeout_s: float = 300.0
     # Time a cancelled child gets to stop by itself before its process group is killed.
     cancel_grace_s: float = 10.0
     # The job's own reporter thread (process RSS, PyTorch allocator).

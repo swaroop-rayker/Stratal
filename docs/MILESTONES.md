@@ -452,8 +452,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_RUN_1_3_*`: kill mid-training, resume from the checkpoint; the metrics match an uninterrupted run within NFR-4's tolerance (2026-11-18: the weights match within 1e-6 on the CPU, `test_M8_training.py`)
 - [ ] 👤 `test_RUN_1_4_*` (gpu): after a training model is unloaded, `torch.cuda.memory_allocated` is back at baseline
 - [ ] 👤 `test_RUN_1_5_*` (gpu): a deliberately oversized batch fails cleanly with a smaller batch suggested, and nothing crashes
-- [ ] `test_RUN_1_6_*`: a simulated high temperature pauses the job; it resumes when the temperature falls
-- [ ] `test_RUN_1_7_*`: a simulated hang becomes `stalled` after T seconds
+- [x] `test_RUN_1_6_*`: a simulated high temperature pauses the job; it resumes when the temperature falls (2026-11-18, `test_M8_watchdog.py`: 84 °C pauses the GPU job, 78 °C keeps it paused, 72 °C resumes it; CPU jobs and user pauses are left alone)
+- [x] `test_RUN_1_7_*`: a simulated hang becomes `stalled` after T seconds (2026-11-18, `test_M8_watchdog.py`, T shortened to 1 s; it becomes running again when progress returns)
 - [ ] `test_RUN_1_8_*`: SCR-04 updates live during a training run
 - [ ] `test_RUN_1_9_*`: a tiny model defaults to the faster device measured by the benchmark; a forced device is used as given
 - [ ] `test_REG_1_1_*`: any trained version traces to its exact dataset version and config

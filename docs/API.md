@@ -135,6 +135,8 @@ Version (abridged):
 
 A paused job can be cancelled (`paused → cancelled`, at once). Pausing a queued job is refused: cancel it instead.
 
+The Job carries `pause_reason` (M8, RUN-1.6): `user` for a pause asked through the API, `thermal` for one the watchdog made when the GPU reached `thermal_pause_c` (83 °C); null when the job is not paused. The watchdog resumes `thermal` pauses below `thermal_resume_c` (75 °C) and never a `user` one. A job whose stage is alive but silent for `stall_timeout_s` (300 s) is `stalled` (RUN-1.7) and returns to `running` when the stage reports again; it can be cancelled like a running job. Each of these actions is an `action` event with `metrics.code` `thermal_pause`, `thermal_resume` or `stalled`.
+
 Training request (M8, RUN-1.1, [ADR-0014](decisions/ADR-0014-training-jobs.md)):
 
 ```json
@@ -192,6 +194,7 @@ Job (abridged):
   "kind": "pipeline",
   "state": "running",
   "desired_state": null,
+  "pause_reason": null,
   "attempt": 1,
   "dataset": "coco10k",
   "current_stage": "label",

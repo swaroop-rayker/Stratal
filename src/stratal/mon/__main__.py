@@ -64,6 +64,10 @@ def main() -> None:
         enqueue=enqueue_stage,
         stale_after_s=settings.heartbeat_stale_after_s,
         max_attempts=settings.max_attempts,
+        bus=registry_bus,
+        stall_after_s=settings.stall_timeout_s,
+        thermal_pause_c=settings.thermal_pause_c,
+        thermal_resume_c=settings.thermal_resume_c,
     )
 
     def watch() -> None:

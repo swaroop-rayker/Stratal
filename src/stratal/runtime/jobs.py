@@ -31,7 +31,13 @@ from stratal.data import registry
 from stratal.db.models import Dataset, Job, JobStage
 from stratal.mon.events import utc_now
 from stratal.runtime import stages as stage_registry
-from stratal.runtime.states import TERMINAL, check_transition, record_creation, transition
+from stratal.runtime.states import (
+    TERMINAL,
+    Actor,
+    check_transition,
+    record_creation,
+    transition,
+)
 from stratal.train.config import TrainRequest
 
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{1,62}$")
@@ -394,7 +400,7 @@ def request_cancel(session: Session, job_id: str) -> tuple[Job, bool]:
     """
     job = get_job(session, job_id, lock=True)
     check_transition(job.id, job.state, "cancelled")
-    if job.state == "running":
+    if job.state in ("running", "stalled"):  # a child is still at work: it stops itself
         job.desired_state = "cancelled"
         return job, True
     transition(session, job, "cancelled", reason="cancelled by the user", actor="user")
@@ -402,7 +408,9 @@ def request_cancel(session: Session, job_id: str) -> tuple[Job, bool]:
     return job, False
 
 
-def request_pause(session: Session, job_id: str) -> Job:
+def request_pause(
+    session: Session, job_id: str, *, reason: Literal["user", "thermal"] = "user"
+) -> Job:
     """Ask a running job to pause (RUN-1.2, ADR-0014 rule 6).
 
     Sets ``desired_state = paused``. The stage stops at its next safe point (a
@@ -417,11 +425,15 @@ def request_pause(session: Session, job_id: str) -> Job:
             suggested_action="Wait for the cancellation to finish.",
         )
     job.desired_state = "paused"
+    job.pause_reason = reason
     return job
 
 
-def request_resume(session: Session, job_id: str) -> tuple[Job, Enqueue]:
-    """Requeue a paused job from the stage that was paused (RUN-1.2)."""
+def request_resume(
+    session: Session, job_id: str, *, actor: Actor = "user", reason: str = "resumed by the user"
+) -> tuple[Job, Enqueue]:
+    """Requeue a paused job from the stage that was paused (RUN-1.2); the watchdog also
+    resumes jobs it paused for heat (RUN-1.6)."""
     job = get_job(session, job_id, lock=True)
     if job.state != "paused":
         raise InvalidStateTransition(
@@ -439,7 +451,8 @@ def request_resume(session: Session, job_id: str) -> tuple[Job, Enqueue]:
     resume.finished_at = None
     job.current_stage_idx = resume.idx
     job.desired_state = None
-    transition(session, job, "queued", reason="resumed by the user", actor="user")
+    job.pause_reason = None
+    transition(session, job, "queued", reason=reason, actor=actor)
     return job, Enqueue(job.id, resume.idx, resume.queue)
 
 
@@ -509,6 +522,7 @@ def job_view(session: Session, job: Job) -> dict[str, Any]:
         "kind": job.kind,
         "state": job.state,
         "desired_state": job.desired_state,
+        "pause_reason": job.pause_reason,
         "attempt": job.attempt,
         "dataset": job.spec.get("dataset"),
         "current_stage": current if job.state not in TERMINAL else None,

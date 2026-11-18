@@ -93,6 +93,10 @@ class Job(Base):
             "desired_state IS NULL OR desired_state IN ('paused', 'cancelled')",
             name="ck_jobs_desired_state",
         ),
+        CheckConstraint(
+            "pause_reason IS NULL OR pause_reason IN ('user', 'thermal')",
+            name="ck_jobs_pause_reason",
+        ),
         Index("ix_jobs_state", "state"),
         Index("ix_jobs_created", "created_at"),
         Index(
@@ -104,6 +108,9 @@ class Job(Base):
     kind: Mapped[str] = mapped_column(Text)
     state: Mapped[str] = mapped_column(Text)
     desired_state: Mapped[str | None] = mapped_column(Text)
+    pause_reason: Mapped[str | None] = mapped_column(Text)
+    """Why a paused job is paused: 'user' or 'thermal' (RUN-1.6). Only thermal pauses are
+    resumed by the watchdog."""
     spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
     dataset_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("datasets.id"))
     input_version_id: Mapped[str | None] = mapped_column(

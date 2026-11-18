@@ -57,6 +57,8 @@ class Job(_Model):
     kind: str
     state: JobState
     desired_state: Literal["paused", "cancelled"] | None
+    pause_reason: Literal["user", "thermal"] | None = None
+    """Why a paused job is paused (RUN-1.6); null when it is not paused."""
     attempt: int
     dataset: str | None
     current_stage: str | None

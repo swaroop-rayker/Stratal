@@ -164,10 +164,10 @@ stateDiagram-v2
   running --> completed
   running --> failed
   running --> cancelled: cancel
-  running --> paused: pause (phase 2)
+  running --> paused: pause, or the GPU too hot
   running --> stalled: no progress for T seconds
   running --> queued: interrupted, will resume
-  paused --> queued: resume
+  paused --> queued: resume (or cooled, if paused for heat)
   paused --> cancelled: cancel
   stalled --> running: progress resumes
   stalled --> failed: gave up
@@ -180,7 +180,7 @@ stateDiagram-v2
 
 Any transition not drawn is rejected, and every transition is written to `job_transitions` with its reason and who caused it (RUN-1.1.AC1). A separate `desired_state` field holds a pause or cancel request until the job reaches a safe point, so the UI can show "cancelling" honestly.
 
-Stages have their own simpler status: pending, queued, running, completed, failed, skipped, cancelled.
+Stages have their own simpler status: pending, queued, running, paused (M8), completed, failed, skipped, cancelled. A `stalled` job's stage stays `running`: the stage has not stopped, it has gone quiet.
 
 ### 4.3 Stopping and recovering
 
@@ -190,7 +190,8 @@ Stages have their own simpler status: pending, queued, running, completed, faile
 | User pauses (M8, RUN-1.2) | Same flag, set to `pause`. A pipeline stage stops at its next safe point and exits with code 4; a training stage checkpoints at its current step first. The supervisor moves the stage and the job to `paused` and clears the flag. Paused between stages, the next stage waits as `paused`. There is no grace-period kill: the work since the last safe point would be lost. Resume is a new attempt that starts from the checkpoint or the caches |
 | Child crashes | Supervisor records `failed` with the reason. Finished stages and cached batches are kept |
 | Worker container dies | The watchdog in `monitor` sees the heartbeat go stale and either requeues the job (work is resumable) or marks it failed |
-| No progress for T seconds | The watchdog marks the job `stalled` (RUN-1.7, phase 2) |
+| No progress for T seconds (M8, RUN-1.7) | The watchdog marks the job `stalled` when its running stage has reported no progress or activity for `stall_timeout_s` (300 s, OC-3) while the heartbeat is fresh, so the worker is alive. Progress or activity moves it back to `running`; if the stage ends meanwhile, the supervisor finishes it as usual. The supervisor keeps heartbeating a stalled job, and a stalled job with a stale heartbeat is requeued like a running one. Cancel works as for a running job |
+| GPU too hot (M8, RUN-1.6) | The watchdog reads the GPU temperature from the monitor's newest sample. At `thermal_pause_c` (83 °C) it pauses the running GPU job as a user pause would, with `pause_reason: thermal`. Below `thermal_resume_c` (75 °C) it resumes the jobs paused for heat, and only those; between the two nothing changes, so the job does not flap |
 | Laptop sleeps | See [§8](#8-sleep-and-suspend) |
 
 ## 5. Events and telemetry

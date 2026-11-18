@@ -49,6 +49,12 @@ class Claim:
     queue: str
 
 
+def _pause_reason(job: Job) -> str:
+    if job.pause_reason == "thermal":
+        return "paused at a safe point: the GPU is too hot (RUN-1.6)"
+    return "paused at a safe point by the user"
+
+
 def worker_name() -> str:
     return f"{socket.gethostname()}:{os.getpid()}"
 
@@ -72,7 +78,7 @@ def claim(job_id: str, idx: int, worker: str) -> Claim | None:
             # Paused between stages: this stage waits for the resume (RUN-1.2).
             stage.status = "paused"
             job.desired_state = None
-            transition(session, job, "paused", reason="paused by the user", actor="supervisor")
+            transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")
             return None
         if job.state == "queued":
             job.attempt += 1
@@ -99,7 +105,7 @@ def heartbeat(job_id: str, attempt: int) -> tuple[bool, str | None]:
     with Session(get_engine()) as session, session.begin():
         row = session.execute(
             update(Job)
-            .where(Job.id == job_id, Job.attempt == attempt, Job.state == "running")
+            .where(Job.id == job_id, Job.attempt == attempt, Job.state.in_(("running", "stalled")))
             .values(heartbeat_at=func.now())
             .returning(Job.desired_state)
         ).first()
@@ -173,8 +179,10 @@ def finalize(
         stage = session.get(JobStage, (job_id, idx))
         if job is None or stage is None:
             return "superseded", None
-        if job.attempt != held.attempt or job.state != "running":
+        if job.attempt != held.attempt or job.state not in ("running", "stalled"):
             return "superseded", None  # the watchdog gave this job to someone else
+        if job.state == "stalled":  # the stage ended, so it was not hung after all (RUN-1.7)
+            transition(session, job, "running", reason="the stage finished", actor="supervisor")
         now = utc_now()
         stage.finished_at = now
         cancel_requested = cancel_requested or job.desired_state == "cancelled"
@@ -191,7 +199,7 @@ def finalize(
                 following.input_version_id = stage.output_version_id
                 job.current_stage_idx = following.idx
                 job.desired_state = None
-                transition(session, job, "paused", reason="paused by the user", actor="supervisor")
+                transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")
                 outcome = "paused"
             elif following is not None and not cancel_requested:
                 following.status = "queued"
@@ -214,7 +222,7 @@ def finalize(
         elif code == EXIT_PAUSED and not cancel_requested:
             stage.status = "paused"
             job.desired_state = None
-            transition(session, job, "paused", reason="paused at a safe point", actor="supervisor")
+            transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")
             outcome = "paused"
         elif cancel_requested or code == EXIT_CANCELLED:
             stage.status = "cancelled"

@@ -109,6 +109,7 @@ Indexes: `(dataset_id, created_at desc)`; `(stage, parent_version_id, config_has
 | `kind` | text | no | `pipeline` in phase 1; later `train`, `hpo_study`, `hpo_trial`, `eval`, `maintenance` |
 | `state` | text | no | `queued`, `running`, `paused`, `completed`, `failed`, `cancelled`, `stalled` (check constraint) |
 | `desired_state` | text | yes | `paused` or `cancelled` while a request is pending |
+| `pause_reason` | text | yes | why a paused job is paused: `user` or `thermal` (M8, RUN-1.6); set with the pause request, kept while paused, cleared on resume. The watchdog resumes only `thermal` pauses |
 | `spec` | jsonb | no | the fully resolved request |
 | `dataset_id` | bigint | yes | FK |
 | `input_version_id` | text | yes | FK |
@@ -142,7 +143,7 @@ Indexes: `(state)`; `(created_at desc)`; partial `(heartbeat_at) where state = '
 | `activity` | text | yes | latest plain-language message (MON-1.2) |
 | `metrics` | jsonb | yes | latest stage metrics (MON-3) |
 | `peaks` | jsonb | yes | peak VRAM, peak RAM, max temperature (MON-2.5) |
-| `last_progress_at` | timestamptz | yes | used for stall detection |
+| `last_progress_at` | timestamptz | yes | the last progress report or activity message from the stage (activity counts since M8, ADR-0014 rule 7); the watchdog's stall detection (RUN-1.7) compares it with `stall_timeout_s` |
 | `started_at`, `finished_at` | timestamptz | yes | |
 | `error` | jsonb | yes | |
 
