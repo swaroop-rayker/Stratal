@@ -69,15 +69,17 @@ flowchart LR
 | `redis` | Celery broker, event stream buffer, live fan-out, control flags | M0 | no | 0.25 GB |
 | `api` | HTTP and SSE. Loads no models and does not import PyTorch | M0 | no | 0.4 GB |
 | `worker-cpu` | CPU stages: ingest, clean, preprocess, filter, split, evaluate; since M8 also training on the CPU, from its own image with PyTorch's CPU build (`ml-cpu` extra, ADR-0014 rule 11; 1.97 GB against `api`'s 650 MB) | M2 | no | 2.5 GB |
-| `worker-gpu` | GPU stages, one at a time: label, and later training | M2 | yes | 4.5 GB |
+| `worker-gpu` | GPU stages, one at a time: label and training | M2 | yes | 3.5 GB (4.5 GB until M8) |
 | `monitor` | Collector (events to Postgres), sampler (psutil + NVML), watchdog (dead and stalled jobs) | M2 | NVML only | 0.25 GB |
 | `frontend` | Vite dev server for the web UI (React, SPEC §7.4); proxies `/api` to `api`. Its checks run on demand in `frontend-tools` (1.5 GB, profile `dev`, like `dev`) | M6 | no | 0.4 GB |
 | `beat` | Scheduled maintenance: telemetry downsampling (NFR-12) | M7 | no | 0.2 GB |
-| `inference` | Long-lived process that holds at most one model for `/predict` (REG-1.4) | Phase 2 | yes | to be set |
+| `inference` | Long-lived process that holds at most one model for `/predict` (REG-1.4, ADR-0016); the `worker-gpu` image, profile `gpu`, port 8100 on the Compose network only | M8 | yes | 1.0 GB |
 | `ollama` | Local LLM serving (LLM-1.1) | Phase 3 | yes | to be set |
 | Host script | PowerShell on Windows: keeps the laptop awake while jobs run, reports sleep and resume | M2 | – | – |
 
 The limits sum to 9.0 GB, which is how NFR-2 is enforced. Spike S-07 ([RISKS.md](RISKS.md)) measured them while labelling 2,000 images on 2026-11-15: every container stayed under half its limit (worker-gpu 2.2 of 4.5 GB, worker-cpu 0.9 of 2.5 GB), so they are kept, with worker-gpu's headroom left for training in phase 2.
+
+**Revised in M8 (2026-11-18, ADR-0016 rule 7).** `inference` takes 1 GB from `worker-gpu`, so the sum stays 9.0 GB. Measured from each container's cgroup (`memory.peak`): `worker-gpu` peaked at 1,631 MiB training on CIFAR-10 with 4 loader workers (job_0033, a 2-epoch MLP; the per-process RSS sum said 6.3 GB, counting shared pages once per worker), against 2.2 GB while labelling; `inference` at 397 MiB serving `small_cnn` on the CPU.
 
 ## 3. The phase-1 pipeline
 

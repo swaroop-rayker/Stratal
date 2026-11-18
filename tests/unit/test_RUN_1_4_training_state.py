@@ -72,3 +72,16 @@ def test_RUN_1_4_a_training_state_is_what_the_vram_manager_loads() -> None:
     state = TrainingState(FakeModel(), FakeAdam(FakeModel()), info=INFO)
     assert state.info.name == "small_cnn"
     assert callable(state.close)
+
+
+@owner_unit
+def test_RUN_1_4_close_accepts_a_model_without_an_optimizer() -> None:
+    """Contract rule 6 (added 2026-11-18 for the inference service, ADR-0016): a model
+    held for inference has no optimizer."""
+    model = FakeModel()
+    state = TrainingState(model, None, info=INFO)
+
+    state.close()
+    state.close()
+
+    assert state.model is None and state.optimizer is None

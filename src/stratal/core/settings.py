@@ -49,6 +49,18 @@ class Settings(BaseSettings):
     event_stream_maxlen: int = 100_000
     # Where source folders are mounted in the api and worker containers.
     sources_dir: Path = Path("/sources")
+    # REG-1.4, ADR-0016: the inference service, reached by the API on the Compose network.
+    inference_url: str = "http://inference:8100"
+    inference_port: int = 8100
+    # Decision 2: below this many parameters a model runs on the CPU while a job holds the
+    # GPU; at or above it the request is refused with gpu_busy. 50 M is about 200 MB of fp32.
+    inference_cpu_max_parameters: int = 50_000_000
+    # Rule 5: the lease goes back after this long without a GPU request.
+    inference_idle_release_s: float = 60.0
+    # How often the service checks for idleness and for a waiting job.
+    inference_check_interval_s: float = 1.0
+    # How long the API waits for a prediction, including a model load on the CPU.
+    inference_timeout_s: float = 120.0
 
 
 @lru_cache

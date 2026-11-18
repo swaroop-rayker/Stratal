@@ -118,6 +118,14 @@ class VramInsufficient(StratalError):
     http_status = 409
 
 
+class WeightsDeleted(StratalError):
+    """A version's weights were deleted by retention; its metadata remains (REG-2.7)."""
+
+    code = "weights_deleted"
+    title = "Weights deleted"
+    http_status = 409
+
+
 class GpuBusy(StratalError):
     """Another process holds the GPU lease (BUG6, ADR-0006 rule 2)."""
 

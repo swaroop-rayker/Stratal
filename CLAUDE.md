@@ -84,7 +84,7 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 
 | Purpose | Command |
 |---|---|
-| Start postgres, redis, api, worker-cpu, monitor, beat and frontend | `docker compose up -d` (add `--profile gpu` for the GPU worker) |
+| Start postgres, redis, api, worker-cpu, monitor, beat and frontend | `docker compose up -d` (add `--profile gpu` for the GPU worker and the inference service) |
 | Stop them | `docker compose down` |
 | All quality gates (format, lint, types, tests, integration; training tests in worker-gpu) | `.\scripts\check.ps1` |
 | Same, without integration tests | `.\scripts\check.ps1 -Fast` |

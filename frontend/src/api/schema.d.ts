@@ -868,6 +868,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models/{version_id}/predict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Predict
+         * @description A prediction from a registered version (REG-1.4). Runs on the GPU when it is free;
+         *     while a job holds it, a small model runs on the CPU and the result says so; a large
+         *     one is refused with ``gpu_busy`` (decision 2).
+         */
+        post: operations["predict_api_v1_models__version_id__predict_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -1646,6 +1668,46 @@ export interface components {
              * Format: date-time
              */
             at: string;
+        };
+        /** PredictRequest */
+        PredictRequest: {
+            /**
+             * Image B64
+             * @description An image file, base64-encoded.
+             */
+            image_b64?: string | null;
+            /**
+             * Blob
+             * @description An image already in the data folder, by its SHA-256 (a dataset row's sha256 or derived_sha256).
+             */
+            blob?: string | null;
+        };
+        /** PredictedClass */
+        PredictedClass: {
+            /** Class */
+            class: string;
+            /** Probability */
+            probability: number;
+        };
+        /** Prediction */
+        Prediction: {
+            /** Version Id */
+            version_id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /**
+             * Device
+             * @enum {string}
+             */
+            device: "cpu" | "gpu";
+            /** Fallback Reason */
+            fallback_reason: string | null;
+            /** Top */
+            top: components["schemas"]["PredictedClass"][];
+            /** Load Ms */
+            load_ms: number | null;
+            /** Total Ms */
+            total_ms: number;
         };
         /**
          * ProcessSample
@@ -3950,6 +4012,48 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Job"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    predict_api_v1_models__version_id__predict_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PredictRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Prediction"];
+                };
+            };
+            /** @description gpu_busy, weights_deleted or a partial version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

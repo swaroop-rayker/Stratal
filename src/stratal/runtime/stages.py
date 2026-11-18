@@ -555,34 +555,23 @@ def _run_retention(run: StageRun) -> StageResult:
 
     config = RetentionConfig.model_validate(run.config)
     bus = Bus(get_settings().redis_url, timeout_s=2.0)
-    try:
-        loaded, redis_ok = retention.loaded_from(bus.get_inference_loaded)
-    finally:
-        bus.close()
-    if not redis_ok:
-        run.ctx.emit(
-            stage="retention",
-            level="WARN",
-            message="Redis is unreachable: versions the policy would delete are kept, since "
-            "the one loaded for inference cannot be told apart",
-            reason="Redis did not answer.",
-            suggested_action="Check Redis (GET /health) and run retention again.",
-        )
 
     def emit(**fields: Any) -> None:
         run.ctx.emit(stage="retention", **fields)
 
-    metrics = retention.run(
-        run.engine,
-        run.data_dir,
-        emit,
-        job_id=run.ctx.job_id,
-        lineage_ids=config.lineage_ids,
-        dry_run=config.dry_run,
-        confirmed=config.confirmed,
-        loaded=loaded,
-        redis_ok=redis_ok,
-    )
+    try:
+        metrics = retention.run(
+            run.engine,
+            run.data_dir,
+            emit,
+            job_id=run.ctx.job_id,
+            lineage_ids=config.lineage_ids,
+            dry_run=config.dry_run,
+            confirmed=config.confirmed,
+            read_loaded=bus.get_inference_loaded,
+        )
+    finally:
+        bus.close()
     return StageResult(metrics=metrics)
 
 

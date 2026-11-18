@@ -516,11 +516,14 @@ def run(
     lineage_ids: Sequence[str] | None,
     dry_run: bool,
     confirmed: Sequence[str] | None,
-    loaded: dict[str, Any] | None,
-    redis_ok: bool,
+    read_loaded: Callable[[], dict[str, Any] | None],
 ) -> dict[str, MetricValue]:
     """One retention run (REG-2.9). ``confirmed`` limits deletions to a plan the owner
-    confirmed (REG-2.10); ``None`` applies the policy as it stands (REG-2.2)."""
+    confirmed (REG-2.10); ``None`` applies the policy as it stands (REG-2.2).
+
+    What inference holds is read again for each lineage, under that lineage's lock: the
+    service takes the same lock to read weights, so a version it starts loading after
+    this read waits for the deletes and then finds its weights gone (ADR-0016 rule 6)."""
     totals = Totals()
     allowed = set(confirmed) if confirmed is not None else None
     with Session(engine) as session:
@@ -536,6 +539,15 @@ def run(
         with store.holding_lineage(engine, lineage_id):
             if not dry_run:
                 _recover(engine, data_dir, lineage_id, job_id, emit, totals)
+            loaded, redis_ok = loaded_from(read_loaded)
+            if not redis_ok:
+                emit(
+                    level="WARN",
+                    message="Redis is unreachable: versions the policy would delete are kept, "
+                    "since the one loaded for inference cannot be told apart",
+                    reason="Redis did not answer.",
+                    suggested_action="Check Redis (GET /health) and run retention again.",
+                )
             with Session(engine) as session:
                 use = in_use(session, loaded, redis_ok=redis_ok)
                 plan, keep, source = lineage_plan(session, lineage_id, read_values(session), use)

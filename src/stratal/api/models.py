@@ -1,17 +1,24 @@
 """The model registry and retention (docs/API.md §3.9; REG-1.1, REG-1.2, REG-2; ADR-0015).
 
 Lineages and versions; pins; disk use measured on disk; re-train; the retention
-dry run and run. ``/predict`` arrives with REG-1.4.
+dry run and run; ``/predict``, forwarded to the inference service (REG-1.4).
 """
 
+import json
+import urllib.error
+import urllib.request
+from collections.abc import Callable
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from stratal.api import schemas
 from stratal.api.jobs import Db, Limit, Queue, Redis
+from stratal.api.problem import PROBLEM_JSON
 from stratal.core.bus import Bus
+from stratal.core.errors import DependencyUnavailable
 from stratal.core.settings import get_settings
 from stratal.registry import retention, store
 from stratal.runtime import jobs as job_service
@@ -179,3 +186,73 @@ def retention_run(body: RunRequest, session: Db, enqueue: Queue, bus: Redis) -> 
     enqueue(first)
     job_service.after_commit(bus, job.id)
     return view
+
+
+# -- /predict (REG-1.4, ADR-0016 rule 1) --------------------------------------------
+
+Forward = Callable[[dict[str, Any]], tuple[int, dict[str, Any]]]
+"""Send a body to the inference service's ``/predict``: ``(status, JSON body)``."""
+
+
+def _forward_http(body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    """POST to the inference service with the standard library: the API image keeps no
+    HTTP client dependency, and no ML library (ADR-0016)."""
+    settings = get_settings()
+    request = urllib.request.Request(
+        f"{settings.inference_url}/predict",
+        data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=settings.inference_timeout_s) as response:
+            return response.status, json.loads(response.read())
+    except urllib.error.HTTPError as exc:
+        try:
+            return exc.code, json.loads(exc.read())
+        except ValueError:
+            return exc.code, {"code": "internal_error", "detail": f"HTTP {exc.code}"}
+    except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+        raise DependencyUnavailable(
+            f"The inference service at {settings.inference_url} did not answer ({exc}).",
+            suggested_action="Start it with the GPU profile: docker compose --profile gpu "
+            "up -d inference",
+        ) from None
+
+
+def get_forward() -> Forward:
+    """Dependency, so tests can call the inference app in process."""
+    return _forward_http
+
+
+class PredictRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    image_b64: str | None = Field(default=None, description="An image file, base64-encoded.")
+    blob: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+        description="An image already in the data folder, by its SHA-256 (a dataset row's "
+        "sha256 or derived_sha256).",
+    )
+
+
+@router.post(
+    "/models/{version_id}/predict",
+    response_model=schemas.Prediction,
+    responses={409: {"description": "gpu_busy, weights_deleted or a partial version"}},
+)
+def predict(
+    version_id: str,
+    body: PredictRequest,
+    session: Db,
+    forward: Annotated[Forward, Depends(get_forward)],
+) -> Any:
+    """A prediction from a registered version (REG-1.4). Runs on the GPU when it is free;
+    while a job holds it, a small model runs on the CPU and the result says so; a large
+    one is refused with ``gpu_busy`` (decision 2)."""
+    store.get_version(session, version_id)  # 404 here, before reaching the service
+    status, payload = forward({"version_id": version_id, **body.model_dump(exclude_none=True)})
+    if status >= 400:
+        return JSONResponse(status_code=status, content=payload, media_type=PROBLEM_JSON)
+    return payload

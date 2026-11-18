@@ -644,6 +644,26 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The token hashes the new settings and every version to delete with its size, so any change in between (a pin, a new run) gives another token, and the save is refused again with the new plan. Saves also carry the section's `version`, so a stale form gets `409 conflict`. Problem documents gained RFC 9457 extension members for this (`plan`, `version`).
 - **Why:** The owner sees the exact versions and sizes before anything is deleted, and nothing outside what was seen is deleted by that save. Runs after it apply the saved settings without asking, as REG-2.2 expects.
 
+**Inference serves on the CPU until RUN-1.4 is written** (M8, REG-1.4, ADR-0016 rule 3; the owner's choice, 2026-11-18)
+- **What:** While `TrainingState.close` is the stub, the inference service never uses the GPU: models under 50 M parameters run on the CPU, larger ones are refused, and `fallback_reason` names RUN-1.4. This replaces "it will stop it from serving" in the entry above.
+- **How:** At its first decision the service tries `close()` on a tiny CPU model with no optimizer; `NotImplementedError` means unwritten. `close()`'s contract gained rule 6 (the optimizer may be `None`) with a strict expected-failure test; the real card's check is `tests/gpu/test_REG_1_4_inference_gpu.py`.
+- **Why:** The guard exists because a GPU unload could not be proven; the CPU path never touches VRAM. Serving there keeps `/predict` usable and REG-1.4's test honest, while the GPU half stays visibly unfinished.
+
+**The inference service's GPU logic is tested on a fake card** (M8, REG-1.4)
+- **What:** Placement, one model at a time, verified unloads, exit on a leak, and giving the lease back are tested with `FakeGpuSide` (memory counted by `FakeGpu`, tensors on the CPU) and the real PostgreSQL lease.
+- **How:** `ModelHolder` takes the card as a `GpuSide`, the state class and the leak action as arguments; production passes `TorchGpuSide`, `TrainingState` and `os._exit(3)`. The inference app runs in the test process behind the API's `get_forward` dependency.
+- **Why:** The real GPU path cannot run before the owner's `close()` exists, and the decisions it makes are what REG-1.4 and ADR-0016 specify.
+
+**The API forwards with the standard library** (M8, REG-1.4, ADR-0016 rule 1)
+- **What:** `POST /api/v1/models/{id}/predict` posts to `inference_url` with `urllib.request` and passes problem documents through unchanged.
+- **How:** A connection failure is `503 dependency_unavailable` with the command that starts the service.
+- **Why:** No requirement asks for an HTTP client library, and the API image stays free of ML libraries.
+
+**Memory: 1 GB from worker-gpu to inference** (M8, ADR-0007, ADR-0016 rule 7)
+- **What:** `worker-gpu` 3.5 GB, `inference` 1.0 GB; the sum stays 9.0 GB.
+- **How:** Measured from cgroup `memory.peak`, not per-process RSS: a 2-epoch MLP on CIFAR-10 with 4 loader workers in its own lineage (job_0033, so `small_cnn · cifar10` was untouched) peaked at 1,631 MiB; the inference service at 397 MiB.
+- **Why:** Per-process RSS summed 6.3 GB for the same run, because each loader worker counts the shared PyTorch pages again; only the cgroup figure is what the limit enforces.
+
 **Retention runs after every run that ends** (M8, REG-2.2, REG-2.6, REG-2.9)
 - **What:** The supervisor queues a `retention` job for a run's lineage when the run completes or is cancelled; cancelling a paused run through the API does the same. It runs on the CPU queue, torch-free.
 - **How:** Queued after the run's outcome is committed, in its own transaction. If that fails, the run's outcome stands and the next run cleans up.

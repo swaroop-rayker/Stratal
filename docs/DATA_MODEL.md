@@ -365,6 +365,7 @@ File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.pa
 | `stratal:job:<job_id>:control` | string | `pause` or `cancel`. Fast path only; `jobs.desired_state` is the durable copy |
 | `stratal:active` | hash | job ID → `{stage, queue, since}`. Read by the sampler to tag samples and pick the interval |
 | `stratal:system` | string | JSON `{gpu_name, gpu_error, vram_total_mb, ram_total_mb, cpu_count}`, written by the monitor when it starts; read by `GET /system` (M6) |
+| `stratal:gpu:wanted` | string | the holder name of a job waiting for the GPU lease, set with a 5 s life and renewed while it waits; the inference service then releases the lease (ADR-0016 rule 5, M8) |
 | `stratal:inference:loaded` | string | JSON `{version_id, device, since}`: the model the inference service holds, absent when it holds none (ADR-0016 rule 6). Retention treats that version as in use; if Redis cannot be read, it deletes nothing the rule does not keep anyway (REG-2.8, M8) |
 | Celery's own keys | – | queues `cpu` and `gpu` |
 

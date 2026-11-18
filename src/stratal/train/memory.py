@@ -56,6 +56,10 @@ class TrainingState:
        at the baseline it measured before the load, within v1's tolerance
        (RUN-1.4.AC1). This is checked on the card, after a few real training
        steps with Adam, in ``tests/gpu/test_RUN_1_4_training_unload.py``.
+    6. ``optimizer`` may be ``None``: the inference service (ADR-0016) holds a
+       trained model with no optimizer and unloads it through the same class.
+       Rules 1, 3, 4 and 5 still hold; rule 2 has nothing to do. (Added
+       2026-11-18; ``test_RUN_1_4_close_accepts_a_model_without_an_optimizer``.)
     """
 
     def __init__(self, model: Any, optimizer: Any, *, info: ModelInfo) -> None:

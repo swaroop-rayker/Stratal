@@ -47,6 +47,7 @@ Every error response uses RFC 9457 problem details with media type `application/
 | `model_integrity_failed` | 502 | A downloaded model file did not match its pinned size or hash; it was not kept (NFR-8) |
 | `vram_insufficient` | 409 | A model load was refused: free VRAM is below its estimate (ADR-0006) |
 | `gpu_busy` | 409 | Another process holds the GPU lease; the detail names it (BUG6) |
+| `weights_deleted` | 409 | The version's weights were deleted by retention; re-train it (REG-2.7) |
 | `model_not_pulled` | 409 | An allowed model that has not been downloaded; run time never downloads (NFR-7) |
 | `internal_error` | 500 | Anything unexpected. The detail carries the request ID, not a stack trace |
 
@@ -274,6 +275,7 @@ Built in M5 (2026-11-16). Details:
 | `POST /model-versions/{version_id}/pin` | Exempt from retention (REG-2.5); `409 conflict` unless trained with weights on disk | `200` version detail |
 | `DELETE /model-versions/{version_id}/pin` | Unpin; deletes nothing now | `200` version detail |
 | `POST /model-versions/{version_id}/retrain` | A run with the version's exact config and dataset version (REG-2.7); `409 conflict` for a base or partial version | `202` Job |
+| `POST /models/{version_id}/predict` | A prediction (REG-1.4). Body `{image_b64}` or `{blob}` (a data-folder SHA-256, e.g. a row's `derived_sha256`) | `200 {version_id, lineage_id, device, fallback_reason, top: [{class, probability}], load_ms, total_ms}` |
 | `POST /retention/plan` | The dry run, answered at once (REG-2.9). Body `{lineage_id?, values?}`; `values` plans with other settings than the saved ones | `200` plan |
 | `POST /retention/run` | Queue a retention job with the saved settings. Body `{lineage_id?, dry_run?}` | `202` Job |
 
@@ -283,7 +285,8 @@ Built in M5 (2026-11-16). Details:
 - Each version also carries `weights_deleted_by_job_id`, `retention_action` (`keep`, `delete` at the next cleanup, `blocked`, or `none` once deleted) and `retention_reason`, under the saved settings. A lineage's detail adds `retention: {keep_intermediate, source: global | lineage, last_run: {job_id, finished_at, versions_deleted, bytes_freed} | null}`.
 - **Plan:** `{lineages: [{lineage_id, name, keep_intermediate, source, latest_version_id, delete, keep, blocked, checkpoints, bytes_to_free}], versions_to_delete, bytes_to_free, token, settings_version}`. Each decision is `{version_id, reason, weights_bytes, main_metric, created_at}`; `blocked` lists versions the policy would delete that are in use or a parent (REG-2.8); `checkpoints` those of completed and cancelled runs (`{job_id, bytes, reason}`). `token` names this exact plan.
 - **Retention jobs** have kind `retention` and one `retention` stage on the CPU queue. The supervisor queues one for a run's lineage after every training run that completes or is cancelled; cancelling a paused run through the API does too. Events: `plan` (per lineage, and each would-be deletion in a dry run), `blocked` (WARN, with `reason` and `suggested_action`), `deleting` and `delete` (`version_id`, `lineage_id`, `bytes_freed`), `checkpoint` (`checkpoint_job_id`, `bytes_freed`), `recover` and `orphan` (WARN). Metrics: `lineages`, `dry_run`, and `versions_deleted`, `bytes_freed`, `checkpoints_removed`, `blocked`, `orphans_removed`, `recovered`, or for a dry run `would_delete` and `bytes_to_free`.
-- Unknown IDs are `404 not_found`. `POST /models/{version}/predict` follows in M8's next step.
+- **Predict** (ADR-0016). The API forwards to the `inference` service (`inference_url`) with the standard library; the service holds one model. A model already on the GPU is used there; otherwise the GPU lease is tried once. While a job holds it, a model under `inference_cpu_max_parameters` (50 M) runs on the CPU and `fallback_reason` says why; a larger one is `409 gpu_busy` naming the job. Until the owner's `TrainingState.close` (RUN-1.4) exists the GPU is not used at all and `fallback_reason` says so. A version whose weights were deleted is `409 weights_deleted`; a partial one `409 conflict`; an undecodable image `422`; the service not running `503 dependency_unavailable`, saying how to start it. The image is resized to the model's input with LANCZOS and normalised as in training.
+- Unknown IDs are `404 not_found`.
 
 ### 3.10 Settings (M8, OC-9; SCR-14)
 
@@ -457,6 +460,8 @@ Still planned for phase 1: run a pipeline.
 | Retention | `stratal.registry.retention` | `RetentionValues`, `read_values`, `write_values`, `values_version`, `effective_keep`; `in_use(session, loaded, *, redis_ok) -> InUse`; `build_plan(session, *, use, lineage_ids, values)`; `run(engine, data_dir, emit, *, job_id, lineage_ids, dry_run, confirmed, loaded, redis_ok)`; `disk_report`, `last_run`, `decisions` |
 | Lineage lock | `stratal.registry.store` | `lock_lineage(session, id)` (transaction), `holding_lineage(engine, id)` (a block): one Postgres advisory lock per lineage, taken by every writer of registry files and by retention |
 | Registry jobs | `stratal.runtime.jobs` | `create_retention_job(session, *, lineage_ids, dry_run, confirmed, reason)`, `retention_after_run(session, job)`, `create_retrain_job(session, version_id)` |
+| GPU lease for a long-lived holder | `stratal.runtime.gpu_lease` | `HeldLease(engine, *, holder)`: `try_acquire() -> bool` (never waits), `release()`, `held`; `gpu_lease(..., on_wait=)` calls `on_wait(holder)` while it waits, by default setting `stratal:gpu:wanted` |
+| Inference service | `stratal.inference` | `holder.ModelHolder(*, engine, settings, bus, gpu, state_cls, on_leak)`: `predict(version_id, image)`, `status()`, `tick()`, `run_checks(stop)`, `shutdown()`; `holder.decode_image`, `prepare_input`, `close_written`; `app.create_inference_app(holder, decode)` (`POST /predict`, `GET /status`); `python -m stratal.inference` |
 | Inference holdings | `stratal.core.bus` | `set_inference_loaded({version_id, device, since} | None)`, `get_inference_loaded()`: Redis key `stratal:inference:loaded`, written by the inference service (ADR-0016 rule 6), read by retention |
 
 ## 7. Later phases

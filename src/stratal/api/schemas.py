@@ -705,3 +705,27 @@ class SettingsSaved(_Model):
     section: SettingsSection
     job_id: str | None
     """The retention job the save queued, when it deletes weights."""
+
+
+# -- prediction (REG-1.4; API.md §3.9) ---------------------------------------------
+
+
+class PredictedClass(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    class_: str = Field(alias="class")
+    probability: float
+
+
+class Prediction(_Model):
+    version_id: str
+    lineage_id: str
+    device: Literal["cpu", "gpu"]
+    """Which device served it (ADR-0016 rule 4)."""
+    fallback_reason: str | None
+    """Why the CPU served it, when it did: the GPU's holder, or why inference avoids it."""
+    top: list[PredictedClass]
+    """Up to five classes, most probable first."""
+    load_ms: float | None
+    """Time to load the model, when this request loaded it."""
+    total_ms: float
