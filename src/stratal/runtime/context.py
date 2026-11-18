@@ -22,24 +22,29 @@ log = get_logger("stratal.job")
 CRASH_AT_ENV = "STRATAL_TEST_CRASH_AT"
 """Test-only crash point for the NFR-5 kill tests. ``<stage>:step:<k>`` kills the
 stage process with SIGKILL right after that stage reports progress at or past step
-``k``; ``<stage>:event:<n>`` right after its ``n``-th event. It fires on a job's
-first attempt only, so a retry runs through. Events are spooled before the kill,
-and stages report progress after a batch is cached, so the kill lands just after
-a durable point, as a real crash between batches would."""
+``k``; ``<stage>:event:<n>`` right after its ``n``-th event; ``<stage>:substage:<name>``
+right after its first event of that substage. It fires on a job's first attempt
+only, so a retry runs through. Events are spooled before the kill, and stages
+report progress after a batch is cached, so the kill lands just after a durable
+point, as a real crash between batches would."""
 
 
 class _CrashPoint:
     def __init__(self, spec: str) -> None:
-        stage, kind, number = spec.split(":")
-        if kind not in ("step", "event"):
-            raise ValueError(f"{CRASH_AT_ENV}: kind must be step or event, not {kind!r}")
-        self.stage, self.kind, self.number = stage, kind, int(number)
+        stage, kind, at = spec.split(":")
+        if kind not in ("step", "event", "substage"):
+            raise ValueError(f"{CRASH_AT_ENV}: kind must be step, event or substage, not {kind!r}")
+        self.stage, self.kind = stage, kind
+        self.substage = at if kind == "substage" else None
+        self.number = int(at) if kind != "substage" else 0
         self.events = 0
 
     def reached(self, event: Event) -> bool:
         if event.stage != self.stage:
             return False
         self.events += 1
+        if self.kind == "substage":
+            return event.substage == self.substage
         if self.kind == "event":
             return self.events >= self.number
         return event.step is not None and event.step >= self.number

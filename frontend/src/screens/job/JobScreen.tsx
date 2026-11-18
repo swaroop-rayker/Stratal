@@ -10,7 +10,7 @@ import { useJobFeed } from "../../api/stream";
 import { Modal, ModalClose } from "../../components/Modal";
 import { copy, ErrorState } from "../../components/states";
 import { Badge, Button, Icon, Progress, Skeleton, StatePill } from "../../components/ui";
-import { clock, count, duration, gb } from "../../lib/format";
+import { clock, count, duration, errorDetail, gb } from "../../lib/format";
 import { useNow } from "../../lib/useNow";
 import { useCrumbs } from "../../shell/hooks";
 import { useActiveJobs } from "../../shell/JobIndicator";
@@ -182,7 +182,7 @@ function Failure({ job, onOpenStage }: { job: Job; onOpenStage: (name: string) =
           {stage ? `${stage.name} failed` : "The job failed"}
           {error?.reason ? `: ${error.reason}` : ""} {error ? <Badge tone="err">{error.code}</Badge> : null}
         </h2>
-        {error?.detail ? <p>{error.detail}</p> : null}
+        {errorDetail(error?.detail) ? <p>{errorDetail(error?.detail)}</p> : null}
         <p>
           {error?.suggested_action ? (
             <>

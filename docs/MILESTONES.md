@@ -456,8 +456,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_RUN_1_7_*`: a simulated hang becomes `stalled` after T seconds (2026-11-18, `test_M8_watchdog.py`, T shortened to 1 s; it becomes running again when progress returns)
 - [x] `test_RUN_1_8_*`: SCR-04 updates live during a training run (2026-11-18: progress events carry the metrics, `Training.test.tsx` derives the charts from them; checked live at SCR-04 v2's Gate 3)
 - [x] `test_RUN_1_9_*`: a tiny model defaults to the faster device measured by the benchmark; a forced device is used as given (2026-11-18, `test_M8_training.py`: planted timings send a run to either device, a real measurement keeps the faster and is cached, a forced device skips the benchmark)
-- [ ] `test_REG_1_1_*`: any trained version traces to its exact dataset version and config
-- [ ] `test_REG_1_2_*`: the three states are shown and filterable
+- [x] `test_REG_1_1_*`: any trained version traces to its exact dataset version and config (2026-11-18, `test_M8_registry.py`: the version's dataset version, config and hash match the run's; its safetensors load; later runs start from the base; a retry after registration trains nothing; job_0030–0032 backfilled)
+- [ ] `test_REG_1_2_*`: the three states are shown and filterable (API part 2026-11-18, `test_M8_registry.py`: a paused run is `partial`, then `trained`, and both list filters work; "shown" is ticked with SCR-11's Gate 3)
 - [ ] `test_REG_1_4_*`: `/predict` returns a result for a sample input, also while a training job holds the GPU
 - [ ] `test_REG_2_1_*`: base weights are still present after 10 training runs
 - [ ] `test_REG_2_2_*`: default settings, 3 runs: only base and run-3 weights on disk

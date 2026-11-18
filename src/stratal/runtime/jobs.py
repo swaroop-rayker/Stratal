@@ -30,6 +30,7 @@ from stratal.core.errors import (
 from stratal.data import registry
 from stratal.db.models import Dataset, Job, JobStage
 from stratal.mon.events import utc_now
+from stratal.registry import store as model_registry
 from stratal.runtime import stages as stage_registry
 from stratal.runtime.states import (
     TERMINAL,
@@ -530,6 +531,9 @@ def job_view(session: Session, job: Job) -> dict[str, Any]:
         "current_stage": current if job.state not in TERMINAL else None,
         "stages": [stage_view(stage) for stage in stages],
         "output_version_id": job.output_version_id,
+        "model_version_id": (
+            model_registry.model_version_for_job(session, job.id) if job.kind == "train" else None
+        ),
         "error": job.error,
         "summary": job.summary,
         "created_at": _iso(job.created_at),

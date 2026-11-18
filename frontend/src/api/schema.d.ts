@@ -699,6 +699,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Models
+         * @description Model lineages, most recently updated first (REG-1.2).
+         */
+        get: operations["list_models_api_v1_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/{lineage_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Model
+         * @description One lineage and its versions, newest first, filtered by state and weights.
+         */
+        get: operations["get_model_api_v1_models__lineage_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-versions/{version_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Model Version
+         * @description Everything that made a version: config, dataset version, job, parent, metrics and
+         *     the per-epoch history (REG-1.1).
+         */
+        get: operations["get_model_version_api_v1_model_versions__version_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -975,6 +1036,8 @@ export interface components {
             stages: components["schemas"]["JobStage"][];
             /** Output Version Id */
             output_version_id: string | null;
+            /** Model Version Id */
+            model_version_id?: string | null;
             error: components["schemas"]["JobError"] | null;
             /** Summary */
             summary: {
@@ -999,7 +1062,9 @@ export interface components {
             /** Suggested Action */
             suggested_action?: string | null;
             /** Detail */
-            detail?: string | null;
+            detail?: string | {
+                [key: string]: unknown;
+            } | null;
         } & {
             [key: string]: unknown;
         };
@@ -1077,6 +1142,87 @@ export interface components {
             /** In Progress */
             in_progress: components["schemas"]["ExtendingJob"][];
         };
+        /** ModelLineage */
+        ModelLineage: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Task */
+            task: string;
+            /** Model */
+            model: {
+                [key: string]: unknown;
+            };
+            /** Dataset */
+            dataset: string;
+            /** Input Shape */
+            input_shape: number[];
+            /** Classes */
+            classes: string[];
+            /** Parameters */
+            parameters: number;
+            counts: components["schemas"]["VersionCounts"];
+            /** Latest Version Id */
+            latest_version_id: string | null;
+            /** Latest State */
+            latest_state: ("base" | "partial" | "trained") | null;
+            /** Main Metric */
+            main_metric: number | null;
+            /** Weights Bytes */
+            weights_bytes: number;
+            /** Checkpoint Bytes */
+            checkpoint_bytes: number;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /** ModelLineageDetail */
+        ModelLineageDetail: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Task */
+            task: string;
+            /** Model */
+            model: {
+                [key: string]: unknown;
+            };
+            /** Dataset */
+            dataset: string;
+            /** Input Shape */
+            input_shape: number[];
+            /** Classes */
+            classes: string[];
+            /** Parameters */
+            parameters: number;
+            counts: components["schemas"]["VersionCounts"];
+            /** Latest Version Id */
+            latest_version_id: string | null;
+            /** Latest State */
+            latest_state: ("base" | "partial" | "trained") | null;
+            /** Main Metric */
+            main_metric: number | null;
+            /** Weights Bytes */
+            weights_bytes: number;
+            /** Checkpoint Bytes */
+            checkpoint_bytes: number;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Versions */
+            versions: components["schemas"]["ModelVersion"][];
+        };
+        /** ModelLineageList */
+        ModelLineageList: {
+            /** Items */
+            items: components["schemas"]["ModelLineage"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /**
          * ModelSpec
          * @description A model to train. In M8 it names a reference model; from M9 the builder's graph.
@@ -1088,6 +1234,106 @@ export interface components {
              * @enum {string}
              */
             name: "mlp" | "small_cnn";
+        };
+        /** ModelVersion */
+        ModelVersion: {
+            /** Id */
+            id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "base" | "partial" | "trained";
+            /** Is Latest */
+            is_latest: boolean;
+            /**
+             * Weights Status
+             * @enum {string}
+             */
+            weights_status: "present" | "deleting" | "weights_deleted";
+            /** Weights Bytes */
+            weights_bytes: number | null;
+            /** Pinned */
+            pinned: boolean;
+            /** Parent Version Id */
+            parent_version_id: string | null;
+            /** Job Id */
+            job_id: string | null;
+            /** Job State */
+            job_state: ("queued" | "running" | "paused" | "completed" | "failed" | "cancelled" | "stalled") | null;
+            /** Dataset Version Id */
+            dataset_version_id: string | null;
+            /** Config Hash */
+            config_hash: string;
+            /** Main Metric */
+            main_metric: number | null;
+            /** Note */
+            note: string | null;
+            /** Created At */
+            created_at: string;
+            /** Trained At */
+            trained_at: string | null;
+        };
+        /** ModelVersionDetail */
+        ModelVersionDetail: {
+            /** Id */
+            id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "base" | "partial" | "trained";
+            /** Is Latest */
+            is_latest: boolean;
+            /**
+             * Weights Status
+             * @enum {string}
+             */
+            weights_status: "present" | "deleting" | "weights_deleted";
+            /** Weights Bytes */
+            weights_bytes: number | null;
+            /** Pinned */
+            pinned: boolean;
+            /** Parent Version Id */
+            parent_version_id: string | null;
+            /** Job Id */
+            job_id: string | null;
+            /** Job State */
+            job_state: ("queued" | "running" | "paused" | "completed" | "failed" | "cancelled" | "stalled") | null;
+            /** Dataset Version Id */
+            dataset_version_id: string | null;
+            /** Config Hash */
+            config_hash: string;
+            /** Main Metric */
+            main_metric: number | null;
+            /** Note */
+            note: string | null;
+            /** Created At */
+            created_at: string;
+            /** Trained At */
+            trained_at: string | null;
+            /** Lineage Name */
+            lineage_name: string;
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            } | null;
+            /** History */
+            history: {
+                [key: string]: unknown;
+            }[];
+            /** Weights Path */
+            weights_path: string | null;
+            /** Weights Deleted At */
+            weights_deleted_at: string | null;
         };
         /**
          * PipelineRequest
@@ -1832,6 +2078,15 @@ export interface components {
             created_by_job_state: ("queued" | "running" | "paused" | "completed" | "failed" | "cancelled" | "stalled") | null;
             /** Created At */
             created_at: string;
+        };
+        /** VersionCounts */
+        VersionCounts: {
+            /** Base */
+            base: number;
+            /** Partial */
+            partial: number;
+            /** Trained */
+            trained: number;
         };
         /** VersionList */
         VersionList: {
@@ -3015,6 +3270,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_models_api_v1_models_get: {
+        parameters: {
+            query?: {
+                /** @description The state of the lineage's latest version. */
+                state?: ("base" | "partial" | "trained") | null;
+                task?: string | null;
+                /** @description Name substring. */
+                q?: string | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelLineageList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_model_api_v1_models__lineage_id__get: {
+        parameters: {
+            query?: {
+                state?: ("base" | "partial" | "trained") | null;
+                /** @description 'deleted' lists versions whose weights retention removed. */
+                weights?: ("present" | "deleted") | null;
+            };
+            header?: never;
+            path: {
+                lineage_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelLineageDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_model_version_api_v1_model_versions__version_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionDetail"];
                 };
             };
             /** @description Validation Error */

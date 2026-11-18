@@ -10,23 +10,24 @@ whenever ``checkpoint_every_s`` has passed (RUN-1.3). If the job's folder
 already holds a checkpoint for the same config, as after a crash and a retry, it
 resumes from there, replaying the rest of the epoch in the same order.
 
-At the end it writes the trained weights to ``jobs/<job_id>/weights/`` and
-removes the checkpoints (REG-2.6). The registry (M8 part B) takes the weights
-from there.
+Every run belongs to a lineage (ADR-0015 rule 1). The first run of a lineage
+saves its initial weights as the lineage's base before the first step; later
+runs start from that base (REG-2.1). A pause records the run's version as
+``partial``; at the end the trained weights go to ``registry/<lineage>/<version>/``,
+the version becomes ``trained``, and only then are the checkpoints removed
+(REG-1.1, REG-1.2, REG-2.6). A retry of a run that already registered its
+weights returns that result without training again.
 """
 
-import json
 import math
 import os
 import random
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import torch
-from safetensors.torch import save_file
 from sqlalchemy.orm import Session
 from torch import nn
 from torch.utils.data import DataLoader
@@ -34,15 +35,17 @@ from torch.utils.data import DataLoader
 from stratal.core.errors import CudaUnavailable, GpuOom, StratalError
 from stratal.data import registry
 from stratal.data.dataset_types import validate_labelled_images
+from stratal.db.models import Dataset
 from stratal.label.models import ModelInfo
-from stratal.mon.events import MetricValue
+from stratal.mon.events import MetricValue, utc_now
+from stratal.registry import store
 from stratal.runtime.context import JobCancelled, JobContext, JobPaused, StageHandoff
 from stratal.runtime.gpu_lease import gpu_lease
 from stratal.runtime.jobs import config_hash
 from stratal.runtime.stages import StageResult, StageRun
 from stratal.storage.blobs import BlobStore
 from stratal.train import checkpoint as ckpt
-from stratal.train import device
+from stratal.train import device, weights
 from stratal.train.config import TrainConfig
 from stratal.train.data import EpochOrder, Item, LabelledImages, split_items
 from stratal.train.memory import TrainingState, suggest_batch_size, training_oom_error
@@ -158,6 +161,9 @@ class _Run:
             raise StratalError("The train stage was given no dataset version.")
         with Session(self.run.engine) as session:
             rows = list(registry.load_version(session, self.run.data_dir, version_id))
+            dataset = session.get(Dataset, registry.get_version(session, version_id).dataset_id)
+            assert dataset is not None
+            self.dataset_id, self.dataset_slug = dataset.id, dataset.slug
         blobs = BlobStore(self.run.data_dir)
         report = validate_labelled_images(rows, blobs.exists)
         if not report.is_valid:
@@ -218,6 +224,7 @@ class _Run:
                 "loader_workers": self.workers,
             },
         )
+        self._attach_lineage(model)
         if self.device != "cuda":
             optimizer = _optimizer(model, config)
             return self._with_choice(self._train(model, optimizer, started))
@@ -380,13 +387,6 @@ class _Run:
             checkpoint_bytes = self._save(model, optimizer, scheduler, state)
             last_checkpoint = time.monotonic()
 
-        weights = self._write_weights(model, state.history)
-        freed = ckpt.remove_all(self.folder)
-        ctx.emit(
-            stage=STAGE,
-            substage="finish",
-            message=f"Run complete; checkpoints removed ({freed / MB:.1f} MB)",
-        )
         last = state.history[-1] if state.history else {}
         metrics: dict[str, MetricValue] = {
             "epochs": config.epochs,
@@ -397,12 +397,20 @@ class _Run:
             "val_loss": last.get("val_loss", 0.0),
             "train_loss": last.get("train_loss", 0.0),
             "checkpoint_bytes": checkpoint_bytes,
-            "weights_bytes": weights,
             "seconds": round(time.monotonic() - started, 1),
         }
         if cuda:
             metrics["peak_vram_allocated_mb"] = round(torch.cuda.max_memory_allocated() / MB, 1)
             metrics["peak_vram_reserved_mb"] = round(torch.cuda.max_memory_reserved() / MB, 1)
+        version_id = self._register(model, state.history, metrics)
+        freed = self._remove_checkpoints()
+        ctx.emit(
+            stage=STAGE,
+            substage="finish",
+            message=f"Run complete: registered {version_id}; checkpoints removed "
+            f"({freed / MB:.1f} MB)",
+            metrics={"model_version_id": version_id},
+        )
         return StageResult(metrics=metrics)
 
     # ------------------------------------------------------------------ RUN-1.9
@@ -506,6 +514,7 @@ class _Run:
             self._save(
                 model, optimizer, scheduler, ckpt.Checkpoint(position, self.hash, state.history)
             )
+            self._record_partial(state.history)
             raise JobPaused(self.ctx.job_id)
 
     def _save(
@@ -517,6 +526,16 @@ class _Run:
         )
         size = meta.stat().st_size + meta.with_suffix(".safetensors").stat().st_size
         p = state.position
+        with Session(self.run.engine) as session, session.begin():
+            store.record_checkpoint(
+                session,
+                job_id=self.ctx.job_id,
+                lineage_id=self.lineage_id,
+                path=meta.relative_to(self.run.data_dir).as_posix(),
+                size=size,
+                global_step=p.global_step,
+                epoch=p.epoch,
+            )
         where = (
             f"at the end of epoch {p.epoch}"
             if p.batches_done == 0
@@ -549,12 +568,14 @@ class _Run:
         model.train()
         return total_loss / seen, correct / seen
 
-    def _write_weights(self, model: nn.Module, history: list[dict[str, Any]]) -> int:
-        folder = self.run.data_dir / "jobs" / self.ctx.job_id / "weights"
-        folder.mkdir(parents=True, exist_ok=True)
-        tensors = {k: v.detach().cpu().contiguous() for k, v in model.state_dict().items()}
-        save_file(tensors, str(folder / "model.safetensors"))
-        meta = {
+    # ------------------------------------------------------------------ registry
+    def _meta(self, version_id: str, state: str, history: list[dict[str, Any]]) -> dict[str, Any]:
+        """``model.json`` beside the weights: enough to rebuild and trace the model."""
+        return {
+            "lineage_id": self.lineage_id,
+            "version_id": version_id,
+            "state": state,
+            "parent_version_id": None if state == "base" else self.base_id,
             "model": self.config.model.model_dump(mode="json"),
             "input_shape": list(self.shape),
             "classes": self.classes,
@@ -564,8 +585,142 @@ class _Run:
             "config_hash": self.hash,
             "history": history,
         }
-        (folder / "model.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-        return sum(p.stat().st_size for p in folder.iterdir())
+
+    def _attach_lineage(self, model: nn.Module) -> None:
+        """Find or create the run's lineage (ADR-0015 rule 1). A new lineage saves
+        ``model``'s initial weights as its base; otherwise ``model`` is loaded with the
+        base's weights, so every run of a lineage starts from the base (REG-2.1).
+
+        The model is built from the seed either way, so the random state the run
+        continues with does not depend on whether the lineage already existed."""
+        config = self.config
+        with Session(self.run.engine) as session, session.begin():
+            lineage = store.ensure_lineage(
+                session,
+                model_spec=config.model.model_dump(mode="json"),
+                dataset_id=self.dataset_id,
+                dataset_slug=self.dataset_slug,
+                input_shape=self.shape,
+                classes=self.classes,
+                parameters=self.parameters,
+                task="classification",
+            )
+            self.lineage_id = lineage.id
+            base = store.base_of(session, lineage.id)
+            if base is None:
+                self.base_id = store.new_version_id()
+                size = weights.write(
+                    self.run.data_dir / store.version_folder(lineage.id, self.base_id),
+                    model,
+                    self._meta(self.base_id, "base", []),
+                )
+                store.add_base(
+                    session,
+                    lineage=lineage,
+                    version_id=self.base_id,
+                    job_id=self.ctx.job_id,
+                    dataset_version_id=self.run.input_version_id,
+                    config=config.model_dump(mode="json"),
+                    config_hash=self.hash,
+                    weights_bytes=size,
+                    note=f"Initial weights from seed {config.seed}, saved before the first step",
+                )
+                message = (
+                    f"New lineage {lineage.name}: base {self.base_id} saved before the first step"
+                )
+            else:
+                if base.weights_path is None or base.weights_status != "present":
+                    raise StratalError(
+                        f"The base {base.id} of {lineage.name} has no weights on disk.",
+                        suggested_action="Restore the data folder from a backup; base weights "
+                        "are never deleted by retention (REG-2.1).",
+                    )
+                weights.load_into(model, self.run.data_dir / base.weights_path)
+                self.base_id = base.id
+                message = f"Lineage {lineage.name}: starting from base {base.id}"
+        self.ctx.emit(
+            stage=STAGE,
+            substage="setup",
+            message=message,
+            metrics={"lineage_id": self.lineage_id, "base_version_id": self.base_id},
+        )
+
+    def _record_partial(self, history: list[dict[str, Any]]) -> None:
+        """At a pause: the run's version is ``partial``; its weights are the checkpoint."""
+        with Session(self.run.engine) as session, session.begin():
+            version_id = store.record_run(
+                session,
+                lineage_id=self.lineage_id,
+                job_id=self.ctx.job_id,
+                state="partial",
+                parent_version_id=self.base_id,
+                dataset_version_id=self.run.input_version_id,
+                config=self.config.model_dump(mode="json"),
+                config_hash=self.hash,
+                history=history,
+            ).id
+        self.ctx.emit(
+            stage=STAGE,
+            substage="registry",
+            message=f"Recorded {version_id} as partial",
+            metrics={"model_version_id": version_id},
+        )
+
+    def _register(
+        self, model: nn.Module, history: list[dict[str, Any]], metrics: dict[str, MetricValue]
+    ) -> str:
+        """Write the trained weights, then mark the version ``trained`` (REG-1.1). The
+        row is committed only once the files are in place; checkpoints go after."""
+        with Session(self.run.engine) as session, session.begin():
+            existing = store.run_version(session, self.ctx.job_id)
+            version_id = existing.id if existing is not None else store.new_version_id()
+            size = weights.write(
+                self.run.data_dir / store.version_folder(self.lineage_id, version_id),
+                model,
+                self._meta(version_id, "trained", history),
+            )
+            metrics["weights_bytes"] = size
+            store.record_run(
+                session,
+                lineage_id=self.lineage_id,
+                job_id=self.ctx.job_id,
+                state="trained",
+                parent_version_id=self.base_id,
+                dataset_version_id=self.run.input_version_id,
+                config=self.config.model_dump(mode="json"),
+                config_hash=self.hash,
+                history=history,
+                metrics=dict(metrics),
+                version_id=version_id,
+                weights_bytes=size,
+                trained_at=utc_now(),
+            )
+        return version_id
+
+    def _remove_checkpoints(self) -> int:
+        freed = ckpt.remove_all(self.folder)
+        with Session(self.run.engine) as session, session.begin():
+            store.drop_checkpoint(session, self.ctx.job_id)
+        return freed
+
+    def already_registered(self) -> StageResult | None:
+        """On a retry of a run that registered its weights before the process died:
+        finish the cleanup and return the recorded result, training nothing."""
+        with Session(self.run.engine) as session:
+            version = store.run_version(session, self.ctx.job_id)
+            if version is None or version.state != "trained" or version.weights_status != "present":
+                return None
+            version_id = version.id
+            metrics: dict[str, MetricValue] = dict(version.metrics or {})
+        freed = self._remove_checkpoints()
+        self.ctx.emit(
+            stage=STAGE,
+            substage="finish",
+            message=f"Run already registered as {version_id}; checkpoints removed "
+            f"({freed / MB:.1f} MB)",
+            metrics={"model_version_id": version_id},
+        )
+        return StageResult(metrics=metrics)
 
     def _oom(self, optimizer: Any) -> StratalError:
         optimizer.zero_grad(set_to_none=True)
@@ -591,9 +746,8 @@ def run_train(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult:
     """Run one training stage (RUN-1.1). ``units`` are the owner's; tests pass fakes."""
     config = TrainConfig.model_validate(run.config)
     training = _Run(run, config, units)
+    finished = training.already_registered()
+    if finished is not None:
+        return finished
     training.prepare()
     return training.execute()
-
-
-def weights_folder(data_dir: Path, job_id: str) -> Path:
-    return data_dir / "jobs" / job_id / "weights"

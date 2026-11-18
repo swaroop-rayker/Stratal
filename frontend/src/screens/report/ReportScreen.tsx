@@ -10,7 +10,7 @@ import { useLineage, useVersion } from "../../api/queries";
 import { useFeedMessage } from "../../api/stream";
 import { ErrorState } from "../../components/states";
 import { Badge, Button, Icon, Progress, Skeleton, StatePill } from "../../components/ui";
-import { clock, count, stagePercent } from "../../lib/format";
+import { clock, count, errorDetail, stagePercent } from "../../lib/format";
 import { useCrumbs } from "../../shell/hooks";
 
 type Report = Schemas["Report"];
@@ -487,7 +487,7 @@ export function ReportScreen() {
             <b>Building the report failed</b>
             <Badge tone="err">{job.error?.code ?? job.state}</Badge>
             <p>
-              {job.error?.reason ?? job.error?.detail ?? "The evaluate stage did not finish."}{" "}
+              {job.error?.reason ?? errorDetail(job.error?.detail) ?? "The evaluate stage did not finish."}{" "}
               {job.error?.suggested_action ? (
                 <>
                   <b style={{ color: "var(--text-primary)" }}>Do</b> {job.error.suggested_action}

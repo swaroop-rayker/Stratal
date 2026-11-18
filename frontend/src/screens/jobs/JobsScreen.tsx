@@ -12,7 +12,7 @@ import { useFeedMessage } from "../../api/stream";
 import { Modal, ModalClose } from "../../components/Modal";
 import { EmptyState, ErrorState } from "../../components/states";
 import { Button, Icon, Kbd, Progress, Skeleton, StatePill } from "../../components/ui";
-import { clock, duration, stagePercent } from "../../lib/format";
+import { clock, duration, errorDetail, stagePercent } from "../../lib/format";
 import { useNow } from "../../lib/useNow";
 import { useCrumbs, useShortcuts } from "../../shell/hooks";
 import { StartPipelineDrawer } from "../datasets/StartPipelineDrawer";
@@ -173,7 +173,7 @@ function Now({ job, context }: { job: Job; context: Context }) {
       );
     case "failed": {
       const where = failedStage(job);
-      const why = job.error?.reason ?? job.error?.detail ?? null;
+      const why = job.error?.reason ?? errorDetail(job.error?.detail);
       return (
         <span className="now err" title={why ?? undefined}>
           <span className="code">{job.error?.code ?? "failed"}</span>

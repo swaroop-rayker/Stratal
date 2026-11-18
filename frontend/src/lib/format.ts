@@ -64,3 +64,14 @@ export function stagePercent(step: Maybe, total: Maybe): number | null {
   if (step === null || step === undefined || !total) return null;
   return Math.min(100, (step / total) * 100);
 }
+
+/** A job error's ``detail`` as text: it is either a sentence or facts such as
+ * ``{signal: "SIGKILL"}`` for a killed process, which read as ``signal SIGKILL``. */
+export function errorDetail(detail: string | { [key: string]: unknown } | null | undefined): string | null {
+  if (detail == null) return null;
+  if (typeof detail === "string") return detail || null;
+  const parts = Object.entries(detail)
+    .filter(([, value]) => value !== null && value !== undefined)
+    .map(([key, value]) => `${key.replace(/_/g, " ")} ${String(value)}`);
+  return parts.length ? parts.join(" · ") : null;
+}

@@ -30,7 +30,8 @@ class JobError(BaseModel):
     code: str
     reason: str | None = None
     suggested_action: str | None = None
-    detail: str | None = None
+    detail: str | Json | None = None
+    """Text, or facts about the failure, e.g. ``{"signal": "SIGKILL"}`` for a killed child."""
 
 
 class JobStage(_Model):
@@ -70,6 +71,8 @@ class Job(_Model):
     current_stage: str | None
     stages: list[JobStage]
     output_version_id: str | None
+    model_version_id: str | None = None
+    """A training job's registry version, partial or trained (REG-1.1); null otherwise."""
     error: JobError | None
     summary: Json | None
     created_at: str
@@ -512,3 +515,77 @@ class ReviewSummary(_Model):
 class ReviewList(_Model):
     items: list[ReviewSummary]
     next_cursor: str | None
+
+
+# -- model registry (REG-1.1, REG-1.2; API.md §3.9) ---------------------------------
+
+VersionState = Literal["base", "partial", "trained"]
+WeightsStatus = Literal["present", "deleting", "weights_deleted"]
+
+
+class VersionCounts(_Model):
+    base: int
+    partial: int
+    trained: int
+
+
+class ModelLineage(_Model):
+    id: str
+    name: str
+    task: str
+    model: Json
+    dataset: str
+    input_shape: list[int]
+    classes: list[str]
+    parameters: int
+    counts: VersionCounts
+    latest_version_id: str | None
+    """The newest trained version, or the base before any run completes (REG-2.2)."""
+    latest_state: VersionState | None
+    main_metric: float | None
+    """``val_accuracy`` of the latest version, until EVAL-1.2's task metrics exist."""
+    weights_bytes: int
+    """Weights on disk by the registry's records: base, trained and intermediate versions."""
+    checkpoint_bytes: int
+    """In-run checkpoints of the lineage's running and paused jobs."""
+    created_at: str
+    updated_at: str
+
+
+class ModelLineageList(_Model):
+    items: list[ModelLineage]
+    next_cursor: str | None
+
+
+class ModelVersion(_Model):
+    id: str
+    lineage_id: str
+    state: VersionState
+    is_latest: bool
+    weights_status: WeightsStatus
+    weights_bytes: int | None
+    """Null for a partial version: its weights are its run's checkpoint."""
+    pinned: bool
+    parent_version_id: str | None
+    job_id: str | None
+    job_state: JobState | None
+    dataset_version_id: str | None
+    config_hash: str
+    main_metric: float | None
+    note: str | None
+    created_at: str
+    trained_at: str | None
+
+
+class ModelLineageDetail(ModelLineage):
+    versions: list[ModelVersion]
+
+
+class ModelVersionDetail(ModelVersion):
+    lineage_name: str
+    config: Json
+    metrics: Json | None
+    history: list[Json]
+    """One entry per finished epoch: train and val loss and accuracy."""
+    weights_path: str | None
+    weights_deleted_at: str | None

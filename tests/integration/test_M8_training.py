@@ -59,6 +59,16 @@ def _job_dir(job_id: str) -> Path:
     return get_settings().data_dir / "jobs" / job_id
 
 
+def _weights(job_id: str) -> Path:
+    """The trained weights the run registered (REG-1.1)."""
+    with get_engine().connect() as connection:
+        folder = connection.execute(
+            text("SELECT weights_path FROM model_versions WHERE job_id = :j AND state = 'trained'"),
+            {"j": job_id},
+        ).scalar_one()
+    return get_settings().data_dir / folder / "model.safetensors"
+
+
 def test_RUN_1_1_a_training_job_runs_through_its_states_to_completed(
     runner: Runner, tmp_path: Path
 ) -> None:
@@ -86,7 +96,7 @@ def test_RUN_1_1_a_training_job_runs_through_its_states_to_completed(
     assert list(states) == ["queued", "running", "completed"], "every transition is logged"
     validated = [e for e in runner.events(job_id) if e["substage"] == "validate"]
     assert [e["metrics"]["epoch"] for e in validated] == [1, 2, 3]
-    weights = _job_dir(job_id) / "weights"
+    weights = _weights(job_id).parent
     assert (weights / "model.safetensors").is_file() and (weights / "model.json").is_file()
     assert not list((_job_dir(job_id) / "checkpoints").glob("ckpt-*")), "REG-2.6"
 
@@ -135,8 +145,8 @@ def test_RUN_1_3_a_killed_run_resumes_from_its_checkpoint_and_matches_an_uninter
     resumes = [e for e in runner.events(killed) if e["substage"] == "resume"]
     assert len(resumes) == 1 and resumes[0]["attempt"] == 2
     assert resumes[0]["metrics"]["resumed_at_step"] > 0
-    a = load_file(str(_job_dir(whole) / "weights" / "model.safetensors"))
-    b = load_file(str(_job_dir(killed) / "weights" / "model.safetensors"))
+    a = load_file(str(_weights(whole)))
+    b = load_file(str(_weights(killed)))
     assert set(a) == set(b)
     for name in a:
         assert torch.allclose(a[name], b[name], atol=1e-6), name  # NFR-4: within tolerance
@@ -186,8 +196,8 @@ def test_RUN_1_2_a_paused_run_checkpoints_and_resumes_where_it_stopped(
     pause_saves = [e for e in events if e["substage"] == "checkpoint" and e["attempt"] == 1]
     [resume] = [e for e in events if e["substage"] == "resume"]
     assert resume["metrics"]["resumed_at_step"] == pause_saves[-1]["metrics"]["checkpoint_step"]
-    a = load_file(str(_job_dir(whole) / "weights" / "model.safetensors"))
-    b = load_file(str(_job_dir(paused) / "weights" / "model.safetensors"))
+    a = load_file(str(_weights(whole)))
+    b = load_file(str(_weights(paused)))
     for name in a:
         assert torch.allclose(a[name], b[name], atol=1e-6), name  # NFR-4
 

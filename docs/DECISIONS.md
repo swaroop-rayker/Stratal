@@ -594,6 +594,31 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The stage catches the stub's `NotImplementedError` from `VramManager.unload`. Out-of-memory handling still fails with the "owner unit not written" error, as the label stage does.
 - **Why:** The run's work is done and saved by then, and the child process exits right after, which frees the card (ADR-0006 rule 1). Failing a finished run would only hide its result; the unload check proves itself once the owner writes `close()`. Long-lived processes are different: the inference service (ADR-0016) keeps one model between requests, so there an unwritten `close()` will stop it from serving rather than warn.
 
+**A lineage is a model on one dataset's inputs and classes** (M8, REG-1.1, ADR-0015 rule 1; the owner's choice, 2026-11-18)
+- **What:** The lineage key is the model spec, the dataset, the input shape and the class list; its ID is `ml_` and the first 12 hex characters of the key's SHA-256.
+- **How:** `stratal.registry.store.ensure_lineage` inserts the lineage if new and locks its row for the transaction, so two runs starting together create one base. Named `<model> · <dataset>`.
+- **Why:** ADR-0015 says "a model spec on a dataset type", but weights for CIFAR-10's 10 classes cannot start a run on another labelled-images dataset's classes. Deriving the ID from the key finds the lineage again without a lookup table.
+
+**Every run of a lineage starts from its base** (M8, REG-2.1, ADR-0015 rule 1; the owner's choice, 2026-11-18)
+- **What:** The first run of a lineage saves its initial weights as the base before the first step; every later run loads the base, and records it as its parent. From the second run on, `seed` decides only the data order and dropout.
+- **How:** The stage always builds the model from the seed first and then, for an existing lineage, loads the base's safetensors into it, so the random state the run continues with is the same either way. Starting from a chosen trained version (`init_from`) waits for SCR-09 (M9).
+- **Why:** It makes "parent = base" true, and a re-train of a version whose weights were deleted exact (REG-2.7): the base is never deleted.
+
+**Weights are registered before checkpoints go** (M8, REG-1.1, REG-2.6, NFR-15)
+- **What:** A finished run writes `registry/<lineage>/<version>/`, then marks its version `trained` and commits, then removes its checkpoints. A pause records the version as `partial`, its weights being the checkpoint (`checkpoints` table). Version IDs are random (`mv_` + 12 hex).
+- **How:** The folder is written as `<version>.part/` and renamed. A retry finds the run's `trained` version by `job_id`, removes leftover checkpoints and returns the recorded metrics. A test crash point `train:substage:finish` proves it.
+- **Why:** Before, a crash between "weights written" and "checkpoints removed" sent the retry back to epoch 1, because the checkpoints were gone. Registering first leaves either a registered version or a resumable checkpoint.
+
+**`GET /models?state=` matches any version in that state** (M8, REG-1.2)
+- **What:** The lineage list's state filter keeps lineages with at least one version in the state, not only those whose latest version is in it.
+- **How:** `list_lineages` filters on the per-state counts it already computes.
+- **Why:** "Latest" is the newest trained version (REG-2.2), so filtering on it could never find a lineage with a paused run. SCR-11's mockup annotates the filter as "state of the latest version"; this is the reading that makes `partial` useful, and the filter looks the same.
+
+**Runs from before the registry: backfilled, base rebuilt from the seed** (M8, REG-1.1; the owner's choice, 2026-11-18)
+- **What:** `registry backfill` registered job_0030, job_0031 and job_0032 in `small_cnn · cifar10` (`ml_319245b543d4`). Their base `mv_3462e579d7dd` is job_0030's initial weights rebuilt from seed 0. job_0030 and job_0031 (seed 0) have it as parent; job_0032 (seed 1) has no parent and a note saying why.
+- **How:** The stage builds a model on the CPU right after seeding Python's and PyTorch's random state, so rebuilding it reproduces the initial weights bit for bit. A run gets the base as parent only if its own rebuilt initial weights equal the base's. Weights folders are moved into `registry/`, not copied; a failed registration moves them back.
+- **Why:** Those runs saved no base. Claiming that job_0032 descends from a base it never started from would make its lineage wrong.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

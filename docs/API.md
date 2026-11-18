@@ -149,8 +149,8 @@ Training request (M8, RUN-1.1, [ADR-0014](decisions/ADR-0014-training-jobs.md)):
 
 - **`dataset_version`** must be a `split` version of a `labelled_images` dataset; anything else, or an unknown ID, is a `validation_error` at `["dataset_version"]`.
 - **`config`** is the `train` stage's config (`GET /config/schemas/train`): `model` (`mlp` or `small_cnn` until M9), `epochs`, `batch_size`, `optimizer` (`adam`, `sgd`), `learning_rate`, `momentum`, `weight_decay`, `schedule` (`cosine`, `constant`), `seed`, `deterministic`, `device` (`auto`, `cpu`, `gpu`; `auto` times a model under 1 M parameters on both devices and trains on the faster, RUN-1.9), `loader_workers` (null: 4 on the GPU worker, 1 on the CPU worker), `checkpoint_every_s` (300) and a read-only `algorithm_version`. Every field is recorded in the stage's config.
-- The job has kind `train` and one stage, `train`, on the `gpu` queue for `gpu` and `auto` and the `cpu` queue for `cpu` (CPU training needs the ml-cpu image, ADR-0014 rule 11). The stage makes no dataset version, so the job's `output_version_id` is null; its metrics are `epochs`, `steps`, `parameters`, `device`, `val_accuracy`, `val_loss`, `train_loss`, `checkpoint_bytes`, `weights_bytes`, `seconds` and, on the GPU, `peak_vram_allocated_mb` and `peak_vram_reserved_mb`. With `device: auto` and a small model they also carry `device_choice` (`gpu` or `cpu`), `device_gpu_step_ms`, `device_cpu_step_ms` and `device_benchmark_cached` (0 or 1). When the CPU wins, the job goes `running → queued` and the stage's `queue` becomes `cpu`; an `action` event with `metrics.code` `device_handoff` says why. Until the registry (M8 part B), the trained weights are in `jobs/<job_id>/weights/`.
-- **Events** (RUN-1.8): `substage` `setup` (model, device, rows), `train` progress reports at most once a second (`step`/`total` are global steps; metrics `epoch`, `loss`, `accuracy`, `learning_rate`, `grad_norm`, `step_ms`, `samples_per_s`), `validate` once per epoch (`train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`), `checkpoint` (`checkpoint_step`, `checkpoint_bytes`), `resume` when a retry continues from a checkpoint (`resumed_at_step`, `resumed_epoch`), `device` when `auto` chose a device (the timings), and `finish`.
+- The job has kind `train` and one stage, `train`, on the `gpu` queue for `gpu` and `auto` and the `cpu` queue for `cpu` (CPU training needs the ml-cpu image, ADR-0014 rule 11). The stage makes no dataset version, so the job's `output_version_id` is null; its metrics are `epochs`, `steps`, `parameters`, `device`, `val_accuracy`, `val_loss`, `train_loss`, `checkpoint_bytes`, `weights_bytes`, `seconds` and, on the GPU, `peak_vram_allocated_mb` and `peak_vram_reserved_mb`. With `device: auto` and a small model they also carry `device_choice` (`gpu` or `cpu`), `device_gpu_step_ms`, `device_cpu_step_ms` and `device_benchmark_cached` (0 or 1). When the CPU wins, the job goes `running → queued` and the stage's `queue` becomes `cpu`; an `action` event with `metrics.code` `device_handoff` says why. The run registers a model version (§3.9): the job's `model_version_id` names it, `partial` while the job is paused and `trained` once it completes; the weights are in `registry/<lineage>/<version>/`, not in the job's folder. A retry of a run that had already registered its weights returns that result without training again.
+- **Events** (RUN-1.8): `substage` `setup` (model, device, rows), `train` progress reports at most once a second (`step`/`total` are global steps; metrics `epoch`, `loss`, `accuracy`, `learning_rate`, `grad_norm`, `step_ms`, `samples_per_s`), `validate` once per epoch (`train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`), `checkpoint` (`checkpoint_step`, `checkpoint_bytes`), `resume` when a retry continues from a checkpoint (`resumed_at_step`, `resumed_epoch`), `device` when `auto` chose a device (the timings), a second `setup` event naming the lineage and its base (`lineage_id`, `base_version_id`), `registry` when a pause records the version as partial, and `finish` (`model_version_id`).
 - `GET /config/schemas` and `/config/defaults` list pipeline stages only, so the Start pipeline drawer does not show `train`.
 
 Pipeline request:
@@ -215,6 +215,8 @@ Job (abridged):
 }
 ```
 
+A job's and a stage's `error` is `{code, reason, suggested_action, detail}`; `detail` is text or an object of facts, such as `{"signal": "SIGKILL", "peak_rss_mb": 2410, "limit_mb": 2560}` for a killed process (E-013). A training job also has `model_version_id` (§3.9), null for other kinds.
+
 ### 3.4 Activity log and telemetry
 
 | Method and path | Purpose | Success |
@@ -257,6 +259,19 @@ Built in M5 (2026-11-16). Details:
 - **Report:** `{id, version_id, kind, review_session_id, job_id, created_at, report}`. `report` is `{kind, version_id, stage, algorithm_version, confidence, rows: {total, accepted, by_split}, rejections: {total, accepted, by_stage: {stage: {reason: rows}}}, filter_rate, clip_scores: {edges, labelled, accepted, by_split: {split: …}}, review}`. Each distribution is `{count, mean, std, minimum, maximum, quantiles: {p05…p95}, edges, histogram, below, above}`. `review` is `{review_id, status, sample_size, seed, decided, acceptance: {sampled, undecided, overall, by_split}}`, or null. Each rate is `{decided, accepted, interval: {estimate, low, high, confidence}}`. `by_split` is null for a version that has not been split. The statistics are the owner's (§5), so the stage fails with the usual owner-unit message until they are written.
 - **Config** (`stages.evaluate`): `kind`, `review_id`, `score_edges` (default 0 to 0.5 in steps of 0.025, strictly increasing), `confidence` (0.95).
 - `GET …/reports/latest` gives `404 not_found` until the version has a report.
+
+### 3.9 Model registry (M8, REG-1.1, REG-1.2, [ADR-0015](decisions/ADR-0015-model-registry-and-retention.md))
+
+| Method and path | Purpose | Success |
+|---|---|---|
+| `GET /models?state=&task=&q=` | Lineages, most recently updated first. `state` (`base`, `partial`, `trained`) keeps lineages with a version in that state; `q` matches the name | `200 {items, next_cursor}` |
+| `GET /models/{lineage_id}?state=&weights=` | One lineage and its versions, newest first. `weights` is `present` or `deleted` | `200` lineage with `versions` |
+| `GET /model-versions/{version_id}` | Everything that made a version (REG-1.1) | `200` version detail |
+
+- **Lineage:** `{id, name, task, model, dataset, input_shape, classes, parameters, counts: {base, partial, trained}, latest_version_id, latest_state, main_metric, weights_bytes, checkpoint_bytes, created_at, updated_at}`. `latest` is the newest trained version, or the base before any run completes (REG-2.2). `main_metric` is its `val_accuracy` until EVAL-1.2. `weights_bytes` sums the registry's records of weights on disk; `checkpoint_bytes` the lineage's in-run checkpoints. The measured disk use (REG-2.11) comes with retention.
+- **Version (in a lineage's list):** `{id, lineage_id, state, is_latest, weights_status, weights_bytes, pinned, parent_version_id, job_id, job_state, dataset_version_id, config_hash, main_metric, note, created_at, trained_at}`. A partial version has no `weights_bytes`: its weights are its run's checkpoint.
+- **Version detail** adds `{lineage_name, config, metrics, history, weights_path, weights_deleted_at}`.
+- Unknown IDs are `404 not_found`. Pins, retention (`/retention/plan`, `/retention/run`) and `POST /models/{version}/predict` follow in M8's next steps.
 
 ### 3.7 Configuration
 
@@ -331,6 +346,7 @@ The CLI calls the same domain functions as the workers. It prints its result as 
 
 | `python -m stratal.cli models list` | Lists the allowed models and whether each is pulled | M4 |
 | `python -m stratal.cli models pull NAME... \| --all` | Downloads and verifies allowed models; the only hub access (NFR-8) | M4 |
+| `python -m stratal.cli registry backfill [--dry-run]` | Registers training runs that finished before the registry: rebuilds a missing base from the run's seed, moves `jobs/<id>/weights/` into `registry/`, and gives a run a parent only if its initial weights equal the base. Needs PyTorch: run it in `worker-cpu` | M8 |
 
 Still planned for phase 1: run a pipeline.
 
@@ -409,6 +425,10 @@ Still planned for phase 1: run a pipeline.
 | Train stage | `stratal.train.stage` | `run_train(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult`; `TrainUnits(state, suggest, oom_error)` are the owner's RUN-1.4 and RUN-1.5 units |
 | Train jobs | `stratal.runtime.jobs` | `create_train_job(session, request) -> (Job, Enqueue)`; `create_job_from_plan` gained `queues` (a stage's queue by name) |
 | Test helpers | `stratal.testing.labelled` | `class_folders(root, *, per_class, size)`, `labelled_split(runner, root, slug) -> version_id` |
+| Registry rows (REG-1.1) | `stratal.registry.store` | `lineage_key(...) -> (lineage_id, key_hash)`, `ensure_lineage(session, ...)` (creates and locks), `base_of`, `run_version(session, job_id)`, `add_base`, `record_run(..., state)`, `record_checkpoint`, `drop_checkpoint`, `version_folder(lineage_id, version_id)`; views `list_lineages`, `lineage_detail`, `version_detail`; torch-free |
+| Registry files | `stratal.train.weights` | `write(folder, model, meta) -> bytes` (temporary folder, then rename), `load_into(model, folder)`, `size(folder)` (PyTorch images only) |
+| Backfill | `stratal.train.backfill` | `backfill(engine, data_dir, *, dry_run) -> list[report]` |
+| Crash point | `stratal.runtime.context` | `STRATAL_TEST_CRASH_AT` also takes `<stage>:substage:<name>` |
 
 ## 7. Later phases
 
@@ -416,7 +436,7 @@ Listed so the phase-1 design leaves room. Each is specified at its phase kickoff
 
 | Phase | Interfaces |
 |---|---|
-| 2 | `POST /jobs` with `kind: train`, `hpo_study`, `eval`; pause and resume; model specs and templates; registry (`/models`, `/models/{id}/versions`, pin, retention preview and run); `POST /models/{version}/predict` (REG-1.4); comparison views |
+| 2 | `hpo_study` and `eval` jobs; model specs and templates; pins, retention preview and run; `POST /models/{version}/predict` (REG-1.4); comparison views. Train jobs, pause and resume (§3.3) and the registry reads (§3.9) are built |
 | 3 | Chat with token streaming over SSE; RAG corpora and indexes; router decisions; image search |
 | 4 | Image generation; LoRA jobs; export and import of remote bundles |
 | 5 | Translation; full chat with manual and auto mode |

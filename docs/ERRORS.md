@@ -35,6 +35,16 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-013 — A job killed by a signal could not be read through the API
+
+- **Date:** 2026-11-18
+- **Seen:** While writing M8's registry tests, `GET /jobs/{id}` for a training job killed by the test crash point returned 500: `ResponseValidationError ... ('response', 'error', 'detail'): Input should be a valid string, input: {'signal': 'SIGKILL'}`.
+- **Where:** `describe_exit` in the supervisor (M2) writes `detail` as facts (`{"signal": ...}`, `{"exit_code": ...}`); the response model `JobError.detail` (M6) allowed only text. The job screens render `detail` as text too, so a killed job would also have broken SCR-04 and SCR-07 once the API returned it.
+- **Cause:** Two ends of one field written at different times. Earlier kill tests read jobs through the harness, not the API, so none caught it.
+- **Fix:** `JobError.detail` is text or an object; the frontend shows an object as words through `errorDetail` (`signal SIGKILL · peak rss mb 2410`).
+- **Guard:** `test_REG_1_1_a_retry_after_the_weights_were_registered_trains_nothing` reads a killed job through the API; `errorDetail (E-013)` in `format.test.ts`.
+- **Status:** fixed
+
 ### E-012 — After Modern Standby, WSL lost the GPU
 
 - **Date:** 2026-11-18

@@ -232,9 +232,9 @@ Everything Stratal owns lives on one Docker volume, `stratal-data`, on the Linux
 ├── blobs/sha256/ab/cd/<hash>     immutable files, named by content hash
 ├── manifests/<version_id>.parquet  one immutable manifest per dataset version
 ├── jobs/<job_id>/                per-job log, event spool; for training, checkpoints/ (in-run, latest only)
-│                                 and weights/ (the trained model, until the registry takes it, M8)
 ├── models/<name>/<revision>/     pretrained models from the allow-list, verified by `models pull`
-├── registry/                     trained weights (phase 2)
+├── registry/<lineage>/<version>/ model.safetensors + model.json for a base or trained version (M8,
+│                                 ADR-0015); written as <version>.part/ and renamed into place
 └── tmp/                          staging area for atomic writes
 ```
 
@@ -243,6 +243,7 @@ Everything Stratal owns lives on one Docker volume, `stratal-data`, on the Linux
 - **Rows are never dropped, only marked.** A manifest carries every row forward with a status (`accepted`, `rejected`, `duplicate`, `filtered`), the stage that decided it, and a reason. Any version can therefore report rejection counts for every stage (EVAL-1.1), and nothing silently disappears (BUG1).
 - **Writes are atomic.** A file is written under `tmp/`, flushed, then renamed into place. A crash leaves either the old state or the new one. A version row is inserted in Postgres only after its manifest is in place.
 - **One read path.** All code reads a dataset through `load_version(version_id)`, which streams the manifest in batches. Nothing loads a whole dataset into memory (NFR-2).
+- **Model weights are registered after they are in place** (M8, ADR-0015). The first run of a lineage writes its base before step 1; every later run of the lineage loads it. At the end the stage writes the version's folder, then marks the version `trained` and commits, and only then removes its checkpoints. A crash in between leaves a registered version and stale checkpoints, which the retry removes without training again.
 
 The version ID is derived from the manifest's content hash and the stage's config hash (DATA-3.2). The exact derivation is the owner's to implement; the contract it must satisfy is in [DATA_MODEL.md](DATA_MODEL.md#3-identifiers).
 

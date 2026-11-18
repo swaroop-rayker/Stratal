@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 and §4.11 built in M5 (2026-11-16) |
+| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 and §4.11 built in M5 (2026-11-16); §4.12 built in M8 (2026-11-18) |
 | Detail level | Phase-1 tables are specified. Phase 2+ tables are outlined in [§9](#9-planned-for-later-phases) |
 | Rule | Any schema change updates this file in the same change. Applied migrations are never edited |
 
@@ -15,6 +15,7 @@
 | **Blob store** | Image files (originals and preprocessed copies), named by content hash | Immutable, deduplicated by construction |
 | **Redis** | Task queue, event stream buffer, live fan-out, control flags | Transient. Nothing in Redis is the only copy of anything that matters |
 | **Per-job files** | Structured log, event spool, in-run checkpoints | Local durability that does not depend on any service being up |
+| **Registry files** | Model weights as safetensors with `model.json` beside them, one folder per version (`registry/<lineage>/<version>/`, M8) | Deletable by retention, so not content-addressed (ADR-0015) |
 
 ## 2. Entity overview
 
@@ -31,6 +32,14 @@ erDiagram
   DATASET_VERSIONS ||--o{ REVIEW_SESSIONS : "reviewed in"
   REVIEW_SESSIONS ||--|{ REVIEW_ITEMS : contains
   DATASET_VERSIONS ||--o{ EVAL_REPORTS : "described by"
+  DATASETS ||--o{ MODEL_LINEAGES : "trains"
+  MODEL_LINEAGES ||--|{ MODEL_VERSIONS : has
+  MODEL_VERSIONS ||--o{ MODEL_VERSIONS : "parent of"
+  DATASET_VERSIONS ||--o{ MODEL_VERSIONS : "trained on"
+  JOBS ||--o| MODEL_VERSIONS : makes
+  JOBS ||--o| CHECKPOINTS : keeps
+  MODEL_VERSIONS ||--o| PINS : "pinned by"
+  MODEL_LINEAGES ||--o| RETENTION_SETTINGS : "overridden by"
 ```
 
 ## 3. Identifiers
@@ -41,6 +50,8 @@ erDiagram
 | Dataset version | `ds_` + 12 hex characters | `ds_7f3a9c21b04e` | derived from content hash and config hash (DATA-3.2) |
 | Job | `job_` + zero-padded sequence | `job_0142` | Postgres sequence |
 | Review session | `rev_` + zero-padded sequence | `rev_0007` | Postgres sequence |
+| Model lineage | `ml_` + 12 hex characters | `ml_319245b543d4` | SHA-256 of the lineage key (model spec, dataset slug, input shape, classes) as canonical JSON (M8) |
+| Model version | `mv_` + 12 hex characters | `mv_23763657482f` | random (`secrets.token_hex(6)`); weights are not content-addressed (ADR-0015) |
 | Blob | 64 hex characters (SHA-256 of the file's bytes) | `9f86d0…` | computed while copying |
 | Event | UUID | – | the emitting process |
 
@@ -257,6 +268,50 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 
 `id` (bigint identity, PK), `version_id` (FK), `kind` (`phase1_dataset`), `report` (jsonb), `review_session_id` (FK, nullable), `job_id` (FK, nullable), `created_at`. Index: `(version_id, created_at desc)`. Built in M5 (2026-11-16). The `report` document is described in [API.md §3.6](API.md#36-evaluation-eval-11).
 
+### 4.12 Model registry (M8, REG-1.1, REG-1.2, [ADR-0015](decisions/ADR-0015-model-registry-and-retention.md))
+
+**`model_lineages`**: one model on one task (ADR-0015 rule 1).
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | text | no | PK, `ml_…`, derived from the key |
+| `key_hash` | text | no | unique; the full SHA-256 of the key: model spec, dataset slug, input shape and class list. Any difference is another lineage, since weights for one shape or class list cannot start a run for another |
+| `name` | text | no | `<model> · <dataset>`, e.g. `small_cnn · cifar10` |
+| `task` | text | no | `classification` in M8 |
+| `model_spec` | jsonb | no | the train config's `model` |
+| `dataset_id` | bigint | no | FK |
+| `input_shape` | jsonb | no | `[C, H, W]` |
+| `classes` | jsonb | no | class names in label order |
+| `parameters` | bigint | no | |
+| `created_at` | timestamptz | no | |
+
+**`model_versions`**: a lineage's base, or one training run's result.
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | text | no | PK, `mv_…` |
+| `lineage_id` | text | no | FK |
+| `state` | text | no | `base`, `partial` (its run is paused), `trained` (REG-1.2) |
+| `weights_status` | text | no | `present`, `deleting`, `weights_deleted` (NFR-15, REG-2.7) |
+| `parent_version_id` | text | yes | FK → `model_versions`; the version the run started from. In M8 every run starts from its lineage's base. Null for a base, and for runs registered by the backfill that did not start from it |
+| `job_id` | text | yes | FK; the run that made it. A base records the run that created the lineage, so uniqueness is per run: partial unique index on `job_id` where `state <> 'base'` |
+| `dataset_version_id` | text | yes | FK; the exact data (REG-1.1) |
+| `config`, `config_hash` | jsonb, text | no | the run's resolved train config and its SHA-256 over canonical JSON (REG-1.1) |
+| `metrics` | jsonb | yes | the stage's final metrics; null while partial |
+| `history` | jsonb | yes | one entry per finished epoch |
+| `weights_path` | text | yes | `registry/<lineage>/<version>`, relative to the data folder; null while partial (its weights are the run's checkpoint) |
+| `weights_bytes` | bigint | yes | both files |
+| `note` | text | yes | how it came to be, where that is unusual (a base's seed; a backfilled run without a parent) |
+| `created_at`, `trained_at`, `weights_deleted_at` | timestamptz | mixed | a base has no `trained_at` |
+
+Constraints: state and weights status check constraints; `present` needs a path and size unless `partial`; one base per lineage (partial unique index on `lineage_id` where `state = 'base'`). Indexes `(lineage_id, created_at)`, `(parent_version_id)`.
+
+**`checkpoints`**: a run's in-run checkpoint, the latest only (REG-2.6). `job_id` (PK, FK), `lineage_id` (FK), `path` (the checkpoint's JSON file, relative to the data folder), `bytes` (both files), `global_step`, `epoch`, `updated_at`. Written at every save, removed when the run completes.
+
+**`pins`**: `version_id` (PK, FK), `pinned_at`. Used from REG-2.5.
+
+**`retention_settings`**: `id` (identity), `lineage_id` (FK, null for the global row; unique with nulls not distinct, so one global row), `keep_intermediate` (integer ≥ 0, null for "all"), `updated_at`. The migration inserts the global row with 0 (REG-2.3's default). Used from REG-2.3.
+
 ## 5. Manifest schema
 
 One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accumulate as stages run; a column is null until its stage has run.
@@ -336,7 +391,7 @@ Outlined only. Each is specified at its phase kickoff, with an ADR where it is a
 
 | Phase | Tables | Notes |
 |---|---|---|
-| 2 | `model_lineages`, `model_versions`, `checkpoints`, `pins`, `retention_settings` | Version state (`base`, `partial`, `trained`), weights status (`present`, `weights_deleted`), parent version, dataset version, config, metrics, size on disk. Retention deletions are logged as events (REG-2.9). Delete order per NFR-15 |
+| 2 | ~~`model_lineages`, `model_versions`, `checkpoints`, `pins`, `retention_settings`~~ | Built in M8: [§4.12](#412-model-registry-m8-reg-11-reg-12-adr-0015) |
 | 2 | Optuna's own tables, in a separate schema | Studies and trials (HPO) |
 | 3 | `corpora`, `rag_indexes`, `chat_sessions`, `inference_requests` | Index versions for hit@k (LLM-2.2); request latency for NFR-6 |
 | 4 | adapter columns on `model_versions` | LoRA deltas with a parent base (REG-1.3, REG-2.8) |
