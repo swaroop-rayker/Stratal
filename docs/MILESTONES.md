@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
 | Planning style | Phases 1 and 2 (M0–M11) are planned in detail; phase 2's detail was approved on 2026-11-17. Phases 3–5 (M12–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -25,7 +25,7 @@
 | M5 | Splits, review, eval report | 1 | M | Done 2026-11-16 |
 | M6 | Phase-1 screens | 1 | L | Done 2026-11-17 |
 | M7 | Phase-1 acceptance | 1 | M | Done 2026-11-17 |
-| M8 | Training runtime and registry | 2 | L | Built 2026-11-19; done checklist complete except the owner's OK to merge (RUN-1.4 and RUN-1.5 written by the agent at the owner's request) |
+| M8 | Training runtime and registry | 2 | L | Done 2026-11-19 |
 | M9 | Model builder | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
@@ -476,7 +476,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] G3 for SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 (SCR-07 v2 and SCR-04 v2 approved 2026-11-18; SCR-11, SCR-14 and the registry additions to SCR-07 v2 and SCR-04 v2 approved 2026-11-19: `docs/design/g3/SCR-11.md`, `SCR-14.md`, the addenda in `SCR-07.md` and `SCR-04.md`)
 - [x] Demo: train the reference CNN on the phase-2 image dataset; pause and resume it from the UI; find it in the registry; run retention; get a prediction (2026-11-19, README "Training demo": `job_0051`, 30 epochs on the GPU, 84.3 %; paused and resumed on SCR-07 at the checkpoint's step 3,244; `partial`, then `trained` and latest on SCR-11; retention `job_0052` deleted job_0030's and job_0031's weights and kept the pinned `mv_e80834ce01b0`, as the owner chose; the dry run and disk report on SCR-11 agree; SCR-11's try-out predicted on the CPU in 146 ms)
 - [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS for BUG7; learning notes)
-- [ ] Owner's OK to merge
+- [x] Owner's OK to merge ("Merge M8", 2026-11-19)
 
 ## M9 — Model builder
 
