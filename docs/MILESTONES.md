@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). M9 merged 2026-11-19 (the model builder: graph specs checked in plain Python, compiled to PyTorch, templates; SCR-08 and SCR-09 through G3; BUILD-1.8 written by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
 | Planning style | Phases 1 and 2 (M0–M11) are planned in detail; phase 2's detail was approved on 2026-11-17. Phases 3–5 (M12–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -26,7 +26,7 @@
 | M6 | Phase-1 screens | 1 | L | Done 2026-11-17 |
 | M7 | Phase-1 acceptance | 1 | M | Done 2026-11-17 |
 | M8 | Training runtime and registry | 2 | L | Done 2026-11-19 |
-| M9 | Model builder | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M9 | Model builder | 2 | L | Done 2026-11-19 |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M12 | LLM serving and RAG | 3 | L | Outline |
@@ -517,7 +517,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] G3 for SCR-08 and SCR-09 (approved 2026-11-19, "Approved": `docs/design/g3/SCR-08.md`, `SCR-09.md`)
 - [x] Demo: build a CNN on the canvas, train it from SCR-09, follow it on SCR-04, find it in SCR-11 (2026-11-19: `my_model`, eight layers added from the palette, 10,602 parameters; `job_0053` chose the GPU by benchmark, 10 epochs in 65 s, val acc 53.6 %, peak 302 MB; `mv_0cfa1ce88a16` in `my_model · cifar10` on SCR-11. README "Model builder demo")
 - [x] Docs updated (learning notes) (2026-11-19: API.md §3.11 and the M9 interfaces, DATA_MODEL §4.14, ARCHITECTURE's code layout, ADR-0017; `docs/learning/` §26 and §5k)
-- [ ] Owner's OK to merge
+- [x] Owner's OK to merge ("Merge M9", 2026-11-19)
 
 ## M10 — Classical ML, HPO, task metrics
 
