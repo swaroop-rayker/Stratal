@@ -571,7 +571,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] ADR-0018 approved; S-09 report delivered (ADR-0018 approved 2026-11-19, "Approve all three")
+- [x] ADR-0018 approved; S-09 report delivered (ADR-0018 approved 2026-11-19, "Approve all three"; `docs/spikes/S-09-hpo.md` 2026-11-19: Optuna stays in its schema, decision 7 confirmed, importance uses fANOVA set explicitly)
 - [x] ADR-0019 approved (open points 1–7, 9, 14–17); DATA-1.5 approved or declined (points 11–13) (both approved 2026-11-19, "Approve all three")
 - [ ] `test_DATA_1_5_*`: a flat image folder with a labels CSV ingests with each image's label; unlisted images, missing files and repeated paths are reported; one changed label gives a new version ID
 - [ ] `test_DATA_1_4_*`: a sample CSV and a sample JSONL ingest without errors

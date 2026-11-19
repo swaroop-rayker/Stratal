@@ -706,6 +706,23 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Put as four questions with a recommendation each; recorded in MILESTONES.md's M9 section and shaping ADR-0017 (proposed).
 - **Why:** Each changes the model spec's shape (ADR-0017 rules 1, 6 and 10) or adds a dependency, so each is the owner's to decide before the ADR. The owner took the recommendation on three, and full graphs over a residual wrapper layer.
 
+## M10: classical ML, HPO, task metrics
+
+**The owner's M10 kickoff decisions** (2026-11-19)
+- **What:** EVAL-1.2 written by the agent, on libraries (sklearn.metrics, sacrebleu; CIDEr-D in house); words as tokens; scikit-learn, skops and Optuna approved for the worker images; one ADR-0019 for the open points; DATA-1.5 for labels from a CSV.
+- **How:** Put as four questions; recorded as K1–K5 in MILESTONES.md's M10 section. ADR-0018, ADR-0019 and DATA-1.5 were then approved together ("Approve all three").
+- **Why:** Ownership, dependencies and the shape of the decisions are the owner's. ADR-0019 also put scikit-learn and skops into the GPU image for serving and left torchmetrics out, both stated before the approval.
+
+**M10's new packages held to releases at least two weeks old** (HPO-1.2, ML-1.1, ML-1.5, EVAL-1.2; the owner's choice, 2026-11-19)
+- **What:** scikit-learn 1.9.1, scipy 1.18.1, skops 0.16.0, Optuna 5.0.0 and sacrebleu 2.6.0 in both worker images (`ml-cpu` and `gpu` extras); five transitive or new releases held back: Optuna 5.0.0 rather than 5.1.0, cloudpickle 3.1.2, narwhals 2.28.0, prettytable 3.18.0, threadpoolctl 3.7.0.
+- **How:** `[tool.uv] constraint-dependencies` caps those five, with a comment; re-locking changed only them. A global `exclude-newer` was tried in a scratch copy and rejected: it re-resolves every package. `worker-cpu` now also installs the `test` group, so tests that need these libraries (marker `ml`) run there, as `torch` tests run in `worker-gpu`. Modules that import them use `# pyright: basic, reportMissingImports=false`, like the existing PyTorch modules, so `dev` stays without them.
+- **Why:** Re-locking brought in releases one to three days old and one package nobody had approved, cloudpickle (joblib's dependency, for its process pool). Waiting two weeks lets a bad release be yanked before we take it. cloudpickle is accepted as a dependency; nothing in Stratal calls it, and NFR-8's scan still forbids unpickling in our code.
+
+**Spike S-09** (HPO-1.2, HPO-1.5, ADR-0018) — [docs/spikes/S-09-hpo.md](spikes/S-09-hpo.md)
+- **What:** Optuna on PostgreSQL in its own schema, the cost per trial, and parameter importance, measured before building HPO.
+- **How:** A scratch database for the storage checks, which was created and then dropped; past `train` and `retention` jobs for the start latencies; and a test study with a known answer for importance.
+- **Why:** ADR-0018 assumed these. Two surprises: Optuna 5.0's default importance evaluator is PED-ANOVA, not fANOVA, and it ranked the wrong parameter first at 20 trials, so fANOVA is set explicitly. And a deep-learning trial costs about 19 s beyond its training, 23 % of a 10-epoch Small CNN trial.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

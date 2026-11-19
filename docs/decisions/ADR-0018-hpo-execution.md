@@ -95,6 +95,13 @@ On the running stack, with Optuna installed in a scratch container:
 
 The report goes in `docs/spikes/S-09-hpo.md`. If a number contradicts this ADR, the ADR is revised before building.
 
+## As measured (S-09, 2026-11-19)
+
+[docs/spikes/S-09-hpo.md](../spikes/S-09-hpo.md). The decision holds; two notes:
+
+- **Rule 9, the word "default", was wrong.** Optuna 5.0's default importance evaluator is PED-ANOVA, not fANOVA. On a test study with a known answer, PED-ANOVA ranked the wrong parameter first at 20 trials; fANOVA ranked the right one first at 20 and 200 trials, in 0.14 s and 1.7 s. Importance therefore uses `FanovaImportanceEvaluator`, **set explicitly** with the study's seed, as the rule intended.
+- **A deep-learning trial costs about 19 s beyond its training**: about 16 s from its job's creation to its first training step, and about 3 s for the step that advances the study. That is 23 % of a 10-epoch Small CNN trial and 9 % of a 30-epoch one. A classical trial in its own job would cost about five times as much as one inside the study's job, which confirms decision 7. Optuna's calls add about 0.2 s per deep-learning trial and 0.13 s per 5-fold classical trial. Its tables and its own `alembic_version` stay in schema `optuna`, and `alembic check` sees no change.
+
 ## Alternatives
 
 | Option | Why not |
