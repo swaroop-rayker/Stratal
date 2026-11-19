@@ -302,6 +302,24 @@ Built in M5 (2026-11-16). Details:
 - A save that would delete weights is refused with `409 confirmation_required` and the `plan`; the same body with `confirm: plan.token` saves it and queues a retention job that deletes only that plan's versions (`job_id`). If anything changed in between, the token no longer matches and a new plan is returned the same way (ADR-0015 rule 7).
 - An unknown lineage in `overrides` is `422 validation_error`.
 
+### 3.11 Model builder (M9, BUILD-1, UI-2.3, DATA-5.5; [ADR-0017](decisions/ADR-0017-model-spec.md))
+
+| Method and path | Purpose | Success |
+|---|---|---|
+| `GET /model-specs/schema` | JSON Schemas for SCR-08's forms: `layer` (one per type under `$defs`, with ranges, defaults and descriptions), `graph`, `max_nodes`, `max_edges` (UI-2.3) | `200` |
+| `POST /model-specs/validate` | Shapes, counts, the memory estimate and every problem. Body `{graph, dataset_version, optimizer?}` (`adam`, `sgd`, `sgd_momentum`) | `200 {dataset, report}` |
+| `GET /dataset-types` | Each type's `{name, title, input_kind, families, default_metrics, trainable, note}` (DATA-5.5) | `200` list |
+| `GET /model-templates?dataset_type=` | Built-in templates first, then saved ones, by name | `200` list |
+| `POST /model-templates` | Save a spec. Body `{name, description?, dataset_type, spec}`; a taken name is `409 conflict` | `201` template |
+| `GET`, `PUT`, `DELETE /model-templates/{id}` | Read; change `name`, `description` or `spec`; delete. A built-in template is `409 conflict` for `PUT` and `DELETE` | `200`, `200`, `204` |
+
+- **A graph** is `{spec_version: 1, label, nodes: [{id, layer: {type, ...}}], edges: [[from, to]]}`, between the fixed nodes `input` and `output` (ADR-0017 rule 1). Layer types and fields are in the schema; a field out of range, an unknown type or an unknown field is `422 validation_error` with `errors[].loc` naming it (BUILD-1.2).
+- **`dataset`** is the version's two locked ends: `{version_id, dataset_type, input: {kind, dims, vocab}, input_text, output_size, classes, families, trainable, problem}`. When the version cannot feed the builder (not a split, or a type not trained until M10), `problem` says why in words and `report` is null.
+- **`report`** is `{valid, input, output_size, nodes: [{id, type, inputs, shape, shape_text, parameters}], head: {in_features, out_features, parameters}, total_parameters, family, memory: {optimizer, weights_bytes, gradients_bytes, optimizer_bytes, total_bytes, activation_bytes_per_sample}, problems: [{node_id, code, message}], structure_hash}`. A spec with problems is still `200`; `valid` is false and `total_parameters`, `memory` and `structure_hash` are null. Nodes are in canonical order (topological, ties by ID); a node whose shape could not be worked out has `shape: null`.
+- **Problem codes:** `shape_mismatch`, `rank_mismatch`, `below_one_pixel`, `invalid_padding`, `heads_do_not_divide`, `odd_model_dim`, `sequence_too_long`, `dropout_needs_layers`, `tokens_need_embedding`, `invalid_padding_idx`, `merge_needs_two`, `merge_shape_mismatch`, `too_many_inputs`, `output_not_vector`, `output_inputs`, `cycle`, `unreachable`, `dangling`, `duplicate_id`, `unknown_node`, `edge_direction`, `duplicate_edge`, `incompatible_family`.
+- **A template** is `{id, name, description, dataset_type, builtin, spec, structure_hash, created_at, updated_at}`; `spec` is stored in canonical form, so it reloads identically however it was listed (BUILD-1.7).
+- **Training a graph:** `POST /jobs` with `config.model` = `{name: "graph", graph}`. A graph with problems is `422 validation_error`, each problem an error with `loc` `["config", "model", "graph", node_id?]` and its `code`. The lineage is named after the graph's `label` and keyed without it (ADR-0017 rule 1).
+
 ### 3.7 Configuration
 
 | Method and path | Purpose | Success |
@@ -358,6 +376,7 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 | Report statistics | EVAL-1.1 | In `stratal.eval.report_stats`: `rejection_counts(rows: Iterable[RowStatus]) -> RejectionCounts`, `filter_rate(counts) -> float \| None`, `score_distribution(scores, *, edges) -> ScoreDistribution` (type-7 quantiles, fixed bins), `wilson_interval(successes, trials, *, confidence=0.95) -> Interval`, `review_acceptance(items: Sequence[ReviewedItem], *, confidence) -> Acceptance` (overall and per split) | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
 | Training state close | RUN-1.4 (v2) | `TrainingState(model, optimizer, *, info).close()` in `stratal.train.memory`: gradients set to `None`, optimizer state emptied, own references dropped, harmless twice; after it the v1 `VramManager.unload` finds allocated memory back at baseline | M8; stub, strict expected-failure tests and `FakeTrainingState` delivered 2026-11-17 |
 | Training out-of-memory | RUN-1.5 | `suggest_batch_size(*, failed_batch, fixed_mb, per_sample_mb, cap_mb) -> int \| None` (largest power of two below the failed batch that fits 90 % of the cap) and `training_oom_error(*, failed_batch, suggested, peak_mb, cap_mb) -> GpuOom` ("reduce batch size from 32 → 16") | M8; stubs, tests and fakes delivered 2026-11-17 |
+| From-scratch layers | BUILD-1.8 | `MultiHeadSelfAttention`, `PositionalEncoding`, `ScratchLSTMCell` in `stratal.build.scratch`, with PyTorch's parameter layout; each matches PyTorch's own layer within 1e-5 (attention) or 1e-6 | M9; written by the agent at the owner's request, 2026-11-19 (ADR-0012) |
 | Task metrics | EVAL-1.2 | In `stratal.eval.task_metrics`: `classification`, `regression`, `clustering`, `perplexity`, `translation` (BLEU, chrF), `cider_d`, `mean_clip_score`; pure functions; `metric_set(task)` names each task's metrics | M10; stubs and tests delivered 2026-11-17 (M8), so the CNN can be scored as soon as they exist |
 | Semantic-duplicate clustering | DATA-2.3, DATA-4.8 (P2) | CLIP image vectors → clusters in the label stage, joined by the split ([ADR-0013](decisions/ADR-0013-semantic-duplicates.md)) | M11 |
 
@@ -447,7 +466,7 @@ Still planned for phase 1: run a pipeline.
 
 | Interface | Where | Shape |
 |---|---|---|
-| Training config (RUN-1.1) | `stratal.train.config` | `ModelSpec(name: "mlp" | "small_cnn")`, `TrainConfig` (fields in §3.3), `TrainRequest(kind, dataset_version, config)`; torch-free |
+| Training config (RUN-1.1) | `stratal.train.config` | `ModelSpec(name: "mlp", "small_cnn" or "graph", graph?)` (since M9; `display`, `identity()`), `TrainConfig` (fields in §3.3), `TrainRequest(kind, dataset_version, config)`; torch-free |
 | Reference models | `stratal.train.reference` | `build_model(spec, input_shape: (C, H, W), num_classes) -> nn.Module`, `parameter_count(model)` (PyTorch images only) |
 | Image loader | `stratal.train.data` | `split_items(rows, blobs) -> SplitItems(classes, by_split)`, `LabelledImages(items)`, `EpochOrder(size, *, seed, epoch, start=0)`, `to_tensor(image)` |
 | Checkpoints (RUN-1.3) | `stratal.train.checkpoint` | `Position(epoch, batches_done, global_step)`, `Checkpoint(position, config_hash, history)`, `save(folder, *, model, optimizer, scheduler, checkpoint)`, `latest(folder)`, `load(path) -> Loaded`, `restore(loaded, *, model, optimizer, scheduler)`, `remove_all(folder) -> bytes freed`, `checkpoint_dir(data_dir, job_id)` |
@@ -466,13 +485,28 @@ Still planned for phase 1: run a pipeline.
 | Inference service | `stratal.inference` | `holder.ModelHolder(*, engine, settings, bus, gpu, state_cls, on_leak)`: `predict(version_id, image)`, `status()`, `tick()`, `run_checks(stop)`, `shutdown()`; `holder.decode_image`, `prepare_input`, `close_written`; `app.create_inference_app(holder, decode)` (`POST /predict`, `GET /status`); `python -m stratal.inference` |
 | Inference holdings | `stratal.core.bus` | `set_inference_loaded({version_id, device, since} | None)`, `get_inference_loaded()`: Redis key `stratal:inference:loaded`, written by the inference service (ADR-0016 rule 6), read by retention |
 
+### Internal interfaces added in M9
+
+| Interface | Where | Shape |
+|---|---|---|
+| Shapes | `stratal.build.shapes` | `Shape(kind: image, vector, sequence or tokens, dims, vocab?)`, `SpecProblem(code, message)` |
+| Layer specs (BUILD-1.1, 1.2) | `stratal.build.layers` | One Pydantic model per type, the `Layer` union on `type`; `apply(inputs: [Shape]) -> Applied(shape, parameters)`, `family()`; `LAYER_TYPES`, `head_parameters` |
+| Graph specs (BUILD-1.4 to 1.6, 1.9) | `stratal.build.spec` | `GraphSpec`, `Node`; `validate_graph(spec, *, input_shape, output_size, optimizer, families) -> Report`; `canonical`, `structure_hash`, `identity`, `family_of`, `input_order`, `chain(label, *layers)` |
+| Locked ends (BUILD-1.3) | `stratal.build.io` | `version_io(engine, data_dir, version_id) -> VersionIo` (cached per version), `image_shape(rows)`, `image_classes(rows)`, `check_train_graph(...)` |
+| Tabular input block | `stratal.build.tabular` | `TabularColumn(name, kind, categories, encoding, embedding_dim)`, `input_block(columns) -> (width, parameters)` |
+| Compilation | `stratal.build.compile` | `compile_graph(spec, input_shape, num_classes) -> GraphModule` (PyTorch images only); called by `build_model` for `name: "graph"` |
+| Templates (BUILD-1.7) | `stratal.build.store`, `stratal.build.templates` | `ensure_builtins`, `list_templates`, `get_template`, `create_template`, `update_template`, `delete_template`, `template_view`; `BUILTINS` |
+| Dataset types (DATA-5.2, 5.5) | `stratal.data.dataset_types` | `TYPE_INFO[name] -> TypeInfo(input_kind, families, default_metrics, trainable, note)`; `TableSchema`, `Column`, `validate_tabular`, `validate_labelled_text` |
+| From-scratch layers (BUILD-1.8) | `stratal.build.scratch` | `MultiHeadSelfAttention(embed_dim, num_heads, *, dropout, causal)`, `PositionalEncoding(d_model, *, max_len, dropout)`, `ScratchLSTMCell(input_size, hidden_size)` (PyTorch images only) |
+| Unpickling tripwire (NFR-8) | `stratal.testing.no_pickle`, `stratal.runtime.child` | `forbid_unpickling(report=None)`, `plant_pickle`; `STRATAL_TEST_FORBID_UNPICKLING` (M8) |
+
 ## 7. Later phases
 
 Listed so the phase-1 design leaves room. Each is specified at its phase kickoff.
 
 | Phase | Interfaces |
 |---|---|
-| 2 | `hpo_study` and `eval` jobs; model specs and templates; `POST /models/{version}/predict` (REG-1.4); comparison views. Train jobs, pause and resume (§3.3), the registry and retention (§3.9) and settings (§3.10) are built |
+| 2 | `hpo_study` and `eval` jobs; comparison views. Train jobs, pause and resume (§3.3), the registry and retention (§3.9), settings (§3.10) and the model builder (§3.11) are built |
 | 3 | Chat with token streaming over SSE; RAG corpora and indexes; router decisions; image search |
 | 4 | Image generation; LoRA jobs; export and import of remote bundles |
 | 5 | Translation; full chat with manual and auto mode |
