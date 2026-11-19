@@ -62,9 +62,9 @@ This document is the source of truth for what Stratal must do. It restates every
 - **DATA-1.4** `[P1][2]` The system shall ingest tabular (CSV/Parquet) and text (TXT/JSONL) sources.
   - `DATA-1.4.AC1` sample CSV and JSONL ingest without errors.
 
-> **Proposed, 2026-11-19, awaiting the owner's approval** (M10's open points 11–13, added to the plan at the owner's request). Not to be built until approved. Today a labelled image's class comes only from its first folder (`label_from: folder`, DATA-5.2). The *(proposed)* marker keeps it out of NFR-9's requirement count; on approval the marker goes and the count becomes 121.
+> **Approved by the owner on 2026-11-19** ("Approve all three"; M10's open points 11–13, added to the plan at the owner's request). Before it, a labelled image's class came only from its first folder (`label_from: folder`, DATA-5.2).
 
-- **DATA-1.5** *(proposed)* `[P1][2]` The system shall take labelled images' classes from a CSV in the source folder that maps each image's path to its label (`label_from: {csv, path_column, label_column}`), as an alternative to class folders. Paths in the CSV are relative to the source folder. Single-label classification only: several labels per image, and a number per image, are not covered.
+- **DATA-1.5** `[P1][2]` The system shall take labelled images' classes from a CSV in the source folder that maps each image's path to its label (`label_from: {csv, path_column, label_column}`), as an alternative to class folders. Paths in the CSV are relative to the source folder. Single-label classification only: several labels per image, and a number per image, are not covered.
   - `DATA-1.5.AC1` a flat folder of images with a labels CSV ingests with each image's label from its row; an image with no row is rejected as `no_label`; a row whose file is missing, and a path listed twice, are reported in the ingest summary with their row numbers, not silently dropped.
   - `DATA-1.5.AC2` the CSV's content is part of the version's identity: the same images and CSV give the same version ID, and changing one label gives a new one.
 

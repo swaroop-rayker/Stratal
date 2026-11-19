@@ -1,6 +1,6 @@
 # ADR-0018 — HPO execution: studies, trials, pruning and the single test evaluation
 
-**Status:** Proposed, 2026-11-19 (M10). Spike S-09 checks the numbers it assumes before anything it covers is built.
+**Status:** Accepted by the owner on 2026-11-19, as proposed ("Approve all three", M10). Spike S-09 checks the numbers it assumes before anything it covers is built.
 
 ## Context
 

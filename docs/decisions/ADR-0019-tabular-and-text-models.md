@@ -1,6 +1,6 @@
 # ADR-0019 — Tabular and text models end to end: data, fitted preprocessing, classical ML, serving
 
-**Status:** Proposed, 2026-11-19 (M10). Settles M10's open points 1–7, 9 and 14–17 (MILESTONES.md), as the owner chose at the kickoff (K5). Points 8 and 10 are settled in ADR-0017 rule 6; points 11–13 are the proposed requirement DATA-1.5 in SPEC.
+**Status:** Accepted by the owner on 2026-11-19, as proposed ("Approve all three", M10), including rule 20 (scikit-learn and skops in the `gpu` extra too) and rule 24 (torchmetrics not added). Settles M10's open points 1–7, 9 and 14–17 (MILESTONES.md), as the owner chose at the kickoff (K5). Points 8 and 10 are settled in ADR-0017 rule 6; points 11–13 are requirement DATA-1.5 in SPEC, approved the same day.
 
 ## Context
 

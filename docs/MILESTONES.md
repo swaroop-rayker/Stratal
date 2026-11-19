@@ -521,7 +521,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 ## M10 — Classical ML, HPO, task metrics
 
-**Size** L · **Branch** `m10-ml-hpo-metrics` · **Serves** ML-1.1–1.5, HPO-1.1–1.5, EVAL-1.2, DATA-1.4, DATA-2.4
+**Size** L · **Branch** `m10-ml-hpo-metrics` · **Serves** ML-1.1–1.5, HPO-1.1–1.5, EVAL-1.2, DATA-1.4, DATA-1.5, DATA-2.4
 
 **Decided by the owner at M10's kickoff (2026-11-19):**
 
@@ -550,7 +550,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
   Points 8 and 10 shape the model spec, so they belong in ADR-0017, before M9.
 
-- **Labels for images from a CSV** (proposed requirement, added to this plan at the owner's request on 2026-11-19; written into SPEC with an ID and acceptance criteria at M10's kickoff, for the owner's approval). Today ingest takes an image's class only from its first folder (`label_from: folder`). Many ready-made and hand-made datasets instead ship one folder of images and a CSV mapping each file to its label (`path, label`). Proposed: a second source of labels for labelled images, e.g. `label_from: {csv: labels.csv, path_column, label_column}`, alongside DATA-1.4's CSV ingestion. To settle:
+- **Labels for images from a CSV** (approved as DATA-1.5 on 2026-11-19; proposed requirement, added to this plan at the owner's request on 2026-11-19; written into SPEC with an ID and acceptance criteria at M10's kickoff, for the owner's approval). Today ingest takes an image's class only from its first folder (`label_from: folder`). Many ready-made and hand-made datasets instead ship one folder of images and a CSV mapping each file to its label (`path, label`). Proposed: a second source of labels for labelled images, e.g. `label_from: {csv: labels.csv, path_column, label_column}`, alongside DATA-1.4's CSV ingestion. To settle:
   11. Paths in the CSV are relative to the source folder; an image with no row is rejected with a reason code (as `no_label` is now); a row whose file is missing is reported, not silently dropped.
   12. The CSV's content is part of the version's identity (DATA-3.2), so editing a label makes a new version.
   13. Scope: single-label classification only. Several labels per image (multi-label) and a number per image (image regression) need training-runtime changes and are not part of this.
@@ -571,8 +571,9 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] ADR-0018 approved; S-09 report delivered
-- [ ] ADR-0019 approved (open points 1–7, 9, 14–17); DATA-1.5 approved or declined (points 11–13)
+- [ ] ADR-0018 approved; S-09 report delivered (ADR-0018 approved 2026-11-19, "Approve all three")
+- [x] ADR-0019 approved (open points 1–7, 9, 14–17); DATA-1.5 approved or declined (points 11–13) (both approved 2026-11-19, "Approve all three")
+- [ ] `test_DATA_1_5_*`: a flat image folder with a labels CSV ingests with each image's label; unlisted images, missing files and repeated paths are reported; one changed label gives a new version ID
 - [ ] `test_DATA_1_4_*`: a sample CSV and a sample JSONL ingest without errors
 - [ ] `test_DATA_2_4_*`: planted bad rows are removed and logged
 - [ ] `test_ML_1_1_*`: each listed model trains on a tabular dataset
