@@ -415,6 +415,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] G2: SCR-07 v2 (low-fi v1 and hi-fi v1 approved 2026-11-17; `docs/design/screens/SCR-07v2_v1.html`)
 - [x] G2: SCR-11 (low-fi v1 and hi-fi v1 approved 2026-11-17; `docs/design/screens/SCR-11_v1.html`)
 - [x] G2: SCR-14 (low-fi v1 approved 2026-11-17, hi-fi v1 approved 2026-11-18; `docs/design/screens/SCR-14_v1.html`)
+- [ ] G2: SCR-08 (low-fi, then hi-fi)
+- [ ] G2: SCR-09 (low-fi, then hi-fi; the HPO part with SCR-10, M10)
 
 ## M8 — Training runtime and registry
 
@@ -482,7 +484,9 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Size** L · **Branch** `m9-model-builder` · **Serves** BUILD-1.1–1.9, UI-2.3, DATA-5.2, DATA-5.5
 
-**Before starting:** ADR-0017 approved, including the tabular input width and categorical embeddings (M10's open points 8 and 10); G2 for SCR-08 and SCR-09 approved; React Flow approved as a frontend dependency (SPEC §7.4 names it).
+**Before starting:** ADR-0017 approved, including the tabular input width and categorical embeddings (M10's open points 8 and 10); G2 for SCR-08 and SCR-09 approved; React Flow approved as a frontend dependency (SPEC §7.4 names it; `@xyflow/react` 13.0.1 is already installed).
+
+**Decided by the owner at M9's kickoff (2026-11-19):** BUILD-1.8 is written by the agent (ADR-0012's log); BUILD-1.9 uses full graphs (nodes and any edges), not a residual wrapper; a tabular network takes its categorical columns through an input block, one-hot by default with an `Embedding` per column as an option (M10's points 8 and 10); torchinfo is added as a test-only dependency in `dev` (BUILD-1.5).
 
 **Scope**
 
@@ -497,7 +501,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] ADR-0017 approved
+- [ ] ADR-0017 approved (proposed 2026-11-19: `docs/decisions/ADR-0017-model-spec.md`)
 - [ ] `test_BUILD_1_1_*`: every layer type can be added and configured
 - [ ] `test_BUILD_1_2_*`: out-of-range values are rejected with a message
 - [ ] `test_BUILD_1_3_*`: changing the dataset updates the input and output
