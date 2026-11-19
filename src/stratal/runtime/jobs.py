@@ -28,7 +28,8 @@ from stratal.core.errors import (
     ValidationFailed,
 )
 from stratal.data import registry
-from stratal.db.models import Checkpoint, Dataset, Job, JobStage
+from stratal.db.models import Checkpoint, Dataset, DatasetVersion, Job, JobStage
+from stratal.ml.params import ClassicalConfig
 from stratal.mon.events import utc_now
 from stratal.registry import store as model_registry
 from stratal.runtime import stages as stage_registry
@@ -363,6 +364,9 @@ def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqu
             suggested_action="List versions with GET /datasets/{slug}/versions and use one.",
             errors=[FieldProblem(loc=loc, msg="unknown version", code="not_found")],
         ) from exc
+    if request.classical is not None:
+        return _create_classical_job(session, request.classical, version)
+    assert request.config is not None
     if version.dtype != stage_registry.LABELLED_IMAGES or version.stage != "split":
         made = f"a {version.stage} version of type {version.dtype or 'none'}"
         raise ValidationFailed(
@@ -412,6 +416,65 @@ def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqu
         dataset_id=version.dataset_id,
         input_version_id=version_id,
         queues={"train": "cpu" if request.config.device == "cpu" else "gpu"},
+    )
+
+
+def _create_classical_job(
+    session: Session, config: ClassicalConfig, version: DatasetVersion
+) -> tuple[Job, Enqueue]:
+    """A classical model's run on a tabular split, on the CPU queue (ML-1.1, ML-1.4)."""
+    from stratal.core.settings import get_settings
+    from stratal.ml.data import load_tabular
+    from stratal.ml.params import check_data, check_task
+
+    version_id = version.version_id
+    if version.dtype != stage_registry.TABULAR or version.stage != "split":
+        made = f"a {version.stage} version of type {version.dtype or 'none'}"
+        raise ValidationFailed(
+            f"Version {version_id} is {made}; a classical model needs a split of a tabular "
+            "dataset.",
+            suggested_action="Run a tabular pipeline through the split stage and train on it.",
+            errors=[
+                FieldProblem(loc=["dataset_version"], msg="not a tabular split", code="invalid")
+            ],
+        )
+    _, manifest = registry.manifest_for(session, get_settings().data_dir, version_id)
+    data = load_tabular(manifest)
+    spec = config.model.resolved()
+    problems: list[FieldProblem] = []
+    wrong_task = check_task(spec.estimator, data.task)
+    if wrong_task is not None:
+        problems.append(
+            FieldProblem(loc=["classical", "model", "estimator"], msg=wrong_task, code="invalid")
+        )
+    for field_name, reason in check_data(spec, data.facts()):
+        problems.append(
+            FieldProblem(
+                loc=["classical", "model", "params", field_name], msg=reason, code="invalid"
+            )
+        )
+    if problems:
+        raise ValidationFailed(
+            "The classical model does not fit this dataset (ML-1.4).",
+            suggested_action="Fix the fields listed in 'errors'.",
+            errors=problems,
+        )
+    resolved = config.model_copy(update={"model": spec}).model_dump(mode="json")
+    dataset = session.get(Dataset, version.dataset_id)
+    spec_json: dict[str, Any] = {
+        "kind": "train",
+        "dataset": dataset.slug if dataset is not None else None,
+        "dataset_version": version_id,
+        "stages": {"train_classical": resolved},
+    }
+    return create_job_from_plan(
+        session,
+        kind="train",
+        spec=spec_json,
+        plan=[("train_classical", resolved)],
+        dataset_id=version.dataset_id,
+        input_version_id=version_id,
+        queues={"train_classical": "cpu"},
     )
 
 
@@ -665,10 +728,13 @@ def create_retrain_job(session: Session, version_id: str) -> tuple[Job, Enqueue]
             f"{version_id} is a {version.state} version; only trained versions are re-trained.",
             suggested_action="Re-train a trained version, or start a new run.",
         )
+    model_spec: dict[str, Any] = dict(version.config.get("model") or {})
+    classical = model_spec.get("kind") == "sklearn"
     request = TrainRequest(
         kind="train",
         dataset_version=version.dataset_version_id,
-        config=TrainConfig.model_validate(version.config),
+        config=None if classical else TrainConfig.model_validate(version.config),
+        classical=ClassicalConfig.model_validate(version.config) if classical else None,
     )
     job, enqueue = create_train_job(session, request)
     job.spec = {**job.spec, "retrain_of": version_id}

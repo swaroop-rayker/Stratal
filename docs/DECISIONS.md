@@ -728,6 +728,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Six nullable manifest columns (`record`, `target_value`, `text`, `text_group`, `tokens`, `token_count`). `sha256` is the row's content hash, so the image stage's exact-duplicate unit marks repeated records. The table schema and the vocabulary travel as manifest metadata. The split keeps its stage but takes a path of its own for records: groups by text group, strata by class or target quintile, the owner's assignment unit, a linear leakage check. Tokens are words from the train split only (K3), stored as a string of IDs.
 - **Why:** Separate clean stages keep the image clean stage's config, and so future image version IDs, unchanged. A string of IDs keeps the version hash's code untouched. Keeping the split in one stage keeps continuing a split (DATA-4.5) and the report the same for every type. The COCO captions export streams the 450 MB instances file with a regex instead of loading it, which would need several GB.
 
+**Classical models** (M10, ML-1.1 to ML-1.5, ADR-0019 part D) — [ADR-0019](decisions/ADR-0019-tabular-and-text-models.md)
+- **What:** Fourteen scikit-learn estimators run as `train_classical` jobs on the CPU queue, fitted on the train split, scored with EVAL-1.2 and registered as skops files.
+- **How:** `stratal.ml.params` (plain Python) holds each estimator's parameters, the cross-field rules and the data-dependent checks the API runs before queueing; `stratal.ml.pipeline` builds one Pipeline (median imputing and scaling, constant imputing and one-hot encoding, then the estimator) on PyArrow tables; `stratal.ml.persist` saves with skops and loads only if every type in the archive's schema is on our list.
+- **Why:** The API must refuse a bad combination without scikit-learn (ML-1.4). PyArrow tables avoid adding pandas. Reading the types ourselves makes the allow-list real: skops alone trusts every scikit-learn estimator.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

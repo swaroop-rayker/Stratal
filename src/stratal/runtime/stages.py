@@ -36,6 +36,7 @@ from stratal.label.filter_stage import FilterConfig, FilterRule, run_filter
 from stratal.label.filtering import filter_decisions
 from stratal.label.stage import OWNER_UNITS as LABEL_UNITS
 from stratal.label.stage import LabelConfig, LabelModels, LabelUnits, run_label
+from stratal.ml.params import ClassicalConfig
 from stratal.mon.events import MetricValue
 from stratal.runtime.context import JobContext
 from stratal.runtime.gpu_lease import gpu_lease
@@ -614,6 +615,16 @@ def _run_train(run: StageRun) -> StageResult:
 
 
 register(StageDef("train", "gpu", TrainConfig, _run_train))
+
+
+def _run_train_classical(run: StageRun) -> StageResult:
+    """A classical model's run (ML-1.1, ADR-0019 part D). scikit-learn loads only here."""
+    from stratal.ml import stage as classical_stage
+
+    return classical_stage.run_train_classical(run)
+
+
+register(StageDef("train_classical", "cpu", ClassicalConfig, _run_train_classical))
 
 
 class RetentionConfig(BaseModel):

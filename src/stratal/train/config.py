@@ -17,6 +17,7 @@ from pydantic import (
 )
 
 from stratal.build.spec import GraphSpec, identity
+from stratal.ml.params import ClassicalConfig
 
 ReferenceModel = Literal["mlp", "small_cnn"]
 """Models defined in code (M8). Since M9 the builder's graphs train beside them."""
@@ -121,6 +122,20 @@ class TrainRequest(BaseModel):
 
     kind: Literal["train"]
     dataset_version: str = Field(
-        description="A split version of a labelled-images dataset, e.g. ds_f8e67211dd94."
+        description="A split version: of a labelled-images dataset for a network, of a "
+        "tabular dataset for a classical model, e.g. ds_f8e67211dd94."
     )
-    config: TrainConfig
+    config: TrainConfig | None = Field(
+        default=None, description="A network's run (RUN-1.1). Give this or 'classical'."
+    )
+    classical: ClassicalConfig | None = Field(
+        default=None,
+        description="A classical model's run on a tabular split (ML-1.1, ADR-0019 rule 15); "
+        "it runs on the CPU queue. Give this or 'config'.",
+    )
+
+    @model_validator(mode="after")
+    def _one_kind(self) -> "TrainRequest":
+        if (self.config is None) == (self.classical is None):
+            raise ValueError("give exactly one of 'config' (a network) and 'classical'")
+        return self

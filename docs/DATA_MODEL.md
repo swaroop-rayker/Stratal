@@ -15,7 +15,7 @@
 | **Blob store** | Image files (originals and preprocessed copies), named by content hash | Immutable, deduplicated by construction |
 | **Redis** | Task queue, event stream buffer, live fan-out, control flags | Transient. Nothing in Redis is the only copy of anything that matters |
 | **Per-job files** | Structured log, event spool, in-run checkpoints | Local durability that does not depend on any service being up |
-| **Registry files** | Model weights as safetensors with `model.json` beside them, one folder per version (`registry/<lineage>/<version>/`, M8). Nothing here or in a checkpoint is pickled; a file that is not safetensors is refused with `weights_unreadable` (NFR-8) | Deletable by retention, so not content-addressed (ADR-0015) |
+| **Registry files** | Model weights as safetensors with `model.json` beside them, one folder per version (`registry/<lineage>/<version>/`, M8); a classical model as `model.skops` with `model.json` (M10, ML-1.5). Nothing here or in a checkpoint is pickled; a network file that is not safetensors, or a skops file holding a type outside Stratal's allow-list, is refused with `weights_unreadable` (NFR-8) | Deletable by retention, so not content-addressed (ADR-0015) |
 
 ## 2. Entity overview
 

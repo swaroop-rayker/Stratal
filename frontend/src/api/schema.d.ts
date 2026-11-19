@@ -1012,6 +1012,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ml/estimators/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estimators Schema
+         * @description Each estimator's title, tasks and parameter schema (ML-1.1, ML-1.2, UI-2.3).
+         */
+        get: operations["estimators_schema_api_v1_ml_estimators_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1123,6 +1143,19 @@ export interface components {
              * @default 0.00001
              */
             eps: number;
+        };
+        /**
+         * ClassicalConfig
+         * @description A classical model's run (ML-1.1, ML-1.2). It runs on the CPU queue (ADR-0019 rule 15).
+         */
+        ClassicalConfig: {
+            model: components["schemas"]["SklearnSpec"];
+            /**
+             * Seed
+             * @description random_state where it applies.
+             * @default 0
+             */
+            seed: number;
         };
         /** ClipScores */
         ClipScores: {
@@ -2910,6 +2943,30 @@ export interface components {
             type: "sigmoid";
         };
         /**
+         * SklearnSpec
+         * @description A classical model: ``{"kind": "sklearn", "estimator": ..., "params": {...}}``.
+         */
+        SklearnSpec: {
+            /**
+             * Kind
+             * @default sklearn
+             * @constant
+             */
+            kind: "sklearn";
+            /**
+             * Estimator
+             * @enum {string}
+             */
+            estimator: "linear" | "ridge" | "lasso" | "logistic_regression" | "svm" | "decision_tree" | "random_forest" | "gradient_boosting" | "knn" | "naive_bayes" | "kmeans" | "dbscan" | "hdbscan" | "pca";
+            /**
+             * Params
+             * @description The estimator's parameters; see GET /ml/estimators/schema.
+             */
+            params?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * Softmax
          * @description Softmax over the last axis.
          */
@@ -3272,10 +3329,13 @@ export interface components {
             kind: "train";
             /**
              * Dataset Version
-             * @description A split version of a labelled-images dataset, e.g. ds_f8e67211dd94.
+             * @description A split version: of a labelled-images dataset for a network, of a tabular dataset for a classical model, e.g. ds_f8e67211dd94.
              */
             dataset_version: string;
-            config: components["schemas"]["TrainConfig"];
+            /** @description A network's run (RUN-1.1). Give this or 'classical'. */
+            config?: components["schemas"]["TrainConfig"] | null;
+            /** @description A classical model's run on a tabular split (ML-1.1, ADR-0019 rule 15); it runs on the CPU queue. Give this or 'config'. */
+            classical?: components["schemas"]["ClassicalConfig"] | null;
         };
         /**
          * TrainingContext
@@ -5189,6 +5249,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    estimators_schema_api_v1_ml_estimators_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: {
+                            [key: string]: unknown;
+                        };
+                    };
                 };
             };
         };

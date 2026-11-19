@@ -158,6 +158,22 @@ Training request (M8, RUN-1.1, [ADR-0014](decisions/ADR-0014-training-jobs.md)):
 - **Events** (RUN-1.8): `substage` `setup` (model, device, rows), `train` progress reports at most once a second (`step`/`total` are global steps; metrics `epoch`, `loss`, `accuracy`, `learning_rate`, `grad_norm`, `step_ms`, `samples_per_s`), `validate` once per epoch (`train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`), `checkpoint` (`checkpoint_step`, `checkpoint_bytes`), `resume` when a retry continues from a checkpoint (`resumed_at_step`, `resumed_epoch`), `device` when `auto` chose a device (the timings), a second `setup` event naming the lineage and its base (`lineage_id`, `base_version_id`), `registry` when a pause records the version as partial, and `finish` (`model_version_id`).
 - `GET /config/schemas` and `/config/defaults` list pipeline stages only, so the Start pipeline drawer does not show `train`.
 
+**A classical model** (M10, ML-1.1 to ML-1.5, [ADR-0019](decisions/ADR-0019-tabular-and-text-models.md) part D) is the same `kind: train` with `classical` in place of `config` (exactly one of the two; both or neither is `422`):
+
+```json
+{
+  "kind": "train",
+  "dataset_version": "ds_98c3fdfd7edc",
+  "classical": {"model": {"kind": "sklearn", "estimator": "random_forest", "params": {"max_depth": 9}}, "seed": 0}
+}
+```
+
+- **`dataset_version`** must be a `split` version of a `tabular` dataset (`validation_error` at `["dataset_version"]` otherwise).
+- **`estimator`**: `linear`, `ridge`, `lasso` (regression); `logistic_regression`, `naive_bayes` (classification); `svm`, `decision_tree`, `random_forest`, `gradient_boosting` (scikit-learn's histogram boosting), `knn` (either, by the dataset's task); `kmeans`, `dbscan`, `hdbscan`, `pca` (any table; the target is ignored). `params` are checked against the estimator's schema (`GET /ml/estimators/schema`) and its cross-field rules (ML-1.4): a broken one is `422` at `["classical", "model"]` with the fields named in the message. Rules that depend on the data are checked against the split before queueing: an estimator for the other task (`["classical", "model", "estimator"]`), `n_neighbors` or `n_clusters` above the train rows, `n_components` above the encoded width (`["classical", "model", "params", <field>]`).
+- The job has kind `train` and one stage, `train_classical`, on the `cpu` queue; its config records every parameter, defaults filled in (NFR-4). Metrics: `task`; for classification `val_accuracy`, `val_macro_f1`, `test_accuracy`, `test_macro_f1`; for regression `val_`/`test_` `mse`, `rmse`, `mae`, `r2`; for clustering `clusters`, `noise_points`, `silhouette`, `davies_bouldin` on train; for PCA `explained_variance`; and `fit_s`, `weights_bytes`, `model_version_id`. The version's `metrics.detail` adds per-class F1 and the confusion matrix with its labels (EVAL-1.2).
+- **Registry:** the lineage is the estimator on the dataset (its parameters are not part of the key, so a study's runs and re-runs share it); its base is the unfitted pipeline. Each version's folder holds `model.skops` and `model.json`. Re-training a classical version (`POST /model-versions/{id}/retrain`) repeats its `classical` config.
+- **`GET /ml/estimators/schema`** returns, per estimator, `{title, tasks, schema}` (the parameters' JSON Schema), for SCR-09's classical form (UI-2.3).
+
 Pipeline request:
 
 ```json

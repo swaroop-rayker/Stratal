@@ -75,6 +75,15 @@ A tokenizer fitted inside training and stored with the weights was the alternati
 - **A records clean stage's WARN carries a suggested action** (MON-1.3); `ListSink`, the test sink, now refuses a WARN without one, as the runtime does.
 - **Measured on the live stack:** breast cancer 569 rows (455 / 57 / 57), diabetes 442, wine 178 (`job_0059` to `job_0061`); the COCO captions 49,585 of 9,912 images in 78 classes, 575 repeated captions marked, vocabulary 5,243, L = 16 with 3.9 % of train texts cut (`job_0062`).
 
+## As built (part D, 2026-11-19)
+
+- **The request.** A classical run is `POST /jobs` with `kind: train` and `classical: {model: {kind: "sklearn", estimator, params}, seed}` beside `config`, exactly one of them (rule 15's `model` is inside `classical`). A union on `config` would have changed every network request's error locations, which SCR-09 maps onto its fields. The job's one stage is `train_classical`, on the CPU queue.
+- **The lineage key is the estimator alone** (rule 19): `{kind: "sklearn", estimator}`, so a study's trials, re-runs and differently tuned runs share one lineage and its base.
+- **Data to scikit-learn as PyArrow tables** with named columns. scikit-learn 1.9 takes them, and pandas, which is not installed, is not needed.
+- **scikit-learn's current API.** 1.8 deprecated `LogisticRegression(penalty=…)`: our `penalty` field (the one ML-1.4's example rule names) is translated to `l1_ratio` and `C`. 1.9 deprecated `SVC(probability=True)`: the SVM has no probability option, and `/predict` returns its class with a null probability, as rule 21 already allows. The library tests run with deprecation warnings as errors.
+- **The allow-list is enforced from the file's own schema** (rule 18). skops trusts scikit-learn's estimators by default, so its own list of untrusted types would not show an estimator Stratal never builds. `stratal.ml.persist` reads every `module.Class` from the archive's `schema.json` and refuses the file if one is not on `TRUSTED`; the list was taken from the types our fourteen estimators actually write.
+- **Tests that need the libraries** carry the marker `ml` and run in `worker-cpu` (check.ps1 steps "ml" and "integration (ml)"); that image has no `httpx`, so the run test creates jobs through the job service, not the API's test client.
+
 ## Alternatives
 
 | Option | Why not |
