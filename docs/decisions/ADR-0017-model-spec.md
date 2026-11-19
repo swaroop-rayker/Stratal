@@ -90,6 +90,8 @@ A **dataset type registry** (`stratal.data.dataset_types`, extended) declares fo
 
 The `input` node of a tabular spec carries an **input block** with one entry per feature column: numeric columns are standardised (one feature each); categorical columns are one-hot encoded by default (one feature per category seen in the train split, plus one for unknown), or, if the column is set to `embedding`, mapped through an `Embedding` of a chosen width (default `min(50, ⌈cardinality / 2⌉)`). The block's width F is the sum, computed from the train split's statistics and **locked** in the builder. The encoding statistics are fitted on the train split only and stored with the weights (M10, ML-1.3). The owner chose this over one-hot only and embeddings only (2026-11-19).
 
+*Forward pointer (the owner's choice, 2026-11-19, with DATA-7.3 for M11b):* from M11b the dataset's table schema gives each column's encoding (`one_hot`, `embedding`, `ordinal` or `ignore`). It is the input block's default; the block may still switch a categorical column between `one_hot` and `embedding` for one model, while `ignore` and `ordinal` always apply. The details go in M11b's ADR.
+
 ### 7. Memory estimate (BUILD-1.5)
 
 For P parameters in fp32:
