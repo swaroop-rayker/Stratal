@@ -540,6 +540,16 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
   Points 8 and 10 shape the model spec, so they belong in ADR-0017, before M9.
 
+- **Labels for images from a CSV** (proposed requirement, added to this plan at the owner's request on 2026-11-19; written into SPEC with an ID and acceptance criteria at M10's kickoff, for the owner's approval). Today ingest takes an image's class only from its first folder (`label_from: folder`). Many ready-made and hand-made datasets instead ship one folder of images and a CSV mapping each file to its label (`path, label`). Proposed: a second source of labels for labelled images, e.g. `label_from: {csv: labels.csv, path_column, label_column}`, alongside DATA-1.4's CSV ingestion. To settle:
+  11. Paths in the CSV are relative to the source folder; an image with no row is rejected with a reason code (as `no_label` is now); a row whose file is missing is reported, not silently dropped.
+  12. The CSV's content is part of the version's identity (DATA-3.2), so editing a label makes a new version.
+  13. Scope: single-label classification only. Several labels per image (multi-label) and a number per image (image regression) need training-runtime changes and are not part of this.
+- **Tokenizing text** (open point, added to this plan at the owner's request on 2026-11-19). The builder takes text as integer tokens with a vocabulary size, both locked from the dataset (ADR-0017 rule 5), but nothing on the roadmap turns text into tokens or stores the vocabulary. Training a labelled-text model needs it, and M12's corpora will too. To settle, in an ADR or an addendum to ADR-0017:
+  14. The kind of tokenizer: characters, words with a vocabulary from the train split, or subwords (BPE). A library such as `tokenizers` is a new dependency (ask first); writing BPE from scratch could be an owner unit.
+  15. Fitted on the train split only (as ML-1.3 requires of preprocessing), with a fixed vocabulary size, reserved IDs (0 for padding, as the built-in text templates assume with `padding_idx: 0`, and one for unknown tokens), and deterministic IDs, so the same data and settings always give the same tokens.
+  16. Where it lives and what it is part of: a stage that writes a versioned derivation (so the tokens and vocabulary are part of a version's identity, DATA-3.2), or a step inside training stored with the weights; either way `/predict` must tokenize the same way.
+  17. The maximum length L (the builder's locked input), with truncation and padding, and the length distribution shown so L can be chosen (SPEC's "Tokenizing corpus, vocab 12,480" activity).
+
 **Scope**
 
 - Tabular (CSV, Parquet) and text (TXT, JSONL) ingestion into manifests (DATA-1.4). Text cleaning: whitespace and Unicode normalised, empty and over-length rows dropped and logged (DATA-2.4).
