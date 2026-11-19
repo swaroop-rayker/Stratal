@@ -1,13 +1,17 @@
 """Dataset types and their schema validation (DATA-5).
 
 M1 defines the image–caption pairs type (DATA-5.1); M8 adds labelled images
-(DATA-5.2, delivered early for training). Tabular and labelled text, and the
-compatible model families each type declares (DATA-5.5), arrive in M9.
+(DATA-5.2, delivered early for training). M9 adds the tabular and labelled-text
+row schemas, and :data:`TYPE_INFO`: what each type feeds a model, the model
+families it accepts and its default metrics (DATA-5.5, ADR-0017 rule 5).
+Tabular and text ingestion arrive in M10 (DATA-1.4), so only labelled images
+can be trained in M9.
 """
 
+import math
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from stratal.storage.manifest import STATUS_ACCEPTED, STATUS_REJECTED, Row
 
@@ -131,4 +135,155 @@ def apply_report(
 DATASET_TYPES: dict[str, Validator] = {
     "image_caption": validate_image_caption,
     "labelled_images": validate_labelled_images,
+}
+
+
+# ---------------------------------------------------------------------------- M9: the other two
+
+
+@dataclass(frozen=True)
+class Column:
+    """One column of a tabular dataset (DATA-5.2)."""
+
+    name: str
+    kind: Literal["numeric", "categorical"]
+    role: Literal["feature", "target"] = "feature"
+
+
+@dataclass(frozen=True)
+class TableSchema:
+    columns: tuple[Column, ...]
+
+    def __post_init__(self) -> None:
+        targets = [c for c in self.columns if c.role == "target"]
+        if len(targets) != 1:
+            raise ValueError(f"a table has exactly one target column, got {len(targets)}")
+        names = [c.name for c in self.columns]
+        if len(set(names)) != len(names):
+            raise ValueError("column names must be unique")
+
+
+def validate_tabular(rows: Iterable[Mapping[str, Any]], schema: TableSchema) -> ValidationReport:
+    """Check accepted rows against a table's schema (DATA-5.2).
+
+    Every column must be present. A numeric value is a finite number; a categorical
+    one a string. A feature may be empty (``None``): filling it in is preprocessing,
+    fitted on the train split (ML-1.3). The target may not be empty.
+    """
+    report = ValidationReport(dtype="tabular")
+    for row in rows:
+        if row.get("status") != STATUS_ACCEPTED:
+            continue
+        report.checked += 1
+        problem = _table_problem(row, schema)
+        if problem is None:
+            report.valid += 1
+        else:
+            report.problems.append(RowProblem(str(row["row_key"]), *problem))
+    return report
+
+
+def _table_problem(row: Mapping[str, Any], schema: TableSchema) -> tuple[str, str] | None:
+    for column in schema.columns:
+        if column.name not in row:
+            return "missing_column", f"no column '{column.name}'"
+        value = row[column.name]
+        if value is None:
+            if column.role == "target":
+                return "missing_target", f"the target '{column.name}' is empty"
+            continue
+        if column.kind == "numeric":
+            number = isinstance(value, int | float) and not isinstance(value, bool)
+            if not number or not math.isfinite(value):
+                return "not_a_number", f"'{column.name}' is {value!r}, not a finite number"
+        elif not isinstance(value, str):
+            return "not_a_category", f"'{column.name}' is {value!r}, not a category name"
+    return None
+
+
+MAX_TEXT_CHARS = 10_000
+"""Longest labelled text kept; DATA-2.4's cleaning drops and logs longer rows (M10)."""
+
+
+def validate_labelled_text(
+    rows: Iterable[Mapping[str, Any]], *, max_chars: int = MAX_TEXT_CHARS
+) -> ValidationReport:
+    """Check accepted rows against the labelled-text schema (DATA-5.2): a ``text`` that
+    is not blank and at most ``max_chars`` long, and a ``label``."""
+    report = ValidationReport(dtype="labelled_text")
+    for row in rows:
+        if row.get("status") != STATUS_ACCEPTED:
+            continue
+        report.checked += 1
+        key = str(row["row_key"])
+        text, label = row.get("text"), row.get("label")
+        if not isinstance(text, str) or not text.strip():
+            report.problems.append(RowProblem(key, "empty_text", "row has no text"))
+        elif len(text) > max_chars:
+            report.problems.append(
+                RowProblem(key, "text_too_long", f"{len(text):,} characters; at most {max_chars:,}")
+            )
+        elif not isinstance(label, str) or not label.strip():
+            report.problems.append(RowProblem(key, "missing_label", "row has no class label"))
+        else:
+            report.valid += 1
+    return report
+
+
+Family = Literal["mlp", "cnn", "rnn", "transformer"]
+InputKind = Literal["image", "vector", "tokens"]
+
+
+@dataclass(frozen=True)
+class TypeInfo:
+    """What a dataset type gives a model (DATA-5.5, ADR-0017 rule 5)."""
+
+    name: str
+    title: str
+    input_kind: InputKind | None
+    """``None``: not a training input for the builder."""
+    families: tuple[Family, ...]
+    default_metrics: tuple[str, ...]
+    trainable: bool
+    """Whether M9's training runtime accepts it; tabular and text arrive in M10."""
+    note: str
+
+
+TYPE_INFO: dict[str, TypeInfo] = {
+    "image_caption": TypeInfo(
+        "image_caption",
+        "Image–caption pairs",
+        None,
+        (),
+        ("clip_score", "cider_d"),
+        False,
+        "Captioned by the label stage; evaluated, not trained by the builder.",
+    ),
+    "labelled_images": TypeInfo(
+        "labelled_images",
+        "Labelled images",
+        "image",
+        ("mlp", "cnn"),
+        ("accuracy", "macro_f1"),
+        True,
+        "Transformers need a layer that cuts images into patches, which the builder does not have.",
+    ),
+    "tabular": TypeInfo(
+        "tabular",
+        "Tabular",
+        "vector",
+        ("mlp",),
+        ("accuracy", "macro_f1"),
+        False,
+        "Ingestion and training arrive in M10.",
+    ),
+    "labelled_text": TypeInfo(
+        "labelled_text",
+        "Labelled text",
+        "tokens",
+        ("mlp", "rnn", "transformer"),
+        ("accuracy", "macro_f1"),
+        False,
+        "Ingestion and training arrive in M10.",
+    ),
 }

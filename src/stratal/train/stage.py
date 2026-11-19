@@ -26,13 +26,14 @@ import random
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import torch
 from sqlalchemy.orm import Session
 from torch import nn
 from torch.utils.data import DataLoader
 
+from stratal.build.io import image_shape
 from stratal.core.errors import CudaUnavailable, GpuOom, StratalError
 from stratal.data import registry
 from stratal.data.dataset_types import validate_labelled_images
@@ -83,22 +84,6 @@ def _device(choice: str) -> str:
             "or set device to cpu.",
         )
     return "cpu"
-
-
-def _input_shape(rows: list[dict[str, Any]]) -> tuple[int, int, int]:
-    sizes = {
-        (int(r["derived_height"] or r["height"]), int(r["derived_width"] or r["width"]))
-        for r in rows
-        if r.get("status") == "accepted" and r.get("split")
-    }
-    if len(sizes) != 1:
-        raise StratalError(
-            f"The images of this version come in {len(sizes)} sizes; training needs one.",
-            suggested_action="Use a dataset whose images share one size; resizing for "
-            "training arrives with the model builder (M9).",
-        )
-    height, width = sizes.pop()
-    return (3, height, width)
 
 
 def _schedule(optimizer: torch.optim.Optimizer, config: TrainConfig, total_steps: int) -> Any:
@@ -176,7 +161,7 @@ class _Run:
                 "training needs both.",
                 suggested_action="Train on a version with train and val rows.",
             )
-        self.shape = _input_shape(rows)
+        self.shape = cast(tuple[int, int, int], image_shape(rows).dims)  # one rule with the builder
         self.device = _device(self.config.device)
         default_workers = 4 if self.device == "cuda" else 1
         self.workers = (
