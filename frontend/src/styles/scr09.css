@@ -1,0 +1,53 @@
+/* SCR-09 copied from docs/design/screens/SCR-09_v1.html (G2 approved), scoped under .scr09. Tokens only. Changes for a live page: "live:". */
+.content:has(> .scr09) { padding: var(--sp-4) var(--sp-5); overflow: auto; }
+.scr09 { display: flex; flex-direction: column; gap: var(--sp-3); }
+.scr09 .phead { display: flex; align-items: center; gap: var(--sp-3); }
+.scr09 .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.scr09 .phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.scr09 .btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.scr09 .group-btns { display: inline-flex; }
+.scr09 .group-btns .btn { border-radius: 0; margin-left: -1px; }
+.scr09 .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; }
+.scr09 .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.scr09 .runcols { display: grid; grid-template-columns: 1fr 360px; gap: var(--sp-4); align-items: start; }
+.scr09 .cards { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.scr09 .card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); }
+.scr09 .card > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.scr09 .card > header h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.scr09 .card > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.scr09 .card > .b { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr09 .card.collapsed > header { border-bottom: 0; color: var(--text-muted); }
+.scr09 .facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-5); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.scr09 .facts b { color: var(--text-primary); font-weight: var(--fw-medium); }
+/* live: the generated form lays its fields out three to a row (frame A); rjsf gives one flat list. */
+.scr09 .fgrid > * { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3) var(--sp-4); align-items: start; }
+.scr09 .check { position: sticky; top: 0; }
+.scr09 .vram { display: flex; flex-direction: column; gap: var(--sp-1); }
+.scr09 .vbar { position: relative; height: 12px; border-radius: var(--r-sm); background: var(--surface-sunken); border: var(--bw) solid var(--border); display: flex; }
+.scr09 .vbar i { display: block; height: 100%; }
+.scr09 .vbar i.fix { background: var(--res-vram); }
+.scr09 .vbar i.act { background: color-mix(in srgb, var(--res-vram) 55%, var(--surface-sunken)); }
+.scr09 .vbar i.ctx { background: var(--text-muted); }
+.scr09 .vbar .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-primary); }
+.scr09 .vscale { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.scr09 .kv2 { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr09 .kv2 span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.scr09 .kv2 .tot { color: var(--text-primary); font-weight: var(--fw-semibold); border-top: var(--bw) solid var(--border); padding-top: 2px; }
+.scr09 .callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid; font-size: var(--fs-12); color: var(--text-primary); }
+.scr09 .callout svg.i { margin-top: 2px; flex: none; }
+.scr09 .callout.ok { border-color: color-mix(in srgb, var(--success) 45%, transparent); background: var(--success-soft); } .scr09 .callout.ok svg.i { color: var(--success); }
+.scr09 .callout.warn { border-color: color-mix(in srgb, var(--warning) 50%, transparent); background: var(--warning-soft); } .scr09 .callout.warn svg.i { color: var(--warning); }
+.scr09 .callout.err { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .scr09 .callout.err svg.i { color: var(--danger); }
+.scr09 .callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .scr09 .callout.info svg.i { color: var(--info); }
+.scr09 .plan { font-size: var(--fs-12); color: var(--text-secondary); padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.scr09 .plan b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr09 .note { font-size: var(--fs-11); color: var(--text-muted); }
+@media (max-width: 1279px) {
+  .scr09 .runcols { grid-template-columns: 1fr; }
+  .scr09 .check { position: static; }
+}
+.scr09 .select { width: auto; }
+/* live: SchemaForm's field, as SCR-14 and the Start pipeline drawer show it. */
+.scr09 .field > label { display: flex; align-items: center; gap: var(--sp-2); }
+.scr09 .field .type { font: var(--fs-11) var(--font-mono); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); }
+.scr09 .field .checks { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-13); color: var(--text-primary); }

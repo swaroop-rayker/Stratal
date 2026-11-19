@@ -23,7 +23,7 @@ from stratal.api.jobs import Db
 from stratal.build import store
 from stratal.build.io import version_io
 from stratal.build.layers import Layer
-from stratal.build.spec import MAX_EDGES, MAX_NODES, GraphSpec, Optimizer, Report, validate_graph
+from stratal.build.spec import MAX_EDGES, MAX_NODES, GraphSpec, Optimizer, SpecReport, validate_graph
 from stratal.core.settings import get_settings
 from stratal.data.dataset_types import TYPE_INFO, Family, InputKind
 from stratal.db.engine import get_engine
@@ -71,7 +71,7 @@ class DatasetEnds(BaseModel):
 
 class ValidateResponse(BaseModel):
     dataset: DatasetEnds
-    report: Report | None
+    report: SpecReport | None
     """``None`` when the dataset version cannot feed the builder (``dataset.problem``)."""
 
 

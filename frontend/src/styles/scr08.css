@@ -1,0 +1,93 @@
+/* SCR-08 copied from docs/design/screens/SCR-08_v1.html (G2 approved), scoped under .scr08. Tokens only. Changes for a live page: "live:". */
+.content:has(> .scr08) { padding: var(--sp-4) var(--sp-5); overflow: hidden; display: flex; flex-direction: column; }
+.scr08 { display: flex; flex-direction: column; gap: var(--sp-3); flex: 1; min-height: 0; }
+.scr08 .phead { display: flex; align-items: center; gap: var(--sp-3); }
+.scr08 .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.scr08 .btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.scr08 .group-btns { display: inline-flex; }
+.scr08 .group-btns .btn { border-radius: 0; margin-left: -1px; }
+.scr08 .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; }
+.scr08 .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.scr08 .dsbar { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); flex-wrap: wrap; }
+.scr08 .dsbar .ends { font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.scr08 .bgrid { display: grid; grid-template-columns: 184px 1fr 312px; gap: var(--sp-3); min-height: 0; flex: 1; }
+.scr08 .panel { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.scr08 .panel > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); font-size: var(--fs-13); }
+.scr08 .panel > header .sub { font: var(--fs-11) var(--font-mono); color: var(--text-muted); font-weight: var(--fw-regular); }
+.scr08 .palette { padding: var(--sp-2); display: flex; flex-direction: column; gap: 2px; overflow: auto; }
+.scr08 .pal-grp { margin: var(--sp-2) var(--sp-1) 2px; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.scr08 .pal-grp:first-child { margin-top: 0; }
+.scr08 .tile { display: flex; align-items: center; gap: var(--sp-2); height: 26px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border); border-radius: var(--r-sm); background: var(--surface-raised); font: var(--fs-12) var(--font-ui); color: var(--text-primary); cursor: pointer; text-align: left; }
+.scr08 .tile svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.scr08 .tile:hover:not([aria-disabled=true]) { border-color: var(--border-strong); }
+.scr08 .tile[aria-disabled=true] { background: transparent; border-style: dashed; color: var(--text-muted); cursor: not-allowed; }
+.scr08 .pal-note { margin: var(--sp-1) var(--sp-1) 0; font-size: var(--fs-11); color: var(--text-muted); display: flex; gap: var(--sp-1); }
+.scr08 .pal-note svg.i { width: 12px; height: 12px; margin-top: 2px; }
+.scr08 .canvas { position: relative; flex: 1; background-color: var(--surface-sunken); min-height: 0; }
+.scr08 .gn { position: relative; width: 280px; height: 44px; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-1); font-size: var(--fs-12); color: var(--text-primary); }
+.scr08 .gn > .h { display: flex; align-items: center; gap: var(--sp-2); height: 23px; padding: 0 var(--sp-2); line-height: 1; }
+.scr08 .gn > .h .id { font: var(--fw-medium) var(--fs-12) var(--font-mono); }
+.scr08 .gn > .h .ty { color: var(--text-secondary); }
+.scr08 .gn > .h .kv { color: var(--text-muted); font: var(--fs-11) var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scr08 .gn > .f { display: flex; align-items: center; gap: var(--sp-2); height: 19px; padding: 0 var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.scr08 .gn > .f .p { margin-left: auto; color: var(--text-muted); }
+.scr08 .gn.on { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-width) var(--accent-soft), var(--shadow-1); }
+.scr08 .gn.lock { background: var(--surface); border-style: dashed; }
+.scr08 .gn.lock:not(:has(.f)) > .h { height: 42px; }
+.scr08 .gn.lock .h svg.i { color: var(--text-muted); }
+.scr08 .gn.bad { border-color: var(--danger); }
+.scr08 .gn.bad > .f { color: var(--danger); }
+.scr08 .gn.muted { opacity: .6; }
+.scr08 .gn .flag { margin-left: auto; color: var(--danger); display: inline-flex; }
+.scr08 .insp { padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-3); overflow: auto; }
+.scr08 .insp .io { display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.scr08 .insp .io b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr08 .insp .input::placeholder { color: var(--text-muted); font-style: italic; }
+.scr08 .insp .note { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); }
+.scr08 .sumbar { white-space: nowrap; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr08 .sumbar .big { font: var(--fw-semibold) var(--fs-14) var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.scr08 .sumbar .sep { width: 1px; align-self: stretch; background: var(--border); }
+.scr08 .mem { display: flex; height: 8px; width: 120px; flex: none; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-sunken); border: var(--bw) solid var(--border); }
+.scr08 .mem i { display: block; height: 100%; }
+.scr08 .mem i.w, .scr08 .key.w::before { background: var(--accent); }
+.scr08 .mem i.g, .scr08 .key.g::before { background: var(--info); }
+.scr08 .mem i.o, .scr08 .key.o::before { background: var(--text-muted); }
+.scr08 .key { white-space: nowrap; display: inline-flex; align-items: center; gap: var(--sp-1); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.scr08 .key::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-xs); }
+.scr08 .problems { background: var(--surface); border: var(--bw) solid color-mix(in srgb, var(--danger) 45%, transparent); border-radius: var(--r-md); max-height: 160px; overflow: auto; flex: none; }
+.scr08 .problems > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+.scr08 .problems > header svg.i { color: var(--danger); }
+.scr08 .problems > header span { font-weight: var(--fw-regular); color: var(--text-secondary); font-size: var(--fs-12); }
+.scr08 .prob { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-12); border-bottom: var(--bw) solid var(--border); }
+.scr08 .prob:last-child { border-bottom: 0; }
+.scr08 .prob .link { font-family: var(--font-mono); color: var(--accent); text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; padding: 0; cursor: pointer; font-size: var(--fs-12); }
+.scr08 .prob .code { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted); white-space: nowrap; }
+.scr08 .prob svg.i { color: var(--danger); margin-top: 2px; }
+.scr08 .tpl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); width: min(900px, 100%); text-align: left; }
+.scr08 .tplc { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.scr08 .tplc b { font-size: var(--fs-14); }
+.scr08 .tplc p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); max-width: none; }
+.scr08 .tplc .meta { display: flex; gap: var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.scr08 .table-wrap { overflow: auto; }
+.scr08 .acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.scr08 .t td.acts-cell { width: 120px; text-align: right; }
+/* live: React Flow draws the canvas; its parts take the mockup's look. */
+.scr08 .react-flow__background { background-color: var(--surface-sunken); }
+.scr08 .react-flow__node { padding: 0; border: 0; background: transparent; }
+.scr08 .react-flow__handle { width: 8px; height: 8px; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); }
+.scr08 .react-flow__edge-path { stroke: var(--border-strong); stroke-width: 1.5; }
+.scr08 .react-flow__edge.on .react-flow__edge-path { stroke: var(--accent); stroke-width: 2; }
+.scr08 .react-flow__edge-text { font: var(--fs-11) var(--font-mono); fill: var(--text-muted); }
+.scr08 .react-flow__edge-textbg { fill: var(--surface-sunken); }
+.scr08 .react-flow__controls { box-shadow: none; display: flex; gap: var(--sp-1); }
+.scr08 .react-flow__controls-button { width: var(--h-sm); height: var(--h-sm); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); color: var(--text-primary); fill: var(--text-primary); }
+.scr08 .react-flow__attribution { display: none; }
+@media (max-width: 1279px) {
+  .scr08 .bgrid { grid-template-columns: 1fr; }
+  .scr08 .bgrid > .panel.side-panel { display: none; }
+}
+.scr08 .select { width: auto; flex: none; }
+/* live: SchemaForm's field, as SCR-14 and the Start pipeline drawer show it. */
+.scr08 .field > label { display: flex; align-items: center; gap: var(--sp-2); }
+.scr08 .field .type { font: var(--fs-11) var(--font-mono); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); }
+.scr08 .field .checks { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-13); color: var(--text-primary); }

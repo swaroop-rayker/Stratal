@@ -62,7 +62,7 @@ export function ModelsScreen() {
       <div className="phead">
         <h1>Models</h1>
         <span className="spacer" />
-        <button type="button" className="btn" disabled title="The model builder arrives in M9 (SCR-08)">
+        <button type="button" className="btn" onClick={() => { void navigate("/models/build"); }}>
           <Icon name="plus" />
           Build a model…
         </button>

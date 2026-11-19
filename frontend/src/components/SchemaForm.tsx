@@ -83,7 +83,7 @@ function ObjectFieldTemplate({ properties }: ObjectFieldTemplateProps) {
 }
 
 function BaseInputTemplate(props: BaseInputTemplateProps) {
-  const { id, schema, disabled, readonly, onChange, onBlur, onFocus, rawErrors } = props;
+  const { id, schema, disabled, readonly, onChange, onBlur, onFocus, rawErrors, placeholder } = props;
   const value: unknown = props.value;
   const numeric = schema.type === "integer" || schema.type === "number";
   const parse = (raw: string): unknown => {
@@ -98,6 +98,7 @@ function BaseInputTemplate(props: BaseInputTemplateProps) {
       className={numeric ? "input mono" : "input"}
       inputMode={numeric ? "decimal" : undefined}
       value={value === undefined || value === null ? "" : show(value)}
+      placeholder={placeholder || undefined}
       disabled={disabled || readonly}
       aria-invalid={rawErrors?.length ? true : undefined}
       aria-describedby={`${id}__help`}
@@ -178,9 +179,11 @@ function CheckboxesWidget({ id, options, value, disabled, onChange }: WidgetProp
   );
 }
 
-/** Arrays of enum values are shown as checkboxes; everything else uses its default widget. */
-function uiSchemaFor(schema: RJSFSchema): UiSchema {
+/** Arrays of enum values are shown as checkboxes; everything else uses its default widget.
+ * ``placeholders`` puts a hint in an empty field (SCR-08: "inferred: 3"). */
+function uiSchemaFor(schema: RJSFSchema, placeholders: Record<string, string> = {}): UiSchema {
   const ui: UiSchema = { "ui:submitButtonOptions": { norender: true } };
+  for (const [name, text] of Object.entries(placeholders)) ui[name] = { "ui:placeholder": text };
   const defs = (schema.$defs ?? {}) as Record<string, RJSFSchema>;
   for (const [name, prop] of Object.entries(schema.properties ?? {})) {
     if (typeof prop === "boolean" || prop.type !== "array" || typeof prop.items !== "object") continue;
@@ -192,11 +195,12 @@ function uiSchemaFor(schema: RJSFSchema): UiSchema {
   return ui;
 }
 
-export function SchemaForm({ schema, values, onChange, serverErrors }: {
+export function SchemaForm({ schema, values, onChange, serverErrors, placeholders }: {
   schema: RJSFSchema;
   values: Values;
   onChange: (values: Values, valid: boolean) => void;
   serverErrors?: Record<string, string>;
+  placeholders?: Record<string, string>;
 }) {
   const extra: ErrorSchema = {};
   for (const [field, message] of Object.entries(serverErrors ?? {})) {
@@ -205,7 +209,7 @@ export function SchemaForm({ schema, values, onChange, serverErrors }: {
   return (
     <Form
       schema={schema}
-      uiSchema={uiSchemaFor(schema)}
+      uiSchema={uiSchemaFor(schema, placeholders)}
       formData={values}
       validator={validator}
       liveValidate="onChange"

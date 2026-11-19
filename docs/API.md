@@ -491,7 +491,7 @@ Still planned for phase 1: run a pipeline.
 |---|---|---|
 | Shapes | `stratal.build.shapes` | `Shape(kind: image, vector, sequence or tokens, dims, vocab?)`, `SpecProblem(code, message)` |
 | Layer specs (BUILD-1.1, 1.2) | `stratal.build.layers` | One Pydantic model per type, the `Layer` union on `type`; `apply(inputs: [Shape]) -> Applied(shape, parameters)`, `family()`; `LAYER_TYPES`, `head_parameters` |
-| Graph specs (BUILD-1.4 to 1.6, 1.9) | `stratal.build.spec` | `GraphSpec`, `Node`; `validate_graph(spec, *, input_shape, output_size, optimizer, families) -> Report`; `canonical`, `structure_hash`, `identity`, `family_of`, `input_order`, `chain(label, *layers)` |
+| Graph specs (BUILD-1.4 to 1.6, 1.9) | `stratal.build.spec` | `GraphSpec`, `Node`; `validate_graph(spec, *, input_shape, output_size, optimizer, families) -> SpecReport`; `canonical`, `structure_hash`, `identity`, `family_of`, `input_order`, `chain(label, *layers)` |
 | Locked ends (BUILD-1.3) | `stratal.build.io` | `version_io(engine, data_dir, version_id) -> VersionIo` (cached per version), `image_shape(rows)`, `image_classes(rows)`, `check_train_graph(...)` |
 | Tabular input block | `stratal.build.tabular` | `TabularColumn(name, kind, categories, encoding, embedding_dim)`, `input_block(columns) -> (width, parameters)` |
 | Compilation | `stratal.build.compile` | `compile_graph(spec, input_shape, num_classes) -> GraphModule` (PyTorch images only); called by `build_model` for `name: "graph"` |

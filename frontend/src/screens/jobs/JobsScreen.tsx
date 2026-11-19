@@ -16,7 +16,7 @@ import { bytes, clock, duration, errorDetail, stagePercent } from "../../lib/for
 import { useNow } from "../../lib/useNow";
 import { useCrumbs, useShortcuts } from "../../shell/hooks";
 import { StartPipelineDrawer } from "../datasets/StartPipelineDrawer";
-import { failedStage, jobSeconds, runningStage, trainingModel, trainingPosition, valAccuracy, waitingFor } from "../job/jobs";
+import { failedStage, jobSeconds, runningStage, suggestedBatch, trainingModel, trainingPosition, valAccuracy, waitingFor } from "../job/jobs";
 
 type JobList = Schemas["JobList"];
 type View = "all" | "active" | "failed" | "completed" | "cancelled";
@@ -562,7 +562,16 @@ export function JobsScreen() {
               Cancel
             </Button>
           ) : null}
-          {job.state === "failed" ? (
+          {job.state === "failed" && suggestedBatch(job) !== null ? (
+            <Link
+              className="btn sm"
+              to={`/runs/new?from=${job.id}&batch_size=${String(suggestedBatch(job))}`}
+              onClick={(e) => { e.stopPropagation(); }}
+            >
+              <Icon name="refresh" />
+              Start again with {String(suggestedBatch(job))}
+            </Link>
+          ) : job.state === "failed" ? (
             <Button
               size="sm"
               aria-label={`Retry ${job.id}`}

@@ -14,7 +14,7 @@ from stratal.build.shapes import Shape
 from stratal.build.spec import (
     GraphSpec,
     Node,
-    Report,
+    SpecReport,
     canonical,
     chain,
     identity,
@@ -27,11 +27,11 @@ TOKENS = Shape("tokens", (20,), vocab=1000)
 LAYER: TypeAdapter[Any] = TypeAdapter(L.Layer)
 
 
-def check(spec: GraphSpec, shape: Shape = IMAGE, classes: int = 10, **kw: Any) -> Report:
+def check(spec: GraphSpec, shape: Shape = IMAGE, classes: int = 10, **kw: Any) -> SpecReport:
     return validate_graph(spec, input_shape=shape, output_size=classes, **kw)
 
 
-def codes(report: Report) -> list[str]:
+def codes(report: SpecReport) -> list[str]:
     return [p.code for p in report.problems]
 
 
