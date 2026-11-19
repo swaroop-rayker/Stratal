@@ -4,7 +4,6 @@
 
 Needs PyTorch, so it runs in the GPU worker's image (check.ps1's torch step,
 ``-m torch tests/integration tests/unit``); in the dev image it is skipped.
-Strict expected failures until the units are written (ADR-0012).
 """
 
 import ast
@@ -24,14 +23,12 @@ from stratal.build.scratch import (  # noqa: E402
 )
 
 pytestmark = pytest.mark.torch
-unit = pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="BUILD-1.8 unit")
 
 
 def _causal(length: int) -> Any:
     return torch.triu(torch.full((length, length), float("-inf")), diagonal=1)
 
 
-@unit
 @pytest.mark.parametrize("causal", [False, True])
 def test_BUILD_1_8_attention_matches_pytorch(causal: bool) -> None:
     torch.manual_seed(0)
@@ -47,7 +44,6 @@ def test_BUILD_1_8_attention_matches_pytorch(causal: bool) -> None:
     torch.testing.assert_close(got, want, atol=1e-5, rtol=1e-5)
 
 
-@unit
 def test_BUILD_1_8_causal_attention_ignores_the_future() -> None:
     torch.manual_seed(1)
     layer = MultiHeadSelfAttention(8, 2, causal=True).eval()
@@ -70,7 +66,6 @@ def test_BUILD_1_8_attention_has_pytorchs_parameter_layout() -> None:
         MultiHeadSelfAttention(10, 4)
 
 
-@unit
 def test_BUILD_1_8_positional_encoding_matches_the_formula() -> None:
     layer = PositionalEncoding(6, max_len=50).eval()
     x = torch.zeros(2, 4, 6)
@@ -84,7 +79,6 @@ def test_BUILD_1_8_positional_encoding_matches_the_formula() -> None:
             assert got[1, pos, 2 * i + 1].item() == pytest.approx(math.cos(angle), abs=1e-6)
 
 
-@unit
 def test_BUILD_1_8_positional_encoding_adds_to_the_input_and_checks_length() -> None:
     layer = PositionalEncoding(4, max_len=3).eval()
     x = torch.randn(2, 3, 4)
@@ -100,7 +94,6 @@ def test_BUILD_1_8_positional_encoding_has_no_parameters_and_needs_an_even_width
         PositionalEncoding(7)
 
 
-@unit
 def test_BUILD_1_8_lstm_cell_matches_pytorch_step_by_step() -> None:
     torch.manual_seed(2)
     ours = ScratchLSTMCell(5, 6)

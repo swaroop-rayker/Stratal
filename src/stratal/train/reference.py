@@ -55,7 +55,14 @@ _BUILDERS = {"mlp": _mlp, "small_cnn": _small_cnn}
 
 
 def build_model(spec: ModelSpec, input_shape: tuple[int, int, int], num_classes: int) -> nn.Module:
-    """A new, randomly initialised model for images of ``input_shape`` (C, H, W)."""
+    """A new, randomly initialised model for images of ``input_shape`` (C, H, W).
+
+    A builder graph compiles through :mod:`stratal.build.compile` (ADR-0017 rule 8)."""
+    if spec.graph is not None:
+        from stratal.build.compile import compile_graph
+        from stratal.build.shapes import Shape
+
+        return compile_graph(spec.graph, Shape("image", tuple(input_shape)), num_classes)
     return _BUILDERS[spec.name](input_shape, num_classes)
 
 

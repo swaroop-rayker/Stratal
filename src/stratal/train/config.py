@@ -5,27 +5,66 @@ themselves are built by :func:`stratal.train.reference.build_model`, in the
 images that have PyTorch.
 """
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
+
+from stratal.build.spec import GraphSpec, identity
 
 ReferenceModel = Literal["mlp", "small_cnn"]
-"""Models defined in code until the model builder (M9) compiles its own specs."""
+"""Models defined in code (M8). Since M9 the builder's graphs train beside them."""
 
 ALGORITHM_VERSION = 1
 """Bumped whenever the training loop changes what a run with the same config produces."""
 
 
 class ModelSpec(BaseModel):
-    """A model to train. In M8 it names a reference model; from M9 the builder's graph."""
+    """A model to train: a reference model by name, or the builder's graph (ADR-0017 rule 2).
+
+    A reference spec serializes exactly as in M8 (``{"name": "small_cnn"}``), so the
+    config hashes and lineage keys of runs before M9 do not change.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    name: ReferenceModel = Field(
+    name: Literal["mlp", "small_cnn", "graph"] = Field(
         description="'mlp': two hidden layers (256, 128) on the flattened image. "
         "'small_cnn': three blocks of two 3×3 convolutions with batch norm, then a "
-        "global average pool and one linear layer."
+        "global average pool and one linear layer. 'graph': the model in `graph`, "
+        "built on SCR-08."
     )
+    graph: GraphSpec | None = Field(default=None, description="The layers and edges, for 'graph'.")
+
+    @model_validator(mode="after")
+    def _graph_iff_named(self) -> "ModelSpec":
+        if (self.name == "graph") != (self.graph is not None):
+            raise ValueError("'graph' is given with name 'graph', and only then")
+        return self
+
+    @model_serializer(mode="wrap")
+    def _without_empty_graph(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if data.get("graph") is None:
+            data.pop("graph", None)
+        return data
+
+    @property
+    def display(self) -> str:
+        """What messages and lineage names call it: the graph's label, or the name."""
+        return self.graph.label if self.graph is not None else self.name
+
+    def identity(self) -> dict[str, Any]:
+        """The spec as it enters a lineage key: a graph without its label (ADR-0017 rule 1)."""
+        if self.graph is None:
+            return self.model_dump(mode="json")
+        return {"name": "graph", "graph": identity(self.graph)}
 
 
 class TrainConfig(BaseModel):

@@ -190,7 +190,7 @@ class _Run:
         self.ctx.emit(
             stage=STAGE,
             substage="setup",
-            message=f"Training {config.model.name} ({self.parameters / 1e6:.2f} M parameters) "
+            message=f"Training {config.model.display} ({self.parameters / 1e6:.2f} M parameters) "
             f"on the {'GPU' if self.device == 'cuda' else 'CPU'} · {len(self.train):,} images · "
             f"{config.epochs} epochs · batch {config.batch_size}",
             metrics={
@@ -215,9 +215,9 @@ class _Run:
             manager = VramManager(TorchGpu(), sink=self.ctx, stage=STAGE)
             estimate = self.parameters * 16 / MB + 256  # weights, grads, Adam's two; context
             info = ModelInfo(
-                config.model.name,
+                config.model.display,
                 f"algorithm-{config.algorithm_version}",
-                config.model.name,
+                config.model.display,
                 "fp32",
             )
 
@@ -229,7 +229,7 @@ class _Run:
                 on_card = holder.pop().to("cuda")
                 return self.units.state(on_card, _optimizer(on_card, config), info=info)
 
-            state = manager.load(load, name=config.model.name, estimate_mb=estimate)
+            state = manager.load(load, name=config.model.display, estimate_mb=estimate)
             result = self._with_choice(self._train(state.model, state.optimizer, started))
             del state  # the manager now holds the only reference (RUN-1.4)
             manager.unload()  # proves the card is back at its baseline, or warns (BUG5)
@@ -321,7 +321,7 @@ class _Run:
                         stage=STAGE,
                         substage="train",
                         message=f"Epoch {epoch + 1}/{config.epochs} · step "
-                        f"{batch_index + 1}/{self.steps_per_epoch} · {config.model.name} · "
+                        f"{batch_index + 1}/{self.steps_per_epoch} · {config.model.display} · "
                         f"bs={config.batch_size} · lr {scheduler.get_last_lr()[0]:.1e} · fp32",
                         step=global_step,
                         total=self.total_steps,
@@ -434,7 +434,7 @@ class _Run:
         self.ctx.emit(
             stage=STAGE,
             substage="device",
-            message=f"Device auto: the {winner} is faster for {config.model.name} at batch "
+            message=f"Device auto: the {winner} is faster for {config.model.display} at batch "
             f"{config.batch_size} ({how}: GPU {choice.gpu_step_ms:.1f} ms, "
             f"CPU {choice.cpu_step_ms:.1f} ms per step)",
             metrics=dict(choice.metrics()),
@@ -442,7 +442,7 @@ class _Run:
         if choice.device == "cpu":
             raise StageHandoff(
                 "cpu",
-                f"the CPU trains {config.model.name} faster ({choice.cpu_step_ms:.1f} ms "
+                f"the CPU trains {config.model.display} faster ({choice.cpu_step_ms:.1f} ms "
                 f"against {choice.gpu_step_ms:.1f} ms per step)",
             )
 
@@ -582,7 +582,8 @@ class _Run:
         with Session(self.run.engine) as session, session.begin():
             lineage = store.ensure_lineage(
                 session,
-                model_spec=config.model.model_dump(mode="json"),
+                model_spec=config.model.identity(),
+                name=config.model.display,
                 dataset_id=self.dataset_id,
                 dataset_slug=self.dataset_slug,
                 input_shape=self.shape,

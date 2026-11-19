@@ -400,3 +400,32 @@ def test_families_are_derived_from_the_layers() -> None:
     assert check(SMALL_CNN).family == "cnn"
     assert check(TEXT, TOKENS).family == "transformer"
     assert check(chain("m", L.Flatten(), L.Linear())).family == "mlp"
+
+
+# ---------------------------------------------------------------------------- the train config
+
+
+def test_BUILD_1_1_reference_specs_serialize_exactly_as_in_m8() -> None:
+    """ADR-0017 rule 2: earlier runs' config hashes and lineage keys do not change."""
+    from stratal.train.config import ModelSpec, TrainConfig
+
+    spec = ModelSpec(name="small_cnn")
+    assert spec.model_dump(mode="json") == {"name": "small_cnn"}
+    assert spec.identity() == {"name": "small_cnn"} and spec.display == "small_cnn"
+    config = TrainConfig.model_validate({"model": {"name": "small_cnn"}})
+    assert config.model_dump(mode="json")["model"] == {"name": "small_cnn"}
+
+
+def test_BUILD_1_1_a_graph_spec_is_a_train_config_model() -> None:
+    from stratal.train.config import ModelSpec, TrainConfig
+
+    config = TrainConfig.model_validate(
+        {"model": {"name": "graph", "graph": SMALL_CNN.model_dump(mode="json")}}
+    )
+    assert config.model.display == "small_cnn"
+    renamed = ModelSpec(name="graph", graph=SMALL_CNN.model_copy(update={"label": "other"}))
+    assert renamed.identity() == config.model.identity(), "the label is not in the lineage key"
+    with pytest.raises(ValidationError, match="graph"):
+        ModelSpec(name="graph")
+    with pytest.raises(ValidationError, match="graph"):
+        ModelSpec(name="mlp", graph=SMALL_CNN)

@@ -1164,9 +1164,11 @@ dev = [
     { name = "pyright", extra = ["nodejs"] },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "torchinfo" },
 ]
 test = [
     { name = "pytest" },
+    { name = "torchinfo" },
 ]
 
 [package.metadata]
@@ -1201,8 +1203,12 @@ dev = [
     { name = "pyright", extras = ["nodejs"], specifier = ">=1.1.380" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "ruff", specifier = ">=0.7" },
+    { name = "torchinfo", specifier = ">=1.8" },
 ]
-test = [{ name = "pytest", specifier = ">=8.3" }]
+test = [
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "torchinfo", specifier = ">=1.8" },
+]
 
 [[package]]
 name = "structlog"
@@ -1321,6 +1327,15 @@ wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.15.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:0955c7e3446326293f48af18fad67872fa31dee5a36a87690eb9e5be8b465be3", upload-time = "2026-10-28T13:18:39Z" },
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.15.0%2Bcpu-cp312-cp312-win_amd64.whl", hash = "sha256:5af9fb357790db09e62484b12032304f046c22c4b1895ca88c4cf5987ea369ca", upload-time = "2026-10-28T13:18:45Z" },
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.15.0%2Bcpu-cp312-cp312-win_arm64.whl", hash = "sha256:fe17318e964a6eb4b1380fd6dcd5405264af3e54b10bce7abcce5fa701a3f049", upload-time = "2026-10-28T13:18:48Z" },
+]
+
+[[package]]
+name = "torchinfo"
+version = "1.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/d9/2b811d1c0812e9ef23e6cf2dbe022becbe6c5ab065e33fd80ee05c0cd996/torchinfo-1.8.0.tar.gz", hash = "sha256:72e94b0e9a3e64dc583a8e5b7940b8938a1ac0f033f795457f27e6f4e7afa2e9", size = 25880, upload-time = "2023-05-14T19:23:26.377Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/25/973bd6128381951b23cdcd8a9870c6dcfc5606cb864df8eabd82e529f9c1/torchinfo-1.8.0-py3-none-any.whl", hash = "sha256:2e911c2918603f945c26ff21a3a838d12709223dc4ccf243407bce8b6e897b46", size = 23377, upload-time = "2023-05-14T19:23:24.141Z" },
 ]
 
 [[package]]

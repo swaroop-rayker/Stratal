@@ -355,6 +355,21 @@ def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqu
         )
     dataset = session.get(Dataset, version.dataset_id)
     resolved = request.config
+    if resolved.model.graph is not None:  # a builder spec: checked against the version's ends
+        from stratal.build.io import check_train_graph
+        from stratal.core.settings import get_settings
+        from stratal.db.engine import get_engine
+
+        optimizer = (
+            "adam"
+            if resolved.optimizer == "adam"
+            else "sgd_momentum"
+            if resolved.momentum > 0
+            else "sgd"
+        )
+        check_train_graph(
+            get_engine(), get_settings().data_dir, resolved.model.graph, version_id, optimizer
+        )
     if "checkpoint_every_s" not in resolved.model_fields_set:
         # The default comes from the settings saved on SCR-14 (OC-9), fixed into the
         # run's config now, so a later change never alters a running job (NFR-4).
