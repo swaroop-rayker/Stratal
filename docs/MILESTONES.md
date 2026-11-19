@@ -502,21 +502,21 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 **Done when**
 
 - [x] ADR-0017 approved (2026-11-19, "Approved": `docs/decisions/ADR-0017-model-spec.md`)
-- [ ] `test_BUILD_1_1_*`: every layer type can be added and configured
-- [ ] `test_BUILD_1_2_*`: out-of-range values are rejected with a message
-- [ ] `test_BUILD_1_3_*`: changing the dataset updates the input and output
-- [ ] `test_BUILD_1_4_*`: a mismatched linear input is caught at build time
-- [ ] `test_BUILD_1_5_*`: parameter count and memory estimate match `sum(p.numel())` and the formula
-- [ ] `test_BUILD_1_6_*`: one test per cross-field rule (`d_model % num_heads == 0`, a conv stack never below 1×1, …)
-- [ ] `test_BUILD_1_7_*`: a saved template reloads identically
-- [ ] 👤 `test_BUILD_1_8_*`: attention, positional encoding and the LSTM cell match PyTorch's outputs within tolerance
-- [ ] `test_BUILD_1_9_*` (P2, if time): a residual block builds and trains
-- [ ] `test_UI_2_3_*`: a field added to a config schema appears in its form with no UI change
-- [ ] `test_DATA_5_2_*`: each type validates against its schema
-- [ ] `test_DATA_5_5_*`: the UI offers only compatible type and model combinations
-- [ ] G3 for SCR-08 and SCR-09
-- [ ] Demo: build a CNN on the canvas, train it from SCR-09, follow it on SCR-04, find it in SCR-11
-- [ ] Docs updated (learning notes)
+- [x] `test_BUILD_1_1_*`: every layer type can be added and configured (2026-11-19, `test_BUILD_1_spec.py`: all 23 types in two valid graphs; the schema lists each with its defaults; a graph compiles through the train factory)
+- [x] `test_BUILD_1_2_*`: out-of-range values are rejected with a message (2026-11-19: field errors naming the field, unknown types and fields refused; through the API a 422; SCR-09 sends the form's values)
+- [x] `test_BUILD_1_3_*`: changing the dataset updates the input and output (2026-11-19: 32- and 64-px splits through the API; on SCR-08 the locked ends change with the split)
+- [x] `test_BUILD_1_4_*`: a mismatched linear input is caught at build time (2026-11-19: `shape_mismatch` on its node, in plain Python, through the API, at `POST /jobs` as a 422, and on SCR-08)
+- [x] `test_BUILD_1_5_*`: parameter count and memory estimate match `sum(p.numel())` and the formula (2026-11-19, `test_BUILD_1_parity.py`: 300 random specs match PyTorch's shapes, `sum(p.numel())` and torchinfo; the formula per optimizer; SCR-09's VRAM check)
+- [x] `test_BUILD_1_6_*`: one test per cross-field rule (`d_model % num_heads == 0`, a conv stack never below 1×1, …) (2026-11-19: 15 rules, one test each, and no cascade)
+- [x] `test_BUILD_1_7_*`: a saved template reloads identically (2026-11-19: canonical form and structure hash through the API, however the spec was listed; built-ins locked; SCR-08's start screen)
+- [x] 👤 `test_BUILD_1_8_*`: attention, positional encoding and the LSTM cell match PyTorch's outputs within tolerance (2026-11-19, written by the agent at the owner's request: attention within 1e-5 of `nn.MultiheadAttention` with and without a causal mask, the LSTM cell within 1e-6 of `nn.LSTMCell` step by step, positional encoding against the formula; no ready-made layer in a forward)
+- [x] `test_BUILD_1_9_*` (P2, if time): a residual block builds and trains (2026-11-19: full graphs, as the owner chose; a residual block's loss halves in 60 steps; a residual graph trains, registers and reloads through the stage)
+- [x] `test_UI_2_3_*`: a field added to a config schema appears in its form with no UI change (2026-11-19, `Builder.test.tsx`: a new Conv2d field appears in SCR-08's inspector)
+- [x] `test_DATA_5_2_*`: each type validates against its schema (2026-11-19: tabular and labelled-text row validators, the tabular input block; labelled images since M8)
+- [x] `test_DATA_5_5_*`: the UI offers only compatible type and model combinations (2026-11-19: `incompatible_family` from the API; SCR-08's palette greys the rest with the reason; templates listed per type)
+- [ ] G3 for SCR-08 and SCR-09 (built 2026-11-19; reports `docs/design/g3/SCR-08.md`, `SCR-09.md`, waiting for the owner)
+- [x] Demo: build a CNN on the canvas, train it from SCR-09, follow it on SCR-04, find it in SCR-11 (2026-11-19: `my_model`, eight layers added from the palette, 10,602 parameters; `job_0053` chose the GPU by benchmark, 10 epochs in 65 s, val acc 53.6 %, peak 302 MB; `mv_0cfa1ce88a16` in `my_model · cifar10` on SCR-11. README "Model builder demo")
+- [x] Docs updated (learning notes) (2026-11-19: API.md §3.11 and the M9 interfaces, DATA_MODEL §4.14, ARCHITECTURE's code layout, ADR-0017; `docs/learning/` §26 and §5k)
 - [ ] Owner's OK to merge
 
 ## M10 — Classical ML, HPO, task metrics
