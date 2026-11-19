@@ -30,7 +30,7 @@ This file lists every screen with its purpose, the requirements it serves, the d
 | SCR-06 | Eval report | `/versions/:version_id/report` | 1 (EVAL-1.2 in 2) | EVAL-1.1, EVAL-1.2 | M6 |
 | SCR-07 | Jobs list and queue control | `/jobs` | phase-1 slice, completed in 2 ([open point 1](#6-open-points-for-the-owner)) | RUN-1.1, RUN-1.2 | slice in M6; pause, resume and queue control in M8 |
 | SCR-08 | Model builder canvas | `/models/build` | 2 | BUILD-1.1–1.9, UI-2.3, DATA-5.5 | M9 |
-| SCR-09 | Training config and HPO setup | `/runs/new` | 2 | BUILD-1.2, BUILD-1.3, HPO-1.1–1.4, RUN-1.9, UI-2.3 | M9–M10 |
+| SCR-09 | Training config and HPO setup | `/runs/new` | 2 | BUILD-1.2, BUILD-1.3, HPO-1.1–1.4, ML-1.1, ML-1.4, RUN-1.9, UI-2.3 | M9–M10 |
 | SCR-10 | HPO results | `/studies/:study_id` | 2 | HPO-1.3, HPO-1.4, HPO-1.5 | M10 |
 | SCR-11 | Model registry and comparison | `/models`, `/models/:lineage` | 2 (adapters in 4) | REG-1.1–1.4, REG-2.1–2.11, EVAL-1.2, EVAL-1.3, EVAL-1.4 | M8, M11 |
 | SCR-12 | Chat (manual and auto mode) | `/chat` | 3, completed in 5 | UI-1.1, LLM-1.1, LLM-2.1, LLM-2.3, LLM-2.4, LLM-3.1, LLM-3.2, IMG-1.1, TRANS-1.1 | M12–M15 |
@@ -218,13 +218,13 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 
 | Region | Shows | Source | Live |
 |---|---|---|---|
-| Model | The spec from SCR-08 (or a template), its parameters and memory estimate | spec | |
+| Model | *Network*: the spec from SCR-08 (or a template), its parameters and memory estimate. *Classical* (M10): an estimator picked here, filtered by the dataset's task, with its parameter form and cross-field rules (ML-1.1, ML-1.4; ADR-0019 rule 15; added with the owner's approval of the study part's low-fi wireframe, 2026-11-19) | spec; `GET /ml/estimators/schema` *planned*, M10 | |
 | Data | The split dataset version; per-split row counts | `GET /versions/{id}` | |
 | Training config | Epochs, batch size, optimizer, learning rate and schedule, seed: a form from the config schema (UI-2.3) | `GET /config/schemas/train` *planned*, M8 | |
 | Start from | The lineage's base, or a chosen version (ADR-0015) | `GET /models/{lineage}` *planned*, M8 | |
 | Device | Auto, CPU or GPU, with what auto will do (RUN-1.9) | | |
 | VRAM check | The estimate against the cap, before starting | validate response | |
-| Study (M10) | A *tunable* toggle on each field with its range or choices and scale (HPO-1.1); trial count and time budget (HPO-1.2); pruning (HPO-1.3); the metric to optimise on validation (HPO-1.4) | study schema *planned*, M10 | |
+| Study (M10) | A *tunable* toggle on each field with its range or choices and scale (HPO-1.1), model parameters included; trial count and time budget (HPO-1.2); pruning (HPO-1.3); the metric to optimise on validation, or cross-validation folds for a classical model (HPO-1.4); the VRAM check for the worst case in the space | study schema *planned*, M10 | |
 
 **Actions.** *Start run* (`POST /jobs` with kind `train`) → SCR-04; *Start study* (*planned*, M10) → SCR-10.
 
@@ -243,7 +243,9 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 | Optimisation history | Value per trial, best so far | study | yes |
 | Test evaluation | The single test result of the best configuration, labelled "computed once" (HPO-1.4) | study | at the end |
 
-**Actions.** Open the best model (SCR-11); *Start a run from the best configuration* (prefills SCR-09); cancel a running study.
+**Actions.** Open the best model (SCR-11); *Start a run from the best configuration* (prefills SCR-09); pause, resume and cancel a running study (they act on its current trial). A trial's row opens a drawer with its values per step against the median the pruner used.
+
+**Reached from** a study job on SCR-07, a trial's header on SCR-04 and a registered version on SCR-11; there is no list of studies (approved with the low-fi wireframe, 2026-11-19). SCR-07 gains a *study* kind with its trials grouped under it, and SCR-04 "Trial n of st_…" for a trial: drawn as addenda at their Gate 3.
 
 **Empty.** A study with no finished trial: "No trial has finished yet." with the first trial's job link.
 
