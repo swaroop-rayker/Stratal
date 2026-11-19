@@ -501,7 +501,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] ADR-0017 approved (proposed 2026-11-19: `docs/decisions/ADR-0017-model-spec.md`)
+- [x] ADR-0017 approved (2026-11-19, "Approved": `docs/decisions/ADR-0017-model-spec.md`)
 - [ ] `test_BUILD_1_1_*`: every layer type can be added and configured
 - [ ] `test_BUILD_1_2_*`: out-of-range values are rejected with a message
 - [ ] `test_BUILD_1_3_*`: changing the dataset updates the input and output

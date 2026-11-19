@@ -1,6 +1,6 @@
 # ADR-0017 — Model spec: layers, graphs, shape inference and compilation
 
-**Status:** Proposed (M9, 2026-11-19), for the owner's approval. The four kickoff decisions it builds on were the owner's (2026-11-19): full graphs for BUILD-1.9, a tabular input block with one-hot by default, torchinfo as a test-only dependency, and BUILD-1.8 written by the agent.
+**Status:** Accepted by the owner on 2026-11-19, as proposed (M9). The four kickoff decisions it builds on were the owner's (2026-11-19): full graphs for BUILD-1.9, a tabular input block with one-hot by default, torchinfo as a test-only dependency, and BUILD-1.8 written by the agent.
 
 ## Context
 
