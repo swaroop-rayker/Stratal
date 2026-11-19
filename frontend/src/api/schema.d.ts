@@ -4076,7 +4076,7 @@ export interface operations {
                     "application/json": components["schemas"]["Prediction"];
                 };
             };
-            /** @description gpu_busy, weights_deleted or a partial version */
+            /** @description gpu_busy, weights_deleted, weights_unreadable or a partial version */
             409: {
                 headers: {
                     [name: string]: unknown;

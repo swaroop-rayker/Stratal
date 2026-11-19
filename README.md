@@ -103,6 +103,15 @@ Measured on 2026-11-15 on the RTX 4050 Laptop GPU (6 GB) in the M4 demo (`job_00
 
 `check.ps1 -Bench`: a CPU-bound synthetic stage with one event per item (about 50 events a second, far above a real stage), three runs with monitoring off and three on. On a quiet machine: runtime **+0.02 %**; the `monitor` process used **1.58 % of the machine's 16 logical CPUs, which is 25 % of one core**, mostly the collector storing and publishing each event. That is within NFR-11, which the owner reads as a share of the machine (SPEC OC-6).
 
+### Training demo (M8, 2026-11-19)
+
+`job_0051` trained the reference CNN (`small_cnn`, 0.29 M parameters) on CIFAR-10 (`ds_f8e67211dd94`) on the GPU for 30 epochs: **84.3 %** validation accuracy in 108 s of training.
+
+- **Pause and resume from SCR-07:** the pause saved a checkpoint at global step 3,244 (epoch 9, step 260; 3.3 MB in 124 ms), and the resumed attempt started at step 3,244. While paused, SCR-11 showed the run as `partial`, with its weights in the checkpoint; once complete, it was `trained` and the lineage's latest version, `mv_359e979462ab`. Each epoch's checkpoint took about 28 ms.
+- **NFR-1:** PyTorch's peak reserve was **420 MB**. `test_NFR_1_*` measures 0.79 GB for the same CNN at batch 512.
+- **Retention:** run automatically after the run completed (`job_0052`). Under `keep_intermediate = 0` it deleted the weights of `job_0030` and `job_0031` (2.3 MB, as the dry run predicted) and kept the base, the latest and the pinned `mv_e80834ce01b0`; the deleted versions keep their metrics. The disk report matches the bytes on disk with no orphans.
+- **Prediction:** SCR-11's try-out answered in 146 ms, on the CPU until RUN-1.4 is written. A deleted version answers `409 weights_deleted`.
+
 ## Documentation
 
 | | |
