@@ -19,10 +19,19 @@ the owner's functions in :mod:`stratal.data.splitting`, passed in as
 
 Which earlier split is continued is decided by the runner, which has the
 database, and recorded in the config as ``continues_version_id`` (DATA-4.4).
+
+Tables and texts (ADR-0019 rule 6) take a path of their own through the same
+stage: they have no pHash or image size, and an all-pairs check would be slow
+on tens of thousands of captions. Their groups are the rows that share a
+``text_group`` (the captions of one image); their stratum is the class, or for
+a numeric target its quintile; the owner's assignment unit places the groups,
+and the leakage check looks for a group or a content hash in two splits.
 """
 
+import bisect
 import dataclasses
 import math
+import statistics
 import time
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterator, Sequence
@@ -35,6 +44,14 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from stratal.core.errors import StratalError
 from stratal.data import splitting
 from stratal.data.commit import VersionRecord, commit_version
+from stratal.data.records import (
+    LABELLED_TEXT,
+    RECORD_TYPES,
+    TABULAR,
+    inherited_metadata,
+    table_schema_of,
+    table_task,
+)
 from stratal.data.splitting import (
     DEFAULT_STRATUM_KEYS,
     SPLITS,
@@ -59,7 +76,12 @@ from stratal.storage.manifest import (
 
 STAGE = "split"
 PARENT_STAGE = "filter"
-PARENT_STAGES: dict[str, str] = {"image_caption": PARENT_STAGE, "labelled_images": "preprocess"}
+PARENT_STAGES: dict[str, str] = {
+    "image_caption": PARENT_STAGE,
+    "labelled_images": "preprocess",
+    TABULAR: "clean_table",
+    LABELLED_TEXT: "clean_text",
+}
 """The stage whose version the split takes, per dataset type (DATA-5.2: labelled images
 have no label or filter stage)."""
 PROPORTION_TOLERANCE = 1e-9
@@ -164,6 +186,11 @@ class SplitResult:
 
 class ContractBroken(StratalError):
     """An owner unit returned what its contract forbids. The stage fails; nothing is written."""
+
+
+class _Keyed(Protocol):
+    @property
+    def row_key(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -432,7 +459,7 @@ def leakage_check(
 
 
 def _report(
-    rows: Sequence[_Accepted], plan: _Plan, config: SplitConfig, leakage: dict[str, Any]
+    rows: Sequence[_Keyed], plan: _Plan, config: SplitConfig, leakage: dict[str, Any]
 ) -> dict[str, Any]:
     """The split report (DATA-4.6), from the rows as written."""
     proportions = config.proportions
@@ -539,6 +566,20 @@ def run_split(
             suggested_action="Leave continues_version_id unset; the stage fills it in.",
         )
 
+    if dtype in RECORD_TYPES:
+        return _run_records(
+            parent_manifest=parent_manifest,
+            parent_version_id=parent_version_id,
+            data_dir=data_dir,
+            config=config,
+            derive=derive,
+            sink=sink,
+            previous=previous,
+            units=units,
+            checkpoint=checkpoint,
+            dtype=str(dtype),
+            started=started,
+        )
     rows, copies = _read(parent_manifest)
     sink.emit(
         stage=STAGE,
@@ -620,5 +661,183 @@ def run_split(
         "newly_assigned": report["newly_assigned"],
         "moved": report["moved"],
         "leakage_violations": int(leakage["violations"]),
+    }
+    return SplitResult(record, report, metrics, round(time.monotonic() - started, 3))
+
+
+# ---------------------------------------------------------------- tables and texts (ADR-0019)
+
+
+@dataclass(frozen=True)
+class _Record:
+    row_key: str
+    sha256: str
+    group: str | None
+    target: str | float | None
+
+
+def _read_records(parent_manifest: Path) -> list[_Record]:
+    columns = ["row_key", "sha256", "status", "label", "target_value", "text_group"]
+    found: list[_Record] = []
+    for row in iter_rows(parent_manifest, columns=columns):
+        if row["status"] != STATUS_ACCEPTED:
+            continue
+        key = str(row["row_key"])
+        if not row["sha256"]:
+            raise StratalError(
+                f"Accepted row {key!r} has no content hash, which ingest sets.",
+                suggested_action="Split a version made by the full pipeline.",
+            )
+        target = row["label"] if row["label"] is not None else row["target_value"]
+        found.append(_Record(key, str(row["sha256"]), row["text_group"], target))
+    return found
+
+
+def record_strata(records: Sequence[_Record], *, numeric: bool) -> dict[str, str]:
+    """Each row's stratum: its class, or its target's quintile ``q1``..``q5`` (ADR-0019 rule 6)."""
+    if not numeric:
+        return {r.row_key: str(r.target) for r in records}
+    values = [float(r.target) for r in records if isinstance(r.target, int | float)]
+    cuts = statistics.quantiles(values, n=5, method="inclusive") if len(values) >= 2 else []
+    return {r.row_key: f"q{bisect.bisect_right(cuts, float(r.target or 0.0)) + 1}" for r in records}
+
+
+def record_groups(records: Sequence[_Record]) -> list[SplitGroup]:
+    """Rows sharing a ``text_group`` form one group; every other row is its own.
+
+    The anchor is the smallest content hash among the members, as for images
+    (DATA_MODEL §5, ``split_group``).
+    """
+    by_group: defaultdict[str, list[_Record]] = defaultdict(list)
+    for record in records:
+        by_group[record.group if record.group is not None else f"row:{record.row_key}"].append(
+            record
+        )
+    groups = [
+        SplitGroup(
+            anchor=min(m.sha256 for m in members),
+            members=tuple(sorted(m.row_key for m in members)),
+        )
+        for members in by_group.values()
+    ]
+    return sorted(groups, key=lambda g: g.anchor)
+
+
+def record_leakage_check(records: Sequence[_Record], split: dict[str, str]) -> dict[str, Any]:
+    """A group, or one content, in two splits (DATA-4.2.AC2 for tables and texts)."""
+    seen: defaultdict[tuple[str, str], set[str]] = defaultdict(set)
+    rows_of: defaultdict[tuple[str, str], list[str]] = defaultdict(list)
+    for record in records:
+        for key in (("group", record.group), ("content", record.sha256)):
+            if key[1] is None:
+                continue
+            ident = (key[0], str(key[1]))
+            seen[ident].add(split[record.row_key])
+            rows_of[ident].append(record.row_key)
+    leaking = sorted(ident for ident, splits in seen.items() if len(splits) > 1)
+    return {
+        "distance": 0,
+        "method": "a text group or a content hash in more than one split",
+        "cross_split_pairs_checked": len(records),
+        "violations": len(leaking),
+        "examples": [
+            {
+                "rows": sorted(rows_of[ident])[:2],
+                "splits": sorted(seen[ident]),
+                "distance": 0,
+                "same_duplicate_group": ident[0] == "group",
+            }
+            for ident in leaking[:EXAMPLES]
+        ],
+        "passed": not leaking,
+    }
+
+
+def _run_records(
+    *,
+    parent_manifest: Path,
+    parent_version_id: str,
+    data_dir: Path,
+    config: SplitConfig,
+    derive: VersionDeriver,
+    sink: EventSink,
+    previous: PreviousSplit | None,
+    units: SplitUnits,
+    checkpoint: Callable[[], None],
+    dtype: str,
+    started: float,
+) -> SplitResult:
+    if config.stratum_keys or config.leakage_distance != 0:
+        raise StratalError(
+            "For tables and texts the stratum is the class or the target's quintile, and rows "
+            "are grouped by text group, not by pHash: stratum_keys must be empty and "
+            "leakage_distance 0.",
+            suggested_action="Leave stratum_keys and leakage_distance at the type's defaults.",
+        )
+    schema = table_schema_of(parent_manifest)
+    numeric = schema is not None and table_task(schema) == "regression"
+    rows = _read_records(parent_manifest)
+    groups = record_groups(rows)
+    strata = record_strata(rows, numeric=numeric)
+    known = _previous_splits(previous)
+    previous_lookup = {r.row_key: known[r.sha256] for r in rows if r.sha256 in known}
+    sink.emit(
+        stage=STAGE,
+        substage="group",
+        message=f"Grouping {len(rows):,} accepted records into {len(groups):,} groups · "
+        f"stratified by {'target quintile' if numeric else 'class'}",
+        metrics={"accepted": len(rows), "groups": len(groups)},
+    )
+    checkpoint()
+    key_of_sha = {r.sha256: r.row_key for r in rows}
+    to_assign = [
+        GroupToAssign(
+            group.anchor,
+            strata[key_of_sha[group.anchor]],
+            tuple(Member(key, previous_lookup.get(key)) for key in group.members),
+        )
+        for group in groups
+    ]
+    splits = _checked_assignment(
+        units.assign(to_assign, proportions=config.proportions, seed=config.seed), to_assign
+    )
+    plan = _Plan(stratum=strata, previous=previous_lookup, groups=groups)
+    for group in groups:
+        for key in group.members:
+            plan.split[key] = splits[group.anchor]
+            plan.group[key] = group.anchor
+    leakage = record_leakage_check(rows, plan.split)
+    if not leakage["passed"]:
+        raise StratalError(
+            f"{leakage['violations']:,} groups or contents ended up in two splits.",
+            suggested_action="Check assign_splits: every member of a group gets its split.",
+        )
+    sink.emit(
+        stage=STAGE,
+        substage="leakage_check",
+        message="Leakage check passed: no text group or content in two splits",
+        metrics={"leakage_violations": 0},
+    )
+    report = _report(rows, plan, config, leakage)
+    record = commit_version(
+        data_dir=data_dir,
+        stage=STAGE,
+        parent_version_id=parent_version_id,
+        rows=_apply(iter_rows(parent_manifest), plan),
+        config=config.model_dump(mode="json"),
+        derive=derive,
+        sink=sink,
+        metadata=inherited_metadata(parent_manifest),
+    )
+    record = dataclasses.replace(record, dtype=dtype, counts={**record.counts, "split": report})
+    metrics: dict[str, MetricValue] = {
+        "accepted": len(rows),
+        **{split: report["splits"][split]["rows"] for split in SPLITS},
+        "groups": len(groups),
+        "largest_group": report["groups"]["largest"],
+        "carried_over": report["carried_over"],
+        "newly_assigned": report["newly_assigned"],
+        "moved": report["moved"],
+        "leakage_violations": 0,
     }
     return SplitResult(record, report, metrics, round(time.monotonic() - started, 3))

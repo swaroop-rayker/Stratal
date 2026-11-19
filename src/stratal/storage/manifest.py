@@ -63,6 +63,13 @@ _FIELDS: list[tuple[str, pa.DataType]] = [
     ("split", pa.string()),
     ("split_group", pa.string()),
     ("split_stratum", pa.string()),
+    # M10 (DATA-1.4, ADR-0019). Nullable and appended, so no existing version ID changes.
+    ("record", pa.string()),
+    ("target_value", pa.float64()),
+    ("text", pa.string()),
+    ("text_group", pa.string()),
+    ("tokens", pa.string()),
+    ("token_count", pa.int32()),
 ]
 SCHEMA: pa.Schema = pa.schema(
     [pa.field(name, kind, nullable=name != "row_key") for name, kind in _FIELDS]

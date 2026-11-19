@@ -353,11 +353,27 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 | `split_group` | string | split | content hash (`sha256`) of the split group's anchor, its member with the smallest `sha256`; rows sharing a duplicate group or within the leakage distance share it (DATA-4.2). Built in M5 |
 | `split_stratum` | string | split | the row's stratum, its keys joined by `\|`, e.g. `q3\|landscape\|train2017`, or `q3\|landscape\|.` for a file at the source's root, as in the flat COCO sources (DATA-4.3; `.` chosen by the owner 2026-11-16). Built in M5 |
 
-Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`. M8 adds `no_label` (ingest with `label_from: folder`, for a file at the source's root) and `missing_label` (the labelled-images validator).
+Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`. M8 adds `no_label` (ingest with `label_from: folder`, for a file at the source's root) and `missing_label` (the labelled-images validator). M10 adds `conflicting_labels` (a labels CSV gives an image two classes, DATA-1.5); `missing_target`, `missing_column`, `not_a_number` and `not_a_category` (a table record that breaks its schema, DATA-1.4); `missing_label` also for a text without a class; `empty_text` and `text_too_long` (`clean_text`, DATA-2.4).
+
+**Tables and texts (M10, [ADR-0019](decisions/ADR-0019-tabular-and-text-models.md))** have one row per record, not per file:
+
+| Column | Type | Added by | Notes |
+|---|---|---|---|
+| `row_key` | | ingest | `<file>#<record or line number, 7 digits>`, e.g. `breast_cancer.csv#0000001`, `captions.jsonl#0000042` |
+| `sha256` | | ingest, `clean_text` | the hash of the row's content: the canonical `record`, or the text (after `clean_text`, the normalised text), so exact duplicates are found as for files |
+| `format` | | ingest | `CSV`, `PARQUET`, `JSONL` or `TXT` |
+| `record` | string | ingest | a table row's feature values as canonical JSON (keys sorted, numbers as floats, categories as strings, a missing value as null) |
+| `target_value` | float64 | ingest | a numeric target (regression); a categorical target is in `label` |
+| `text` | string | ingest, `clean_text` | the text; `clean_text` writes it back normalised |
+| `text_group` | string | ingest | rows that must share a split (the captions of one image); null: the row is its own group |
+| `tokens` | string | tokenize | L token IDs as space-separated numbers (0 padding, 1 unknown); a string, because the version hash takes scalar values only (DATA-3.2) |
+| `token_count` | int32 | tokenize | the text's length in tokens before it was cut to L |
+
+All six are nullable and appended, so no earlier version's ID changed.
 
 `corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. In clean and preprocess, a file missing from the blob store is not a reason code: it fails the stage (BUG1). The filter stage is the exception: its schema validation (DATA-5.1) marks a row whose original or preprocessed file is missing `rejected` with `missing_file`, warns, and lists it in `counts.validation` (the owner's choice, 2026-11-16).
 
-File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.parent_version_id`, `stratal.config_hash`. Rows are written sorted by `row_key`.
+File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.parent_version_id`, `stratal.config_hash`. Since M10 also `stratal.table_schema` (a table's columns with kind and role, and its task: `classification` or `regression`), passed on by every stage that keeps the rows, and `stratal.vocab` (`{sha256, size, max_length}` of a tokenized version's vocabulary, a JSON blob). They follow from the rows and the config, so they are not part of the identity. The vocabulary blob is referenced only from this metadata: the blob garbage collector (phase 2) must count it as in use. Rows are written sorted by `row_key`.
 
 ## 6. Blob store
 

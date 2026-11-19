@@ -75,11 +75,16 @@ class PipelineRequest(BaseModel):
         description="Per-stage overrides of the default config.",
     )
     until_stage: str | None = Field(default=None, description="Stop after this stage.")
-    dataset_type: Literal["image_caption", "labelled_images"] | None = Field(
-        default=None,
-        description="Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest "
-        "to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from "
-        "class folders. Null: the type of 'from_version' if it has one, else image_caption.",
+    dataset_type: Literal["image_caption", "labelled_images", "tabular", "labelled_text"] | None = (
+        Field(
+            default=None,
+            description="Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest "
+            "to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from "
+            "class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, "
+            "stages.ingest.table.target required), clean_table, split. 'labelled_text': ingest "
+            "(JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it "
+            "has one, else image_caption.",
+        )
     )
 
     @model_validator(mode="after")
@@ -221,19 +226,32 @@ def _stage_overrides(dtype: str, request: PipelineRequest, name: str) -> dict[st
     }
 
 
+_INGEST_KIND: dict[str, str | None] = {
+    "image_caption": None,
+    "labelled_images": "label_from",
+    "tabular": "table",
+    "labelled_text": "text",
+}
+"""The ingest field each dataset type needs set (and every other type leaves unset)."""
+
+
 def _label_problems(dtype: str, plan: list[tuple[str, dict[str, Any]]]) -> list[FieldProblem]:
-    """A labelled-images dataset needs labels from ingest; an image–caption one has none."""
+    """Ingest's labels, table or text settings must match the dataset type (DATA-5.2)."""
+    wanted = _INGEST_KIND.get(dtype)
     for name, config in plan:
         if name != "ingest":
             continue
-        wants = dtype == stage_registry.LABELLED_IMAGES
-        if wants != (config.get("label_from") is not None):
+        for field_name in ("label_from", "table", "text"):
+            given = config.get(field_name) is not None
+            if given == (field_name == wanted):
+                continue
             msg = (
-                "labelled_images needs label_from 'folder'"
-                if wants
-                else "label_from is only for dataset_type labelled_images"
+                f"{dtype} needs stages.ingest.{field_name}"
+                if field_name == wanted
+                else f"{field_name} is only for dataset_type "
+                f"{next(t for t, f in _INGEST_KIND.items() if f == field_name)}"
             )
-            return [FieldProblem(loc=["stages", "ingest", "label_from"], msg=msg, code="invalid")]
+            return [FieldProblem(loc=["stages", "ingest", field_name], msg=msg, code="invalid")]
     return []
 
 
@@ -312,7 +330,7 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
     dataset = registry.ensure_dataset(
         session,
         slug=slug,
-        modality="image",
+        modality=stage_registry.modality_of(dtype),
         source_uri=request.source.path if request.source is not None else None,
     )
     spec = request.model_dump(mode="json")

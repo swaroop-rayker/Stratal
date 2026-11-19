@@ -182,6 +182,10 @@ def _check_groups(
         seen.update(members)
 
 
+check_groups = _check_groups
+"""The grouping contract's checks, shared with the clean stages for tables and texts."""
+
+
 def _collect(parent_manifest: Path) -> tuple[int, dict[str, _Accepted]]:
     """Pass 1 over the parent: the row count, and the accepted rows' facts."""
     total = 0

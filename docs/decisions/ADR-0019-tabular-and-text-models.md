@@ -66,6 +66,15 @@ A tokenizer fitted inside training and stored with the weights was the alternati
 24. **Libraries in production, CIDEr-D in house.** Classification, regression and clustering use `sklearn.metrics`; BLEU and chrF use sacrebleu (2.6.0, about 6 MB with lxml, PyPI; in both worker images); CIDEr-D is our own code (CL-13). Perplexity is the exponential of the mean negative log-likelihood the stub's contract already takes; the captioning CLIP score is the mean of LABEL-1.3's CLIP scores, from the scorer we have. **torchmetrics is therefore not added**: with scikit-learn in both worker images (rule 20), nothing left needs it. If the owner prefers it for a metric, it is added for that metric (1.0 MB plus lightning-utilities, PyPI).
 25. `stratal.eval.task_metrics` keeps its stub's contracts; `metric_set(task)` stays importable without the libraries, so `api` can list a task's metrics.
 
+## As built (part A and B, 2026-11-19)
+
+- **Stage names (rules 4 and 5, Consequences).** The clean stages for records are `clean_table` and `clean_text`, registered beside the image `clean`, rather than `clean` itself. Each has its own config; giving the image stage text settings would have changed its config's hash, and so the IDs of image versions cleaned from now on. Pipelines: `tabular` runs `ingest → clean_table → split`, `labelled_text` `ingest → clean_text → split → tokenize`.
+- **`tokens` is a string** of space-separated IDs, not a list of int32 (rule 9): the version hash (DATA-3.2) takes scalar values only, and changing it would touch the identity code.
+- **`sha256` holds the row's content hash**: the canonical record, or the text (normalised after `clean_text`). Exact duplicates are found by the same unit as for images. The source table itself is not copied into the blob store: the manifest holds every value.
+- **The split** keeps its stage and config for records, with `stratum_keys: []` and `leakage_distance: 0` as the types' defaults, and takes its own path inside: groups by `text_group`, strata by class or target quintile (scikit-learn's diabetes: q1 to q5), the owner's `assign_splits`, and a leakage check by group and content hash in linear time. Continuing an earlier split (DATA-4.5) works as for images, by content hash.
+- **A records clean stage's WARN carries a suggested action** (MON-1.3); `ListSink`, the test sink, now refuses a WARN without one, as the runtime does.
+- **Measured on the live stack:** breast cancer 569 rows (455 / 57 / 57), diabetes 442, wine 178 (`job_0059` to `job_0061`); the COCO captions 49,585 of 9,912 images in 78 classes, 575 repeated captions marked, vocabulary 5,243, L = 16 with 3.9 % of train texts cut (`job_0062`).
+
 ## Alternatives
 
 | Option | Why not |

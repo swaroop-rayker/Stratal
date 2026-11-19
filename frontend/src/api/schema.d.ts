@@ -2217,9 +2217,9 @@ export interface components {
             until_stage?: string | null;
             /**
              * Dataset Type
-             * @description Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from class folders. Null: the type of 'from_version' if it has one, else image_caption.
+             * @description Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, stages.ingest.table.target required), clean_table, split. 'labelled_text': ingest (JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it has one, else image_caption.
              */
-            dataset_type?: ("image_caption" | "labelled_images") | null;
+            dataset_type?: ("image_caption" | "labelled_images" | "tabular" | "labelled_text") | null;
         };
         /** PlanCheckpoint */
         PlanCheckpoint: {

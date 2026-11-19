@@ -183,6 +183,12 @@ def validate_tabular(rows: Iterable[Mapping[str, Any]], schema: TableSchema) -> 
     return report
 
 
+def table_problem(row: Mapping[str, Any], schema: TableSchema) -> tuple[str, str] | None:
+    """The first way ``row`` (values by column name) breaks ``schema``: ``(code, detail)``,
+    or ``None``. Tabular ingest rejects the row with it (DATA-1.4)."""
+    return _table_problem(row, schema)
+
+
 def _table_problem(row: Mapping[str, Any], schema: TableSchema) -> tuple[str, str] | None:
     for column in schema.columns:
         if column.name not in row:

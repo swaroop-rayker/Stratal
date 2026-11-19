@@ -723,6 +723,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** A scratch database for the storage checks, which was created and then dropped; past `train` and `retention` jobs for the start latencies; and a test study with a known answer for importance.
 - **Why:** ADR-0018 assumed these. Two surprises: Optuna 5.0's default importance evaluator is PED-ANOVA, not fANOVA, and it ranked the wrong parameter first at 20 trials, so fANOVA is set explicitly. And a deep-learning trial costs about 19 s beyond its training, 23 % of a 10-epoch Small CNN trial.
 
+**Tables and texts as records** (M10, DATA-1.4, DATA-2.4, DATA-1.5, ADR-0019) — [ADR-0019](decisions/ADR-0019-tabular-and-text-models.md)
+- **What:** A tabular or text dataset has one manifest row per record. Tables run `ingest → clean_table → split`, texts `ingest → clean_text → split → tokenize`. Labelled images can take their classes from a CSV.
+- **How:** Six nullable manifest columns (`record`, `target_value`, `text`, `text_group`, `tokens`, `token_count`). `sha256` is the row's content hash, so the image stage's exact-duplicate unit marks repeated records. The table schema and the vocabulary travel as manifest metadata. The split keeps its stage but takes a path of its own for records: groups by text group, strata by class or target quintile, the owner's assignment unit, a linear leakage check. Tokens are words from the train split only (K3), stored as a string of IDs.
+- **Why:** Separate clean stages keep the image clean stage's config, and so future image version IDs, unchanged. A string of IDs keeps the version hash's code untouched. Keeping the split in one stage keeps continuing a split (DATA-4.5) and the report the same for every type. The COCO captions export streams the 450 MB instances file with a regex instead of loading it, which would need several GB.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

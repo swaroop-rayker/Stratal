@@ -575,9 +575,9 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 - [x] ADR-0018 approved; S-09 report delivered (ADR-0018 approved 2026-11-19, "Approve all three"; `docs/spikes/S-09-hpo.md` 2026-11-19: Optuna stays in its schema, decision 7 confirmed, importance uses fANOVA set explicitly)
 - [x] ADR-0019 approved (open points 1–7, 9, 14–17); DATA-1.5 approved or declined (points 11–13) (both approved 2026-11-19, "Approve all three")
-- [ ] `test_DATA_1_5_*`: a flat image folder with a labels CSV ingests with each image's label; unlisted images, missing files and repeated paths are reported; one changed label gives a new version ID
-- [ ] `test_DATA_1_4_*`: a sample CSV and a sample JSONL ingest without errors
-- [ ] `test_DATA_2_4_*`: planted bad rows are removed and logged
+- [x] `test_DATA_1_5_*`: a flat image folder with a labels CSV ingests with each image's label; unlisted images, missing files and repeated paths are reported; one changed label gives a new version ID (2026-11-19: `test_DATA_1_4_records.py`, through the API in `test_M10_records_pipeline.py`; conflicting labels rejected, problems with their line numbers in `counts.labels_csv`)
+- [x] `test_DATA_1_4_*`: a sample CSV and a sample JSONL ingest without errors (2026-11-19: CSV, Parquet, JSONL and TXT in `test_DATA_1_4_records.py`; whole pipelines in `test_M10_records_pipeline.py`; live, breast cancer, diabetes and wine (`job_0059`–`job_0061`) and the COCO captions (`job_0062`))
+- [x] `test_DATA_2_4_*`: planted bad rows are removed and logged (2026-11-19, `test_DATA_2_4_text_clean.py`: empty and over-length texts dropped with their reasons and a WARN naming them; through the API in `test_M10_records_pipeline.py`)
 - [ ] `test_ML_1_1_*`: each listed model trains on a tabular dataset
 - [ ] `test_ML_1_2_*`: k-means, DBSCAN/HDBSCAN and PCA each run and report their metrics
 - [ ] `test_ML_1_3_*`: the scaler's statistics come from the train split
