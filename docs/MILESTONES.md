@@ -523,7 +523,17 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Size** L · **Branch** `m10-ml-hpo-metrics` · **Serves** ML-1.1–1.5, HPO-1.1–1.5, EVAL-1.2, DATA-1.4, DATA-2.4
 
-**Before starting:** ADR-0018 approved; G2 for SCR-10 and SCR-09's HPO part approved; the tabular and labelled-text datasets settled (decision 1); and these open points decided, in an ADR of their own or an addendum to ADR-0016 (raised by the owner on 2026-11-18):
+**Decided by the owner at M10's kickoff (2026-11-19):**
+
+| # | Decision |
+|---|---|
+| K1 | EVAL-1.2 is written by the agent, all of it ("You write em"; ADR-0012's log) |
+| K2 | EVAL-1.2 uses libraries in production: sklearn.metrics, sacrebleu for BLEU and chrF; CIDEr-D stays in house (CL-13). Which of torchmetrics' metrics are still needed is settled in ADR-0019 |
+| K3 | Text is tokenized into words with a vocabulary from the train split; no BPE owner unit and no tokenizer library (open point 14) |
+| K4 | Downloads approved as listed: scikit-learn 1.9.1, scipy 1.18.1, joblib, narwhals, threadpoolctl, skops 0.16.0, prettytable, Optuna 5.1.0 and colorlog in `worker-cpu` (`ml-cpu`); Optuna and colorlog in `worker-gpu` (`gpu`); about 47 MB from PyPI. `api` and `monitor` stay without them; their tests get a marker and run in `worker-cpu`. sacrebleu 2.6.0 (with lxml, about 6 MB) follows from K2 |
+| K5 | One new ADR-0019 settles open points 1–7, 9 and 14–17; the CSV labels (11–13) become a proposed requirement, DATA-1.5, in SPEC |
+
+**Before starting:** ADR-0018 approved; G2 for SCR-10 and SCR-09's HPO part approved; the tabular and labelled-text datasets settled (decision 1); and these open points decided, in an ADR of their own or an addendum to ADR-0016 (raised by the owner on 2026-11-18; the owner chose ADR-0019 at the kickoff, K5):
 
 - **Serving tabular models** (REG-1.4, ML-1.5):
   1. Which process serves skops models. `inference` is built from the `worker-gpu` image, which has neither scikit-learn nor skops (ADR-0014 rule 11 puts them in `ml-cpu`). They run on the CPU, so they never need the GPU lease.
@@ -562,6 +572,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 **Done when**
 
 - [ ] ADR-0018 approved; S-09 report delivered
+- [ ] ADR-0019 approved (open points 1–7, 9, 14–17); DATA-1.5 approved or declined (points 11–13)
 - [ ] `test_DATA_1_4_*`: a sample CSV and a sample JSONL ingest without errors
 - [ ] `test_DATA_2_4_*`: planted bad rows are removed and logged
 - [ ] `test_ML_1_1_*`: each listed model trains on a tabular dataset
