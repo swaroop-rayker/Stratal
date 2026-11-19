@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-09 study part — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+/* SCR-07 */
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.danger { border-width: 2px; border-color: var(--ink); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; } .select.off { color: var(--ink-3); }
+.search { height: 24px; width: 200px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; color: var(--ink-3); font-size: 11px; gap: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); } .pill.strike { text-decoration: line-through; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 40px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.hover td { background: #f7f7f7; }
+.t .sec td { height: 26px; background: var(--fill); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.bar { width: 80px; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; display: inline-block; position: relative; vertical-align: middle; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); }
+.muted { color: var(--ink-3); }
+.err-line { font-size: 11px; color: var(--ink-2); }
+.empty { display: grid; place-items: center; text-align: center; padding: 30px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 460px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.toast { position: absolute; right: 16px; bottom: 44px; width: 360px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.1); font-size: 12px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+/* SCR-11 additions */
+.cols { display: grid; grid-template-columns: 1fr 340px; gap: 12px; min-height: 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.stackbar { display: flex; height: 14px; border: 1px solid var(--ink-3); border-radius: 3px; overflow: hidden; }
+.stackbar i { display: block; height: 100%; border-right: 1px solid #fff; }
+.kvs { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px; } .kvs span:nth-child(even) { font-family: var(--mono); text-align: right; }
+.sw { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--ink-3); margin-right: 6px; vertical-align: middle; }
+.drop { border: 1.5px dashed var(--line); border-radius: 6px; height: 64px; display: grid; place-items: center; color: var(--ink-3); font-size: 12px; }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 480px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font: 600 15px var(--mono); }
+.drawer .body { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; font-size: 12px; }
+.code { font: 11px/1.5 var(--mono); background: var(--fill); border: 1px solid var(--soft); border-radius: 4px; padding: 8px; white-space: pre; color: var(--ink-2); }
+.pin { font-size: 13px; color: var(--ink-3); } .pin.on { color: var(--ink); }
+
+/* SCR-08 / SCR-09 additions */
+.builder { display: grid; grid-template-columns: 170px 1fr 300px; gap: 12px; height: 470px; min-height: 0; }
+.palette { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; font-size: 11px; }
+.pgroup { font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+.ptile { border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; background: #fff; }
+.ptile.off { color: var(--ink-3); border-style: dashed; background: var(--fill); }
+.canvas { position: relative; border: 1px solid var(--line); border-radius: 6px; background: repeating-linear-gradient(0deg, #fafafa 0 19px, #f0f0f0 19px 20px), #fafafa; padding: 14px; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+.gnode { position: relative; width: 300px; min-height: 34px; border: 1.5px solid var(--ink-2); border-radius: 6px; background: #fff; display: flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; }
+.gnode b { font-family: var(--mono); font-weight: 600; }
+.gnode .shape { margin-left: auto; font: 11px var(--mono); color: var(--ink-2); }
+.gnode .par { font: 10px var(--mono); color: var(--ink-3); min-width: 34px; text-align: right; }
+.gnode.on { border-width: 3px; border-color: var(--ink); }
+.gnode.lock { border-style: dashed; background: var(--fill); }
+.gnode.bad { border: 2px solid var(--ink); background: #f3f3f3; }
+.gnode.faded { color: var(--ink-3); border-color: var(--line); }
+.lockk { font: 10px var(--mono); color: var(--ink-3); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; }
+.edge { width: 2px; height: 16px; background: var(--ink-3); }
+.addhint { margin-top: 10px; border: 1.5px dashed var(--line); border-radius: 6px; padding: 6px 12px; color: var(--ink-3); font-size: 11px; }
+.skip { position: absolute; left: 60px; width: 30px; border: 2px solid var(--ink-3); border-right: none; border-radius: 8px 0 0 8px; }
+.skiplabel { position: absolute; left: 20px; font: 10px var(--mono); color: var(--ink-3); }
+.badge { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 10px; font-weight: 700; }
+.inspector { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.inspector h3 { margin: 0; display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.f { display: grid; grid-template-columns: 100px 1fr; gap: 2px 8px; align-items: center; font-size: 12px; }
+.f label { font-family: var(--mono); color: var(--ink-2); font-size: 11px; }
+.f .in { border: 1px solid var(--line); border-radius: 4px; height: 24px; display: flex; align-items: center; padding: 0 8px; background: #fff; }
+.f .in.bad { border: 2px solid var(--ink); }
+.f .hint { grid-column: 2; font-size: 10px; color: var(--ink-3); }
+.summary { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+.summary .sep { width: 1px; height: 18px; background: var(--soft); }
+.problems { border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.problems .muted { font: 10px var(--mono); margin-left: 6px; }
+.form2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+.meter { position: relative; height: 16px; border: 1px solid var(--ink-3); border-radius: 3px; display: flex; overflow: hidden; }
+.meter i { display: block; height: 100%; border-right: 1px solid #fff; }
+.meter .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.off-section { opacity: .45; }
+.drawer.static { position: relative; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-09 — Training run setup, study part · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: HPO-1.1, HPO-1.2, HPO-1.3, HPO-1.4; ML-1.1, ML-1.4 (proposed, decision 7)</span><span>Builds on: <span class="mono">screens/SCR-09_v1.html</span> (approved hi-fi, built at Gate 3)</span><span>Route: <span class="mono">/runs/new</span></span><span>Execution: ADR-0018, ADR-0019 (approved 2026-11-19)</span><span>2026-11-19</span></div>
+<p>Layout and hierarchy only. Everything the approved SCR-09 already has (model, data, training form, start from, device, the VRAM check) keeps its approved design; this wireframe draws only what M10 adds. Blue numbers are annotations. There are two set-ups. The first tunes the <i>Small CNN</i> on CIFAR-10 (<span class="mono">ds_f8e67211dd94</span>). The second tunes a random forest on breast cancer (<span class="mono">ds_2b7e04a91c55</span>, 455 / 57 / 57 rows, 30 numeric columns, target <span class="mono">diagnosis</span>).</p>
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>The study part is the collapsed section <i>Tune with a study</i></b>, as approved. Opening it turns this run into a study: the primary button becomes <i>Start study</i>, and the right-hand column explains what a study will do. Closing it again leaves an ordinary run, and the markers are kept until you leave the page.</li>
+<li><b>Any field can be marked tunable in place.</b> While the study section is open, each field of the generated form gets a <i>tune</i> toggle. Turned on, the field's input becomes a range: <i>low</i> and <i>high</i> with a <i>linear</i> or <i>log</i> scale (and a step for whole numbers); choices as chips for an enum; both values for a yes/no field. The defaults come from the field's own range in its schema, and a range can never go outside it (HPO-1.1).</li>
+<li><b>Model parameters too.</b> <i>Add a model parameter</i> lists the spec's tunable node fields (for example <span class="mono">c1.out_channels</span> or <span class="mono">d1.p</span>) and the estimator's own parameters, with the same range controls. The spec stays as built on SCR-08; a study only varies the fields you pick.</li>
+<li><b>The search space is listed in the study card</b>, one row per marker, with its type and range in words ("learning_rate · log · 1e-4 to 1e-1"). A marker the server refuses (<span class="mono">422</span>) shows its reason on its own row (frame C).</li>
+<li><b>Limits, objective and pruning sit next to the space.</b> Trials (default 20) and a time budget (default 1 h), with "whichever comes first" written out. The objective is chosen from the task's validation metrics, with its direction shown. Pruning is on by default and its rule is written in words. For a classical model, cross-validation folds (default 5) are shown in place of epochs.</li>
+<li><b>The VRAM check takes the worst case in the space</b>: the largest batch and the widest layers. It still warns rather than blocks. A trial whose own settings would go over the cap is not run and is recorded as <i>failed · over_vram</i> (ADR-0018 rule 2), and the column says so.</li>
+<li><b>Choosing a classical model happens on this page</b> (ADR-0019 rule 15). The model card gets two modes: <i>Network</i> (from SCR-08, as today) and <i>Classical</i>, with an estimator picker filtered by the dataset's task and a parameter form generated from <span class="mono">GET /ml/estimators/schema</span> (UI-2.3). A cross-field rule shows on its field before anything is sent (ML-1.4). A classical model has no device choice (it runs on the CPU) and no VRAM check. <b>This adds ML-1.1 and ML-1.4 to SCR-09's inventory entry</b>; SCREENS.md is updated if you approve. The alternative is a separate picker screen, which the inventory doesn't have.</li>
+<li><b>The data card states the task</b> that the dataset's target implies (classification or regression, ADR-0019 rule 2). For text it also gives the vocabulary size and L from the tokenized version (rule 9).</li>
+<li><b><i>Start study</i> opens SCR-10</b> for the new study, not SCR-04. The first trial's live view is one click from there.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · A study on the Small CNN: learning rate, batch size and weight decay</h2>
+<div class="frame" style="height:1000px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav on">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b> / Build / New run</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><b>New study</b><span class="k">a run with tuned fields</span></div>
+      <div class="cols" style="grid-template-columns:1fr 360px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card"><h3>Model <span class="spacer"></span><span class="group"><span class="btn sm on">Network</span><span class="btn sm">Classical</span></span></h3>
+            <div style="display:flex;gap:18px;font-size:12px"><span><b class="mono">small_cnn</b> <span class="k">from SCR-08</span></span><span>cnn</span><span class="mono">288,746 parameters</span><span class="pill">✓ No problems</span></div></div>
+          <div class="card"><h3>Data</h3><div style="display:flex;gap:18px;font-size:12px"><span class="select">cifar10 · <span class="mono">ds_f8e67211dd94</span> ▾</span><span class="mono">train 47,704 · val 5,963 · test 5,963</span><span>classification · 10 classes</span></div></div>
+          <div class="card"><h3><span class="n" style="position:static;display:inline-block">1</span>Training <span class="muted" style="font-weight:400;font-size:11px">⇄ marks a field tuned by the study</span></h3>
+            <div class="form2">
+              <div class="f"><label>epochs</label><span class="in">10</span><span class="hint">fixed · ⇄ tune</span></div>
+              <div class="f"><label>learning_rate <b>⇄</b></label><span class="in" style="border-width:2px">1e-4 … 1e-1 · log ▾</span><span class="hint">field range 1e-6 to 10</span></div>
+              <div class="f"><label>batch_size <b>⇄</b></label><span class="in" style="border-width:2px;gap:4px"><span class="pill">64</span><span class="pill">128</span><span class="pill">256</span><span class="pill dash">+</span></span><span class="hint">choices</span></div>
+              <div class="f"><label>weight_decay <b>⇄</b></label><span class="in" style="border-width:2px">1e-6 … 1e-2 · log ▾</span></div>
+              <div class="f"><label>optimizer</label><span class="in">adam ▾</span><span class="hint">fixed · ⇄ tune</span></div>
+              <div class="f"><label>schedule</label><span class="in">cosine ▾</span><span class="hint">fixed · ⇄ tune</span></div>
+              <div class="f"><label>seed</label><span class="in">0</span></div>
+            </div></div>
+          <div class="card"><h3><span class="n" style="position:static;display:inline-block">2</span>▾ Tune with a study <span class="pill">on</span><span class="spacer"></span><span class="btn sm ghost">Turn off</span></h3>
+            <div class="cols" style="grid-template-columns:1fr 1fr;gap:16px">
+              <div><div class="muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.06em">Search space · 3 fields</div>
+                <table class="t" style="margin-top:4px"><tr><th>Field</th><th>Type</th><th>Range or choices</th><th></th></tr>
+                  <tr><td class="m">learning_rate</td><td>log float</td><td class="m">1e-4 to 1e-1</td><td>✕</td></tr>
+                  <tr><td class="m">batch_size</td><td>choice</td><td class="m">64, 128, 256</td><td>✕</td></tr>
+                  <tr><td class="m">weight_decay</td><td>log float</td><td class="m">1e-6 to 1e-2</td><td>✕</td></tr></table>
+                <span class="btn sm" style="margin-top:6px"><span class="n" style="position:static;display:inline-block">3</span>+ Add a model parameter</span></div>
+              <div class="f" style="grid-template-columns:110px 1fr;align-content:start">
+                <label>n_trials</label><span class="in">20</span><span class="hint">1–200</span>
+                <label>time budget</label><span class="in">1 h ▾</span><span class="hint">running time; pauses don't count. Whichever limit comes first ends the study</span>
+                <label>objective</label><span class="in">val_accuracy · maximise ▾</span><span class="hint">val_loss, val_accuracy, val_macro_f1</span>
+                <label>pruning</label><span class="in">☑ median</span><span class="hint">After 5 trials, from epoch 2: a trial behind the median at the same epoch stops</span>
+                <label>seed</label><span class="in">0</span><span class="hint">TPE's suggestions</span>
+              </div></div></div>
+        </div>
+        <div class="card" style="position:sticky;top:0">
+          <h3><span class="n" style="position:static;display:inline-block">4</span>VRAM check <span class="k">worst case in the space</span></h3>
+          <div class="meter"><i style="width:3%;background:var(--ink-2)"></i><i style="width:11%;background:var(--ink-3)"></i><span class="cap" style="left:85%"></span></div>
+          <div class="kvs"><span>Weights, gradients, Adam</span><span>4.6 MB</span><span>Activations × 256 (largest batch)</span><span>0.69 GB</span><span>CUDA context</span><span>0.09 GB</span><span><b>Total</b></span><span><b>0.79 GB</b></span></div>
+          <div class="pill">✓ Every trial fits under the cap</div>
+          <div style="border-top:1px solid var(--soft);padding-top:8px;font-size:12px"><span class="n" style="position:static;display:inline-block">5</span> Up to <b>20 trials</b> or <b>1 h</b>, whichever comes first. Each trial is its own job on the <b>GPU queue</b>, one at a time, 10 epochs each: about <b>22 min</b> if none is pruned. Only the best trial is registered; the test split is used <b>once</b>, on it, at the end.</div>
+          <span class="btn primary" style="justify-content:center">Start study →</span>
+          <span class="muted" style="font-size:11px">Opens the study (SCR-10).</span>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 3% · RAM 3.1 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Training form with markers</td><td>The approved generated form; while a study is on, each field has a ⇄ toggle that turns its input into a range or choices inside the field's schema range (HPO-1.1)</td><td><span class="mono">GET /config/schemas/train</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Tune with a study</td><td>The search space, one row per marker; trials, time budget, objective with its direction, pruning in words, seed (HPO-1.2, HPO-1.3, HPO-1.4)</td><td>the schemas; <span class="mono">GET /dataset-types</span> for the task's metrics</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Add a model parameter</td><td>The spec's node fields and the estimator's parameters that can be tuned, as JSON pointers</td><td><span class="mono">GET /model-specs/schema</span>; <span class="mono">GET /ml/estimators/schema</span></td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>VRAM check</td><td>The approved check, for the worst case in the space</td><td>validate's <span class="mono">memory</span>; <span class="mono">GET /system</span></td><td>as markers change</td></tr>
+<tr><td><span class="num">5</span></td><td>What will happen; start</td><td>Limits, queue, one job per trial or one job, the rough duration, registration of the best only, the single test; <i>Start study</i> (<span class="mono">POST /jobs</span>, kind <span class="mono">hpo_study</span>)</td><td>the form; past epoch times</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · A classical model: a random forest on breast cancer, tuned with 5-fold CV</h2>
+<div class="frame" style="height:600px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav on">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b> / New run</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="cols" style="grid-template-columns:1fr 360px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card"><h3><span class="n" style="position:static;display:inline-block">6</span>Model <span class="spacer"></span><span class="group"><span class="btn sm">Network</span><span class="btn sm on">Classical</span></span></h3>
+            <div style="display:flex;gap:12px;font-size:12px;align-items:center"><span class="select">random_forest ▾</span><span class="muted">for classification: RandomForestClassifier, in a pipeline with imputing, scaling and one-hot encoding fitted on train (ML-1.3)</span></div>
+            <div class="form2">
+              <div class="f"><label>n_estimators <b>⇄</b></label><span class="in" style="border-width:2px">50 … 500 · step 10</span></div>
+              <div class="f"><label>max_depth <b>⇄</b></label><span class="in" style="border-width:2px">2 … 20</span><span class="hint">empty: unlimited · ⇄ tune</span></div>
+              <div class="f"><label>min_samples_leaf <b>⇄</b></label><span class="in" style="border-width:2px">1 … 20</span></div>
+              <div class="f"><label>max_features <b>⇄</b></label><span class="in" style="border-width:2px;gap:4px"><span class="pill">sqrt</span><span class="pill">log2</span><span class="pill">1.0</span></span></div>
+              <div class="f"><label>class_weight</label><span class="in">none ▾</span><span class="hint">fixed · ⇄ tune</span></div>
+              <div class="f"><label>random_state</label><span class="in">0</span></div>
+            </div></div>
+          <div class="card"><h3>Data</h3><div style="display:flex;gap:18px;font-size:12px"><span class="select">breast-cancer · <span class="mono">ds_2b7e04a91c55</span> ▾</span><span class="mono">train 455 · val 57 · test 57</span><span>classification · target <span class="mono">diagnosis</span> · 2 classes · 30 numeric columns</span></div></div>
+          <div class="card"><h3>▾ Tune with a study <span class="pill">on</span></h3>
+            <div class="f" style="grid-template-columns:140px 1fr 140px 1fr"><label>n_trials</label><span class="in">50</span><label>time budget</label><span class="in">10 min ▾</span><label>objective</label><span class="in">cv_accuracy · maximise ▾</span><label>cv_folds</label><span class="in">5</span><label>pruning</label><span class="in">☑ median, from fold 1</span></div>
+            <div class="muted" style="font-size:11px">Folds are drawn from the train split, grouped so duplicates never sit on both sides (ADR-0018 rule 4). The validation split scores the best configuration once it is refit; it is not used for tuning.</div></div>
+        </div>
+        <div class="card"><h3>Where it runs</h3>
+          <div style="font-size:12px">On the <b>CPU queue</b>, all trials in one job (a trial here takes seconds). Up to <b>50 trials</b> or <b>10 min</b>. The best configuration is refit on the train split, scored on validation, registered, then tested once.</div>
+          <div class="muted" style="font-size:11px">No device choice and no VRAM check for classical models.</div>
+          <span class="btn primary" style="justify-content:center">Start study →</span></div>
+      </div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">With the study section closed, the same card trains one random forest with the values set (ML-1.1), and the primary button is <i>Start run</i>. The estimator list depends on the task: for regression it offers <span class="mono">linear</span>, <span class="mono">ridge</span> and <span class="mono">lasso</span>, and for any table the unsupervised <span class="mono">kmeans</span>, <span class="mono">dbscan</span>, <span class="mono">hdbscan</span> and <span class="mono">pca</span>, which ignore the target.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Refused: a cross-field rule, a marker outside its field's range, an impossible marker</h2>
+<div class="frame w1024" style="height:250px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card"><h3>Model · logistic_regression</h3>
+      <div class="f"><label>penalty</label><span class="in">l1 ▾</span></div>
+      <div class="f"><label>solver</label><span class="in bad">lbfgs ▾</span><span class="hint" style="color:var(--ink)">The l1 penalty needs the liblinear or saga solver · <span class="mono">invalid_combination</span></span></div></div>
+    <div class="card"><h3>Search space</h3>
+      <table class="t"><tr><th>Field</th><th>Range</th></tr>
+        <tr><td class="m">learning_rate</td><td><span class="mono">0 … 0.1 · log</span> <div class="err-line">A log scale needs low &gt; 0</div></td></tr>
+        <tr><td class="m">c1.out_channels</td><td><span class="mono">4 … 2048</span> <div class="err-line">Outside the field's range, 1 to 1024</div></td></tr>
+        <tr><td class="m">penalty</td><td><span class="mono">l1</span> <div class="err-line">With the solver fixed to lbfgs no choice is valid; tune the solver too, or fix it to saga</div></td></tr></table></div>
+  </div>
+</div>
+<p class="caption">The form catches these as you type, from the schemas and the rules. The server's <span class="mono">422</span> lands on the same rows for anything else it finds. A combination that is only invalid for some sampled values is not refused up front: that trial fails as <i>invalid_combination</i> and the study goes on (ADR-0018 rule 2).</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Add a model parameter</h2>
+<div class="frame w1024" style="height:290px">
+  <div style="padding:16px;display:flex;gap:16px">
+    <div class="card" style="width:430px"><h3>Add a model parameter <span class="spacer"></span><span class="search">Filter…</span></h3>
+      <table class="t"><tr><th>Node · field</th><th>Now</th><th>Range</th></tr>
+        <tr class="hover"><td class="m">c1 · conv2d · out_channels</td><td class="m">32</td><td class="m">1–1024</td></tr>
+        <tr><td class="m">c2 · conv2d · out_channels</td><td class="m">64</td><td class="m">1–1024</td></tr>
+        <tr><td class="m">d1 · dropout · p</td><td class="m">0.25</td><td class="m">0–1</td></tr>
+        <tr><td class="m">l1 · linear · out_features</td><td class="m">128</td><td class="m">1–65,536</td></tr></table></div>
+    <div style="font-size:12px;max-width:470px" class="muted">Only numeric and choice fields are listed. Inferred sizes (<span class="mono">in_channels</span>, <span class="mono">in_features</span>) are not listed: they follow from the others. Tuning a width changes the parameter count per trial. Each trial's spec is checked as on SCR-08 before it runs, and a trial that breaks a rule fails without training.</div>
+  </div>
+</div>
+
+<!-- ===================================================================== E -->
+<h2>E · 1024 px</h2>
+<div class="frame w1024" style="height:330px">
+  <div class="shell rail"><aside class="side"></aside><header class="top"><span><b>Models</b> / New run</span></header>
+    <section class="content">
+      <div class="card"><h3>▾ Tune with a study <span class="pill">on</span></h3><div style="font-size:12px">3 fields · 20 trials or 1 h · val_accuracy ↑ · median pruning</div></div>
+      <div class="card"><h3>Training</h3><div class="f"><label>learning_rate ⇄</label><span class="in" style="border-width:2px">1e-4 … 1e-1 · log</span></div></div>
+      <div class="summary"><span class="pill">✓ worst case 0.79 GB of 5.1 GB</span><span class="muted">20 trials · GPU · ~22 min</span><span class="spacer"></span><span class="btn primary">Start study →</span></div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">As in the approved SCR-09, the right-hand column folds into the footer bar, which carries the study's summary in place of the run's.</p>
+</main>
+</body>
+</html>
