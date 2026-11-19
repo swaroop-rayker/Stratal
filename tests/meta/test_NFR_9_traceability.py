@@ -42,7 +42,7 @@ def _test_names() -> set[str]:
 def test_NFR_9_spec_requirements_are_machine_readable() -> None:
     requirements = _requirements()
 
-    assert len(requirements) == 121, "111 from the input, DATA-6.1, DATA-4.1 to DATA-4.8, DATA-1.5"
+    assert len(requirements) == 127, "111 from the input, DATA-6.1, DATA-4.1 to DATA-4.8, DATA-1.5, RUN-1.10, DATA-7.1 to DATA-7.5"
     assert requirements["DATA-4.1"] == ("P0", "1")
     assert requirements["DATA-4.8"] == ("P2", "1")
     assert requirements["DATA-1.1"] == ("P0", "1")

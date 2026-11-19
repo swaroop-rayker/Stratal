@@ -29,6 +29,7 @@
 | M9 | Model builder | 2 | L | Done 2026-11-19 |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M11b | Tabular transforms | 2 | M | Not started (added at the owner's request 2026-11-19; outline) |
 | M12 | LLM serving and RAG | 3 | L | Outline |
 | M13 | Router, tools, caption refinement | 3 | L | Outline |
 | M14 | Text→image and LoRA | 4 | L | Outline |
@@ -595,7 +596,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 ## M11 — Dashboards, monitoring completion, phase-2 acceptance
 
-**Size** L · **Branch** `m11-phase2-acceptance` · **Serves** MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, UI-2.1, UI-2.2, EVAL-1.3, DATA-3.5; DATA-2.3 and DATA-4.8 (phase 1, P2, moved from M7); the phase-2 done-definition
+**Size** L · **Branch** `m11-phase2-acceptance` · **Serves** MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, UI-2.1, UI-2.2, EVAL-1.3, DATA-3.5, RUN-1.10; DATA-2.3 and DATA-4.8 (phase 1, P2, moved from M7); the phase-2 done-definition
 
 **Before starting:** G2 for SCR-13, SCR-03 v2 and SCR-11 v2 approved. The alerts and diagnostics add work to `monitor`, so NFR-11 is measured again here.
 
@@ -608,6 +609,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - Raw against cleaned distributions and rejection reasons per stage (UI-2.2), and the diff of two versions (DATA-3.5, P2, if time), on SCR-03.
 - Semantic duplicates (DATA-2.3) and each cluster kept in one split group (DATA-4.8), as [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) sets out. Written by the agent at the owner's request (2026-11-17); the similarity threshold is proposed from a measurement on coco10k and chosen by the owner (as OC-5). Clusters shown on SCR-03.
 - Three or more models on one test split, side by side (EVAL-1.3), on SCR-11.
+- Fine-tuning a built model (RUN-1.10, added at the owner's request on 2026-11-19): `init_from` a registered version, optional frozen layers, `reset_head` for a different class count; the parent recorded and protected by retention. Its form joins SCR-09 (a G2 revision of SCR-09 before M11's screens) and the parent shows on SCR-11.
 - UI-2.1 completed: models and training runs join datasets and pipeline jobs in the dashboard.
 - The phase-2 acceptance run, measured, with a README section; phase 3 (M12, M13) detailed for approval.
 
@@ -622,6 +624,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included
 - [ ] `test_UI_2_2_*`: charts for any dataset version
 - [ ] `test_EVAL_1_3_*`: three or more models compared in one view
+- [ ] `test_RUN_1_10_*`: a run from a version starts at its weights and records it as parent; frozen layers are unchanged; a shape mismatch is refused unless the head is reset
 - [ ] `test_DATA_3_5_*` (P2, if time): the diff lists the changes correctly
 - [ ] `test_DATA_2_3_*` (P2): cropped variants are grouped together and a report is generated
 - [ ] 👤 `test_DATA_4_8_*` (P2): two photos of one scene from different angles land in the same split (written by the agent at the owner's request)
@@ -631,6 +634,30 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] Meta-test green: every phase-2 P0 (32) has a passing ID-named test
 - [ ] M12–M13 detailed and approved by the owner
 - [ ] Owner's OK to merge; tag `phase-2`
+
+## M11b — Tabular transforms
+
+**Size** M · **Branch** `m11b-tabular-transforms` · **Serves** DATA-7.1–7.5 · Added at the owner's request on 2026-11-19. The letter keeps M12–M15's numbers (as proposed for M8a/M8b). It comes after M11 because it needs M10's tabular ingestion and training; the `phase-2` tag moves to after M11b unless the owner prefers to tag at M11.
+
+**Before starting:** an ADR (or an ADR-0019 addendum) for the `transform` stage: the operation list's schema, the expression language for DATA-7.4 (parsed, never `eval`), how encodings reach the table schema; a G1 revision adding the transform editor as a new screen (SCR-15 proposed) and SCR-03's column view; G2 for both.
+
+**Scope**
+
+- The `transform` stage between `ingest` and `clean` for tabular versions; row-local operations only (DATA-7.1, DATA-7.2, DATA-7.4).
+- Per-column encodings in the table schema, used by the input block and the classical pipelines (DATA-7.3).
+- SCR-03's column view for any tabular version, and the editor with a preview on sample rows (DATA-7.5).
+
+**Done when**
+
+- [ ] ADR approved; G1 revision and G2 for SCR-15 and SCR-03's column view approved
+- [ ] `test_DATA_7_1_*`: raw unchanged, same operations give the same ID, fitted operations refused
+- [ ] `test_DATA_7_2_*`: one test per operation; invalid ones refused naming the column; `cast_failed` rows kept and counted
+- [ ] `test_DATA_7_3_*`: `ignore`, `embedding` and `ordinal` reach the model's input as chosen
+- [ ] `test_DATA_7_4_*` (P2): derived columns and filters correct; anything outside the expression language refused
+- [ ] `test_DATA_7_5_*`: the column summary matches the manifest; the preview equals the stage's output
+- [ ] G3 for SCR-15 and SCR-03's column view
+- [ ] Demo: drop a column of the wine table, change one column's kind, set an encoding, train on the result, and trace it back to raw on SCR-03
+- [ ] Owner's OK to merge
 
 ---
 
