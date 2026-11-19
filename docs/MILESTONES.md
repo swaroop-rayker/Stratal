@@ -417,6 +417,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] G2: SCR-14 (low-fi v1 approved 2026-11-17, hi-fi v1 approved 2026-11-18; `docs/design/screens/SCR-14_v1.html`)
 - [x] G2: SCR-08 (low-fi v1 and hi-fi v1 approved 2026-11-19; `docs/design/screens/SCR-08_v1.html`)
 - [x] G2: SCR-09 (low-fi v1 and hi-fi v1 approved 2026-11-19; `docs/design/screens/SCR-09_v1.html`; the HPO part with SCR-10, M10)
+- [x] G2: SCR-10 and SCR-09's study part (low-fi v1 and hi-fi v1 approved 2026-11-19; `docs/design/screens/SCR-10_v1.html`, `docs/design/screens/SCR-09hpo_v1.html`)
 
 ## M8 — Training runtime and registry
 
