@@ -22,6 +22,9 @@ Step "format check" { docker compose run --rm --no-deps dev ruff format --check 
 Step "lint"         { docker compose run --rm --no-deps dev ruff check . }
 Step "type check"   { docker compose run --rm --no-deps dev pyright }
 Step "unit + meta"  { docker compose run --rm --no-deps dev pytest -q }
+# Tests that need scikit-learn, skops, Optuna or sacreBLEU (M10, marker ml) run in the CPU
+# worker's image, against the current source and tests. In the dev image they are skipped.
+Step "ml"           { docker compose run --rm --no-deps -v ./src:/app/src:ro -v ./tests:/app/tests:ro worker-cpu pytest -q -m ml tests/unit }
 # Frontend (SPEC §7.5): typecheck, lint with the raw-hex rule, Vitest, production build.
 Step "frontend"     { docker compose run --rm --no-deps frontend-tools sh -c "npm run typecheck && npm run lint && npm test && npm run build" }
 if (-not $Fast) {

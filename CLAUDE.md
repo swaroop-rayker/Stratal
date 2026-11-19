@@ -94,6 +94,7 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 | Keep Windows awake while jobs run; report sleeps | `.\host\stratal-host.ps1` |
 | One tool | `docker compose run --rm --no-deps dev ruff check .` (or `ruff format .`, `pyright`, `pytest -q`) |
 | Integration tests | `docker compose run --rm dev pytest -q -m "integration and not benchmark"` |
+| Tests that need scikit-learn, skops, Optuna or sacreBLEU (marker `ml`; skipped in dev) | `docker compose run --rm --no-deps -v ./src:/app/src:ro -v ./tests:/app/tests:ro worker-cpu pytest -q -m ml tests/unit` |
 | Tests that need PyTorch (training, the builder; skipped in dev) | `docker compose run --rm -v ./src:/app/src:ro -v ./migrations:/app/migrations:ro worker-gpu pytest -q -m torch tests/integration tests/unit` |
 | Anything on the GPU | `docker compose run --rm worker-gpu python <script>` |
 | Re-lock after editing `pyproject.toml` | `docker run --rm -v "D:\Stratal:/app" -w /app stratal-base uv lock`, then `docker compose --profile dev --profile gpu build` |

@@ -6,19 +6,29 @@ translation (BLEU, chrF) and captioning (CLIP score, CIDEr). CIDEr is CIDEr-D,
 written in house with no Java dependency, and computed only where reference
 captions exist (SPEC CL-13).
 
-The agent wrote the stubs, the contracts and the tests; the owner writes the
-bodies marked ``raise NotImplementedError``. The stub was delivered at the start
-of M8 so the phase-2 CNN can be scored as soon as it exists; the requirement is
-M10's. Whether to use libraries (scikit-learn, sacrebleu) or own code is the
-owner's choice (MILESTONES, phase-2 dependencies).
+The stubs, contracts and tests were delivered at the start of M8. At M10's
+kickoff the owner asked the agent to write the bodies (ADR-0012's log, K1) and
+chose libraries in production (K2): scikit-learn's metrics for classification,
+regression and clustering, sacreBLEU for BLEU and chrF. CIDEr-D is written here
+(CL-13), and so are perplexity and the mean CLIP score, which are one line each
+(ADR-0019 rule 24).
+
+The libraries are imported inside the functions that use them, so ``api`` can
+import this module for :func:`metric_set` without them (it has no ML libraries).
+They are present in both worker images. Inputs are checked here, before a
+library sees them, so every contract's ``ValueError`` holds whatever the
+library would do.
 
 Every function is pure: plain Python values in, plain values out. Tests:
 ``tests/unit/test_EVAL_1_2_task_metrics.py``.
 """
 
+import importlib
+import math
+from collections import Counter
 from collections.abc import Hashable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 Task = Literal[
     "classification", "regression", "clustering", "language_model", "translation", "captioning"
@@ -38,6 +48,25 @@ METRIC_SETS: Mapping[Task, tuple[str, ...]] = {
 def metric_set(task: Task) -> tuple[str, ...]:
     """The metric names a task reports, in display order."""
     return METRIC_SETS[task]
+
+
+def _library(name: str) -> Any:
+    """A metrics library, imported where it is used (it is absent from ``api`` and ``dev``)."""
+    return importlib.import_module(name)
+
+
+def _pairs(first: Sequence[Any], second: Sequence[Any], what: str) -> None:
+    if len(first) != len(second):
+        raise ValueError(f"{what}: {len(first)} values against {len(second)}")
+    if not first:
+        raise ValueError(f"{what}: nothing to score")
+
+
+def _finite(values: Sequence[float], what: str) -> list[float]:
+    numbers = [float(v) for v in values]
+    if not all(math.isfinite(v) for v in numbers):
+        raise ValueError(f"{what}: a value is not finite")
+    return numbers
 
 
 @dataclass(frozen=True)
@@ -84,7 +113,29 @@ def classification(
     4. ``ValueError`` when the sequences differ in length or are empty, or when
        a value is not in ``labels``.
     """
-    raise NotImplementedError("EVAL-1.2: classification metrics are the owner's to write")
+    _pairs(y_true, y_pred, "classification")
+    order = list(labels)
+    index = {label: i for i, label in enumerate(order)}
+    if len(index) != len(order):
+        raise ValueError("classification: a label is listed twice")
+    unknown = [v for v in (*y_true, *y_pred) if v not in index]
+    if unknown:
+        raise ValueError(f"classification: {unknown[0]!r} is not one of the labels")
+    # scikit-learn wants one type of label; positions in ``labels`` are that.
+    true = [index[v] for v in y_true]
+    pred = [index[v] for v in y_pred]
+    positions = list(range(len(order)))
+    metrics = _library("sklearn.metrics")
+    f1 = metrics.f1_score(true, pred, labels=positions, average=None, zero_division=0.0)
+    matrix = metrics.confusion_matrix(true, pred, labels=positions)
+    per_class = {label: float(f1[i]) for i, label in enumerate(order)}
+    return ClassificationMetrics(
+        accuracy=float(metrics.accuracy_score(true, pred)),
+        macro_f1=sum(per_class.values()) / len(per_class),
+        per_class_f1=per_class,
+        confusion_matrix=[[int(n) for n in row] for row in matrix],
+        labels=order,
+    )
 
 
 def regression(y_true: Sequence[float], y_pred: Sequence[float]) -> RegressionMetrics:
@@ -95,7 +146,15 @@ def regression(y_true: Sequence[float], y_pred: Sequence[float]) -> RegressionMe
        ``r2`` is 1.0 if the predictions are exact and 0.0 otherwise.
     3. ``ValueError`` for empty or unequal-length sequences or non-finite values.
     """
-    raise NotImplementedError("EVAL-1.2: regression metrics are the owner's to write")
+    _pairs(y_true, y_pred, "regression")
+    true, pred = _finite(y_true, "regression"), _finite(y_pred, "regression")
+    metrics = _library("sklearn.metrics")
+    # force_finite (scikit-learn's default) gives rule 2's 1.0 or 0.0 for a constant target.
+    return RegressionMetrics(
+        mse=float(metrics.mean_squared_error(true, pred)),
+        mae=float(metrics.mean_absolute_error(true, pred)),
+        r2=float(metrics.r2_score(true, pred)),
+    )
 
 
 def clustering(points: Sequence[Sequence[float]], labels: Sequence[int]) -> ClusteringMetrics:
@@ -111,7 +170,21 @@ def clustering(points: Sequence[Sequence[float]], labels: Sequence[int]) -> Clus
     3. ``ValueError`` when there are fewer than 2 clusters, as many clusters as
        points, unequal lengths, or points of different dimensions.
     """
-    raise NotImplementedError("EVAL-1.2: clustering metrics are the owner's to write")
+    _pairs(points, labels, "clustering")
+    dims = {len(point) for point in points}
+    if len(dims) != 1 or 0 in dims:
+        raise ValueError("clustering: points must all have the same, non-zero dimension")
+    clusters = len(set(labels))
+    if clusters < 2 or clusters >= len(points):
+        raise ValueError(
+            f"clustering: {clusters} clusters for {len(points)} points; need 2 to points − 1"
+        )
+    rows = [_finite(point, "clustering") for point in points]
+    metrics = _library("sklearn.metrics")
+    return ClusteringMetrics(
+        silhouette=float(metrics.silhouette_score(rows, list(labels), metric="euclidean")),
+        davies_bouldin=float(metrics.davies_bouldin_score(rows, list(labels))),
+    )
 
 
 def perplexity(token_log_probs: Sequence[float]) -> float:
@@ -119,7 +192,12 @@ def perplexity(token_log_probs: Sequence[float]) -> float:
 
     ``ValueError`` when empty or when a value is positive or not finite.
     """
-    raise NotImplementedError("EVAL-1.2: perplexity is the owner's to write")
+    if not token_log_probs:
+        raise ValueError("perplexity: no tokens")
+    values = _finite(token_log_probs, "perplexity")
+    if any(v > 0 for v in values):
+        raise ValueError("perplexity: a log-probability is above 0")
+    return math.exp(-sum(values) / len(values))
 
 
 def translation(hypotheses: Sequence[str], references: Sequence[str]) -> TranslationMetrics:
@@ -131,7 +209,13 @@ def translation(hypotheses: Sequence[str], references: Sequence[str]) -> Transla
     shared word and no shared character n-gram above length 1 scores 0 BLEU;
     ``ValueError`` for empty or unequal-length inputs.
     """
-    raise NotImplementedError("EVAL-1.2: BLEU and chrF are the owner's to write")
+    _pairs(hypotheses, references, "translation")
+    sacrebleu = _library("sacrebleu")
+    hyps, refs = list(hypotheses), [list(references)]
+    return TranslationMetrics(
+        bleu=float(sacrebleu.corpus_bleu(hyps, refs).score),
+        chrf=float(sacrebleu.corpus_chrf(hyps, refs).score),
+    )
 
 
 def cider_d(candidates: Sequence[str], references: Sequence[Sequence[str]]) -> float:
@@ -144,7 +228,31 @@ def cider_d(candidates: Sequence[str], references: Sequence[Sequence[str]]) -> f
     a candidate equal to all its references scores higher than an unrelated one;
     ``ValueError`` when an item has no references or the lengths differ.
     """
-    raise NotImplementedError("EVAL-1.2: CIDEr-D is the owner's to write")
+    _pairs(candidates, references, "cider_d")
+    if any(not refs for refs in references):
+        raise ValueError("cider_d: an item has no reference captions")
+    cands = [_ngram_counts(c) for c in candidates]
+    refs = [[_ngram_counts(r) for r in item] for item in references]
+    # Document frequency: in how many items' reference sets each n-gram occurs.
+    df: Counter[tuple[str, ...]] = Counter()
+    for item in refs:
+        df.update({gram for counts in item for gram in counts})
+    log_items = math.log(float(len(refs)))
+    scores: list[float] = []
+    for cand, item in zip(cands, refs, strict=True):
+        vec, norm, length = _tfidf(cand, df, log_items)
+        total = 0.0
+        for ref in item:
+            ref_vec, ref_norm, ref_length = _tfidf(ref, df, log_items)
+            total += (
+                sum(
+                    _similarity(vec[n], ref_vec[n], norm[n], ref_norm[n], length - ref_length)
+                    for n in range(CIDER_N)
+                )
+                / CIDER_N
+            )
+        scores.append(total / len(item) * 10.0)
+    return sum(scores) / len(scores)
 
 
 def mean_clip_score(scores: Sequence[float]) -> float:
@@ -152,4 +260,58 @@ def mean_clip_score(scores: Sequence[float]) -> float:
 
     ``ValueError`` when empty or a value is not finite.
     """
-    raise NotImplementedError("EVAL-1.2: the captioning CLIP score is the owner's to write")
+    if not scores:
+        raise ValueError("mean_clip_score: no scores")
+    values = _finite(scores, "mean_clip_score")
+    return sum(values) / len(values)
+
+
+# ------------------------------------------------------------------------------ CIDEr-D (CL-13)
+
+CIDER_N = 4
+CIDER_SIGMA = 6.0
+
+
+def _ngram_counts(text: str) -> Counter[tuple[str, ...]]:
+    words = text.lower().split()
+    return Counter(
+        tuple(words[i : i + n]) for n in range(1, CIDER_N + 1) for i in range(len(words) - n + 1)
+    )
+
+
+def _tfidf(
+    counts: Counter[tuple[str, ...]], df: Counter[tuple[str, ...]], log_items: float
+) -> tuple[list[dict[tuple[str, ...], float]], list[float], int]:
+    """Per n, the TF-IDF vector and its norm; and the text's length.
+
+    As the reference implementation does, the length is the number of bigrams
+    (it is the count it sees at n = 2), and a document frequency below 1 counts as 1.
+    """
+    vec: list[dict[tuple[str, ...], float]] = [{} for _ in range(CIDER_N)]
+    norm = [0.0] * CIDER_N
+    length = 0
+    for gram, tf in counts.items():
+        n = len(gram) - 1
+        weight = float(tf) * (log_items - math.log(max(1.0, float(df[gram]))))
+        vec[n][gram] = weight
+        norm[n] += weight * weight
+        if n == 1:
+            length += tf
+    return vec, [math.sqrt(x) for x in norm], length
+
+
+def _similarity(
+    cand: dict[tuple[str, ...], float],
+    ref: dict[tuple[str, ...], float],
+    cand_norm: float,
+    ref_norm: float,
+    delta: int,
+) -> float:
+    """Cosine with the candidate's weights clipped by the reference's (the "D" in CIDEr-D),
+    times a Gaussian penalty on the length difference."""
+    value = sum(
+        min(weight, ref.get(gram, 0.0)) * ref.get(gram, 0.0) for gram, weight in cand.items()
+    )
+    if cand_norm != 0.0 and ref_norm != 0.0:
+        value /= cand_norm * ref_norm
+    return value * math.exp(-(delta**2) / (2 * CIDER_SIGMA**2))
