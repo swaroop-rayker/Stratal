@@ -15,7 +15,7 @@ import { useNow } from "../../lib/useNow";
 import { useCrumbs } from "../../shell/hooks";
 import { useActiveJobs } from "../../shell/JobIndicator";
 import { ActivityLog, type Level, type LogFilters } from "./ActivityLog";
-import { ACTIVE, failedStage, inputVersion, jobSeconds, liveProgress, runningStage, stageSeconds, trainingModel, trainingPosition, waitingFor } from "./jobs";
+import { ACTIVE, failedStage, inputVersion, jobSeconds, liveProgress, runningStage, stageSeconds, suggestedBatch, trainingModel, trainingPosition, waitingFor } from "./jobs";
 import { type Point, ResourceTiles } from "./ResourceTiles";
 import { StageDrawer } from "./StageDrawer";
 import { Timeline } from "./Timeline";
@@ -204,6 +204,12 @@ function Failure({ job, onOpenStage }: { job: Job; onOpenStage: (name: string) =
             : "nothing yet; a retry starts the failed stage again, reusing any cached results."}
         </p>
         <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-2)" }}>
+          {suggestedBatch(job) !== null ? (
+            <Link className="btn sm primary" to={`/runs/new?from=${job.id}&batch_size=${String(suggestedBatch(job))}`}>
+              <Icon name="refresh" />
+              Start again with {String(suggestedBatch(job))}
+            </Link>
+          ) : null}
           <Button size="sm" disabled={retry.isPending} onClick={() => { retry.mutate(); }}>
             <Icon name="refresh" />
             Retry

@@ -107,3 +107,13 @@ export function trainingPosition(stage: JobStage | null): TrainingPosition {
 export function valAccuracy(job: Job): number | null {
   return num(job.stages[0]?.metrics?.val_accuracy);
 }
+
+/** The batch a training run that ran out of GPU memory suggests (RUN-1.5), read from its
+ * error ("reduce batch size from 128 → 64"); ``null`` for anything else. */
+export function suggestedBatch(job: Job): number | null {
+  if (job.kind !== "train") return null;
+  const error = job.error ?? failedStage(job)?.error ?? null;
+  if (error?.code !== "gpu_oom") return null;
+  const found = /reduce batch size from \d+ → (\d+)/.exec(error.reason ?? "");
+  return found ? Number(found[1]) : null;
+}

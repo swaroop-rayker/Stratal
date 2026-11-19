@@ -317,6 +317,12 @@ Constraints: state and weights status check constraints; `present` needs a path 
 
 `section` (text, PK), `values` (jsonb), `updated_at`. One row per section of SCR-14 other than retention, which has its own table above. In M8 the only row is `training`: `{checkpoint_interval_min, thermal_pause_c, thermal_resume_c, stall_timeout_s}` (`stratal.runtime.limits.TrainingValues`). Until it is saved the environment's `STRATAL_THERMAL_PAUSE_C`, `STRATAL_THERMAL_RESUME_C` and `STRATAL_STALL_TIMEOUT_S` are the values, so a fresh install behaves as before. The watchdog reads it before every check; `checkpoint_interval_min` becomes `checkpoint_every_s` of new training runs that do not set it.
 
+### 4.14 `model_templates` (M9, BUILD-1.7, [ADR-0017](decisions/ADR-0017-model-spec.md) rule 9)
+
+`id` (text PK, `mt_` + 12 hex), `name` (text, unique), `description` (text), `spec` (jsonb: a graph spec in canonical form), `structure_hash` (text: SHA-256 of the canonical structure without its label), `dataset_type` (text), `builtin` (bool), `created_at`, `updated_at`. Built-in templates are written by `stratal.build.store.ensure_builtins` on the first list and refreshed when the code's spec changes; they cannot be changed or deleted through the API.
+
+A graph spec is also stored, as part of its run's config, in `job_stages.config`, `model_versions.config` and `model_lineages.model_spec`; the lineage's copy has no `label` (ADR-0017 rule 1).
+
 ## 5. Manifest schema
 
 One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accumulate as stages run; a column is null until its stage has run.

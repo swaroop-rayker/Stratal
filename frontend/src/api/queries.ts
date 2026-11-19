@@ -83,12 +83,13 @@ export function useStageSchema(name: string, enabled: boolean) {
   });
 }
 
-export function useVersion(id: string) {
+export function useVersion(id: string, enabled = true) {
   return useQuery({
     queryKey: keys.version(id),
     queryFn: () =>
       call(() => api.GET("/api/v1/versions/{version_id}", { params: { path: { version_id: id } } })),
     retry: false,
+    enabled: enabled && id !== "",
   });
 }
 

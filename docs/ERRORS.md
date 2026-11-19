@@ -72,6 +72,7 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 - **Where:** Docker Desktop on WSL2, host side; any GPU work (M8 training, ADR-0006); BUG4
 - **Cause:** The laptop was in Modern Standby from 11:09 to 13:17 (System log, events 506 and 507). After it woke, WSL's virtual GPU device no longer had the adapter. Spike S-03 (M0) found no such loss after a short standby, so this depends on how long or deep the standby is, or on the dGPU being powered down meanwhile.
 - **Fix:** Restart WSL (`wsl --shutdown`, then start Docker Desktop again). Prevention is ADR-0008's: keep the laptop awake while jobs run (`host/stratal-host.ps1`).
+- **Again on 2026-11-19:** after Modern Standby periods from 16:02 to 16:32 (events 506 and 507), recreating the containers for M9's demo failed the same way. A GPU container that was already running (the torch test suite) kept its GPU to the end; only new containers lost it. Fixed with the owner's OK by the same restart; the demo run then trained on the GPU.
 - **Guard:** none automatic yet. A GPU job started in this state fails at once with `cuda_unavailable` and says what to do; the supervisor's sleep detection puts the suspend on the timeline (BUG4).
 - **Status:** open
 

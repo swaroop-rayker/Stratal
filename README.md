@@ -112,6 +112,10 @@ Measured on 2026-11-15 on the RTX 4050 Laptop GPU (6 GB) in the M4 demo (`job_00
 - **Retention:** run automatically after the run completed (`job_0052`). Under `keep_intermediate = 0` it deleted the weights of `job_0030` and `job_0031` (2.3 MB, as the dry run predicted) and kept the base, the latest and the pinned `mv_e80834ce01b0`; the deleted versions keep their metrics. The disk report matches the bytes on disk with no orphans.
 - **Prediction:** SCR-11's try-out answered in 146 ms, on the CPU, since RUN-1.4 was not written yet. A deleted version answers `409 weights_deleted`. With RUN-1.4 written (the same day), `/predict` runs on the GPU: 3.3 s to load the model the first time, then 2 ms a prediction; switching versions unloads back to the baseline.
 
+### Model builder demo (M9, 2026-11-19)
+
+On SCR-08 a CNN was built layer by layer from the palette on the CIFAR-10 split `ds_f8e67211dd94`: two 3×3 convolutions of 32 channels, each with batch norm and ReLU, a max pool and a global average pool, then the locked head to 10 classes: **10,602 parameters**, checked by the server on every edit. SCR-09 started it with the defaults (10 epochs, batch 128, Adam): `job_0053` timed both devices and chose the **GPU (6.9 ms a step against 74.6 ms on the CPU)**, trained in **65 s** to **53.6 %** validation accuracy and peaked at **302 MB** of VRAM. It registered `mv_0cfa1ce88a16` in a new lineage, `my_model · cifar10`, found on SCR-11.
+
 ## Documentation
 
 | | |

@@ -532,3 +532,20 @@ class SettingsSection(Base):
     section: Mapped[str] = mapped_column(Text, primary_key=True)
     values: Mapped[dict[str, Any]] = mapped_column(JSONB)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ModelTemplate(Base):
+    """A saved model spec (BUILD-1.7, ADR-0017 rule 9): a graph in canonical form, for one
+    dataset type. Built-in templates are written by the code and cannot be changed."""
+
+    __tablename__ = "model_templates"
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, unique=True)
+    description: Mapped[str] = mapped_column(Text, server_default="")
+    spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    structure_hash: Mapped[str] = mapped_column(Text)
+    dataset_type: Mapped[str] = mapped_column(Text)
+    builtin: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

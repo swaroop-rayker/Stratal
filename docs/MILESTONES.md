@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). M9 merged 2026-11-19 (the model builder: graph specs checked in plain Python, compiled to PyTorch, templates; SCR-08 and SCR-09 through G3; BUILD-1.8 written by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
 | Planning style | Phases 1 and 2 (M0–M11) are planned in detail; phase 2's detail was approved on 2026-11-17. Phases 3–5 (M12–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -26,7 +26,7 @@
 | M6 | Phase-1 screens | 1 | L | Done 2026-11-17 |
 | M7 | Phase-1 acceptance | 1 | M | Done 2026-11-17 |
 | M8 | Training runtime and registry | 2 | L | Done 2026-11-19 |
-| M9 | Model builder | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M9 | Model builder | 2 | L | Done 2026-11-19 |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M12 | LLM serving and RAG | 3 | L | Outline |
@@ -415,6 +415,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] G2: SCR-07 v2 (low-fi v1 and hi-fi v1 approved 2026-11-17; `docs/design/screens/SCR-07v2_v1.html`)
 - [x] G2: SCR-11 (low-fi v1 and hi-fi v1 approved 2026-11-17; `docs/design/screens/SCR-11_v1.html`)
 - [x] G2: SCR-14 (low-fi v1 approved 2026-11-17, hi-fi v1 approved 2026-11-18; `docs/design/screens/SCR-14_v1.html`)
+- [x] G2: SCR-08 (low-fi v1 and hi-fi v1 approved 2026-11-19; `docs/design/screens/SCR-08_v1.html`)
+- [x] G2: SCR-09 (low-fi v1 and hi-fi v1 approved 2026-11-19; `docs/design/screens/SCR-09_v1.html`; the HPO part with SCR-10, M10)
 
 ## M8 — Training runtime and registry
 
@@ -482,7 +484,9 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Size** L · **Branch** `m9-model-builder` · **Serves** BUILD-1.1–1.9, UI-2.3, DATA-5.2, DATA-5.5
 
-**Before starting:** ADR-0017 approved, including the tabular input width and categorical embeddings (M10's open points 8 and 10); G2 for SCR-08 and SCR-09 approved; React Flow approved as a frontend dependency (SPEC §7.4 names it).
+**Before starting:** ADR-0017 approved, including the tabular input width and categorical embeddings (M10's open points 8 and 10); G2 for SCR-08 and SCR-09 approved; React Flow approved as a frontend dependency (SPEC §7.4 names it; `@xyflow/react` 13.0.1 is already installed).
+
+**Decided by the owner at M9's kickoff (2026-11-19):** BUILD-1.8 is written by the agent (ADR-0012's log); BUILD-1.9 uses full graphs (nodes and any edges), not a residual wrapper; a tabular network takes its categorical columns through an input block, one-hot by default with an `Embedding` per column as an option (M10's points 8 and 10); torchinfo is added as a test-only dependency in `dev` (BUILD-1.5).
 
 **Scope**
 
@@ -497,23 +501,23 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] ADR-0017 approved
-- [ ] `test_BUILD_1_1_*`: every layer type can be added and configured
-- [ ] `test_BUILD_1_2_*`: out-of-range values are rejected with a message
-- [ ] `test_BUILD_1_3_*`: changing the dataset updates the input and output
-- [ ] `test_BUILD_1_4_*`: a mismatched linear input is caught at build time
-- [ ] `test_BUILD_1_5_*`: parameter count and memory estimate match `sum(p.numel())` and the formula
-- [ ] `test_BUILD_1_6_*`: one test per cross-field rule (`d_model % num_heads == 0`, a conv stack never below 1×1, …)
-- [ ] `test_BUILD_1_7_*`: a saved template reloads identically
-- [ ] 👤 `test_BUILD_1_8_*`: attention, positional encoding and the LSTM cell match PyTorch's outputs within tolerance
-- [ ] `test_BUILD_1_9_*` (P2, if time): a residual block builds and trains
-- [ ] `test_UI_2_3_*`: a field added to a config schema appears in its form with no UI change
-- [ ] `test_DATA_5_2_*`: each type validates against its schema
-- [ ] `test_DATA_5_5_*`: the UI offers only compatible type and model combinations
-- [ ] G3 for SCR-08 and SCR-09
-- [ ] Demo: build a CNN on the canvas, train it from SCR-09, follow it on SCR-04, find it in SCR-11
-- [ ] Docs updated (learning notes)
-- [ ] Owner's OK to merge
+- [x] ADR-0017 approved (2026-11-19, "Approved": `docs/decisions/ADR-0017-model-spec.md`)
+- [x] `test_BUILD_1_1_*`: every layer type can be added and configured (2026-11-19, `test_BUILD_1_spec.py`: all 23 types in two valid graphs; the schema lists each with its defaults; a graph compiles through the train factory)
+- [x] `test_BUILD_1_2_*`: out-of-range values are rejected with a message (2026-11-19: field errors naming the field, unknown types and fields refused; through the API a 422; SCR-09 sends the form's values)
+- [x] `test_BUILD_1_3_*`: changing the dataset updates the input and output (2026-11-19: 32- and 64-px splits through the API; on SCR-08 the locked ends change with the split)
+- [x] `test_BUILD_1_4_*`: a mismatched linear input is caught at build time (2026-11-19: `shape_mismatch` on its node, in plain Python, through the API, at `POST /jobs` as a 422, and on SCR-08)
+- [x] `test_BUILD_1_5_*`: parameter count and memory estimate match `sum(p.numel())` and the formula (2026-11-19, `test_BUILD_1_parity.py`: 300 random specs match PyTorch's shapes, `sum(p.numel())` and torchinfo; the formula per optimizer; SCR-09's VRAM check)
+- [x] `test_BUILD_1_6_*`: one test per cross-field rule (`d_model % num_heads == 0`, a conv stack never below 1×1, …) (2026-11-19: 15 rules, one test each, and no cascade)
+- [x] `test_BUILD_1_7_*`: a saved template reloads identically (2026-11-19: canonical form and structure hash through the API, however the spec was listed; built-ins locked; SCR-08's start screen)
+- [x] 👤 `test_BUILD_1_8_*`: attention, positional encoding and the LSTM cell match PyTorch's outputs within tolerance (2026-11-19, written by the agent at the owner's request: attention within 1e-5 of `nn.MultiheadAttention` with and without a causal mask, the LSTM cell within 1e-6 of `nn.LSTMCell` step by step, positional encoding against the formula; no ready-made layer in a forward)
+- [x] `test_BUILD_1_9_*` (P2, if time): a residual block builds and trains (2026-11-19: full graphs, as the owner chose; a residual block's loss halves in 60 steps; a residual graph trains, registers and reloads through the stage)
+- [x] `test_UI_2_3_*`: a field added to a config schema appears in its form with no UI change (2026-11-19, `Builder.test.tsx`: a new Conv2d field appears in SCR-08's inspector)
+- [x] `test_DATA_5_2_*`: each type validates against its schema (2026-11-19: tabular and labelled-text row validators, the tabular input block; labelled images since M8)
+- [x] `test_DATA_5_5_*`: the UI offers only compatible type and model combinations (2026-11-19: `incompatible_family` from the API; SCR-08's palette greys the rest with the reason; templates listed per type)
+- [x] G3 for SCR-08 and SCR-09 (approved 2026-11-19, "Approved": `docs/design/g3/SCR-08.md`, `SCR-09.md`)
+- [x] Demo: build a CNN on the canvas, train it from SCR-09, follow it on SCR-04, find it in SCR-11 (2026-11-19: `my_model`, eight layers added from the palette, 10,602 parameters; `job_0053` chose the GPU by benchmark, 10 epochs in 65 s, val acc 53.6 %, peak 302 MB; `mv_0cfa1ce88a16` in `my_model · cifar10` on SCR-11. README "Model builder demo")
+- [x] Docs updated (learning notes) (2026-11-19: API.md §3.11 and the M9 interfaces, DATA_MODEL §4.14, ARCHITECTURE's code layout, ADR-0017; `docs/learning/` §26 and §5k)
+- [x] Owner's OK to merge ("Merge M9", 2026-11-19)
 
 ## M10 — Classical ML, HPO, task metrics
 

@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-08 model builder — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+/* SCR-07 */
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.danger { border-width: 2px; border-color: var(--ink); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; } .select.off { color: var(--ink-3); }
+.search { height: 24px; width: 200px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; color: var(--ink-3); font-size: 11px; gap: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); } .pill.strike { text-decoration: line-through; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 40px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.hover td { background: #f7f7f7; }
+.t .sec td { height: 26px; background: var(--fill); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.bar { width: 80px; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; display: inline-block; position: relative; vertical-align: middle; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); }
+.muted { color: var(--ink-3); }
+.err-line { font-size: 11px; color: var(--ink-2); }
+.empty { display: grid; place-items: center; text-align: center; padding: 30px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 460px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.toast { position: absolute; right: 16px; bottom: 44px; width: 360px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.1); font-size: 12px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+/* SCR-11 additions */
+.cols { display: grid; grid-template-columns: 1fr 340px; gap: 12px; min-height: 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.stackbar { display: flex; height: 14px; border: 1px solid var(--ink-3); border-radius: 3px; overflow: hidden; }
+.stackbar i { display: block; height: 100%; border-right: 1px solid #fff; }
+.kvs { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px; } .kvs span:nth-child(even) { font-family: var(--mono); text-align: right; }
+.sw { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--ink-3); margin-right: 6px; vertical-align: middle; }
+.drop { border: 1.5px dashed var(--line); border-radius: 6px; height: 64px; display: grid; place-items: center; color: var(--ink-3); font-size: 12px; }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 480px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font: 600 15px var(--mono); }
+.drawer .body { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; font-size: 12px; }
+.code { font: 11px/1.5 var(--mono); background: var(--fill); border: 1px solid var(--soft); border-radius: 4px; padding: 8px; white-space: pre; color: var(--ink-2); }
+.pin { font-size: 13px; color: var(--ink-3); } .pin.on { color: var(--ink); }
+
+/* SCR-08 / SCR-09 additions */
+.builder { display: grid; grid-template-columns: 170px 1fr 300px; gap: 12px; height: 470px; min-height: 0; }
+.palette { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; font-size: 11px; }
+.pgroup { font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+.ptile { border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; background: #fff; }
+.ptile.off { color: var(--ink-3); border-style: dashed; background: var(--fill); }
+.canvas { position: relative; border: 1px solid var(--line); border-radius: 6px; background: repeating-linear-gradient(0deg, #fafafa 0 19px, #f0f0f0 19px 20px), #fafafa; padding: 14px; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+.gnode { position: relative; width: 300px; min-height: 34px; border: 1.5px solid var(--ink-2); border-radius: 6px; background: #fff; display: flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; }
+.gnode b { font-family: var(--mono); font-weight: 600; }
+.gnode .shape { margin-left: auto; font: 11px var(--mono); color: var(--ink-2); }
+.gnode .par { font: 10px var(--mono); color: var(--ink-3); min-width: 34px; text-align: right; }
+.gnode.on { border-width: 3px; border-color: var(--ink); }
+.gnode.lock { border-style: dashed; background: var(--fill); }
+.gnode.bad { border: 2px solid var(--ink); background: #f3f3f3; }
+.gnode.faded { color: var(--ink-3); border-color: var(--line); }
+.lockk { font: 10px var(--mono); color: var(--ink-3); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; }
+.edge { width: 2px; height: 16px; background: var(--ink-3); }
+.addhint { margin-top: 10px; border: 1.5px dashed var(--line); border-radius: 6px; padding: 6px 12px; color: var(--ink-3); font-size: 11px; }
+.skip { position: absolute; left: 60px; width: 30px; border: 2px solid var(--ink-3); border-right: none; border-radius: 8px 0 0 8px; }
+.skiplabel { position: absolute; left: 20px; font: 10px var(--mono); color: var(--ink-3); }
+.badge { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 10px; font-weight: 700; }
+.inspector { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.inspector h3 { margin: 0; display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.f { display: grid; grid-template-columns: 100px 1fr; gap: 2px 8px; align-items: center; font-size: 12px; }
+.f label { font-family: var(--mono); color: var(--ink-2); font-size: 11px; }
+.f .in { border: 1px solid var(--line); border-radius: 4px; height: 24px; display: flex; align-items: center; padding: 0 8px; background: #fff; }
+.f .in.bad { border: 2px solid var(--ink); }
+.f .hint { grid-column: 2; font-size: 10px; color: var(--ink-3); }
+.summary { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+.summary .sep { width: 1px; height: 18px; background: var(--soft); }
+.problems { border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.problems .muted { font: 10px var(--mono); margin-left: 6px; }
+.form2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+.meter { position: relative; height: 16px; border: 1px solid var(--ink-3); border-radius: 3px; display: flex; overflow: hidden; }
+.meter i { display: block; height: 100%; border-right: 1px solid #fff; }
+.meter .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.off-section { opacity: .45; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-08 — Model builder · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: BUILD-1.1–1.9, UI-2.3, DATA-5.5 (M9)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> SCR-08 (approved v2)</span><span>Route: <span class="mono">/models/build</span></span><span>Design: <span class="mono">ADR-0017</span> (accepted 2026-11-19)</span><span>2026-11-19</span></div>
+<p>Layout and hierarchy only, inside the approved shell (faint). Blue numbers are annotations. The data: the CIFAR-10 split <span class="mono">ds_f8e67211dd94</span> (3×32×32 images, 10 classes), a small CNN being built, then a residual block. Everything shown is computed by <span class="mono">POST /model-specs/validate</span> on each edit, in plain Python, before anything trains.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Three columns and a footer:</b> a layer palette on the left, the graph in the middle, the selected layer's form on the right; the parameter count, memory estimate and problems in a footer that is always visible.</li>
+<li><b>The two ends are drawn and locked</b> (BUILD-1.3): an <i>Input</i> node showing the dataset's shape and an <i>Output</i> node showing the head, <span class="mono">Linear → 10</span>. Changing the dataset at the top rewrites both and revalidates everything below.</li>
+<li><b>The canvas is a graph</b> (owner's decision: full graphs). Layers stack top to bottom with automatic layout; a skip connection is drawn by dragging from one node's output handle to a merge node (<i>Add</i> or <i>Concat</i>). Each node shows its type, its two or three key fields, its output shape and its parameter count.</li>
+<li><b>A list view does everything the canvas does</b>, from the keyboard (accessibility rule): one row per layer in order, with an <i>Inputs</i> column for merges and buttons to add, move and remove.</li>
+<li><b>Problems are words, attached to nodes</b> (BUILD-1.4, 1.6): a red badge on the node, the same sentence in the footer list, and clicking it selects the node. A node whose shape cannot be worked out shows "?" instead of a shape, and nothing downstream repeats the error.</li>
+<li><b>The form is generated</b> from the layer's JSON Schema (UI-2.3): ranges, defaults and help text come from the server, so a new field needs no UI code. Inferred sizes (<span class="mono">in_features</span>, <span class="mono">in_channels</span>) are shown as "inferred: 3072" and can be overridden.</li>
+<li><b>The palette offers only what the dataset type accepts</b> (DATA-5.5): layers of another family are greyed with the reason ("images take mlp or cnn models").</li>
+<li><b>Templates</b> (BUILD-1.7): <i>Load template</i> replaces the graph (asking first if there are unsaved changes); <i>Save as template</i> asks a name and a description. Built-in templates cannot be overwritten.</li>
+<li><b>The draft survives a reload</b> in the browser's session storage, per dataset version; it becomes durable only as a template or a run. <i>Continue to training</i> carries the spec to SCR-09 and is disabled while there are problems.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Building a CNN on CIFAR-10</h2>
+<div class="frame" style="height:740px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav on">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b> / Build</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><b>Build a model</b><span class="spacer"></span><span class="group"><span class="btn sm on">Canvas</span><span class="btn sm">List</span></span><span class="btn sm">Load template…</span><span class="btn sm">Save as template…</span><span class="btn primary">Continue to training →</span></div>
+      <div style="display:flex;gap:10px;align-items:center"><span class="select">Dataset: <span class="mono">cifar10 · ds_f8e67211dd94</span> ▾</span><span class="muted" style="font-size:12px">labelled images · input 3×32×32 → 10 classes · takes mlp or cnn models</span></div>
+      <div class="builder">
+        <div class="palette">
+          <div class="pgroup">Dense</div><div class="ptile">Linear</div>
+          <div class="pgroup">Convolution</div><div class="ptile">Conv2d</div><div class="ptile">MaxPool2d</div><div class="ptile">AvgPool2d</div><div class="ptile">Global avg pool</div>
+          <div class="pgroup">Normalise</div><div class="ptile">BatchNorm</div><div class="ptile">LayerNorm</div><div class="ptile">Dropout</div><div class="ptile">Flatten</div>
+          <div class="pgroup">Activations</div><div class="ptile">ReLU · GELU · Tanh …</div>
+          <div class="pgroup">Merge</div><div class="ptile">Add</div><div class="ptile">Concat</div>
+          <div class="pgroup">Sequence</div><div class="ptile off" title="images take mlp or cnn models">Embedding</div><div class="ptile off">LSTM · GRU · RNN</div><div class="ptile off">Attention</div>
+          <div class="muted" style="font-size:10px;margin-top:4px">Greyed: images take mlp or cnn models</div>
+        </div>
+        <div class="canvas">
+          <div class="gnode lock">⊡ <b>Input</b> <span class="mono">image 3×32×32</span> <span class="lockk">locked</span></div>
+          <div class="edge"></div>
+          <div class="gnode on"><b>c1</b> Conv2d <span class="muted">32 · k3 · p1</span><span class="shape">image 32×32×32</span><span class="par">896</span></div>
+          <div class="edge"></div>
+          <div class="gnode"><b>bn1</b> BatchNorm<span class="shape">image 32×32×32</span><span class="par">64</span></div>
+          <div class="edge"></div>
+          <div class="gnode"><b>r1</b> ReLU<span class="shape">image 32×32×32</span><span class="par">0</span></div>
+          <div class="edge"></div>
+          <div class="gnode"><b>p1</b> MaxPool2d <span class="muted">k2</span><span class="shape">image 32×16×16</span><span class="par">0</span></div>
+          <div class="edge"></div>
+          <div class="gnode"><b>g</b> Global avg pool<span class="shape">vector 32</span><span class="par">0</span></div>
+          <div class="edge"></div>
+          <div class="gnode lock">⊡ <b>Output</b> <span class="mono">Linear 32 → 10</span><span class="par">330</span> <span class="lockk">locked</span></div>
+          <div class="addhint">+ drop a layer here, or press <span class="k">A</span></div>
+        </div>
+        <div class="inspector">
+          <h3><span class="mono">c1</span> · Conv2d <span class="spacer"></span><span class="btn sm ghost">Remove</span></h3>
+          <div class="f"><label>out_channels</label><span class="in">32</span><span class="hint">Output channels · 1–4096</span></div>
+          <div class="f"><label>kernel_size</label><span class="in">3</span><span class="hint">Square kernel, in pixels · 1–15</span></div>
+          <div class="f"><label>stride</label><span class="in">1</span></div>
+          <div class="f"><label>padding</label><span class="in">1</span></div>
+          <div class="f"><label>dilation</label><span class="in">1</span></div>
+          <div class="f"><label>bias</label><span class="in">☑</span></div>
+          <div class="f"><label>in_channels</label><span class="in muted">inferred: 3</span><span class="hint">Leave empty to take it from the input</span></div>
+          <div class="muted" style="font-size:11px;border-top:1px solid var(--soft);padding-top:6px">In: <span class="mono">image 3×32×32</span> · out: <span class="mono">image 32×32×32</span> · 896 parameters</div>
+        </div>
+      </div>
+      <div class="summary">
+        <span><b>1,290</b> parameters</span><span class="sep"></span>
+        <span>Memory <span class="select">Adam ▾</span></span>
+        <span class="stackbar" style="width:220px"><i style="width:25%;background:var(--ink-3)"></i><i style="width:25%;background:var(--line)"></i><i style="width:50%;background:var(--soft)"></i></span>
+        <span class="mono">weights 5 KB · gradients 5 KB · Adam 10 KB = 20 KB</span><span class="spacer"></span>
+        <span class="pill">✓ No problems</span><span class="muted" style="font-size:11px">family: cnn</span>
+      </div>
+    </section>
+    <footer class="status">CPU 3% · RAM 3.1 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+  <span class="n" style="left:200px;top:104px">1</span>
+  <span class="n" style="left:226px;top:142px">2</span>
+  <span class="n" style="left:404px;top:142px">3</span>
+  <span class="n" style="left:596px;top:186px">4</span>
+  <span class="n" style="left:940px;top:142px">5</span>
+  <span class="n" style="left:200px;top:640px">6</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Dataset</td><td>The split the model is for; its type, locked input and output, and accepted families (BUILD-1.3, DATA-5.5). Only split versions are listed</td><td><span class="mono">GET /datasets</span>, <span class="mono">GET /dataset-types</span>; the ends from the validate response's <span class="mono">dataset</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Palette</td><td>Every layer type by group (BUILD-1.1); incompatible families greyed with the reason; drag onto the canvas, or select and press <span class="k">A</span></td><td><span class="mono">GET /model-specs/schema</span></td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Graph</td><td>Locked input and output; each layer's ID, type, key fields, output shape and parameters (BUILD-1.4, 1.5); edges, including skips (BUILD-1.9)</td><td><span class="mono">POST /model-specs/validate</span> (<span class="mono">report.nodes</span>, <span class="mono">report.head</span>)</td><td>on every edit (debounced 250 ms)</td></tr>
+<tr><td><span class="num">4</span></td><td>Selected node</td><td>Outlined; its edges highlighted</td><td>local</td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Inspector</td><td>The layer's form, generated from its schema (UI-2.3); ranges and help from the server; inferred sizes shown, overridable; its input and output shapes and count</td><td>schema; validate response</td><td>on every edit</td></tr>
+<tr><td><span class="num">6</span></td><td>Summary</td><td>Total parameters; memory split into weights, gradients and optimizer state for the chosen optimizer (BUILD-1.5); problems count or "No problems"; the family</td><td>validate response (<span class="mono">total_parameters</span>, <span class="mono">memory</span>, <span class="mono">problems</span>, <span class="mono">family</span>)</td><td>on every edit</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · A residual block: a skip edge into an Add node (BUILD-1.9)</h2>
+<div class="frame" style="height:470px">
+  <div class="shell">
+    <aside class="side"></aside><header class="top"><span><b style="color:var(--ink-2)">Models</b> / Build</span></header>
+    <section class="content">
+      <div class="builder" style="grid-template-columns:150px 1fr 300px">
+        <div class="palette"><div class="pgroup">…</div></div>
+        <div class="canvas" style="align-items:flex-start;padding-left:80px">
+          <div class="gnode"><b>stem</b> Conv2d <span class="muted">32</span><span class="shape">image 32×32×32</span></div>
+          <div class="edge"></div>
+          <div class="gnode"><b>b1_conv1</b> Conv2d<span class="shape">image 32×32×32</span></div>
+          <div class="edge"></div>
+          <div class="gnode"><b>b1_relu1</b> ReLU<span class="shape">image 32×32×32</span></div>
+          <div class="edge"></div>
+          <div class="gnode"><b>b1_conv2</b> Conv2d<span class="shape">image 32×32×32</span></div>
+          <div class="edge"></div>
+          <div class="gnode on"><b>b1_add</b> Add <span class="muted">2 inputs</span><span class="shape">image 32×32×32</span></div>
+          <div class="skip" style="top:18px;height:225px"></div>
+          <div class="skiplabel" style="top:120px">skip</div>
+        </div>
+        <div class="inspector">
+          <h3><span class="mono">b1_add</span> · Add</h3>
+          <div class="muted" style="font-size:12px">Adds its inputs element by element. They must have the same shape.</div>
+          <div class="f"><label>inputs</label><span class="in mono">b1_conv2, stem</span></div>
+          <div class="muted" style="font-size:11px">To connect: drag from a node's lower handle to this node, or pick in the list view.</div>
+        </div>
+      </div>
+    </section><footer class="status"></footer>
+  </div>
+</div>
+<p class="caption">The skip edge runs beside the chain into the merge node. A node with two inputs that is not a merge is a problem (<span class="mono">too_many_inputs</span>: "join them with add or concat first"). Inputs of a merge are taken in a fixed order (input first, then by ID), which <i>Concat</i> uses.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Problems: a mismatched linear layer, and a stack that shrinks below one pixel</h2>
+<div class="frame" style="height:430px">
+  <div class="shell">
+    <aside class="side"></aside><header class="top"><span><b style="color:var(--ink-2)">Models</b> / Build</span></header>
+    <section class="content">
+      <div class="builder" style="grid-template-columns:150px 1fr 300px;height:300px">
+        <div class="palette"><div class="pgroup">…</div></div>
+        <div class="canvas">
+          <div class="gnode"><b>n1</b> Flatten<span class="shape">vector 3072</span></div>
+          <div class="edge"></div>
+          <div class="gnode bad on"><b>n2</b> Linear <span class="muted">in 1000 → 64</span><span class="shape">?</span><span class="badge">!</span></div>
+          <div class="edge"></div>
+          <div class="gnode faded"><b>n3</b> ReLU<span class="shape">?</span></div>
+        </div>
+        <div class="inspector">
+          <h3><span class="mono">n2</span> · Linear</h3>
+          <div class="f"><label>in_features</label><span class="in bad">1000</span><span class="hint" style="color:var(--ink)">Its input has 3072 features. Clear it to infer.</span></div>
+          <div class="f"><label>out_features</label><span class="in">64</span></div>
+        </div>
+      </div>
+      <div class="summary"><span class="muted">— parameters</span><span class="sep"></span><span class="muted">memory —</span><span class="spacer"></span><span class="pill" style="border-width:2px">! 2 problems</span><span class="btn sm primary" style="opacity:.4">Continue to training →</span></div>
+      <div class="problems">
+        <div><span class="badge">!</span> <span class="mono">n2</span>: in_features is 1000, but its input has 3072 features <span class="muted">shape_mismatch</span></div>
+        <div><span class="badge">!</span> <span class="mono">p6</span>: This pooling would shrink 1×1 below 1×1 (to 0×0): use a smaller kernel or stride, padding, or fewer downsampling layers <span class="muted">below_one_pixel</span></div>
+      </div>
+    </section><footer class="status"></footer>
+  </div>
+</div>
+<p class="caption">Each problem is the server's sentence, linked to its node (click selects it). The node gets a badge; nodes after it show "?" and stay quiet. While any problem remains, the totals are blank and <i>Continue to training</i> is disabled.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · List view: the same graph from the keyboard</h2>
+<div class="frame" style="height:330px">
+  <div class="shell">
+    <aside class="side"></aside><header class="top"><span><b style="color:var(--ink-2)">Models</b> / Build</span></header>
+    <section class="content">
+      <div style="display:flex;gap:8px"><span class="group"><span class="btn sm">Canvas</span><span class="btn sm on">List</span></span><span class="btn sm">+ Add layer <span class="k">A</span></span></div>
+      <table class="t">
+        <tr><th>#</th><th>ID</th><th>Layer</th><th>Inputs</th><th>Output</th><th class="r">Parameters</th><th></th></tr>
+        <tr><td class="m">–</td><td class="m">input</td><td class="muted">locked</td><td></td><td class="m">image 3×32×32</td><td class="r m">–</td><td></td></tr>
+        <tr class="on"><td class="m">1</td><td class="m">stem</td><td>Conv2d 32 · k3</td><td class="m">input</td><td class="m">image 32×32×32</td><td class="r m">896</td><td>↑ ↓ ✕</td></tr>
+        <tr><td class="m">2</td><td class="m">b1_conv1</td><td>Conv2d 32 · k3</td><td class="m">stem</td><td class="m">image 32×32×32</td><td class="r m">9,248</td><td>↑ ↓ ✕</td></tr>
+        <tr><td class="m">3</td><td class="m">b1_add</td><td>Add</td><td><span class="select">b1_conv1, stem ▾</span></td><td class="m">image 32×32×32</td><td class="r m">0</td><td>↑ ↓ ✕</td></tr>
+        <tr><td class="m">–</td><td class="m">output</td><td class="muted">locked</td><td class="m">pool</td><td class="m">Linear 32 → 10</td><td class="r m">330</td><td></td></tr>
+      </table>
+    </section><footer class="status"></footer>
+  </div>
+</div>
+<p class="caption">Rows are in canonical order (topological). <i>Inputs</i> is a single choice for ordinary layers and a multi-choice for merges. ↑ ↓ moves a layer within a chain (rewiring its neighbours); Enter opens the inspector; Delete removes, asking first if it would disconnect anything.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Start: empty, with the templates for this dataset type</h2>
+<div class="frame" style="height:320px">
+  <div class="shell">
+    <aside class="side"></aside><header class="top"><span><b style="color:var(--ink-2)">Models</b> / Build</span></header>
+    <section class="content">
+      <div class="phead"><b>Build a model</b><span class="select">Dataset: <span class="mono">cifar10 · ds_f8e67211dd94</span> ▾</span></div>
+      <div class="empty" style="height:210px"><div><b>Start from a template, or add a first layer.</b>
+        <table class="t" style="margin:10px auto;width:640px"><tr><th>Template</th><th>Family</th><th class="r">Parameters</th><th></th></tr>
+          <tr><td>MLP <span class="k">built-in</span></td><td>mlp</td><td class="r m">820,874</td><td><span class="btn sm">Use</span></td></tr>
+          <tr><td>Small CNN <span class="k">built-in</span></td><td>cnn</td><td class="r m">288,746</td><td><span class="btn sm">Use</span></td></tr>
+          <tr><td>Residual CNN <span class="k">built-in</span></td><td>cnn</td><td class="r m">38,378</td><td><span class="btn sm">Use</span></td></tr>
+          <tr><td>my wide cnn</td><td>cnn</td><td class="r m">1,204,234</td><td><span class="btn sm">Use</span> <span class="btn sm ghost">Delete</span></td></tr></table>
+        <span class="btn sm">+ Add a first layer</span></div></div>
+    </section><footer class="status"></footer>
+  </div>
+</div>
+<p class="caption">Only templates of the chosen dataset's type are listed; parameter counts are for this dataset's ends. Text and tabular templates appear for those types (training them arrives in M10).</p>
+
+<!-- ===================================================================== F -->
+<h2>F · A dataset that cannot feed the builder; loading; error</h2>
+<div class="frame" style="height:230px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Models</b> / Build</span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-content:start">
+      <div class="empty" style="height:150px"><div><b>This version cannot be trained yet</b><p style="margin:6px 0">Tabular: ingestion and training arrive in M10. You can still build and save a template.</p><span class="btn sm">Choose another dataset</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px"><span class="skel" style="width:220px;height:18px"></span><span class="skel" style="height:40px"></span><span class="skel" style="height:40px"></span><span class="muted" style="font-size:11px">Checking… (the last result stays visible while a new one is computed)</span></div>
+      <div class="empty err" style="height:150px"><div><b>The spec could not be checked</b><p style="margin:6px 0"><span class="mono">dependency_unavailable</span> · Postgres is unreachable. Do check the postgres container, then retry. Your draft is kept.</p><span class="btn sm">Retry</span></div></div>
+    </section><footer class="status"></footer></div>
+</div>
+
+<!-- ===================================================================== G -->
+<h2>G · 1024 px</h2>
+<div class="frame w1024" style="height:420px">
+  <div class="shell rail"><aside class="side"></aside><header class="top"><span><b>Models</b> / Build</span></header>
+    <section class="content">
+      <div class="phead"><span class="select">Dataset: <span class="mono">cifar10 · ds_f8e…</span> ▾</span><span class="spacer"></span><span class="btn sm">Layers ▾</span><span class="group"><span class="btn sm on">Canvas</span><span class="btn sm">List</span></span><span class="btn sm primary">Continue →</span></div>
+      <div class="builder" style="grid-template-columns:1fr;height:260px">
+        <div class="canvas"><div class="gnode lock">⊡ <b>Input</b> <span class="mono">image 3×32×32</span></div><div class="edge"></div><div class="gnode on"><b>c1</b> Conv2d<span class="shape">image 32×32×32</span></div><div class="edge"></div><div class="gnode">…</div></div>
+      </div>
+      <div class="summary"><span><b>1,290</b> parameters</span><span class="sep"></span><span class="mono">20 KB with Adam</span><span class="spacer"></span><span class="pill">✓ No problems</span></div>
+    </section><footer class="status"></footer></div>
+  <div class="drawer" style="width:300px;top:48px"><header><b>c1</b> Conv2d</header><div class="body"><div class="f"><label>out_channels</label><span class="in">32</span></div><div class="f"><label>kernel_size</label><span class="in">3</span></div></div></div>
+</div>
+<p class="caption">At 1024 px the palette becomes a <i>Layers</i> menu and the inspector a drawer over the canvas, opened by selecting a node.</p>
+</main>
+
+</body>
+</html>

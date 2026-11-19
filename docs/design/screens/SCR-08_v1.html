@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-08 model builder — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.select { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--fs-12); color: var(--text-primary); }
+.select svg.i { width: 12px; height: 12px; color: var(--text-secondary); } .select.is-disabled { opacity: .45; }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 40px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); }
+.pill.cancelled { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 400px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; } .toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.modal { width: 460px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; } .modal > header svg.i { color: var(--danger); }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); } .modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); max-width: 40ch; }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.grp { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-07 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.phead { display: flex; align-items: center; gap: var(--sp-3); } .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.t tr.sec td .count { margin-left: var(--sp-1); }
+.now { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.now .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.now .stg { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.now .progress { width: 72px; }
+.now.err .code { color: var(--danger); font-family: var(--font-mono); }
+.now.muted { color: var(--text-muted); }
+.now svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.t td.acts-cell { width: 120px; text-align: right; }
+.toasts { position: absolute; right: var(--sp-4); bottom: calc(28px + var(--sp-4)); z-index: var(--z-toast); }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+
+
+/* ============================================================================ SCR-01 sidebar foot (approved v1, unchanged) */
+.side .foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.health { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.health svg.i { color: var(--success); }
+
+/* ============================================================================ form field (design-system preview, unchanged) */
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); display: flex; align-items: center; gap: var(--sp-2); }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.field.error > small { color: var(--danger); display: flex; gap: var(--sp-1); align-items: center; }
+.input { height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-13) var(--font-ui); width: 100%; display: flex; align-items: center; }
+.input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.field.error .input { border-color: var(--danger); }
+.badge.info { color: var(--info); background: var(--info-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; } .badge.ok { color: var(--success); background: var(--success-soft); border-color: transparent; }
+
+/* ============================================================================ SCR-14 (tokens only) */
+.pill.paused { --c: var(--state-paused); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.note2 { font-size: var(--fs-12); color: var(--text-muted); margin: 0; } .note2 .mono { color: var(--text-secondary); }
+.typeconfirm { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-3); font-size: var(--fs-12); }
+.typeconfirm .input { font: var(--fs-13) var(--font-mono); }
+.cols { display: grid; grid-template-columns: 168px 1fr; gap: var(--sp-5); min-height: 0; }
+.index { display: flex; flex-direction: column; gap: 2px; }
+.index a { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); text-decoration: none; }
+.index a[aria-current=true] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); }
+.index a[aria-disabled=true] { color: var(--text-muted); }
+.index a .count, .index a .badge { margin-left: auto; }
+.secs { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.sec { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); display: flex; flex-direction: column; }
+.sec > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.sec > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.sec > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.sec > header .aside { font-size: var(--fs-12); color: var(--text-secondary); }
+.frow { display: grid; grid-template-columns: 380px 1fr; gap: var(--sp-6); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); align-items: start; }
+.frow .input.num { width: 132px; }
+.frow .mod { display: flex; align-items: center; gap: var(--sp-2); }
+.applies { display: flex; flex-direction: column; gap: var(--sp-2); padding-top: 22px; font-size: var(--fs-12); color: var(--text-secondary); }
+.applies .badge svg.i { width: 11px; height: 11px; }
+.ctx { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ctx b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ctx .sq { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res-temp); margin-right: var(--sp-1); }
+.fixed { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-4); font-size: var(--fs-12); color: var(--text-secondary); }
+.fixed svg.i { color: var(--text-muted); margin-top: 2px; }
+.savebar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-top: var(--bw) solid var(--border); background: var(--surface-raised); border-radius: 0 0 var(--r-md) var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.savebar b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ovr { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); border-bottom: var(--bw) solid var(--border); }
+.ovr h3 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.t td .input { height: var(--h-sm); width: 72px; font-size: var(--fs-12); }
+.t td.dim { color: var(--text-secondary); }
+.t.dense td { height: 36px; }
+/* Contrast rules approved at G3 since the v1 mockups (in the built app). */
+[data-theme="light"] .pill { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.err { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.info { color: color-mix(in srgb, var(--info) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.warn { color: color-mix(in srgb, var(--warning) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.ok { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
+[data-theme="dark"] .t tr[aria-selected=true] .pill, [data-theme="dark"] .t tr.is-hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }
+
+/* ============================================================================ SCR-08 / SCR-09 (tokens only) */
+.pill.paused { --c: var(--state-paused); }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.dsbar { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.dsbar .ends { font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.bgrid { display: grid; grid-template-columns: 184px 1fr 312px; gap: var(--sp-3); min-height: 0; flex: 1; }
+.panel { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.panel > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); font-size: var(--fs-13); }
+.panel > header .spacer + * { font-weight: var(--fw-regular); }
+.palette { padding: var(--sp-2); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.pal-grp { margin: var(--sp-2) var(--sp-1) 2px; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.pal-grp:first-child { margin-top: 0; }
+.tile { display: flex; align-items: center; gap: var(--sp-2); height: 26px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border); border-radius: var(--r-sm); background: var(--surface-raised); font-size: var(--fs-12); color: var(--text-primary); }
+.tile svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.tile[aria-disabled=true] { background: transparent; border-style: dashed; color: var(--text-muted); }
+.pal-note { margin: var(--sp-1) var(--sp-1) 0; font-size: var(--fs-11); color: var(--text-muted); display: flex; gap: var(--sp-1); }
+.pal-note svg.i { width: 12px; height: 12px; margin-top: 2px; }
+.canvas { position: relative; flex: 1; background-color: var(--surface-sunken); background-image: radial-gradient(var(--border) 1px, transparent 1px); background-size: 16px 16px; overflow: hidden; }
+.canvas-tools { position: absolute; left: var(--sp-2); bottom: var(--sp-2); display: flex; gap: var(--sp-1); }
+.canvas-tools .btn { width: var(--h-sm); padding: 0; }
+.gn { position: absolute; width: 280px; height: 44px; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-1); font-size: var(--fs-12); }
+.gn > .h { display: flex; align-items: center; gap: var(--sp-2); height: 23px; padding: 0 var(--sp-2); line-height: 1; }
+.gn > .h .id { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.gn > .h .ty { color: var(--text-secondary); }
+.gn > .h .kv { color: var(--text-muted); font: var(--fs-11) var(--font-mono); }
+.gn > .f { display: flex; align-items: center; gap: var(--sp-2); height: 19px; padding: 0 var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.gn > .f .p { margin-left: auto; color: var(--text-muted); }
+.gn[aria-selected=true] { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-width) var(--accent-soft), var(--shadow-1); }
+.gn.lock { background: var(--surface); border-style: dashed; }
+.gn.lock:not(:has(.f)) > .h { height: 42px; }
+.gn.lock .h svg.i { color: var(--text-muted); }
+.gn.bad { border-color: var(--danger); }
+.gn.bad > .f { color: var(--danger); }
+.gn.muted { opacity: .6; }
+.gn .hd { position: absolute; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: var(--r-pill); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); }
+.gn .hd.in { top: -5px; } .gn .hd.out { bottom: -5px; }
+.gn .flag { margin-left: auto; color: var(--danger); display: inline-flex; }
+.edges { position: absolute; inset: 0; pointer-events: none; }
+.edges path { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+.edges path.on { stroke: var(--accent); stroke-width: 2; }
+.edges path.skip { stroke-dasharray: 0; }
+.edges text { font: var(--fs-11) var(--font-mono); fill: var(--text-muted); }
+.dropzone { position: absolute; width: 280px; height: 30px; border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; gap: var(--sp-2); color: var(--text-muted); font-size: var(--fs-12); }
+.insp { padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-3); overflow: hidden; }
+.insp .field > label .badge { margin-left: auto; }
+.insp .field .input { height: 28px; }
+.insp .io { display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.insp .io b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.inferred { color: var(--text-muted); font-style: italic; }
+.chk { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-13); }
+.chk i { width: 14px; height: 14px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-xs); background: var(--accent); display: inline-grid; place-items: center; }
+.chk i svg.i { width: 10px; height: 10px; color: var(--on-accent); stroke-width: 2.4; }
+.chk i.off { background: var(--surface-sunken); }
+.sumbar { white-space: nowrap; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.sumbar .big { font: var(--fw-semibold) var(--fs-14) var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.sumbar .sep { width: 1px; align-self: stretch; background: var(--border); }
+.mem { display: flex; height: 8px; width: 120px; flex: none; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-sunken); border: var(--bw) solid var(--border); }
+.mem i { display: block; height: 100%; }
+.mem i.w, .key.w::before { background: var(--accent); }
+.mem i.g, .key.g::before { background: var(--info); }
+.mem i.o, .key.o::before { background: var(--text-muted); }
+.key { white-space: nowrap; display: inline-flex; align-items: center; gap: var(--sp-1); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.key::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-xs); }
+.problems { background: var(--surface); border: var(--bw) solid color-mix(in srgb, var(--danger) 45%, transparent); border-radius: var(--r-md); }
+.problems > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+.problems > header svg.i { color: var(--danger); }
+.prob { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-12); border-bottom: var(--bw) solid var(--border); }
+.prob:last-child { border-bottom: 0; }
+.prob a { font-family: var(--font-mono); color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.prob .code { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted); white-space: nowrap; }
+.prob svg.i { color: var(--danger); margin-top: 2px; }
+.tpl { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+.tplc { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.tplc b { font-size: var(--fs-14); }
+.tplc p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); }
+.tplc .meta { display: flex; gap: var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 320px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+/* SCR-09 */
+.runcols { display: grid; grid-template-columns: 1fr 360px; gap: var(--sp-4); min-height: 0; align-items: start; }
+.cards { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); }
+.card > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.card > header h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.card > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.card > .b { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.card.collapsed > header { border-bottom: 0; color: var(--text-muted); }
+.facts { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.facts b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3) var(--sp-4); }
+.fset { display: flex; flex-direction: column; gap: var(--sp-2); }
+.fset > h3 { margin: 0; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.check { position: sticky; top: 0; }
+.vram { display: flex; flex-direction: column; gap: var(--sp-1); }
+.vbar { position: relative; height: 12px; border-radius: var(--r-sm); background: var(--surface-sunken); border: var(--bw) solid var(--border); display: flex; overflow: visible; }
+.vbar i { display: block; height: 100%; }
+.vbar i.fix { background: var(--res-vram); }
+.vbar i.act { background: color-mix(in srgb, var(--res-vram) 55%, var(--surface-sunken)); }
+.vbar i.ctx { background: var(--text-muted); }
+.vbar .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-primary); }
+.vscale { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.kv2 { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.kv2 span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.kv2 .tot { color: var(--text-primary); font-weight: var(--fw-semibold); border-top: var(--bw) solid var(--border); padding-top: 2px; }
+.callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid; font-size: var(--fs-12); color: var(--text-primary); }
+.callout svg.i { margin-top: 2px; flex: none; }
+.callout.ok { border-color: color-mix(in srgb, var(--success) 45%, transparent); background: var(--success-soft); } .callout.ok svg.i { color: var(--success); }
+.callout.warn { border-color: color-mix(in srgb, var(--warning) 50%, transparent); background: var(--warning-soft); } .callout.warn svg.i { color: var(--warning); }
+.callout.err { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .callout.err svg.i { color: var(--danger); }
+.callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .callout.info svg.i { color: var(--info); }
+.plan { font-size: var(--fs-12); color: var(--text-secondary); padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.plan b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.was { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+<symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9" stroke-width="2.2"/></symbol>
+<symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+<symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+<symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 16 16"><path d="M6 2.5h4M6.8 2.5v3.8L5 9h6L9.2 6.3V2.5M8 9v4.5"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M2 8h3l1.5-3 3 6L11 8h3"/></symbol>
+  <symbol id="i-keys" viewBox="0 0 16 16"><rect x="1.8" y="4" width="12.4" height="8" rx="1.5"/><path d="M4.5 6.7h.3M7 6.7h.3M9.5 6.7h.3M5 9.4h6"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 16 16"><path d="M2.5 4h2M7.5 4h6M2.5 8h7M12.5 8h1M2.5 12h4M9.5 12h4"/><circle cx="6" cy="4" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="8" cy="12" r="1.5"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-08 — Model builder · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-08-lofi_v1.html</span>, approved 2026-11-19) inside the SCR-01 shell, using only design system v1 tokens, components and patterns; no new icon. Every number is what <span class="mono">POST /model-specs/validate</span> returns for this data today: the CIFAR-10 split <span class="mono">ds_f8e67211dd94</span> (3×32×32, 10 classes) and a CNN of two convolutions. Open as <span class="mono">SCR-08_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>A node is a small card:</b> its ID in mono, its type, its key fields; a footer with its output shape and parameter count. Locked ends are dashed with a lock. The selected node has the accent outline and its edges turn accent.</li>
+<li><b>The canvas is the sunken surface with a dot grid</b>, as React Flow draws it, with zoom and fit buttons in the corner. Edges are plain lines; a skip edge is a curve with its label, never a colour alone.</li>
+<li><b>The inspector uses the schema-form pattern</b> approved for SCR-14: the property name in mono, its type as a badge, the schema's description with range and default as helper text. An inferred size shows "inferred: 3" in the input, in italics, and can be typed over.</li>
+<li><b>The memory estimate</b> is one bar in three parts with a text key: weights (accent), gradients (info), optimizer state (muted). Each part also has its number in the key, so the colours carry no meaning alone.</li>
+<li><b>Problems</b> use the danger colour only on the node's border, a warning icon and the problem list; each problem's node ID is a link that selects it. The list sits above the summary while there are problems and is hidden when there are none.</li>
+<li><b>Greyed palette tiles</b> are dashed and muted, with the reason under the group, and are not focusable.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Building a CNN on CIFAR-10 (dark)</h2>
+<div class="frame" style="height:820px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="grp">Data</div><a class="nav"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="grp">Jobs</div><a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+      <div class="grp">Models</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models<kbd>g m</kbd></a>
+      <div class="foot">
+        <div class="health" role="status"><svg class="i"><use href="#i-heart"/></svg>All systems ok</div>
+        <a class="nav"><svg class="i"><use href="#i-sliders"/></svg>Settings</a>
+        <a class="nav"><svg class="i"><use href="#i-theme"/></svg>Theme<kbd>t</kbd></a>
+        <a class="nav"><svg class="i"><use href="#i-keys"/></svg>Shortcuts<kbd>?</kbd></a>
+      </div>
+    </nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Build</b></div><span class="spacer"></span><span class="jobind idle"><svg class="i"><use href="#i-check"/></svg>Idle · last <span class="mono">job_0052</span> completed</span></header>
+    <main class="content">
+      <div class="phead"><h1>Build a model</h1><span class="spacer"></span>
+        <span class="group-btns" role="group" aria-label="View"><button class="btn sm" aria-pressed="true"><svg class="i"><use href="#i-branch"/></svg>Canvas</button><button class="btn sm"><svg class="i"><use href="#i-list"/></svg>List</button></span>
+        <button class="btn sm">Load template…</button><button class="btn sm">Save as template…</button>
+        <button class="btn primary">Continue to training<svg class="i"><use href="#i-chevron"/></svg></button></div>
+      <div class="dsbar"><span class="select">cifar10 · <span class="mono">ds_f8e67211dd94</span><svg class="i"><use href="#i-down"/></svg></span><span>Labelled images</span><span class="ends">input image 3×32×32 → 10 classes</span><span class="badge">takes mlp, cnn</span></div>
+      <div class="bgrid">
+        <section class="panel" aria-label="Layers">
+          <header>Layers</header>
+          <div class="palette">
+            <div class="pal-grp">Dense</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Linear</div>
+            <div class="pal-grp">Convolution</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Conv2d</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>MaxPool2d</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>AvgPool2d</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Global avg pool</div>
+            <div class="pal-grp">Shape and norm</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>BatchNorm</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>LayerNorm</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Dropout</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Flatten</div>
+            <div class="pal-grp">Activation</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>ReLU, GELU, Tanh…</div>
+            <div class="pal-grp">Merge</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Add</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Concat</div>
+            <div class="pal-grp">Sequence</div><div class="tile" aria-disabled="true">Embedding</div><div class="tile" aria-disabled="true">LSTM, GRU, RNN</div><div class="tile" aria-disabled="true">Attention</div>
+            <div class="pal-note"><svg class="i"><use href="#i-info"/></svg>Images take mlp or cnn models</div>
+          </div>
+        </section>
+        <section class="panel" aria-label="Graph">
+          <header>Graph <span class="spacer"></span><span class="mono" style="color:var(--text-muted);font-size:var(--fs-11)">my_cnn · 8 layers</span></header>
+          <div class="canvas">
+            <svg class="edges" viewBox="0 0 501 525" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M252 56 V64"/><path class="on" d="M252 108 V116"/><path class="on" d="M252 160 V168"/><path d="M252 212 V220"/><path d="M252 264 V272"/><path d="M252 316 V324"/><path d="M252 368 V376"/><path d="M252 420 V428"/><path d="M252 472 V480"/>
+            </svg>
+            <div class="gn lock" style="left:112px;top:12px"><div class="h"><svg class="i"><use href="#i-db"/></svg><span class="id">input</span><span class="ty">locked</span><span class="kv" style="margin-left:auto">image 3×32×32</span></div><span class="hd out"></span></div>
+            <div class="gn" aria-selected="true" style="left:112px;top:64px"><span class="hd in"></span><div class="h"><span class="id">c1</span><span class="ty">Conv2d</span><span class="kv">32 · k3 · p1 · no bias</span></div><div class="f">image 32×32×32<span class="p">864</span></div><span class="hd out"></span></div>
+            <div class="gn" style="left:112px;top:116px"><span class="hd in"></span><div class="h"><span class="id">bn1</span><span class="ty">BatchNorm</span></div><div class="f">image 32×32×32<span class="p">64</span></div></div>
+            <div class="gn" style="left:112px;top:168px"><div class="h"><span class="id">r1</span><span class="ty">ReLU</span></div><div class="f">image 32×32×32<span class="p">0</span></div></div>
+            <div class="gn" style="left:112px;top:220px"><div class="h"><span class="id">c2</span><span class="ty">Conv2d</span><span class="kv">32 · k3 · p1 · no bias</span></div><div class="f">image 32×32×32<span class="p">9,216</span></div></div>
+            <div class="gn" style="left:112px;top:272px"><div class="h"><span class="id">bn2</span><span class="ty">BatchNorm</span></div><div class="f">image 32×32×32<span class="p">64</span></div></div>
+            <div class="gn" style="left:112px;top:324px"><div class="h"><span class="id">r2</span><span class="ty">ReLU</span></div><div class="f">image 32×32×32<span class="p">0</span></div></div>
+            <div class="gn" style="left:112px;top:376px"><div class="h"><span class="id">p1</span><span class="ty">MaxPool2d</span><span class="kv">k2</span></div><div class="f">image 32×16×16<span class="p">0</span></div></div>
+            <div class="gn" style="left:112px;top:428px"><div class="h"><span class="id">g</span><span class="ty">Global avg pool</span></div><div class="f">vector 32<span class="p">0</span></div></div>
+            <div class="gn lock" style="left:112px;top:480px"><span class="hd in"></span><div class="h"><svg class="i"><use href="#i-db"/></svg><span class="id">output</span><span class="ty">locked</span><span class="kv" style="margin-left:auto">Linear 32 → 10</span></div><div class="f">10 classes<span class="p">330</span></div></div>
+            <div class="canvas-tools"><button class="btn sm" aria-label="Zoom in"><svg class="i"><use href="#i-plus"/></svg></button><button class="btn sm" aria-label="Fit"><svg class="i"><use href="#i-grid"/></svg></button></div>
+          </div>
+        </section>
+        <section class="panel" aria-label="Selected layer">
+          <header><span class="mono">c1</span> · Conv2d<span class="spacer"></span><button class="btn sm ghost"><svg class="i"><use href="#i-x"/></svg>Remove</button></header>
+          <div class="insp">
+            <div class="field"><label><span class="mono">out_channels</span><span class="badge">integer</span></label><span class="input mono">32</span><small>Output channels. 1–4096, default 32.</small></div>
+            <div class="field"><label><span class="mono">kernel_size</span><span class="badge">integer</span></label><span class="input mono is-focus">3</span><small>Square kernel, in pixels. 1–15, default 3.</small></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-2)">
+              <div class="field"><label><span class="mono">stride</span></label><span class="input mono">1</span></div>
+              <div class="field"><label><span class="mono">padding</span></label><span class="input mono">1</span></div>
+              <div class="field"><label><span class="mono">dilation</span></label><span class="input mono">1</span></div>
+            </div>
+            <div class="field"><label><span class="mono">bias</span><span class="badge">boolean</span></label><span class="chk"><i class="off"></i>Learn an additive bias per channel</span></div>
+            <div class="field"><label><span class="mono">in_channels</span><span class="badge">integer</span></label><span class="input mono inferred">inferred: 3</span><small>Leave empty to take it from the input.</small></div>
+            <div class="io"><span>in <b>image 3×32×32</b></span><span>out <b>image 32×32×32</b></span><span><b>864</b> parameters</span></div>
+          </div>
+        </section>
+      </div>
+      <div class="sumbar" role="status"><span><span class="big">10,538</span> parameters</span><span class="sep"></span>
+        <span class="select">Adam<svg class="i"><use href="#i-down"/></svg></span>
+        <span class="mem" aria-hidden="true"><i class="w" style="width:25%"></i><i class="g" style="width:25%"></i><i class="o" style="width:50%"></i></span>
+        <span class="key w">weights 41.2 KB</span><span class="key g">gradients 41.2 KB</span><span class="key o">Adam 82.3 KB</span><span class="mono" style="color:var(--text-primary)">= 164.7 KB</span>
+        <span class="spacer"></span><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>No problems</span><span class="badge">cnn</span></div>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>3%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>3.1</b><small>/ 9.7 GB</small></span><span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>0%</b></span><span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>0.3</b><small>/ 6.0 GB</small></span><span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>41 °C</b><small>· 3 W</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 10 s</span></footer>
+  </div>
+  <span class="n" style="left:212px;top:124px">1</span>
+  <span class="n" style="left:212px;top:166px">2</span>
+  <span class="n" style="left:494px;top:166px">3</span>
+  <span class="n" style="left:520px;top:222px">4</span>
+  <span class="n" style="left:1060px;top:166px">5</span>
+  <span class="n" style="left:212px;top:752px">6</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Dataset</td><td>The split the model is for, its type, its locked input and output, and the families it accepts (BUILD-1.3, DATA-5.5); only split versions are listed</td><td><span class="mono">GET /datasets</span>; the validate response's <span class="mono">dataset</span></td><td>on change</td></tr>
+<tr><td><span class="n">2</span></td><td>Layers</td><td>Every layer type by group (BUILD-1.1); a family the dataset does not take is dashed and muted, with the reason; drag onto the graph, or select a node and press <kbd>a</kbd></td><td><span class="mono">GET /model-specs/schema</span>, <span class="mono">GET /dataset-types</span></td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Graph</td><td>Locked input and output; each node's ID, type, key fields, output shape and parameter count (BUILD-1.4, 1.5); edges, skips included (BUILD-1.9)</td><td><span class="mono">POST /model-specs/validate</span>: <span class="mono">report.nodes</span>, <span class="mono">report.head</span></td><td>each edit, debounced 250 ms; the last result stays while a new one is computed</td></tr>
+<tr><td><span class="n">4</span></td><td>Selected node</td><td>Accent outline; its edges in accent</td><td>local</td><td>–</td></tr>
+<tr><td><span class="n">5</span></td><td>Inspector</td><td>The layer's form, generated from its schema (UI-2.3); inferred sizes in italics, overridable; its input, output and count</td><td>the schema; the validate response</td><td>each edit</td></tr>
+<tr><td><span class="n">6</span></td><td>Summary</td><td>Total parameters; memory as weights, gradients and optimizer state for the chosen optimizer (BUILD-1.5); "No problems" or the count; the family</td><td><span class="mono">report.total_parameters</span>, <span class="mono">memory</span>, <span class="mono">problems</span>, <span class="mono">family</span></td><td>each edit</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:330px">
+  <div class="shell" style="grid-template-rows:48px 1fr 0">
+    <nav class="side" aria-label="Main"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Models</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models</a></nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Build</b></div></header>
+    <main class="content">
+      <div class="bgrid" style="height:200px">
+        <section class="panel"><header>Layers</header><div class="palette"><div class="pal-grp">Convolution</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Conv2d</div><div class="pal-grp">Sequence</div><div class="tile" aria-disabled="true">LSTM, GRU, RNN</div></div></section>
+        <section class="panel"><header>Graph</header><div class="canvas">
+          <svg class="edges" viewBox="0 0 504 160" preserveAspectRatio="none" aria-hidden="true"><path d="M252 56 V64"/><path class="on" d="M252 108 V116"/></svg>
+          <div class="gn lock" style="left:112px;top:12px"><div class="h"><svg class="i"><use href="#i-db"/></svg><span class="id">input</span><span class="ty">locked</span><span class="kv" style="margin-left:auto">image 3×32×32</span></div></div>
+          <div class="gn" aria-selected="true" style="left:112px;top:64px"><div class="h"><span class="id">c1</span><span class="ty">Conv2d</span><span class="kv">32 · k3 · p1 · no bias</span></div><div class="f">image 32×32×32<span class="p">864</span></div></div>
+          <div class="gn bad" style="left:112px;top:116px"><div class="h"><span class="id">l2</span><span class="ty">Linear</span><span class="flag"><svg class="i"><use href="#i-alert"/></svg></span></div><div class="f">—<span class="p">rank_mismatch</span></div></div>
+        </div></section>
+        <section class="panel"><header><span class="mono">c1</span> · Conv2d</header><div class="insp"><div class="field"><label><span class="mono">kernel_size</span><span class="badge">integer</span></label><span class="input mono">3</span><small>Square kernel, in pixels. 1–15, default 3.</small></div></div></section>
+      </div>
+      <div class="sumbar"><span><span class="big">10,538</span> parameters</span><span class="sep"></span><span class="mem" aria-hidden="true"><i class="w" style="width:25%"></i><i class="g" style="width:25%"></i><i class="o" style="width:50%"></i></span><span class="key w">weights 41.2 KB</span><span class="key g">gradients 41.2 KB</span><span class="key o">Adam 82.3 KB</span><span class="spacer"></span><span class="pill failed"><svg class="i"><use href="#i-alert"/></svg>1 problem</span></div>
+    </main>
+  </div>
+</div>
+</div>
+<p class="cap">The same parts in light, with one node in error to show the danger border and flag on the light surfaces.</p>
+
+<!-- ===================================================================== B -->
+<h2>B · A residual block: a skip edge into an Add node (BUILD-1.9)</h2>
+<div class="frame" style="height:470px">
+  <div class="shell" style="grid-template-rows:48px 1fr 0">
+    <nav class="side" aria-label="Main"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Models</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models</a></nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Build</b></div></header>
+    <main class="content">
+      <div class="bgrid" style="height:390px;grid-template-columns:184px 1fr 312px">
+        <section class="panel"><header>Layers</header><div class="palette"><div class="pal-grp">Merge</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Add</div><div class="tile"><svg class="i"><use href="#i-plus"/></svg>Concat</div></div></section>
+        <section class="panel"><header>Graph <span class="spacer"></span><span class="mono" style="color:var(--text-muted);font-size:var(--fs-11)">residual_cnn</span></header><div class="canvas">
+          <svg class="edges" viewBox="0 0 504 350" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M282 56 V64"/><path d="M282 108 V116"/><path d="M282 160 V168"/><path d="M282 212 V220"/><path class="on" d="M282 264 V272"/>
+            <path class="on skip" d="M142 30 C 92 30, 92 290, 142 290"/>
+            <text x="64" y="166">skip</text>
+          </svg>
+          <div class="gn" style="left:142px;top:12px"><div class="h"><span class="id">stem_relu</span><span class="ty">ReLU</span></div><div class="f">image 32×32×32<span class="p">0</span></div></div>
+          <div class="gn" style="left:142px;top:64px"><div class="h"><span class="id">b1_conv1</span><span class="ty">Conv2d</span><span class="kv">32 · k3</span></div><div class="f">image 32×32×32<span class="p">9,216</span></div></div>
+          <div class="gn" style="left:142px;top:116px"><div class="h"><span class="id">b1_bn1</span><span class="ty">BatchNorm</span></div><div class="f">image 32×32×32<span class="p">64</span></div></div>
+          <div class="gn" style="left:142px;top:168px"><div class="h"><span class="id">b1_relu1</span><span class="ty">ReLU</span></div><div class="f">image 32×32×32<span class="p">0</span></div></div>
+          <div class="gn" style="left:142px;top:220px"><div class="h"><span class="id">b1_conv2</span><span class="ty">Conv2d</span><span class="kv">32 · k3</span></div><div class="f">image 32×32×32<span class="p">9,216</span></div></div>
+          <div class="gn" aria-selected="true" style="left:142px;top:272px"><div class="h"><span class="id">b1_add</span><span class="ty">Add</span><span class="kv">2 inputs</span></div><div class="f">image 32×32×32<span class="p">0</span></div></div>
+        </div></section>
+        <section class="panel"><header><span class="mono">b1_add</span> · Add</header><div class="insp">
+          <p style="margin:0;font-size:var(--fs-12);color:var(--text-secondary)">Adds its inputs element by element. They must have the same shape.</p>
+          <div class="field"><label>Inputs</label><span class="input mono">b1_conv2, stem_relu</span><small>In this order: input first, then by ID. Concat joins them in this order.</small></div>
+          <div class="io"><span>in <b>image 32×32×32</b> × 2</span><span>out <b>image 32×32×32</b></span></div>
+          <p style="margin:0;font-size:var(--fs-11);color:var(--text-muted)">To connect, drag from a node's lower handle onto this node, or pick inputs in the list view.</p>
+        </div></section>
+      </div>
+    </main>
+  </div>
+</div>
+<p class="cap">The skip edge leaves <span class="mono">stem_relu</span> and curves around the block into the Add node, labelled "skip"; selecting the Add node turns both its incoming edges accent. A node with two inputs that is not a merge is a problem (<span class="mono">too_many_inputs</span>).</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Problems: a mismatched linear layer, and a stack that shrinks below one pixel</h2>
+<div class="frame" style="height:520px">
+  <div class="shell" style="grid-template-rows:48px 1fr 0">
+    <nav class="side" aria-label="Main"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Models</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models</a></nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Build</b></div></header>
+    <main class="content">
+      <div class="bgrid" style="height:250px">
+        <section class="panel"><header>Layers</header></section>
+        <section class="panel"><header>Graph</header><div class="canvas">
+          <svg class="edges" viewBox="0 0 504 210" preserveAspectRatio="none" aria-hidden="true"><path d="M252 56 V64"/><path class="on" d="M252 108 V116"/><path d="M252 160 V168"/></svg>
+          <div class="gn" style="left:112px;top:12px"><div class="h"><span class="id">n1</span><span class="ty">Flatten</span></div><div class="f">vector 3072<span class="p">0</span></div></div>
+          <div class="gn bad" aria-selected="true" style="left:112px;top:64px"><div class="h"><span class="id">n2</span><span class="ty">Linear</span><span class="kv">in 1000 → 64</span><span class="flag"><svg class="i"><use href="#i-alert"/></svg></span></div><div class="f">—<span class="p">shape_mismatch</span></div></div>
+          <div class="gn muted" style="left:112px;top:116px"><div class="h"><span class="id">n3</span><span class="ty">ReLU</span></div><div class="f">?<span class="p">–</span></div></div>
+        </div></section>
+        <section class="panel"><header><span class="mono">n2</span> · Linear</header><div class="insp">
+          <div class="field error"><label><span class="mono">in_features</span><span class="badge">integer</span></label><span class="input mono" aria-invalid="true">1000</span><small><svg class="i" style="width:12px;height:12px"><use href="#i-alert"/></svg>Its input has 3072 features. Clear it to infer.</small></div>
+          <div class="field"><label><span class="mono">out_features</span><span class="badge">integer</span></label><span class="input mono">64</span></div>
+        </div></section>
+      </div>
+      <section class="problems" aria-labelledby="pr">
+        <header id="pr"><svg class="i"><use href="#i-alert"/></svg>2 problems <span style="font-weight:400;color:var(--text-secondary);font-size:var(--fs-12)">· fix them to continue</span></header>
+        <div class="prob"><svg class="i"><use href="#i-alert"/></svg><span><a href="#">n2</a>: in_features is 1000, but its input has 3072 features</span><span class="code">shape_mismatch</span></div>
+        <div class="prob"><svg class="i"><use href="#i-alert"/></svg><span><a href="#">p6</a>: This pooling would shrink 1×1 below 1×1 (to 0×0): use a smaller kernel or stride, padding, or fewer downsampling layers (BUILD-1.6)</span><span class="code">below_one_pixel</span></div>
+      </section>
+      <div class="sumbar"><span style="color:var(--text-muted)">— parameters · memory — until the problems are fixed</span><span class="spacer"></span><span class="pill failed"><svg class="i"><use href="#i-alert"/></svg>2 problems</span><button class="btn sm primary is-disabled" aria-disabled="true">Continue to training</button></div>
+    </main>
+  </div>
+</div>
+<p class="cap">The server's sentences, unchanged. A node in error has the danger border and a warning flag; nodes after it show "?" and stay quiet (no cascade). <i>Continue to training</i> is disabled, and its tooltip says why.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · List view: the same graph from the keyboard</h2>
+<div class="frame" style="height:350px">
+  <div class="shell" style="grid-template-rows:48px 1fr 0">
+    <nav class="side" aria-label="Main"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Models</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models</a></nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Build</b></div></header>
+    <main class="content">
+      <div class="toolbar"><span class="group-btns" role="group" aria-label="View"><button class="btn sm"><svg class="i"><use href="#i-branch"/></svg>Canvas</button><button class="btn sm" aria-pressed="true"><svg class="i"><use href="#i-list"/></svg>List</button></span><button class="btn sm"><svg class="i"><use href="#i-plus"/></svg>Add layer <kbd>a</kbd></button></div>
+      <div class="table-wrap"><table class="t">
+        <thead><tr><th>#</th><th>ID</th><th>Layer</th><th>Inputs</th><th>Output</th><th class="r">Parameters</th><th></th></tr></thead>
+        <tbody>
+        <tr><td class="id">–</td><td class="id">input</td><td style="color:var(--text-muted)">locked</td><td></td><td class="id">image 3×32×32</td><td class="r">–</td><td></td></tr>
+        <tr><td class="id">1</td><td class="id">stem</td><td>Conv2d 32 · k3</td><td class="id">input</td><td class="id">image 32×32×32</td><td class="r">864</td><td class="acts-cell"><span class="acts"><button class="btn sm ghost" aria-label="Move up">↑</button><button class="btn sm ghost" aria-label="Move down">↓</button><button class="btn sm ghost" aria-label="Remove"><svg class="i"><use href="#i-x"/></svg></button></span></td></tr>
+        <tr aria-selected="true"><td class="id">5</td><td class="id">b1_add</td><td>Add</td><td><span class="select is-focus">b1_conv2, stem_relu<svg class="i"><use href="#i-down"/></svg></span></td><td class="id">image 32×32×32</td><td class="r">0</td><td class="acts-cell"><span class="acts"><button class="btn sm ghost">↑</button><button class="btn sm ghost">↓</button><button class="btn sm ghost"><svg class="i"><use href="#i-x"/></svg></button></span></td></tr>
+        <tr><td class="id">–</td><td class="id">output</td><td style="color:var(--text-muted)">locked</td><td class="id">pool</td><td class="id">Linear 32 → 10</td><td class="r">330</td><td></td></tr>
+        </tbody></table></div>
+    </main>
+  </div>
+</div>
+<p class="cap">Rows in canonical order. <i>Inputs</i> is one choice for ordinary layers and several for merges. ↑ ↓ move a layer within a chain and rewire its neighbours; <kbd>Enter</kbd> opens the inspector; <kbd>Delete</kbd> removes, asking first if that would disconnect anything.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Start: the templates for this dataset type</h2>
+<div class="frame" style="height:380px">
+  <div class="shell" style="grid-template-rows:48px 1fr 0">
+    <nav class="side" aria-label="Main"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Models</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models</a></nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Build</b></div></header>
+    <main class="content">
+      <div class="dsbar"><span class="select">cifar10 · <span class="mono">ds_f8e67211dd94</span><svg class="i"><use href="#i-down"/></svg></span><span class="ends">input image 3×32×32 → 10 classes</span></div>
+      <div class="state" style="padding:var(--sp-4)"><svg class="i"><use href="#i-branch"/></svg><b>Start from a template, or add a first layer.</b>
+        <div class="tpl" style="width:900px;margin-top:var(--sp-2);text-align:left">
+          <div class="tplc"><b>MLP</b><p>Two hidden layers (256, 128) on the flattened image: M8's reference MLP.</p><div class="meta"><span class="badge">built-in</span>mlp · 820,874<span class="spacer"></span><button class="btn sm">Use</button></div></div>
+          <div class="tplc"><b>Small CNN</b><p>Three blocks of two 3×3 convolutions with batch norm, then a global average pool.</p><div class="meta"><span class="badge">built-in</span>cnn · 288,746<span class="spacer"></span><button class="btn sm">Use</button></div></div>
+          <div class="tplc"><b>Residual CNN</b><p>A stem and two residual blocks, each adding its input back (BUILD-1.9).</p><div class="meta"><span class="badge">built-in</span>cnn · 38,378<span class="spacer"></span><button class="btn sm">Use</button></div></div>
+        </div>
+        <button class="btn sm"><svg class="i"><use href="#i-plus"/></svg>Add a first layer</button></div>
+    </main>
+  </div>
+</div>
+<p class="cap">Only this type's templates; counts are for this dataset's ends. Saved templates follow the built-in ones, with <i>Delete</i> on their card.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · A dataset that cannot be trained yet; checking; error</h2>
+<div class="frame" style="height:250px">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-3);padding:var(--sp-4)">
+    <div class="state"><svg class="i"><use href="#i-info"/></svg><b>This version cannot be trained yet</b><p>Tabular: ingestion and training arrive in M10. You can still build a model and save it as a template.</p><button class="btn sm">Choose another dataset</button></div>
+    <div class="state" style="border-style:solid"><span class="skeleton" style="width:180px"></span><span class="skeleton" style="width:240px;height:40px"></span><p>Checking… the last result stays visible meanwhile.</p></div>
+    <div class="state err" role="alert"><svg class="i"><use href="#i-alert"/></svg><b>The spec could not be checked</b><p><span class="mono">dependency_unavailable</span> · Postgres is unreachable. Check the postgres container, then retry. Your draft is kept.</p><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Retry</button></div>
+  </div>
+</div>
+
+<!-- ===================================================================== G -->
+<h2>G · 1024 px</h2>
+<div class="frame compact" style="height:470px">
+  <div class="shell rail">
+    <nav class="side" aria-label="Main"><div class="brand" style="padding:0 var(--sp-1)"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg></a></nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Build</b></div></header>
+    <main class="content">
+      <div class="phead"><span class="select">cifar10 · <span class="mono">ds_f8e…</span><svg class="i"><use href="#i-down"/></svg></span><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-plus"/></svg>Layers<svg class="i"><use href="#i-down"/></svg></button><span class="group-btns"><button class="btn sm" aria-pressed="true">Canvas</button><button class="btn sm">List</button></span><button class="btn sm primary">Continue</button></div>
+      <section class="panel" style="flex:1"><div class="canvas">
+        <svg class="edges" viewBox="0 0 900 300" preserveAspectRatio="none" aria-hidden="true"><path d="M310 56 V64"/><path d="M310 108 V116"/></svg>
+        <div class="gn lock" style="left:170px;top:12px"><div class="h"><svg class="i"><use href="#i-db"/></svg><span class="id">input</span><span class="kv" style="margin-left:auto">image 3×32×32</span></div></div>
+        <div class="gn" aria-selected="true" style="left:170px;top:64px"><div class="h"><span class="id">c1</span><span class="ty">Conv2d</span></div><div class="f">image 32×32×32<span class="p">864</span></div></div>
+        <div class="gn" style="left:170px;top:116px"><div class="h"><span class="id">bn1</span><span class="ty">BatchNorm</span></div><div class="f">image 32×32×32<span class="p">64</span></div></div>
+      </div></section>
+      <div class="sumbar"><span><span class="big">10,538</span> parameters</span><span class="sep"></span><span class="key w">164.7 KB with Adam</span><span class="spacer"></span><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>No problems</span></div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+  <aside class="drawer" aria-label="Selected layer"><header><span class="mono">c1</span> · Conv2d<span class="spacer"></span><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header><div class="insp"><div class="field"><label><span class="mono">out_channels</span><span class="badge">integer</span></label><span class="input mono">32</span></div><div class="field"><label><span class="mono">kernel_size</span><span class="badge">integer</span></label><span class="input mono">3</span></div></div></aside>
+</div>
+<p class="cap">At 1024 px the palette becomes the <i>Layers</i> menu and the inspector a drawer over the graph, opened by selecting a node and closed with <kbd>Esc</kbd>.</p>
+
+<h2>Accessibility notes</h2>
+<div class="changes">
+<ul>
+<li>The list view is the keyboard path for everything; the canvas is a picture of it for pointer use. <kbd>a</kbd> adds after the selected node, arrows move between rows, <kbd>Enter</kbd> edits, <kbd>Delete</kbd> removes.</li>
+<li>Each node has a text name: "c1, Conv2d, output image 32 by 32 by 32, 864 parameters"; a node in error adds "problem: …".</li>
+<li>The problem count and the summary are a polite status region: each edit announces "2 problems" or "No problems", not every number.</li>
+<li>Greyed palette tiles are not focusable; their reason is read with the group.</li>
+<li>Meaning is never colour alone: problems have an icon and words, the memory parts have their names and numbers, the selected node has a thicker outline.</li>
+</ul>
+</div>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body></html>

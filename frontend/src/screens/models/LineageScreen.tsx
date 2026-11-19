@@ -108,10 +108,20 @@ export function LineageScreen() {
           <span className="mono">{(data.parameters / 1e6).toFixed(2)} M</span> parameters
         </span>
         <span className="spacer" />
-        <button type="button" className="btn" disabled title="Run setup arrives with the model builder (M9, SCR-09)">
-          <Icon name="refresh" />
-          Train again…
-        </button>
+        {(() => {
+          const latest = data.versions.find((v) => v.id === data.latest_version_id && v.job_id);
+          return latest?.job_id ? (
+            <Link className="btn" to={`/runs/new?from=${latest.job_id}`}>
+              <Icon name="refresh" />
+              Train again…
+            </Link>
+          ) : (
+            <button type="button" className="btn" disabled title="No run to start again from yet">
+              <Icon name="refresh" />
+              Train again…
+            </button>
+          );
+        })()}
       </div>
       {queued ? (
         <p className="note2" role="status">

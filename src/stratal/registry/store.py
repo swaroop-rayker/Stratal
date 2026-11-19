@@ -114,6 +114,7 @@ def ensure_lineage(
     classes: Sequence[str],
     parameters: int,
     task: str,
+    name: str | None = None,
 ) -> ModelLineage:
     """The lineage for this key, created if new, and locked until the transaction ends,
     so two runs starting at once create one base between them."""
@@ -129,7 +130,7 @@ def ensure_lineage(
         .values(
             id=lineage_id,
             key_hash=key_hash,
-            name=f"{model_spec.get('name', 'model')} · {dataset_slug}",
+            name=f"{name or model_spec.get('name', 'model')} · {dataset_slug}",
             task=task,
             model_spec=model_spec,
             dataset_id=dataset_id,

@@ -41,6 +41,7 @@ ml-cpu = [
 # Also installed in the GPU worker image, so GPU-marked tests can run there.
 test = [
     "pytest>=8.3",              # SPEC §7.1 Tests
+    "torchinfo>=1.8",           # BUILD-1.5: cross-checks the builder's parameter counts (tests only)
 ]
 dev = [
     { include-group = "test" },

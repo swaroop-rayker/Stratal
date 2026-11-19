@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-09 training run setup — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+/* SCR-07 */
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.danger { border-width: 2px; border-color: var(--ink); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; } .select.off { color: var(--ink-3); }
+.search { height: 24px; width: 200px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; color: var(--ink-3); font-size: 11px; gap: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); } .pill.strike { text-decoration: line-through; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 40px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.hover td { background: #f7f7f7; }
+.t .sec td { height: 26px; background: var(--fill); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.bar { width: 80px; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; display: inline-block; position: relative; vertical-align: middle; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); }
+.muted { color: var(--ink-3); }
+.err-line { font-size: 11px; color: var(--ink-2); }
+.empty { display: grid; place-items: center; text-align: center; padding: 30px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 460px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.toast { position: absolute; right: 16px; bottom: 44px; width: 360px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.1); font-size: 12px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+/* SCR-11 additions */
+.cols { display: grid; grid-template-columns: 1fr 340px; gap: 12px; min-height: 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.stackbar { display: flex; height: 14px; border: 1px solid var(--ink-3); border-radius: 3px; overflow: hidden; }
+.stackbar i { display: block; height: 100%; border-right: 1px solid #fff; }
+.kvs { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px; } .kvs span:nth-child(even) { font-family: var(--mono); text-align: right; }
+.sw { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--ink-3); margin-right: 6px; vertical-align: middle; }
+.drop { border: 1.5px dashed var(--line); border-radius: 6px; height: 64px; display: grid; place-items: center; color: var(--ink-3); font-size: 12px; }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 480px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font: 600 15px var(--mono); }
+.drawer .body { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; font-size: 12px; }
+.code { font: 11px/1.5 var(--mono); background: var(--fill); border: 1px solid var(--soft); border-radius: 4px; padding: 8px; white-space: pre; color: var(--ink-2); }
+.pin { font-size: 13px; color: var(--ink-3); } .pin.on { color: var(--ink); }
+
+/* SCR-08 / SCR-09 additions */
+.builder { display: grid; grid-template-columns: 170px 1fr 300px; gap: 12px; height: 470px; min-height: 0; }
+.palette { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; font-size: 11px; }
+.pgroup { font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+.ptile { border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; background: #fff; }
+.ptile.off { color: var(--ink-3); border-style: dashed; background: var(--fill); }
+.canvas { position: relative; border: 1px solid var(--line); border-radius: 6px; background: repeating-linear-gradient(0deg, #fafafa 0 19px, #f0f0f0 19px 20px), #fafafa; padding: 14px; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+.gnode { position: relative; width: 300px; min-height: 34px; border: 1.5px solid var(--ink-2); border-radius: 6px; background: #fff; display: flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; }
+.gnode b { font-family: var(--mono); font-weight: 600; }
+.gnode .shape { margin-left: auto; font: 11px var(--mono); color: var(--ink-2); }
+.gnode .par { font: 10px var(--mono); color: var(--ink-3); min-width: 34px; text-align: right; }
+.gnode.on { border-width: 3px; border-color: var(--ink); }
+.gnode.lock { border-style: dashed; background: var(--fill); }
+.gnode.bad { border: 2px solid var(--ink); background: #f3f3f3; }
+.gnode.faded { color: var(--ink-3); border-color: var(--line); }
+.lockk { font: 10px var(--mono); color: var(--ink-3); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; }
+.edge { width: 2px; height: 16px; background: var(--ink-3); }
+.addhint { margin-top: 10px; border: 1.5px dashed var(--line); border-radius: 6px; padding: 6px 12px; color: var(--ink-3); font-size: 11px; }
+.skip { position: absolute; left: 60px; width: 30px; border: 2px solid var(--ink-3); border-right: none; border-radius: 8px 0 0 8px; }
+.skiplabel { position: absolute; left: 20px; font: 10px var(--mono); color: var(--ink-3); }
+.badge { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 10px; font-weight: 700; }
+.inspector { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.inspector h3 { margin: 0; display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.f { display: grid; grid-template-columns: 100px 1fr; gap: 2px 8px; align-items: center; font-size: 12px; }
+.f label { font-family: var(--mono); color: var(--ink-2); font-size: 11px; }
+.f .in { border: 1px solid var(--line); border-radius: 4px; height: 24px; display: flex; align-items: center; padding: 0 8px; background: #fff; }
+.f .in.bad { border: 2px solid var(--ink); }
+.f .hint { grid-column: 2; font-size: 10px; color: var(--ink-3); }
+.summary { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+.summary .sep { width: 1px; height: 18px; background: var(--soft); }
+.problems { border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.problems .muted { font: 10px var(--mono); margin-left: 6px; }
+.form2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+.meter { position: relative; height: 16px; border: 1px solid var(--ink-3); border-radius: 3px; display: flex; overflow: hidden; }
+.meter i { display: block; height: 100%; border-right: 1px solid #fff; }
+.meter .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.off-section { opacity: .45; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-09 — Training run setup · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: BUILD-1.2, BUILD-1.3, RUN-1.9, UI-2.3 (M9); HPO-1.1–1.4 in M10 (the study part, not drawn)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> SCR-09 (approved v2)</span><span>Route: <span class="mono">/runs/new</span></span><span>2026-11-19</span></div>
+<p>Layout and hierarchy only, inside the approved shell (faint). Blue numbers are annotations. The data: the <i>Small CNN</i> from SCR-08 on the CIFAR-10 split <span class="mono">ds_f8e67211dd94</span> (288,746 parameters). The memory figures are the builder's estimate (ADR-0017 rule 7); on the card the same CNN measured 0.23 GB at batch 128 and 0.79 GB at 512 (M8, NFR-1), so the estimate errs on the safe side.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>One page in the order you decide things:</b> model, data, training settings, device, then start. A right-hand column stays in view with the VRAM check, what will happen, and <i>Start run</i>.</li>
+<li><b>The model comes from SCR-08</b> (or a template, or <i>Train again</i> on SCR-11). The page shows its name, family, parameters and memory, with <i>Edit in builder</i>. Reached with no model, it says so and links to SCR-08 and the templates.</li>
+<li><b>The training form is generated</b> from <span class="mono">GET /config/schemas/train</span> (UI-2.3), grouped into schedule, optimizer, reproducibility and checkpoints. <span class="mono">momentum</span> appears only for SGD. The checkpoint interval defaults to the one saved on SCR-14.</li>
+<li><b>Start from:</b> in M9 every run starts from its lineage's base (ADR-0015); the page says whether that base exists or will be created. Choosing a trained version to start from is not offered yet.</li>
+<li><b>Device</b> is <i>Auto</i>, <i>GPU</i> or <i>CPU</i>, with what Auto will do for this model ("under 1 M parameters: times both and picks the faster") and whether a GPU job is running now (RUN-1.9).</li>
+<li><b>The VRAM check warns, it does not block.</b> It adds weights, gradients, optimizer state and the activation estimate for the batch size, and compares the sum with the 5.1 GB cap. Over the cap it says so and offers the largest batch that fits by the estimate. Starting anyway is allowed: the estimate is rough, and a run that does run out of memory fails cleanly with a suggested batch (RUN-1.5).</li>
+<li><b>"Start again with 64"</b> on a run that ran out of memory (SCR-07, SCR-04) opens this page prefilled with that run's settings and the suggested batch. This closes the difference accepted at their Gate 3.</li>
+<li><b>Errors from the server land on their fields:</b> a <span class="mono">422</span> from <span class="mono">POST /jobs</span> marks each field it names; spec problems link back to SCR-08.</li>
+<li><b>The study part (M10)</b> is a collapsed section, <i>Tune with a study</i>, marked as arriving in M10, so the layout has room for it now.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Setting up a run</h2>
+<div class="frame" style="height:880px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav on">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b> / Build / New run</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><b>New training run</b></div>
+      <div class="cols" style="grid-template-columns:1fr 360px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card"><h3><span class="n" style="position:static;display:inline-block;margin-right:4px">1</span>Model <span class="spacer"></span><span class="btn sm ghost">Edit in builder</span></h3>
+            <div style="display:flex;gap:18px;font-size:12px"><span><b class="mono">small_cnn</b> <span class="k">from SCR-08</span></span><span>cnn</span><span class="mono">288,746 parameters</span><span class="mono">4.6 MB with Adam</span><span class="pill">✓ No problems</span></div></div>
+          <div class="card"><h3><span class="n" style="position:static;display:inline-block;margin-right:4px">2</span>Data</h3>
+            <div style="display:flex;gap:18px;font-size:12px;align-items:center"><span class="select">cifar10 · <span class="mono">ds_f8e67211dd94</span> ▾</span><span class="mono">train 47,704 · val 5,963 · test 5,963</span><span class="muted">10 classes · 3×32×32</span></div></div>
+          <div class="card"><h3><span class="n" style="position:static;display:inline-block;margin-right:4px">3</span>Training <span class="muted" style="font-weight:400;font-size:11px">form from the train schema</span></h3>
+            <div class="form2">
+              <div class="f"><label>epochs</label><span class="in">30</span><span class="hint">1–1000</span></div>
+              <div class="f"><label>batch_size</label><span class="in">128</span><span class="hint">Images per step · 1–4096</span></div>
+              <div class="f"><label>learning_rate</label><span class="in">0.001</span></div>
+              <div class="f"><label>schedule</label><span class="in">cosine ▾</span></div>
+              <div class="f"><label>optimizer</label><span class="in">adam ▾</span></div>
+              <div class="f"><label>weight_decay</label><span class="in">0</span></div>
+              <div class="f"><label>seed</label><span class="in">0</span></div>
+              <div class="f"><label>deterministic</label><span class="in">☐</span><span class="hint">Slower; an exact resume on the GPU</span></div>
+              <div class="f"><label>checkpoint_every_s</label><span class="in">300</span><span class="hint">From SCR-14: every 5 min</span></div>
+            </div></div>
+          <div class="card"><h3><span class="n" style="position:static;display:inline-block;margin-right:4px">4</span>Start from</h3><div style="font-size:12px">A new lineage, <span class="mono">small_cnn · cifar10</span>: its base is saved before step 1. <span class="muted">(Choosing a trained version to start from is not offered yet.)</span></div></div>
+          <div class="card"><h3><span class="n" style="position:static;display:inline-block;margin-right:4px">5</span>Device</h3><div style="display:flex;gap:12px;align-items:center;font-size:12px"><span class="group"><span class="btn sm on">Auto</span><span class="btn sm">GPU</span><span class="btn sm">CPU</span></span><span class="muted">Under 1 M parameters: Auto times 20 steps on each and trains on the faster (RUN-1.9). The GPU is free.</span></div></div>
+          <div class="card off-section"><h3>▸ Tune with a study <span class="k">M10</span></h3></div>
+        </div>
+        <div class="card" style="position:sticky;top:0">
+          <h3><span class="n" style="position:static;display:inline-block;margin-right:4px">6</span>VRAM check</h3>
+          <div class="meter"><i style="width:3%;background:var(--ink-2)"></i><i style="width:4%;background:var(--ink-3)"></i><span class="cap" style="left:85%"></span></div>
+          <div style="font-size:11px;display:flex;justify-content:space-between" class="muted"><span>0</span><span>cap 5.1 GB ▲</span><span>6 GB</span></div>
+          <div class="kvs"><span>Weights, gradients, Adam</span><span>4.6 MB</span><span>Activations × 128 (estimate)</span><span>0.35 GB</span><span>CUDA context</span><span>0.09 GB</span><span><b>Total</b></span><span><b>0.44 GB</b></span></div>
+          <div class="pill">✓ Fits under the cap</div>
+          <div style="border-top:1px solid var(--soft);padding-top:8px;font-size:12px">Will run <b>30 epochs</b> of 373 steps on the <b>GPU queue</b>, checkpointing every epoch and every 5 min. About <b>2 min</b> at M8's measured speed.</div>
+          <span class="btn primary" style="justify-content:center">Start run →</span>
+          <span class="muted" style="font-size:11px">Opens the run's live view (SCR-04).</span>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 3% · RAM 3.1 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Model</td><td>The spec's name, family, parameters, memory and problems (none, or the start is disabled)</td><td><span class="mono">POST /model-specs/validate</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Data</td><td>The split, its rows per split, classes and image size (BUILD-1.3); changing it revalidates the model</td><td><span class="mono">GET /versions/{id}</span>; validate's <span class="mono">dataset</span></td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Training</td><td>The train config's fields, generated with ranges and help (BUILD-1.2, UI-2.3)</td><td><span class="mono">GET /config/schemas/train</span>; <span class="mono">GET /settings</span> for the checkpoint default</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Start from</td><td>Whether the lineage and its base exist (ADR-0015)</td><td><span class="mono">GET /models?q=</span></td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Device</td><td>Auto, GPU or CPU, what Auto will do, and whether a GPU job is running (RUN-1.9)</td><td><span class="mono">GET /jobs?state=running</span></td><td>on <span class="mono">job</span> messages</td></tr>
+<tr><td><span class="num">6</span></td><td>VRAM check and start</td><td>Weights, gradients, optimizer state, activations for the batch, context, against the cap; a warning and a smaller batch when over; what will happen; <i>Start run</i> (<span class="mono">POST /jobs</span>, kind <span class="mono">train</span>)</td><td>validate's <span class="mono">memory</span> × batch; <span class="mono">GET /system</span> for the card</td><td>as fields change</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Batch 2048: over the cap by the estimate</h2>
+<div class="frame w1024" style="height:300px">
+  <div style="padding:16px;display:flex;gap:16px">
+    <div class="card" style="width:360px">
+      <h3>VRAM check</h3>
+      <div class="meter"><i style="width:86%;background:var(--ink-2)"></i><i style="width:6%;background:var(--ink-3)"></i><span class="cap" style="left:85%"></span></div>
+      <div class="kvs"><span>Weights, gradients, Adam</span><span>4.6 MB</span><span>Activations × 2048 (estimate)</span><span>5.52 GB</span><span>CUDA context</span><span>0.09 GB</span><span><b>Total</b></span><span><b>5.6 GB</b></span></div>
+      <div style="padding:8px 10px;border:2px solid var(--ink);border-radius:6px;background:#f7f7f7;font-size:12px"><b>Over the 5.1 GB cap by the estimate.</b> Batch 1024 fits (2.8 GB). The estimate is rough; if the run does run out of memory it stops cleanly and suggests a batch.</div>
+      <div style="display:flex;gap:8px"><span class="btn sm primary">Use batch 1024</span><span class="btn sm">Start anyway</span></div>
+    </div>
+    <div style="font-size:12px;max-width:520px" class="muted">The warning names the largest power of two that fits by the same estimate. <i>Start anyway</i> starts the run as set; nothing is blocked.</div>
+  </div>
+</div>
+
+<!-- ===================================================================== C -->
+<h2>C · Opened from a run that ran out of memory: "Start again with 64"</h2>
+<div class="frame w1024" style="height:200px">
+  <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+    <div style="padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--fill);font-size:12px">Prefilled from <span class="mono">job_0067</span>, which ran out of GPU memory at batch 128: <b>batch_size</b> set to <b>64</b>, everything else as that run. <span class="btn sm ghost">Clear</span></div>
+    <div class="form2" style="width:640px"><div class="f"><label>batch_size</label><span class="in" style="border-width:2px">64</span><span class="hint">was 128 in job_0067</span></div><div class="f"><label>epochs</label><span class="in">30</span></div></div>
+  </div>
+</div>
+<p class="caption">Reached from SCR-07's or SCR-04's out-of-memory panel (<span class="mono">/runs/new?from=job_0067&amp;batch_size=64</span>), and likewise from SCR-11's <i>Train again</i> without a batch change. A changed field is marked with what it was.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · The server refuses: field errors, and a spec problem</h2>
+<div class="frame w1024" style="height:220px">
+  <div style="padding:16px;display:flex;gap:16px">
+    <div class="card" style="width:460px"><h3>Training</h3>
+      <div class="f"><label>epochs</label><span class="in bad">0</span><span class="hint" style="color:var(--ink)">Input should be greater than or equal to 1</span></div></div>
+    <div class="card" style="width:420px"><h3>Model</h3>
+      <div style="padding:8px 10px;border:2px solid var(--ink);border-radius:6px;background:#f7f7f7;font-size:12px"><b>output_not_vector</b> · the model must end in a vector, got image 32×16×16: flatten or pool before the output. <span class="btn sm">Open in builder</span></div></div>
+  </div>
+</div>
+<p class="caption">Ranges are checked as you type, from the schema; the server's <span class="mono">422</span> is shown the same way for anything it adds. A spec problem (after the dataset was changed, say) links to its node on SCR-08.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · No model yet; loading; error</h2>
+<div class="frame" style="height:220px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Models</b> / New run</span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-content:start">
+      <div class="empty" style="height:150px"><div><b>Build or pick a model first.</b><p style="margin:6px 0">A run needs a model and a split to train it on.</p><span class="btn sm primary">Open the builder</span> <span class="btn sm">Templates</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px"><span class="skel" style="width:220px;height:18px"></span><span class="skel" style="height:50px"></span><span class="skel" style="height:90px"></span></div>
+      <div class="empty err" style="height:150px"><div><b>The run could not be started</b><p style="margin:6px 0"><span class="mono">dependency_unavailable</span> · Redis is unreachable. Do check the redis container, then try again. Your settings are kept.</p><span class="btn sm">Try again</span></div></div>
+    </section><footer class="status"></footer></div>
+</div>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame w1024" style="height:300px">
+  <div class="shell rail"><aside class="side"></aside><header class="top"><span><b>Models</b> / New run</span></header>
+    <section class="content">
+      <div class="card"><h3>Model <span class="spacer"></span><span class="mono" style="font-weight:400">small_cnn · 288,746</span></h3></div>
+      <div class="card"><h3>Training</h3><div class="f"><label>epochs</label><span class="in">30</span></div><div class="f"><label>batch_size</label><span class="in">128</span></div></div>
+      <div class="summary"><span class="pill">✓ 0.44 GB of 5.1 GB</span><span class="spacer"></span><span class="btn primary">Start run →</span></div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">At 1024 px the right-hand column folds into a footer bar with the VRAM result and <i>Start run</i>; its detail opens from the result.</p>
+</main>
+
+</body>
+</html>

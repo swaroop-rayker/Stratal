@@ -915,6 +915,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/model-specs/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Spec Schema
+         * @description JSON Schemas for SCR-08's forms (UI-2.3): one per layer type, under ``$defs``.
+         */
+        get: operations["spec_schema_api_v1_model_specs_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-specs/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Spec
+         * @description Check a spec against a dataset version's two ends (BUILD-1.3 to BUILD-1.6).
+         */
+        post: operations["validate_spec_api_v1_model_specs_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dataset-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dataset Types
+         * @description Each dataset type's input, compatible model families and default metrics (DATA-5.5).
+         */
+        get: operations["dataset_types_api_v1_dataset_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Templates */
+        get: operations["list_templates_api_v1_model_templates_get"];
+        put?: never;
+        /** Create Template */
+        post: operations["create_template_api_v1_model_templates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Template */
+        get: operations["get_template_api_v1_model_templates__template_id__get"];
+        /** Update Template */
+        put: operations["update_template_api_v1_model_templates__template_id__put"];
+        post?: never;
+        /** Delete Template */
+        delete: operations["delete_template_api_v1_model_templates__template_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -939,6 +1036,94 @@ export interface components {
             accepted: number;
             interval: components["schemas"]["Interval"];
         };
+        /**
+         * Add
+         * @description Element-wise sum of its inputs, e.g. a residual connection (BUILD-1.9).
+         */
+        Add: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "add";
+        };
+        /**
+         * Attention
+         * @description Multi-head self-attention, from scratch (BUILD-1.8).
+         */
+        Attention: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "attention";
+            /**
+             * Num Heads
+             * @description Heads; must divide the features.
+             * @default 4
+             */
+            num_heads: number;
+            /**
+             * Dropout
+             * @description Dropout on attention weights.
+             * @default 0
+             */
+            dropout: number;
+            /**
+             * Causal
+             * @description Each position sees only earlier ones.
+             * @default false
+             */
+            causal: boolean;
+        };
+        /** AvgPool2d */
+        AvgPool2d: {
+            /**
+             * Kernel Size
+             * @description Square window, in pixels.
+             * @default 2
+             */
+            kernel_size: number;
+            /**
+             * Stride
+             * @description Step between windows; empty means the window.
+             */
+            stride?: number | null;
+            /**
+             * Padding
+             * @description Padding on each side; at most half the window.
+             * @default 0
+             */
+            padding: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "avg_pool2d";
+        };
+        /**
+         * BatchNorm
+         * @description Batch normalisation: over channels for an image, over features for a vector.
+         */
+        BatchNorm: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "batch_norm";
+            /**
+             * Momentum
+             * @description Running-average momentum.
+             * @default 0.1
+             */
+            momentum: number;
+            /**
+             * Eps
+             * @description Added to the variance.
+             * @default 0.00001
+             */
+            eps: number;
+        };
         /** ClipScores */
         ClipScores: {
             /** Edges */
@@ -949,6 +1134,66 @@ export interface components {
             by_split: {
                 [key: string]: components["schemas"]["Distribution"];
             } | null;
+        };
+        /**
+         * Concat
+         * @description Join inputs along the channel axis of images, the feature axis otherwise.
+         */
+        Concat: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "concat";
+        };
+        /** Conv2d */
+        Conv2d: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "conv2d";
+            /**
+             * Out Channels
+             * @description Output channels.
+             * @default 32
+             */
+            out_channels: number;
+            /**
+             * Kernel Size
+             * @description Square kernel, in pixels.
+             * @default 3
+             */
+            kernel_size: number;
+            /**
+             * Stride
+             * @description Step between windows.
+             * @default 1
+             */
+            stride: number;
+            /**
+             * Padding
+             * @description Zero padding on each side.
+             * @default 1
+             */
+            padding: number;
+            /**
+             * Dilation
+             * @description Spacing between kernel taps.
+             * @default 1
+             */
+            dilation: number;
+            /**
+             * Bias
+             * @description Learn an additive bias per channel.
+             * @default true
+             */
+            bias: boolean;
+            /**
+             * In Channels
+             * @description Input channels. Leave empty to take them from the input.
+             */
+            in_channels?: number | null;
         };
         /** CreateDataset */
         CreateDataset: {
@@ -1015,12 +1260,52 @@ export interface components {
             stored_bytes: number;
             latest_version: components["schemas"]["Version"] | null;
         };
+        /** DatasetEnds */
+        DatasetEnds: {
+            /** Version Id */
+            version_id: string;
+            /** Dataset Type */
+            dataset_type: string;
+            /** Input */
+            input: {
+                [key: string]: unknown;
+            } | null;
+            /** Input Text */
+            input_text: string | null;
+            /** Output Size */
+            output_size: number | null;
+            /** Classes */
+            classes: string[];
+            /** Families */
+            families: ("mlp" | "cnn" | "rnn" | "transformer")[];
+            /** Trainable */
+            trainable: boolean;
+            /** Problem */
+            problem: string | null;
+        };
         /** DatasetList */
         DatasetList: {
             /** Items */
             items: components["schemas"]["Dataset"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** DatasetTypeOut */
+        DatasetTypeOut: {
+            /** Name */
+            name: string;
+            /** Title */
+            title: string;
+            /** Input Kind */
+            input_kind: ("image" | "vector" | "tokens") | null;
+            /** Families */
+            families: ("mlp" | "cnn" | "rnn" | "transformer")[];
+            /** Default Metrics */
+            default_metrics: string[];
+            /** Trainable */
+            trainable: boolean;
+            /** Note */
+            note: string;
         };
         /** Decision */
         Decision: {
@@ -1093,6 +1378,39 @@ export interface components {
             /** Above */
             above: number;
         };
+        /** Dropout */
+        Dropout: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "dropout";
+            /**
+             * P
+             * @description Share of values zeroed in training.
+             * @default 0.5
+             */
+            p: number;
+        };
+        /** Embedding */
+        Embedding: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "embedding";
+            /**
+             * Embedding Dim
+             * @description Features per token.
+             * @default 64
+             */
+            embedding_dim: number;
+            /**
+             * Padding Idx
+             * @description A token ID whose vector stays zero, e.g. padding.
+             */
+            padding_idx?: number | null;
+        };
         /** Event */
         Event: {
             /** Id */
@@ -1156,6 +1474,14 @@ export interface components {
             /** Total */
             total: number | null;
         };
+        /** Flatten */
+        Flatten: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "flatten";
+        };
         /** FolderSource */
         FolderSource: {
             /**
@@ -1170,10 +1496,102 @@ export interface components {
              */
             path: string;
         };
+        /** GELU */
+        GELU: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "gelu";
+        };
+        /** GRU */
+        GRU: {
+            /**
+             * Hidden Size
+             * @description Features per direction.
+             * @default 128
+             */
+            hidden_size: number;
+            /**
+             * Num Layers
+             * @description Stacked recurrent layers.
+             * @default 1
+             */
+            num_layers: number;
+            /**
+             * Bidirectional
+             * @description Also read the sequence backwards.
+             * @default false
+             */
+            bidirectional: boolean;
+            /**
+             * Dropout
+             * @description Dropout between stacked layers (needs 2 or more).
+             * @default 0
+             */
+            dropout: number;
+            /**
+             * Output
+             * @description 'last': the final step's features, a vector; 'sequence': every step's.
+             * @default last
+             * @enum {string}
+             */
+            output: "sequence" | "last";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "gru";
+        };
+        /**
+         * GlobalAvgPool
+         * @description Mean over the spatial axes of an image, or over the positions of a sequence.
+         */
+        GlobalAvgPool: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "global_avg_pool";
+        };
+        /**
+         * GraphSpec
+         * @description A model as layers and edges (ADR-0017 rule 1).
+         */
+        GraphSpec: {
+            /**
+             * Spec Version
+             * @default 1
+             * @constant
+             */
+            spec_version: 1;
+            /**
+             * Label
+             * @description The model's name in lists. Not part of its identity.
+             * @default model
+             */
+            label: string;
+            /** Nodes */
+            nodes?: components["schemas"]["Node"][];
+            /** Edges */
+            edges?: [
+                string,
+                string
+            ][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** Head */
+        Head: {
+            /** In Features */
+            in_features: number;
+            /** Out Features */
+            out_features: number;
+            /** Parameters */
+            parameters: number;
         };
         /** Health */
         Health: {
@@ -1324,6 +1742,83 @@ export interface components {
             finished_at: string | null;
             error: components["schemas"]["JobError"] | null;
         };
+        /** LSTM */
+        LSTM: {
+            /**
+             * Hidden Size
+             * @description Features per direction.
+             * @default 128
+             */
+            hidden_size: number;
+            /**
+             * Num Layers
+             * @description Stacked recurrent layers.
+             * @default 1
+             */
+            num_layers: number;
+            /**
+             * Bidirectional
+             * @description Also read the sequence backwards.
+             * @default false
+             */
+            bidirectional: boolean;
+            /**
+             * Dropout
+             * @description Dropout between stacked layers (needs 2 or more).
+             * @default 0
+             */
+            dropout: number;
+            /**
+             * Output
+             * @description 'last': the final step's features, a vector; 'sequence': every step's.
+             * @default last
+             * @enum {string}
+             */
+            output: "sequence" | "last";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "lstm";
+            /**
+             * Implementation
+             * @description 'torch': PyTorch's LSTM; 'scratch': the from-scratch cell (BUILD-1.8).
+             * @default torch
+             * @enum {string}
+             */
+            implementation: "torch" | "scratch";
+        };
+        /**
+         * LayerNorm
+         * @description Layer normalisation over the last axis (features).
+         */
+        LayerNorm: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "layer_norm";
+            /**
+             * Eps
+             * @description Added to the variance.
+             * @default 0.00001
+             */
+            eps: number;
+        };
+        /** LeakyReLU */
+        LeakyReLU: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "leaky_relu";
+            /**
+             * Negative Slope
+             * @description Slope below zero.
+             * @default 0.01
+             */
+            negative_slope: number;
+        };
         /** Lineage */
         Lineage: {
             /** Version Id */
@@ -1371,6 +1866,74 @@ export interface components {
              */
             source: "global" | "lineage";
             last_run: components["schemas"]["RetentionLastRun"] | null;
+        };
+        /** Linear */
+        Linear: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "linear";
+            /**
+             * Out Features
+             * @description Output features.
+             * @default 128
+             */
+            out_features: number;
+            /**
+             * Bias
+             * @description Learn an additive bias.
+             * @default true
+             */
+            bias: boolean;
+            /**
+             * In Features
+             * @description Input features. Leave empty to take them from the input; a value that disagrees with the input is an error (BUILD-1.4).
+             */
+            in_features?: number | null;
+        };
+        /** MaxPool2d */
+        MaxPool2d: {
+            /**
+             * Kernel Size
+             * @description Square window, in pixels.
+             * @default 2
+             */
+            kernel_size: number;
+            /**
+             * Stride
+             * @description Step between windows; empty means the window.
+             */
+            stride?: number | null;
+            /**
+             * Padding
+             * @description Padding on each side; at most half the window.
+             * @default 0
+             */
+            padding: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "max_pool2d";
+        };
+        /** Memory */
+        Memory: {
+            /**
+             * Optimizer
+             * @enum {string}
+             */
+            optimizer: "adam" | "sgd" | "sgd_momentum";
+            /** Weights Bytes */
+            weights_bytes: number;
+            /** Gradients Bytes */
+            gradients_bytes: number;
+            /** Optimizer Bytes */
+            optimizer_bytes: number;
+            /** Total Bytes */
+            total_bytes: number;
+            /** Activation Bytes Per Sample */
+            activation_bytes_per_sample: number;
         };
         /** ModelLineage */
         ModelLineage: {
@@ -1456,15 +2019,20 @@ export interface components {
         };
         /**
          * ModelSpec
-         * @description A model to train. In M8 it names a reference model; from M9 the builder's graph.
+         * @description A model to train: a reference model by name, or the builder's graph (ADR-0017 rule 2).
+         *
+         *     A reference spec serializes exactly as in M8 (``{"name": "small_cnn"}``), so the
+         *     config hashes and lineage keys of runs before M9 do not change.
          */
         ModelSpec: {
             /**
              * Name
-             * @description 'mlp': two hidden layers (256, 128) on the flattened image. 'small_cnn': three blocks of two 3×3 convolutions with batch norm, then a global average pool and one linear layer.
+             * @description 'mlp': two hidden layers (256, 128) on the flattened image. 'small_cnn': three blocks of two 3×3 convolutions with batch norm, then a global average pool and one linear layer. 'graph': the model in `graph`, built on SCR-08.
              * @enum {string}
              */
-            name: "mlp" | "small_cnn";
+            name: "mlp" | "small_cnn" | "graph";
+            /** @description The layers and edges, for 'graph'. */
+            graph?: components["schemas"]["GraphSpec"] | null;
         };
         /** ModelVersion */
         ModelVersion: {
@@ -1584,6 +2152,33 @@ export interface components {
             /** Weights Deleted At */
             weights_deleted_at: string | null;
         };
+        /** Node */
+        Node: {
+            /**
+             * Id
+             * @description Short name, unique in the spec.
+             */
+            id: string;
+            /** Layer */
+            layer: components["schemas"]["Linear"] | components["schemas"]["Conv2d"] | components["schemas"]["MaxPool2d"] | components["schemas"]["AvgPool2d"] | components["schemas"]["GlobalAvgPool"] | components["schemas"]["BatchNorm"] | components["schemas"]["LayerNorm"] | components["schemas"]["Dropout"] | components["schemas"]["Flatten"] | components["schemas"]["Embedding"] | components["schemas"]["RNN"] | components["schemas"]["LSTM"] | components["schemas"]["GRU"] | components["schemas"]["Attention"] | components["schemas"]["PositionalEncoding"] | components["schemas"]["ReLU"] | components["schemas"]["LeakyReLU"] | components["schemas"]["GELU"] | components["schemas"]["Tanh"] | components["schemas"]["Sigmoid"] | components["schemas"]["Softmax"] | components["schemas"]["Add"] | components["schemas"]["Concat"];
+        };
+        /** NodeReport */
+        NodeReport: {
+            /** Id */
+            id: string;
+            /** Type */
+            type: string;
+            /** Inputs */
+            inputs: string[];
+            /** Shape */
+            shape: {
+                [key: string]: unknown;
+            } | null;
+            /** Shape Text */
+            shape_text: string | null;
+            /** Parameters */
+            parameters: number | null;
+        };
         /**
          * PipelineRequest
          * @description ``POST /jobs`` with ``kind: pipeline``.
@@ -1658,6 +2253,29 @@ export interface components {
             /** @description Settings to plan with instead of the saved ones. */
             values?: components["schemas"]["RetentionValues"] | null;
         };
+        /**
+         * PositionalEncoding
+         * @description Sinusoidal position information added to a sequence (BUILD-1.8). No parameters.
+         */
+        PositionalEncoding: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "positional_encoding";
+            /**
+             * Max Len
+             * @description Longest sequence it encodes.
+             * @default 512
+             */
+            max_len: number;
+            /**
+             * Dropout
+             * @description Dropout after adding.
+             * @default 0
+             */
+            dropout: number;
+        };
         /** PowerEvent */
         PowerEvent: {
             /**
@@ -1711,6 +2329,15 @@ export interface components {
             /** Total Ms */
             total_ms: number;
         };
+        /** Problem */
+        Problem: {
+            /** Node Id */
+            node_id: string | null;
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
         /**
          * ProcessSample
          * @description One row of ``process_samples`` (DATA_MODEL.md §4.8): the job's own memory view.
@@ -1732,6 +2359,60 @@ export interface components {
             torch_reserved_mb: number | null;
             /** Torch Max Allocated Mb */
             torch_max_allocated_mb: number | null;
+        };
+        /** RNN */
+        RNN: {
+            /**
+             * Hidden Size
+             * @description Features per direction.
+             * @default 128
+             */
+            hidden_size: number;
+            /**
+             * Num Layers
+             * @description Stacked recurrent layers.
+             * @default 1
+             */
+            num_layers: number;
+            /**
+             * Bidirectional
+             * @description Also read the sequence backwards.
+             * @default false
+             */
+            bidirectional: boolean;
+            /**
+             * Dropout
+             * @description Dropout between stacked layers (needs 2 or more).
+             * @default 0
+             */
+            dropout: number;
+            /**
+             * Output
+             * @description 'last': the final step's features, a vector; 'sequence': every step's.
+             * @default last
+             * @enum {string}
+             */
+            output: "sequence" | "last";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "rnn";
+            /**
+             * Nonlinearity
+             * @description Activation.
+             * @default tanh
+             * @enum {string}
+             */
+            nonlinearity: "tanh" | "relu";
+        };
+        /** ReLU */
+        ReLU: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "relu";
         };
         /** ReasonCount */
         ReasonCount: {
@@ -2220,6 +2901,25 @@ export interface components {
             lineages: components["schemas"]["SettingsLineage"][] | null;
             context: components["schemas"]["TrainingContext"] | null;
         };
+        /** Sigmoid */
+        Sigmoid: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "sigmoid";
+        };
+        /**
+         * Softmax
+         * @description Softmax over the last axis.
+         */
+        Softmax: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "softmax";
+        };
         /** Source */
         Source: {
             /** Name */
@@ -2235,6 +2935,44 @@ export interface components {
             items: components["schemas"]["Source"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** SpecReport */
+        SpecReport: {
+            /** Valid */
+            valid: boolean;
+            /** Input */
+            input: {
+                [key: string]: unknown;
+            };
+            /** Output Size */
+            output_size: number;
+            /** Nodes */
+            nodes: components["schemas"]["NodeReport"][];
+            head: components["schemas"]["Head"] | null;
+            /** Total Parameters */
+            total_parameters: number | null;
+            /** Family */
+            family: ("mlp" | "cnn" | "rnn" | "transformer") | null;
+            memory: components["schemas"]["Memory"] | null;
+            /** Problems */
+            problems: components["schemas"]["Problem"][];
+            /** Structure Hash */
+            structure_hash: string | null;
+        };
+        /** SpecSchema */
+        SpecSchema: {
+            /** Layer */
+            layer: {
+                [key: string]: unknown;
+            };
+            /** Graph */
+            graph: {
+                [key: string]: unknown;
+            };
+            /** Max Nodes */
+            max_nodes: number;
+            /** Max Edges */
+            max_edges: number;
         };
         /** SplitProgress */
         SplitProgress: {
@@ -2365,6 +3103,14 @@ export interface components {
             /** Stall Timeout S */
             stall_timeout_s: number;
         };
+        /** Tanh */
+        Tanh: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "tanh";
+        };
         /** Telemetry */
         Telemetry: {
             /** Resource */
@@ -2380,6 +3126,53 @@ export interface components {
             job_id: string | null;
             /** At */
             at: string | null;
+        };
+        /** TemplateCreate */
+        TemplateCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Dataset Type */
+            dataset_type: string;
+            spec: components["schemas"]["GraphSpec"];
+        };
+        /** TemplateOut */
+        TemplateOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Dataset Type */
+            dataset_type: string;
+            /** Builtin */
+            builtin: boolean;
+            spec: components["schemas"]["GraphSpec"];
+            /** Structure Hash */
+            structure_hash: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** TemplateUpdate */
+        TemplateUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            spec?: components["schemas"]["GraphSpec"] | null;
         };
         /**
          * TrainConfig
@@ -2494,6 +3287,27 @@ export interface components {
             gpu_temp_high_7d: components["schemas"]["TemperatureHigh"] | null;
             /** Running Jobs */
             running_jobs: string[];
+        };
+        /** ValidateRequest */
+        ValidateRequest: {
+            graph: components["schemas"]["GraphSpec"];
+            /**
+             * Dataset Version
+             * @description The split the model will train on.
+             */
+            dataset_version: string;
+            /**
+             * Optimizer
+             * @description For the memory estimate.
+             * @default adam
+             * @enum {string}
+             */
+            optimizer: "adam" | "sgd" | "sgd_momentum";
+        };
+        /** ValidateResponse */
+        ValidateResponse: {
+            dataset: components["schemas"]["DatasetEnds"];
+            report: components["schemas"]["SpecReport"] | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -4135,6 +4949,238 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SettingsSaved"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    spec_schema_api_v1_model_specs_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpecSchema"];
+                };
+            };
+        };
+    };
+    validate_spec_api_v1_model_specs_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dataset_types_api_v1_dataset_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetTypeOut"][];
+                };
+            };
+        };
+    };
+    list_templates_api_v1_model_templates_get: {
+        parameters: {
+            query?: {
+                dataset_type?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_template_api_v1_model_templates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_template_api_v1_model_templates__template_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_template_api_v1_model_templates__template_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_template_api_v1_model_templates__template_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

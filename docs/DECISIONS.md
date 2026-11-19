@@ -699,6 +699,13 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `_stop_if_asked` emits it before raising `JobPaused`; the collector sets the stage's `step` and `metrics.epoch` from it, which is what SCR-07's toast reads. Charts ignore it (they plot only `train` progress).
 - **Why:** Progress is reported at most once a second, so the toast named the last report's step (193) while the run had paused at 260.
 
+## M9: model builder
+
+**The owner's M9 kickoff decisions** (2026-11-19)
+- **What:** BUILD-1.8 written by the agent; full graphs for BUILD-1.9; tabular categorical columns through an input block, one-hot by default with an optional `Embedding` per column; torchinfo as a test-only dependency.
+- **How:** Put as four questions with a recommendation each; recorded in MILESTONES.md's M9 section and shaping ADR-0017 (proposed).
+- **Why:** Each changes the model spec's shape (ADR-0017 rules 1, 6 and 10) or adds a dependency, so each is the owner's to decide before the ADR. The owner took the recommendation on three, and full graphs over a residual wrapper layer.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

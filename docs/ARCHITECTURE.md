@@ -316,6 +316,7 @@ Stratal/
 │   ├── label/          captioning, CLIP scoring, filter, review
 │   ├── eval/           reports and metrics
 │   ├── train/          training: config, reference models, image loader, checkpoints, weights, the train stage (M8)
+│   ├── build/          the model builder: layer and graph specs, shapes, counts, templates (plain Python); compile and from-scratch layers (PyTorch) (M9)
 │   ├── registry/       model registry store, the retention keep rule and the retention job (M8)
 │   ├── inference/      the inference service: the model holder and its /predict app (M8)
 │   ├── pretrained/     the pretrained-model allow-list and the pull command (M4)
