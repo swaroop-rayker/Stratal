@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-09_v1.html`](../screens/SCR-09_v1.html), G2 approved 2026-11-19 (the study part with SCR-10, M10) |
 | Built | `frontend/src/screens/build/RunScreen.tsx`, `vram.ts`, `frontend/src/styles/scr09.css`; route `/runs/new` (`?version=`, or `?from=job_…&batch_size=`); links from SCR-08 (*Continue to training*), SCR-11 (*Train again…*), SCR-07 and SCR-04 (*Start again with N* on a run that ran out of memory) |
 | Checked | 2026-11-19, live at the pane's 800 px (the single-column layout), dark and light, with the CNN built on SCR-08 (`my_model`, 10,602 parameters) on `ds_f8e67211dd94`; *Start run* created `job_0053`, followed on SCR-04 and found on SCR-11 |
-| Status | Waiting for the owner's review |
+| Status | **Approved by the owner on 2026-11-19** ("Approved"), with the listed differences |
 
 ## Screenshots (in `SCR-09/`)
 

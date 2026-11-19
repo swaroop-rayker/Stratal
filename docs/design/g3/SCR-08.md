@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-08_v1.html`](../screens/SCR-08_v1.html), G2 approved 2026-11-19 |
 | Built | `frontend/src/screens/build/` (`BuilderScreen`, `GraphCanvas`, `parts`, `layers`), `frontend/src/lib/graph.ts`, `frontend/src/api/builder.ts`, `frontend/src/styles/scr08.css`; route `/models/build` (`?version=` the split, `?view=list` the keyboard view) |
 | Checked | 2026-11-19, live at 1280 × 760 (contrast, the demo), 1400 × 900 (frames A and E) and at the pane's 800 px (the narrow layout), dark and light, on the CIFAR-10 split `ds_f8e67211dd94`: the Small CNN template, then a CNN built layer by layer from the palette (`my_model`, 10,602 parameters), trained as `job_0053` |
-| Status | Waiting for the owner's review |
+| Status | **Approved by the owner on 2026-11-19** ("Approved"), with the listed differences |
 
 ## Screenshots (in `SCR-08/`)
 

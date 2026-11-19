@@ -514,7 +514,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_UI_2_3_*`: a field added to a config schema appears in its form with no UI change (2026-11-19, `Builder.test.tsx`: a new Conv2d field appears in SCR-08's inspector)
 - [x] `test_DATA_5_2_*`: each type validates against its schema (2026-11-19: tabular and labelled-text row validators, the tabular input block; labelled images since M8)
 - [x] `test_DATA_5_5_*`: the UI offers only compatible type and model combinations (2026-11-19: `incompatible_family` from the API; SCR-08's palette greys the rest with the reason; templates listed per type)
-- [ ] G3 for SCR-08 and SCR-09 (built 2026-11-19; reports `docs/design/g3/SCR-08.md`, `SCR-09.md`, waiting for the owner)
+- [x] G3 for SCR-08 and SCR-09 (approved 2026-11-19, "Approved": `docs/design/g3/SCR-08.md`, `SCR-09.md`)
 - [x] Demo: build a CNN on the canvas, train it from SCR-09, follow it on SCR-04, find it in SCR-11 (2026-11-19: `my_model`, eight layers added from the palette, 10,602 parameters; `job_0053` chose the GPU by benchmark, 10 epochs in 65 s, val acc 53.6 %, peak 302 MB; `mv_0cfa1ce88a16` in `my_model · cifar10` on SCR-11. README "Model builder demo")
 - [x] Docs updated (learning notes) (2026-11-19: API.md §3.11 and the M9 interfaces, DATA_MODEL §4.14, ARCHITECTURE's code layout, ADR-0017; `docs/learning/` §26 and §5k)
 - [ ] Owner's OK to merge
