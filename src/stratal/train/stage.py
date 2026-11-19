@@ -19,6 +19,7 @@ the version becomes ``trained``, and only then are the checkpoints removed
 weights returns that result without training again.
 """
 
+import gc
 import math
 import os
 import random
@@ -68,14 +69,6 @@ class TrainUnits:
 
 
 OWNER_UNITS = TrainUnits()
-
-
-def _owner_unit_missing(exc: NotImplementedError) -> StratalError:
-    return StratalError(
-        f"Stage {STAGE} needs an owner unit that is not written yet: {exc}",
-        suggested_action="Write the unit (ADR-0012; its tests are strict expected failures "
-        "until then).",
-    )
 
 
 def _device(choice: str) -> str:
@@ -253,17 +246,8 @@ class _Run:
 
             state = manager.load(load, name=config.model.name, estimate_mb=estimate)
             result = self._with_choice(self._train(state.model, state.optimizer, started))
-            try:
-                manager.unload()
-            except NotImplementedError:
-                self.ctx.emit(
-                    stage=STAGE,
-                    level="WARN",
-                    message="VRAM manager v2 is not written yet (RUN-1.4); the process "
-                    "exit frees the GPU",
-                    reason="TrainingState.close is an owner unit.",
-                    suggested_action="None needed for this run.",
-                )
+            del state  # the manager now holds the only reference (RUN-1.4)
+            manager.unload()  # proves the card is back at its baseline, or warns (BUG5)
             return result
 
     def _train(
@@ -322,15 +306,20 @@ class _Run:
                 x = x.to(self.device, non_blocking=True)
                 y = y.to(self.device, non_blocking=True)
                 optimizer.zero_grad(set_to_none=True)
+                out_of_memory = False
                 try:
                     logits = model(x)
                     loss = loss_fn(logits, y)
                     loss.backward()
+                    grad_norm = nn.utils.clip_grad_norm_(model.parameters(), float("inf"))
+                    optimizer.step()  # Adam's state is allocated on the first step
                 except torch.cuda.OutOfMemoryError:
-                    del x, y
+                    out_of_memory = True
+                if out_of_memory:
+                    # Outside the except block, so the traceback no longer holds the failed
+                    # step's tensors; dropping these frees the rest before _oom measures.
+                    x = y = logits = loss = None
                     raise self._oom(optimizer) from None
-                grad_norm = nn.utils.clip_grad_norm_(model.parameters(), float("inf"))
-                optimizer.step()
                 scheduler.step()
                 global_step += 1
                 loss_sum += loss.detach() * len(y)
@@ -515,6 +504,17 @@ class _Run:
                 model, optimizer, scheduler, ckpt.Checkpoint(position, self.hash, state.history)
             )
             self._record_partial(state.history)
+            # A last progress report at the checkpoint's step: progress is otherwise reported
+            # at most once a second, so the stage's step would lag the pause (SCR-07's toast).
+            self.ctx.emit(
+                stage=STAGE,
+                substage="pause",
+                message=f"Paused in epoch {position.epoch + 1}/{self.config.epochs}, after step "
+                f"{position.batches_done}/{self.steps_per_epoch}; the checkpoint is kept",
+                step=position.global_step,
+                total=self.total_steps,
+                metrics={"epoch": position.epoch + 1},
+            )
             raise JobPaused(self.ctx.job_id)
 
     def _save(
@@ -724,7 +724,10 @@ class _Run:
         return StageResult(metrics=metrics)
 
     def _oom(self, optimizer: Any) -> StratalError:
+        """The suggested batch (RUN-1.5): what stays allocated once the step's tensors and
+        gradients are gone is fixed; the rest of the step's peak is per sample."""
         optimizer.zero_grad(set_to_none=True)
+        gc.collect()
         peak = torch.cuda.max_memory_allocated() / MB
         total = torch.cuda.get_device_properties(0).total_memory / MB
         cap = total * VRAM_FRACTION
@@ -732,15 +735,12 @@ class _Run:
         torch.cuda.empty_cache()
         batch = self.config.batch_size
         per_sample = max(peak - fixed, 0.0) / batch
-        try:
-            suggested = self.units.suggest(
-                failed_batch=batch, fixed_mb=fixed, per_sample_mb=per_sample, cap_mb=cap
-            )
-            return self.units.oom_error(
-                failed_batch=batch, suggested=suggested, peak_mb=peak, cap_mb=cap
-            )
-        except NotImplementedError as exc:
-            return _owner_unit_missing(exc)
+        suggested = self.units.suggest(
+            failed_batch=batch, fixed_mb=fixed, per_sample_mb=per_sample, cap_mb=cap
+        )
+        return self.units.oom_error(
+            failed_batch=batch, suggested=suggested, peak_mb=peak, cap_mb=cap
+        )
 
 
 def run_train(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult:

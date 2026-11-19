@@ -259,6 +259,7 @@ VRAM handling is owner-implemented (RUN-1.4, RUN-1.5). The architecture fixes th
 - **A hard cap below the card's limit.** Each GPU process limits PyTorch to a fraction of VRAM chosen so the driver-reported peak stays under 5.5 GB. PyTorch then raises a catchable out-of-memory error at a known point, whatever the Windows driver would have done (NFR-1, BUG2).
 - **OOM is handled at the batch boundary.** For inference-style stages such as captioning, the batch is halved and retried, with a WARN event that says so. For training (phase 2) the job fails cleanly with a suggested batch size (RUN-1.5).
 - **Unload is verified, not assumed.** Where a process outlives a model (the phase-2 `inference` service), every unload is followed by a check that allocated VRAM returned to baseline. If it did not, the process restarts itself (RUN-1.4.AC1).
+- **Training uses the same manager (M8).** A GPU run loads its model and optimizer as one `TrainingState` and unloads it at the end; `close()` sets gradients to `None` and empties the optimizer's state, and the unload proves allocated memory is back at its baseline before the process exits. A training OOM is caught outside the failed step, once its tensors are gone: what stays allocated is the fixed part, the rest of the step's peak is divided per sample, and the run fails with `gpu_oom` and the largest power of two below the batch that fits 90 % of the cap (RUN-1.5). When the step fails early, its peak is only a lower bound, so the suggestion tends to half the batch; it fit on the card. The inference service probes `close()` once and uses the GPU only if it works.
 - **RAM is bounded from outside.** Each container has a memory limit. A job that exceeds it is killed by the kernel, which cannot be caught in-process, so the supervisor detects it from the exit status and reports "killed: out of memory" with the peak it reached (BUG2, BUG3).
 - **Loading is streamed and bounded.** Decoders feed the GPU through bounded queues, so a slow GPU slows the loader instead of filling RAM. Worker counts are derived from the container's memory limit (BUG3).
 
@@ -282,7 +283,7 @@ Spike S-03 (one run, 705 s of Modern Standby) found the job and the GPU unharmed
 | **Errors** | One exception hierarchy with stable codes. The API maps it to RFC 9457 problem details. Job failures store the same code, a reason and a suggested action ([ADR-0011](decisions/ADR-0011-error-model.md)) |
 | **IDs** | Human-readable prefixes: `job_0142`, `ds_7f3a9c21b04e`, `rev_0007`. See [DATA_MODEL.md](DATA_MODEL.md#3-identifiers) |
 | **Reproducibility** | Locked dependencies (uv), pinned model revisions, seeds in config, deterministic row order in manifests, version IDs from content and config (NFR-4) |
-| **Security** | No `trust_remote_code`, safetensors for weights, skops for scikit-learn models, no pickle from outside. Models are downloaded only by an explicit pull command from an allow-list; at run time the model hub is offline (NFR-7, NFR-8) |
+| **Security** | No `trust_remote_code`, safetensors for weights, skops for scikit-learn models, no pickle from outside. Models are downloaded only by an explicit pull command from an allow-list; at run time the model hub is offline (NFR-7, NFR-8). Since M8 every read of a weights or checkpoint file goes through `train.weights.read_tensors`, which refuses anything that is not safetensors with `weights_unreadable`. Two tests keep it that way: a scan of `src/` and `scripts/` for any call that unpickles, and a tripwire (`stratal.testing.no_pickle`) that fails a whole training run, its resume and a `/predict` if anything unpickles |
 | **Testing** | Unit tests for domain logic on synthetic fixtures. Integration tests against real Postgres and Redis. GPU tests behind a marker, run locally. Kill tests for resilience. A meta-test checks every finished P0 has a `test_<ID>_*` (NFR-9) |
 | **Dependencies** | None added without naming the requirement that needs it. The API image carries no ML libraries |
 
@@ -296,7 +297,7 @@ Spike S-03 (one run, 705 s of Modern Standby) found the job and the GPU unharmed
 | **BUG4** sleep | Keep-awake while jobs run, sleep events on the timeline, per-batch commits, resume in a fresh process ([§8](#8-sleep-and-suspend)) | Freeze/unfreeze test; real sleep test in spike S-03 |
 | **BUG5** stale weights in VRAM | Process exit is the unload for jobs; verified unload plus self-restart for the inference service ([§7](#7-gpu-and-memory-policy)) | `test_RUN_1_4_*` |
 | **BUG6** VRAM bloat | One GPU lease across training, inference and Ollama; free-VRAM check before every load ([§7](#7-gpu-and-memory-policy)) | Lease contention test |
-| **BUG7** disk bloat | REG-2 retention as a job after every run, one rolling in-run checkpoint, content-addressed files never duplicated, orphan sweep and crash recovery in every retention run, a dry run | NFR-14 disk audit (`GET /models/{id}/disk`), `test_BUG7_*` |
+| **BUG7** disk bloat | REG-2 retention as a job after every run, one rolling in-run checkpoint, content-addressed files never duplicated, orphan sweep and crash recovery in every retention run, a dry run | NFR-14 disk audit (`GET /models/{id}/disk`), `test_NFR_14_*`, `test_BUG7_*`, `test_NFR_15_*` |
 
 ## 11. Code layout
 
@@ -314,11 +315,15 @@ Stratal/
 │   ├── data/           ingest, clean, preprocess, split, dataset types, versioning
 │   ├── label/          captioning, CLIP scoring, filter, review
 │   ├── eval/           reports and metrics
-│   ├── train/          training: config, reference models, image loader, checkpoints, the train stage (M8)
+│   ├── train/          training: config, reference models, image loader, checkpoints, weights, the train stage (M8)
+│   ├── registry/       model registry store, the retention keep rule and the retention job (M8)
+│   ├── inference/      the inference service: the model holder and its /predict app (M8)
+│   ├── pretrained/     the pretrained-model allow-list and the pull command (M4)
 │   ├── runtime/        job model, state machine, supervisor, child, context, GPU lease, VRAM manager
 │   ├── mon/            event schema, emitter, collector, sampler, watchdog
 │   ├── api/            FastAPI app, routers, schemas, SSE
-│   └── cli/            command-line entry points
+│   ├── cli/            command-line entry points
+│   └── testing/        fakes, harness and fixtures shared by the tests (shipped so integration tests run in every image)
 ├── tests/              unit, integration, gpu, chaos, bench, meta
 ├── frontend/           React app (from M6)
 └── docs/
@@ -337,6 +342,5 @@ Domain code in `data/`, `label/` and `eval/` does not import Celery, Redis or Fa
 
 ## 13. Not decided yet
 
-- Exact memory limits per container (spike S-07).
 - Hibernate, battery, and a sleep in the middle of a large allocation (spike S-03 covered one clean Modern Standby run).
 - Everything marked as an open clarification in [SPEC.md Appendix B](SPEC.md#appendix-b--open-clarifications-not-yet-approved).

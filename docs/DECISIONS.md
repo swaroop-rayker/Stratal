@@ -689,6 +689,16 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** An AST scan for `pickle`/`torch.load`/`np.load(allow_pickle)`-style calls and pickle-based libraries. `stratal.testing.no_pickle.forbid_unpickling` arms a `pickle.find_class` audit hook and swaps `pickle.load(s)`, `pickle.Unpickler` (for a refusing subclass, since libraries subclass it on import) and `torch.load`; the child arms it for a whole stage when `STRATAL_TEST_FORBID_UNPICKLING` names a report file. Every safetensors read goes through `weights.read_tensors`, which turns `SafetensorError` into the typed error.
 - **Why:** NFR-8.AC1 is a code review checklist; the scan makes the review repeatable, and the tripwire proves no library unpickles behind the code's back. The planted-file test showed that an unreadable file reached clients as a 500 `internal_error` (ERRORS.md E-014).
 
+**RUN-1.4 and RUN-1.5 written by the agent** (M8, RUN-1.4, RUN-1.5; the owner's request, 2026-11-19, ADR-0012)
+- **What:** `TrainingState.close`, `suggest_batch_size` and `training_oom_error`, to the contracts unchanged. The train stage no longer catches a missing unit: a GPU run proves its unload before exiting, and a training OOM fails with `gpu_oom` and a suggested batch. The inference service's probe now finds `close()` working, so it uses the GPU. This supersedes "Unwritten VRAM manager v2 only warns".
+- **How:** `close()` drops its references first, sets every parameter's gradient to `None`, then empties the optimizer's `state` and `param_groups` (a scheduler still holding the optimizer would otherwise pin the weights). The suggestion walks down the powers of two below the failed batch. The stage now leaves the `except` block before measuring after an OOM, and drops the step's tensors, so `fixed_mb` is weights, optimizer state and context only; `optimizer.step()` moved inside the guarded block, since Adam allocates its state there.
+- **Why:** The owner asked. Measured on the card: the CNN on 256-px images at batch 128 failed at the 5.1 GB cap with "reduce batch size from 128 → 64", and 64 completed. A step that fails early peaks at about the cap, so per-sample memory is a lower bound and the suggestion tends to half the batch; a probe step on a few samples would estimate it better, but the contract measures at the failed batch, so that is left as a possible change for the owner.
+
+**A pause reports its step** (M8, RUN-1.2; ERRORS.md E-015)
+- **What:** After a pause's checkpoint, the train stage sends one more progress report (substage `pause`) with the checkpoint's step and epoch.
+- **How:** `_stop_if_asked` emits it before raising `JobPaused`; the collector sets the stage's `step` and `metrics.epoch` from it, which is what SCR-07's toast reads. Charts ignore it (they plot only `train` progress).
+- **Why:** Progress is reported at most once a second, so the toast named the last report's step (193) while the run had paused at 260.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

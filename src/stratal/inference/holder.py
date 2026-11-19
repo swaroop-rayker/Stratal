@@ -15,9 +15,10 @@
 - **It reports what it holds** in ``stratal:inference:loaded``, set before the
   weights are read, and reads them under the lineage's lock, so retention never
   deletes a version while it is being loaded or served (REG-2.8).
-- **Until the owner's ``TrainingState.close()`` exists (RUN-1.4)** the GPU is not
-  used: the unload could not be proven. Small models are served on the CPU; larger
-  ones are refused, and the reason says why (the owner's choice, 2026-11-18).
+- **Only with a working ``TrainingState.close()`` (RUN-1.4)** is the GPU used: it is
+  tried once on a tiny CPU model, and without it no GPU unload could be proven. Then
+  small models are served on the CPU, larger ones are refused, and the reason says
+  why (the owner's choice, 2026-11-18). ``close()`` exists since 2026-11-19.
 
 Weights are read from the registry's safetensors with the model rebuilt from its
 spec; nothing is unpickled (NFR-8).
@@ -112,7 +113,7 @@ class TorchGpuSide:
 
 
 def close_written(state_cls: type[TrainingState] = TrainingState) -> bool:
-    """Whether the owner's ``TrainingState.close`` (RUN-1.4) exists: tried on a tiny CPU
+    """Whether ``TrainingState.close`` (RUN-1.4) works: tried on a tiny CPU
     model with no optimizer, as inference uses it (its contract's rule 6)."""
     probe = nn.Linear(1, 1)
     try:

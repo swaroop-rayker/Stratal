@@ -10,12 +10,12 @@
 
 | Store | Holds | Why this store |
 |---|---|---|
-| **PostgreSQL** | Jobs, stages, state transitions, events, telemetry, dataset versions and lineage, derivation cache, reviews, reports | Several processes write at once (API, workers, monitor); needs transactions and migrations |
+| **PostgreSQL** | Jobs, stages, state transitions, events, telemetry, dataset versions and lineage, derivation cache, reviews, reports; since M8 the model registry and the settings edited on SCR-14 | Several processes write at once (API, workers, monitor); needs transactions and migrations |
 | **Parquet manifests** | One file per dataset version: one row per item with status, hashes and per-stage columns | Columnar, compact, streamable in batches, queryable with DuckDB |
 | **Blob store** | Image files (originals and preprocessed copies), named by content hash | Immutable, deduplicated by construction |
 | **Redis** | Task queue, event stream buffer, live fan-out, control flags | Transient. Nothing in Redis is the only copy of anything that matters |
 | **Per-job files** | Structured log, event spool, in-run checkpoints | Local durability that does not depend on any service being up |
-| **Registry files** | Model weights as safetensors with `model.json` beside them, one folder per version (`registry/<lineage>/<version>/`, M8) | Deletable by retention, so not content-addressed (ADR-0015) |
+| **Registry files** | Model weights as safetensors with `model.json` beside them, one folder per version (`registry/<lineage>/<version>/`, M8). Nothing here or in a checkpoint is pickled; a file that is not safetensors is refused with `weights_unreadable` (NFR-8) | Deletable by retention, so not content-addressed (ADR-0015) |
 
 ## 2. Entity overview
 
@@ -73,7 +73,7 @@ The spec's examples show six hex characters. Six collide too easily (about a 3% 
 - A null and an absent column are the same, so a new empty column does not change existing IDs.
 - A known-answer test pins the algorithm. Changing it changes every stored version ID, so that needs an ADR and a migration plan.
 
-## 4. PostgreSQL schema (phase 1)
+## 4. PostgreSQL schema
 
 Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 
@@ -117,7 +117,7 @@ Indexes: `(dataset_id, created_at desc)`; `(stage, parent_version_id, config_has
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | `id` | text | no | PK, `job_…` |
-| `kind` | text | no | `pipeline` in phase 1; later `train`, `hpo_study`, `hpo_trial`, `eval`, `maintenance` |
+| `kind` | text | no | `pipeline`; since M8 also `train` (RUN-1.1) and `retention` (REG-2.2); later `hpo_study`, `hpo_trial`, `eval`, `maintenance` |
 | `state` | text | no | `queued`, `running`, `paused`, `completed`, `failed`, `cancelled`, `stalled` (check constraint) |
 | `desired_state` | text | yes | `paused` or `cancelled` while a request is pending |
 | `pause_reason` | text | yes | why a paused job is paused: `user` or `thermal` (M8, RUN-1.6); set with the pause request, kept while paused, cleared on resume. The watchdog resumes only `thermal` pauses |

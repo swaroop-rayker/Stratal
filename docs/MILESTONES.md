@@ -25,7 +25,7 @@
 | M5 | Splits, review, eval report | 1 | M | Done 2026-11-16 |
 | M6 | Phase-1 screens | 1 | L | Done 2026-11-17 |
 | M7 | Phase-1 acceptance | 1 | M | Done 2026-11-17 |
-| M8 | Training runtime and registry | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M8 | Training runtime and registry | 2 | L | Built 2026-11-19; done checklist complete except the owner's OK to merge (RUN-1.4 and RUN-1.5 written by the agent at the owner's request) |
 | M9 | Model builder | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
@@ -450,8 +450,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_RUN_1_1_*`: a training job moves through every state; invalid transitions are rejected and every transition is logged (2026-11-18: `test_M8_training.py`, `test_M8_pause_resume.py`, `test_M8_watchdog.py`, with the state machine's unit tests)
 - [x] `test_RUN_1_2_*`: start, pause, resume and cancel each work on a running job (2026-11-18: `test_M8_pause_resume.py` for pipeline jobs, `test_M8_training.py` for a training run, whose resumed weights match an uninterrupted run)
 - [x] `test_RUN_1_3_*`: kill mid-training, resume from the checkpoint; the metrics match an uninterrupted run within NFR-4's tolerance (2026-11-18: the weights match within 1e-6 on the CPU, `test_M8_training.py`)
-- [ ] 👤 `test_RUN_1_4_*` (gpu): after a training model is unloaded, `torch.cuda.memory_allocated` is back at baseline
-- [ ] 👤 `test_RUN_1_5_*` (gpu): a deliberately oversized batch fails cleanly with a smaller batch suggested, and nothing crashes
+- [x] 👤 `test_RUN_1_4_*` (gpu): after a training model is unloaded, `torch.cuda.memory_allocated` is back at baseline (2026-11-19, written by the agent at the owner's request, ADR-0012: on the card after Adam steps; a GPU training run's own unload is proven too; inference now uses the GPU, `test_REG_1_4_an_inference_model_unloads_to_baseline_on_the_card`)
+- [x] 👤 `test_RUN_1_5_*` (gpu): a deliberately oversized batch fails cleanly with a smaller batch suggested, and nothing crashes (2026-11-19, written by the agent at the owner's request: the CNN on 256-px images at batch 128 fails with `gpu_oom`, "reduce batch size from 128 → 64"; the next run at 64 completes in the same worker)
 - [x] `test_RUN_1_6_*`: a simulated high temperature pauses the job; it resumes when the temperature falls (2026-11-18, `test_M8_watchdog.py`: 84 °C pauses the GPU job, 78 °C keeps it paused, 72 °C resumes it; CPU jobs and user pauses are left alone)
 - [x] `test_RUN_1_7_*`: a simulated hang becomes `stalled` after T seconds (2026-11-18, `test_M8_watchdog.py`, T shortened to 1 s; it becomes running again when progress returns)
 - [x] `test_RUN_1_8_*`: SCR-04 updates live during a training run (2026-11-18: progress events carry the metrics, `Training.test.tsx` derives the charts from them; checked live at SCR-04 v2's Gate 3)

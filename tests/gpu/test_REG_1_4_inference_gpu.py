@@ -1,11 +1,8 @@
 # pyright: basic, reportMissingImports=false
 # PyTorch is installed only in the GPU image, so the type checker cannot see it here.
 """REG-1.4 on the real card: an inference model, held without an optimizer, unloads back
-to the baseline through the owner's ``TrainingState.close`` (ADR-0016 rule 3).
-
-A strict expected failure until the owner writes ``TrainingState.close`` (RUN-1.4,
-its contract's rule 6). Until then the service serves on the CPU only. Run in the
-GPU image:
+to the baseline through ``TrainingState.close`` (ADR-0016 rule 3; RUN-1.4, its
+contract's rule 6). Run in the GPU image:
     docker compose run --rm --no-deps worker-gpu pytest -q -m gpu tests/gpu
 """
 
@@ -19,7 +16,6 @@ from stratal.train.memory import TrainingState
 pytestmark = pytest.mark.gpu
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="owner unit")
 def test_REG_1_4_an_inference_model_unloads_to_baseline_on_the_card() -> None:
     import torch
 

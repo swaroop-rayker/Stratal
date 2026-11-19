@@ -19,12 +19,14 @@ def class_folders(root: Path, *, per_class: int = 20, size: int = 32) -> Path:
     return root
 
 
-def labelled_split(runner: Runner, root: Path, slug: str, *, per_class: int = 20) -> str:
+def labelled_split(
+    runner: Runner, root: Path, slug: str, *, per_class: int = 20, size: int = 32
+) -> str:
     """Run a labelled-images pipeline over fresh class folders; returns the split version."""
     job = PipelineApi(runner).run(
         {
             "dataset": slug,
-            "source": {"path": str(class_folders(root, per_class=per_class))},
+            "source": {"path": str(class_folders(root, per_class=per_class, size=size))},
             "dataset_type": "labelled_images",
             "stages": {"ingest": {"min_size": 32}},
         }

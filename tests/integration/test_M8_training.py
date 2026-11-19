@@ -8,6 +8,7 @@ marked ``gpu``), so they finish in seconds.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -189,9 +190,16 @@ def test_RUN_1_2_a_paused_run_checkpoints_and_resumes_where_it_stopped(
     assert api.client.post(f"/api/v1/jobs/{paused}/pause").status_code == 202
     thread.join(60)
 
+    runner.collect()
     job = runner.job(paused)
     assert job["state"] == "paused", job
     assert job["stages"][0]["status"] == "paused"
+    saved = [e for e in runner.events(paused) if e["substage"] == "checkpoint"][-1]
+    stopped_at = saved["metrics"]["checkpoint_step"]
+    assert job["stages"][0]["step"] == stopped_at, "the stage's step is where it paused"
+    setup = next(e for e in runner.events(paused) if e["substage"] == "setup")
+    per_epoch = -(-int(setup["metrics"]["train_rows"]) // CONFIG["batch_size"])
+    assert job["stages"][0]["metrics"]["epoch"] == stopped_at // per_epoch + 1  # SCR-07's toast
     assert list((_job_dir(paused) / "checkpoints").glob("ckpt-*.json")), "kept while paused"
     assert api.client.post(f"/api/v1/jobs/{paused}/resume").status_code == 202
     api.runner.queue.extend(api.queued)
@@ -225,6 +233,37 @@ def test_RUN_1_1_a_training_job_runs_on_the_gpu_under_the_cap(
     metrics = job["stages"][0]["metrics"]
     assert metrics["device"] == "gpu"
     assert metrics["peak_vram_reserved_mb"] < 5.5 * 1024, "NFR-1"
+    unloaded = [e for e in runner.events(job_id) if str(e["message"]).startswith("Unloaded")]
+    assert len(unloaded) == 1 and unloaded[0]["level"] == "INFO", unloaded
+    assert "back to its baseline" in unloaded[0]["message"], "RUN-1.4.AC1, in the stage itself"
+
+
+@pytest.mark.gpu
+def test_RUN_1_5_an_oversized_batch_fails_cleanly_and_the_suggested_batch_fits(
+    runner: Runner, tmp_path: Path
+) -> None:
+    if not torch.cuda.is_available():
+        pytest.skip("no CUDA device")
+    # 256-px images: the small CNN needs about 90 MB a sample, so 128 cannot fit in 5.1 GB.
+    version = labelled_split(runner, tmp_path / "src", "m8oom", per_class=100, size=256)
+    api = PipelineApi(runner)
+    gpu = {"model": {"name": "small_cnn"}, "device": "gpu", "epochs": 1}
+
+    failed = _run(api, _start(api, version, batch_size=128, **gpu))
+
+    assert failed["state"] == "failed", failed
+    error = failed["error"]
+    assert error["code"] == "gpu_oom", error
+    found = re.search(r"reduce batch size from 128 → (\d+)", error["reason"])
+    assert found, error["reason"]
+    suggested = int(found.group(1))
+    assert suggested < 128 and f"batch_size to {suggested}" in error["suggested_action"]
+    print(f"RUN-1.5: 128 failed; suggested {suggested}: {error['reason']}")
+
+    fits = _run(api, _start(api, version, batch_size=suggested, **gpu))  # the worker carried on
+
+    assert fits["state"] == "completed", fits["error"]
+    assert fits["stages"][0]["metrics"]["peak_vram_reserved_mb"] < 5.5 * 1024, "NFR-1"
 
 
 def _auto_run(runner: Runner, tmp_path: Path, slug: str, **config: Any) -> dict[str, Any]:

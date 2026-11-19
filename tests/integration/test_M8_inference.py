@@ -97,6 +97,7 @@ class Service:
         self.runner = runner
         self.version = labelled_split(runner, tmp_path / "src", "m8infer")
         settings = holder.pop("settings", get_settings())
+        self.gpu_side = holder.get("gpu")
         self.holder = ModelHolder(engine=get_engine(), settings=settings, bus=bus, **holder)
         app = create_inference_app(
             self.holder, lambda **kw: decode_image(data_dir=settings.data_dir, **kw)
@@ -190,14 +191,30 @@ def test_REG_1_4_predict_returns_a_result_for_a_sample_input(service: Service, b
     assert uploaded.json()["load_ms"] is None, "the model stayed loaded"
 
 
-def test_REG_1_4_without_the_owners_close_inference_stays_on_the_cpu(service: Service) -> None:
-    version = service.train()
+class UnwrittenState(TrainingState):
+    """``close()`` as the RUN-1.4 stub was: the service cannot prove a GPU unload."""
 
-    result = service.predict(version).json()
+    def close(self) -> None:
+        raise NotImplementedError("RUN-1.4 v2: TrainingState.close")
 
-    reason = service.holder.status()["gpu_unavailable"]
-    assert reason is not None and ("RUN-1.4" in reason or "CUDA" in reason)
+
+@pytest.fixture
+def no_close(runner: Runner, tmp_path: Any, bus: Bus) -> Iterator[Service]:
+    made = Service(runner, tmp_path, bus, gpu=FakeGpuSide(), state_cls=UnwrittenState)
+    yield made
+    made.holder.shutdown()
+
+
+def test_REG_1_4_without_a_working_close_inference_stays_on_the_cpu(no_close: Service) -> None:
+    version = no_close.train()
+
+    result = no_close.predict(version).json()
+
+    reason = no_close.holder.status()["gpu_unavailable"]
+    assert reason is not None and "RUN-1.4" in reason
     assert (result["device"], result["fallback_reason"]) == ("cpu", reason)
+    card = no_close.gpu_side
+    assert isinstance(card, FakeGpuSide) and card.gpu.allocated_mb() == 0, "nothing on the card"
 
 
 def test_REG_1_4_while_a_job_holds_the_gpu_a_small_model_runs_on_the_cpu(

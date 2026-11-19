@@ -1,7 +1,8 @@
 """GPU memory in training: the VRAM manager v2 and out-of-memory handling (RUN-1.4, RUN-1.5).
 
-Owner units (ADR-0012). The agent wrote the stubs, the contracts below and the
-tests; the owner writes the bodies marked ``raise NotImplementedError``.
+Owner units (ADR-0012), written by the agent at the owner's request on 2026-11-19,
+to the contracts below, which the owner approved with the stubs. How and why they
+work is explained in ``docs/learning/sys-design.md``.
 
 Training reuses the phase-1 :class:`~stratal.label.vram.VramManager`: it loads one
 GPU model at a time, refuses a load that does not fit, and proves after unloading
@@ -24,6 +25,7 @@ Tests: ``tests/unit/test_RUN_1_4_training_state.py``,
 ``tests/gpu/test_RUN_1_4_training_unload.py`` (the real card).
 """
 
+import math
 from typing import Any
 
 from stratal.core.errors import GpuOom
@@ -72,7 +74,21 @@ class TrainingState:
         return self._info
 
     def close(self) -> None:
-        raise NotImplementedError("RUN-1.4 v2: TrainingState.close is the owner's to write")
+        model, optimizer = self.model, self.optimizer
+        # Rule 3 first: whatever happens below, this object no longer pins anything.
+        self.model = None
+        self.optimizer = None
+        if model is not None:
+            # Rule 1, for every parameter, including any the optimizer does not hold.
+            for parameter in model.parameters():
+                parameter.grad = None
+        if optimizer is not None:
+            optimizer.zero_grad(set_to_none=True)
+            # Rule 2: Adam's exp_avg and exp_avg_sq live here, one pair per parameter.
+            optimizer.state.clear()
+            # The groups list every parameter, so an optimizer someone still holds
+            # (a learning-rate scheduler keeps one) would otherwise pin the weights.
+            optimizer.param_groups.clear()
 
 
 def suggest_batch_size(
@@ -95,7 +111,26 @@ def suggest_batch_size(
        ``per_sample_mb`` or ``cap_mb`` is negative or not finite, or ``cap_mb`` is 0.
     4. Depends on nothing but its arguments.
     """
-    raise NotImplementedError("RUN-1.5: suggest_batch_size is the owner's to write")
+    if failed_batch < 1:
+        raise ValueError(f"failed_batch must be at least 1, got {failed_batch}")
+    for name, value in (
+        ("fixed_mb", fixed_mb),
+        ("per_sample_mb", per_sample_mb),
+        ("cap_mb", cap_mb),
+    ):
+        if not math.isfinite(value) or value < 0:
+            raise ValueError(f"{name} must be a finite number of MB, at least 0, got {value!r}")
+    if cap_mb == 0:
+        raise ValueError("cap_mb must be more than 0")
+    budget = SAFETY_MARGIN * cap_mb
+    if failed_batch == 1:
+        return None
+    batch = 1 << ((failed_batch - 1).bit_length() - 1)  # the largest power of two below it
+    while batch >= 1:
+        if fixed_mb + batch * per_sample_mb <= budget:
+            return batch
+        batch //= 2
+    return None
 
 
 def training_oom_error(
@@ -116,4 +151,16 @@ def training_oom_error(
        (MB / 1024, as the VRAM manager's messages do), so the event explains
        itself: 5100 MB is "5.0 GB", 5220 MB is "5.1 GB".
     """
-    raise NotImplementedError("RUN-1.5: training_oom_error is the owner's to write")
+    usage = f"peak {peak_mb / 1024:.1f} GB of the {cap_mb / 1024:.1f} GB cap"
+    if suggested is None:
+        return GpuOom(
+            f"Training ran out of GPU memory at batch size {failed_batch} ({usage}); "
+            "even a batch of 1 does not fit.",
+            suggested_action="Train a smaller model, or set device: cpu to train on the processor.",
+        )
+    return GpuOom(
+        f"Training ran out of GPU memory at batch size {failed_batch} ({usage}): "
+        f"reduce batch size from {failed_batch} → {suggested}.",
+        suggested_action=f"Set the run's batch_size to {suggested} and start it again. A "
+        "smaller batch changes the optimisation, so its results will differ from this run's.",
+    )

@@ -7,12 +7,8 @@ failures until the owner writes ``TrainingState.close`` (ADR-0012).
 
 from typing import Any
 
-import pytest
-
 from stratal.label.models import ModelInfo
 from stratal.train.memory import TrainingState
-
-owner_unit = pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="owner unit")
 
 INFO = ModelInfo(name="small_cnn", revision="spec-1", display="small CNN", dtype="fp32")
 
@@ -45,7 +41,6 @@ class FakeAdam:
                 p.grad = None if set_to_none else p.grad
 
 
-@owner_unit
 def test_RUN_1_4_close_frees_gradients_and_optimizer_state() -> None:
     model = FakeModel()
     optimizer = FakeAdam(model)
@@ -59,7 +54,6 @@ def test_RUN_1_4_close_frees_gradients_and_optimizer_state() -> None:
     assert state.model is None and state.optimizer is None
 
 
-@owner_unit
 def test_RUN_1_4_closing_twice_is_harmless() -> None:
     state = TrainingState(FakeModel(), FakeAdam(FakeModel()), info=INFO)
     state.close()
@@ -74,7 +68,6 @@ def test_RUN_1_4_a_training_state_is_what_the_vram_manager_loads() -> None:
     assert callable(state.close)
 
 
-@owner_unit
 def test_RUN_1_4_close_accepts_a_model_without_an_optimizer() -> None:
     """Contract rule 6 (added 2026-11-18 for the inference service, ADR-0016): a model
     held for inference has no optimizer."""

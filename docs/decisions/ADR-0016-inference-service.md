@@ -27,7 +27,7 @@
 ## Built and measured (M8, 2026-11-18)
 
 - **Memory (rule 7).** Measured from cgroup `memory.peak`: `worker-gpu` 1,631 MiB training CIFAR-10 with 4 loader workers (job_0033), 2.2 GB while labelling (S-07); `inference` 397 MiB serving `small_cnn` on the CPU. `worker-gpu` goes from 4.5 to 3.5 GB and `inference` gets 1.0 GB; the sum stays 9.0 GB ([ARCHITECTURE.md §2](../ARCHITECTURE.md#2-components)).
-- **Until the owner's `TrainingState.close` (RUN-1.4) exists, the GPU is not used for inference** (the owner's choice, 2026-11-18). A GPU unload could not be proven (rule 3), and the CPU path never touches VRAM, so small models are served on the CPU and larger ones refused, with the reason given. `close()`'s contract gained a rule: the optimizer may be `None`.
+- **Until the owner's `TrainingState.close` (RUN-1.4) exists, the GPU is not used for inference** (the owner's choice, 2026-11-18; `close()` written 2026-11-19, so the GPU is used since, and the guard stays for a `close()` that fails its probe). A GPU unload could not be proven (rule 3), and the CPU path never touches VRAM, so small models are served on the CPU and larger ones refused, with the reason given. `close()`'s contract gained a rule: the optimizer may be `None`.
 - **What it holds (rule 6)** is the Redis key `stratal:inference:loaded`, set before the weights are read; weights are read under the lineage's retention lock.
 - **A waiting job (rule 5)** names itself in `stratal:gpu:wanted` while `gpu_lease` polls; the service checks every second and gives the lease back.
 

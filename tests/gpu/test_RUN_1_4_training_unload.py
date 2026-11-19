@@ -3,8 +3,7 @@
 """RUN-1.4.AC1 for training, on the real card: after a few Adam steps, unloading the
 training state brings ``torch.cuda.memory_allocated`` back to its baseline.
 
-A strict expected failure until the owner writes ``TrainingState.close``
-(ADR-0012). Run in the GPU image:
+Run in the GPU image:
     docker compose run --rm --no-deps worker-gpu pytest -q -m gpu tests/gpu
 """
 
@@ -18,7 +17,6 @@ from stratal.train.memory import TrainingState
 pytestmark = pytest.mark.gpu
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="owner unit")
 def test_RUN_1_4_memory_allocated_returns_to_baseline_after_training() -> None:
     import torch
     from torch import nn
