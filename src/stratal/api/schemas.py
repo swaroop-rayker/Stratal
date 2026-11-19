@@ -9,11 +9,13 @@ as they are (configs, metrics, report bodies) stay ``dict[str, Any]``.
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 Json = dict[str, Any]
 JobState = Literal["queued", "running", "paused", "completed", "failed", "cancelled", "stalled"]
-StageStatus = Literal["pending", "queued", "running", "completed", "failed", "skipped", "cancelled"]
+StageStatus = Literal[
+    "pending", "queued", "running", "paused", "completed", "failed", "skipped", "cancelled"
+]
 
 
 class _Model(BaseModel):
@@ -28,7 +30,8 @@ class JobError(BaseModel):
     code: str
     reason: str | None = None
     suggested_action: str | None = None
-    detail: str | None = None
+    detail: str | Json | None = None
+    """Text, or facts about the failure, e.g. ``{"signal": "SIGKILL"}`` for a killed child."""
 
 
 class JobStage(_Model):
@@ -45,6 +48,8 @@ class JobStage(_Model):
     throughput: float | None
     eta_seconds: float | None
     activity: str | None
+    last_progress_at: str | None = None
+    """The stage's last progress or activity (RUN-1.7)."""
     metrics: Json | None
     peaks: Json | None
     started_at: str | None
@@ -57,11 +62,19 @@ class Job(_Model):
     kind: str
     state: JobState
     desired_state: Literal["paused", "cancelled"] | None
+    pause_reason: Literal["user", "thermal"] | None = None
+    """Why a paused job is paused (RUN-1.6); null when it is not paused."""
+    heartbeat_at: str | None = None
+    """The supervisor's last heartbeat: shows a stalled job's worker is alive (RUN-1.7)."""
     attempt: int
     dataset: str | None
     current_stage: str | None
     stages: list[JobStage]
     output_version_id: str | None
+    model_version_id: str | None = None
+    """A training job's registry version, partial or trained (REG-1.1); null otherwise."""
+    model_lineage_id: str | None = None
+    """That version's lineage, for a link to SCR-11."""
     error: JobError | None
     summary: Json | None
     created_at: str
@@ -166,6 +179,14 @@ class System(_Model):
     vram_cap_mb: float | None
     ram_total_mb: float | None
     cpu_count: int | None
+    gpu_slowdown_c: float | None = None
+    """The card slows itself down at this temperature (NVML); the most thermal_pause_c may be."""
+    thermal_pause_c: float
+    """GPU jobs pause at this temperature (RUN-1.6), as saved on SCR-14."""
+    thermal_resume_c: float
+    """Jobs paused for heat resume below this temperature."""
+    stall_timeout_s: float
+    """A silent stage is marked stalled after this long (RUN-1.7)."""
 
 
 class Version(_Model):
@@ -498,3 +519,236 @@ class ReviewSummary(_Model):
 class ReviewList(_Model):
     items: list[ReviewSummary]
     next_cursor: str | None
+
+
+# -- model registry (REG-1.1, REG-1.2; API.md §3.9) ---------------------------------
+
+VersionState = Literal["base", "partial", "trained"]
+WeightsStatus = Literal["present", "deleting", "weights_deleted"]
+
+
+class VersionCounts(_Model):
+    base: int
+    partial: int
+    trained: int
+
+
+class ModelLineage(_Model):
+    id: str
+    name: str
+    task: str
+    model: Json
+    dataset: str
+    input_shape: list[int]
+    classes: list[str]
+    parameters: int
+    counts: VersionCounts
+    latest_version_id: str | None
+    """The newest trained version, or the base before any run completes (REG-2.2)."""
+    latest_state: VersionState | None
+    main_metric: float | None
+    """``val_accuracy`` of the latest version, until EVAL-1.2's task metrics exist."""
+    weights_bytes: int
+    """Weights on disk by the registry's records: base, trained and intermediate versions."""
+    checkpoint_bytes: int
+    """In-run checkpoints of the lineage's running and paused jobs."""
+    created_at: str
+    updated_at: str
+
+
+class ModelLineageList(_Model):
+    items: list[ModelLineage]
+    next_cursor: str | None
+
+
+class ModelVersion(_Model):
+    id: str
+    lineage_id: str
+    state: VersionState
+    is_latest: bool
+    weights_status: WeightsStatus
+    weights_bytes: int | None
+    """Null for a partial version: its weights are its run's checkpoint."""
+    pinned: bool
+    parent_version_id: str | None
+    job_id: str | None
+    job_state: JobState | None
+    dataset_version_id: str | None
+    config_hash: str
+    main_metric: float | None
+    note: str | None
+    created_at: str
+    trained_at: str | None
+    weights_deleted_by_job_id: str | None
+    """The retention job that deleted the weights (REG-2.9)."""
+    retention_action: Literal["keep", "delete", "blocked", "none"]
+    """What the next cleanup does to it under the saved settings: ``delete`` means it
+    goes then; ``blocked`` that the policy would delete it but it is in use or a parent."""
+    retention_reason: str
+
+
+class RetentionLastRun(_Model):
+    job_id: str
+    finished_at: str | None
+    versions_deleted: int
+    bytes_freed: int
+
+
+class LineageRetention(_Model):
+    keep_intermediate: int | Literal["all"]
+    source: Literal["global", "lineage"]
+    last_run: RetentionLastRun | None
+
+
+class ModelLineageDetail(ModelLineage):
+    versions: list[ModelVersion]
+    retention: LineageRetention
+
+
+class ModelVersionDetail(ModelVersion):
+    lineage_name: str
+    config: Json
+    metrics: Json | None
+    history: list[Json]
+    """One entry per finished epoch: train and val loss and accuracy."""
+    weights_path: str | None
+    weights_deleted_at: str | None
+
+
+# -- retention and settings (REG-2; API.md §3.9, §3.10) ---------------------------
+
+
+class DiskParts(_Model):
+    base: int
+    latest: int
+    intermediate: int
+    pinned: int
+    checkpoints: int
+
+
+class DiskOrphan(_Model):
+    path: str
+    bytes: int
+
+
+class DiskReport(_Model):
+    lineage_id: str
+    parts: DiskParts
+    """Bytes measured on disk (REG-2.11)."""
+    disk_bytes: int
+    registry_bytes: int
+    """What the registry's rows say should be on disk."""
+    matches: bool
+    orphans: list[DiskOrphan]
+    """Files under the lineage's folder that no version accounts for."""
+    missing: list[str]
+    """Versions whose weights should be present but are not on disk."""
+
+
+class PlanDecision(_Model):
+    version_id: str
+    reason: str
+    weights_bytes: int
+    main_metric: float | None
+    created_at: str | None
+
+
+class PlanCheckpoint(_Model):
+    job_id: str
+    bytes: int
+    reason: str
+
+
+class LineagePlan(_Model):
+    lineage_id: str
+    name: str
+    keep_intermediate: int | Literal["all"]
+    source: Literal["global", "lineage"]
+    latest_version_id: str | None
+    delete: list[PlanDecision]
+    keep: list[PlanDecision]
+    blocked: list[PlanDecision]
+    """Versions the policy would delete that are in use or a parent (REG-2.8)."""
+    checkpoints: list[PlanCheckpoint]
+    bytes_to_free: int
+
+
+class RetentionPlan(_Model):
+    lineages: list[LineagePlan]
+    versions_to_delete: int
+    bytes_to_free: int
+    token: str
+    """Names this exact plan; a settings save is confirmed with it (REG-2.10)."""
+    settings_version: str
+
+
+class SettingsLineage(_Model):
+    lineage_id: str
+    name: str
+    keep_intermediate: int | Literal["all"]
+    source: Literal["global", "lineage"]
+    intermediates: int
+    intermediates_bytes: int
+
+
+class TemperatureHigh(_Model):
+    celsius: float
+    job_id: str | None
+    at: str | None
+
+
+class TrainingContext(_Model):
+    """What SCR-14 shows beside the thermal limits."""
+
+    gpu_slowdown_c: float | None
+    """The card's slowdown point (NVML): the most thermal_pause_c may be."""
+    gpu_temp_high_7d: TemperatureHigh | None
+    running_jobs: list[str]
+    """Jobs a changed stall timeout applies to at once."""
+
+
+class SettingsSection(_Model):
+    name: Literal["retention", "training"]
+    title: str
+    requirements: list[str]
+    values: Json
+    schema_: Json = Field(alias="schema")
+    version: str
+    lineages: list[SettingsLineage] | None
+    """Retention only: each lineage's keep_intermediate and current intermediates."""
+    context: TrainingContext | None
+    """Training only."""
+
+
+class SettingsList(_Model):
+    sections: list[SettingsSection]
+
+
+class SettingsSaved(_Model):
+    section: SettingsSection
+    job_id: str | None
+    """The retention job the save queued, when it deletes weights."""
+
+
+# -- prediction (REG-1.4; API.md §3.9) ---------------------------------------------
+
+
+class PredictedClass(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    class_: str = Field(alias="class")
+    probability: float
+
+
+class Prediction(_Model):
+    version_id: str
+    lineage_id: str
+    device: Literal["cpu", "gpu"]
+    """Which device served it (ADR-0016 rule 4)."""
+    fallback_reason: str | None
+    """Why the CPU served it, when it did: the GPU's holder, or why inference avoids it."""
+    top: list[PredictedClass]
+    """Up to five classes, most probable first."""
+    load_ms: float | None
+    """Time to load the model, when this request loaded it."""
+    total_ms: float

@@ -1,9 +1,9 @@
 // Modal (DESIGN-SYSTEM c) on Radix Dialog: focus is trapped inside and returns to the
 // trigger on close; Esc closes.
 import * as Dialog from "@radix-ui/react-dialog";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 
-export function Modal({ open, onOpenChange, title, icon, children, footer, width }: {
+export function Modal({ open, onOpenChange, title, icon, children, footer, width, initialFocus, alert }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -11,6 +11,10 @@ export function Modal({ open, onOpenChange, title, icon, children, footer, width
   children: ReactNode;
   footer?: ReactNode;
   width?: number;
+  /** The element to focus on open, e.g. a deletion dialog's safe choice (DESIGN-SYSTEM d). */
+  initialFocus?: RefObject<HTMLElement | null>;
+  /** An alert dialog: a choice the user must make, such as deleting data. */
+  alert?: boolean;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -27,6 +31,15 @@ export function Modal({ open, onOpenChange, title, icon, children, footer, width
             width,
           }}
           aria-describedby={undefined}
+          role={alert ? "alertdialog" : "dialog"}
+          onOpenAutoFocus={
+            initialFocus
+              ? (event) => {
+                  event.preventDefault();
+                  initialFocus.current?.focus();
+                }
+              : undefined
+          }
         >
           <header>
             {icon}

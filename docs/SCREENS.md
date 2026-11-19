@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Status | **v1, approved by the owner on 2026-11-15** (Gate 1, SPEC §9.4). Changes from here on are new versions and need approval |
+| Status | **v2, approved by the owner on 2026-11-17** (Gate 1 revision at phase 2's kickoff: phase-2 screens detailed in §3a, Flow 4 in steps, Flow 3's phase-2 part). v1 approved 2026-11-15. Changes from here on are new versions and need approval |
 | Builds on | [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) v1 (Gate 0, approved 2026-11-15) |
-| Data sources | Endpoints are from [API.md](API.md). Phase-2 to phase-5 interfaces are not specified yet, so those screens are outlines and are detailed at their phase kickoff |
+| Data sources | Endpoints are from [API.md](API.md). Phase-2 screens name the endpoints their milestone adds (*planned*). Phase-3 to phase-5 interfaces are not specified yet, so those screens are outlines and are detailed at their phase kickoff |
 | Approvals | Logged in [design/APPROVALS.md](design/APPROVALS.md) |
 
 This file lists every screen with its purpose, the requirements it serves, the data it shows and its main actions, then the core user flows. It decides **what is on each screen and how the screens connect**, not what they look like: layout and styling are Gate 2, one screen at a time, low-fi first.
@@ -24,7 +24,7 @@ This file lists every screen with its purpose, the requirements it serves, the d
 |---|---|---|---|---|---|
 | SCR-01 | App shell and navigation | (wraps all) | 1 | all; UI-2.1 slice, MON-1.4, MON-2.1 | M6 |
 | SCR-02 | Datasets and versions | `/datasets`, `/datasets/:slug` | 1 | DATA-3.1, DATA-3.2, DATA-3.4, UI-2.1 | M6 |
-| SCR-03 | Version detail and lineage | `/versions/:version_id` | 1 (UI-2.2 part in 2) | DATA-3.3, DATA-2.1, DATA-2.2, DATA-6.1, DATA-5.1, UI-2.1, UI-2.2 | M6 |
+| SCR-03 | Version detail and lineage | `/versions/:version_id` | 1 (UI-2.2 part in 2) | DATA-3.3, DATA-2.1, DATA-2.2, DATA-6.1, DATA-5.1, UI-2.1, UI-2.2; DATA-3.5, DATA-2.3 | M6; v2 additions in M11 |
 | SCR-04 | Live job view | `/jobs/:job_id` | 1 | MON-4.1, MON-4.2, MON-4.3, MON-1.1–1.5, MON-2.1, 2.3, 2.4, 2.5, MON-3.1; RUN-1.1/1.2 slice | M6 |
 | SCR-05 | Labeling review | `/reviews/:review_id` | 1 | LABEL-1.5 | M6 |
 | SCR-06 | Eval report | `/versions/:version_id/report` | 1 (EVAL-1.2 in 2) | EVAL-1.1, EVAL-1.2 | M6 |
@@ -169,6 +169,136 @@ Each table says which endpoint feeds each piece of data. "Live" marks what updat
 
 **Empty.** "No report for this version yet." with *Build report*; if no review is closed, the report is built without the acceptance part and says so. **Phase 2 adds** the task-metric sets of EVAL-1.2 for model evaluations.
 
+## 3a. Phase-2 screens in detail (v2)
+
+Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md, M8–M11) and ADR-0014 to ADR-0016. Endpoints marked *planned* are added to API.md by the milestone named; their exact shape is settled there, and a G2 mockup shows them as planned. Each screen still goes through Gate 2 (low-fi, then hi-fi) before it is built.
+
+### SCR-04 v2 — Live job view, training runs (M8)
+
+**Purpose.** Follow a training run the way a pipeline run is followed: what it is doing, how far it is, how well it is learning, and what it costs.
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Header | Job, state pill, model and dataset version, device and why ("auto: GPU 12 ms/step, CPU 41 ms/step"), attempt | `GET /jobs/{id}` (training fields *planned*, M8) | yes |
+| Progress | Epoch e/E and step s/S with a bar, samples/s, ETA | job stream progress events | yes |
+| Training charts | Loss (train per step, validation per epoch), accuracy, learning rate, gradient norm, step time; each with a table view | job stream event metrics; `GET /jobs/{id}/events` for the history | yes |
+| Resource tiles | As phase 1: CPU, RAM, GPU, VRAM (allocated vs reserved), temperature | job stream samples | yes |
+| Timeline | Epochs as segments, checkpoints as markers (only the latest kept), pauses as gaps with their reason | events | yes |
+| Activity log | As phase 1, with checkpoint, pause, resume and out-of-memory events | events | yes |
+| State banners | Paused: by whom (user or heat, "GPU 84 °C, resumes below 75 °C"); stalled: "no progress for 5 min" with the last activity | job and events | yes |
+
+**Actions.** Pause, resume, cancel (RUN-1.2; `POST /jobs/{id}/pause`, `/resume` *planned*, M8); open the registered version (SCR-11) when the run completes. An out-of-memory failure shows MON-1.3's "reduce batch size from 32 → 16" with *Start again with 16*.
+
+**Empty.** Not applicable (a job exists). Before the first step: "Preparing data…" or "Benchmarking devices…" with the activity message.
+
+### SCR-07 v2 — Jobs list (M8)
+
+**Changes from the phase-1 slice.** *Pause* on running jobs and *Resume* on paused ones, as row actions beside *Cancel* (RUN-1.2, OC-8: pipelines too). Paused and stalled jobs count as Active, with the pause reason in "Now / outcome". The kind filter gains `train` and `retention`; a training row's Dataset column reads "model on dataset version". Everything else is the approved slice.
+
+### SCR-08 — Model builder canvas (M9)
+
+**Purpose.** Build a model by stacking layers, with mistakes caught before training starts.
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Dataset and type | The dataset version and its type; input shape and output size, locked (BUILD-1.3); only compatible model families offered (DATA-5.5) | `GET /versions/{id}`; type registry *planned*, M9 | |
+| Layer palette | Linear, Conv2d, MaxPool, BatchNorm, Dropout, Flatten, Embedding, RNN, LSTM, GRU, attention block, activations (BUILD-1.1) | spec schema *planned*, M9 | |
+| Canvas | Layer nodes in order; edges for skip connections (BUILD-1.9); each node shows its output shape and parameter count (BUILD-1.4) | `POST /model-specs/validate` *planned*, M9 | on every edit |
+| Layer inspector | The selected layer's fields, generated from its schema with ranges and defaults (BUILD-1.2, UI-2.3) | spec schema | |
+| Summary bar | Total parameters; memory estimate split into weights, gradients and optimizer state for the chosen optimizer (BUILD-1.5) | validate response | on every edit |
+| Problems | Cross-field errors in words, each linked to its node (BUILD-1.6) | validate response | on every edit |
+
+**Actions.** Add, configure, reorder and remove layers; save and load templates (BUILD-1.7); *Continue to training* (SCR-09), disabled while there are problems. The canvas has an equivalent list view, so every action works from the keyboard (accessibility rule).
+
+**Empty.** "Start from a template, or add a first layer." with the template list.
+
+### SCR-09 — Training run and HPO setup (M9; HPO part M10)
+
+**Purpose.** Configure one training run, or a study of many, and start it.
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Model | The spec from SCR-08 (or a template), its parameters and memory estimate | spec | |
+| Data | The split dataset version; per-split row counts | `GET /versions/{id}` | |
+| Training config | Epochs, batch size, optimizer, learning rate and schedule, seed: a form from the config schema (UI-2.3) | `GET /config/schemas/train` *planned*, M8 | |
+| Start from | The lineage's base, or a chosen version (ADR-0015) | `GET /models/{lineage}` *planned*, M8 | |
+| Device | Auto, CPU or GPU, with what auto will do (RUN-1.9) | | |
+| VRAM check | The estimate against the cap, before starting | validate response | |
+| Study (M10) | A *tunable* toggle on each field with its range or choices and scale (HPO-1.1); trial count and time budget (HPO-1.2); pruning (HPO-1.3); the metric to optimise on validation (HPO-1.4) | study schema *planned*, M10 | |
+
+**Actions.** *Start run* (`POST /jobs` with kind `train`) → SCR-04; *Start study* (*planned*, M10) → SCR-10.
+
+**Empty.** Reached without a model: "Build or pick a model first." with links to SCR-08 and the templates.
+
+### SCR-10 — HPO results (M10)
+
+**Purpose.** Read a study, running or finished, and act on its best configuration.
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Header | Study, objective and metric, trials done of the limit, time used of the budget, state | `GET /studies/{id}` *planned*, M10 | yes |
+| Trial table | Parameters, value, state (complete, pruned at step n, failed), duration; sortable, virtualised (HPO-1.3) | study trials | yes |
+| Best configuration | Its parameters and validation value | study | yes |
+| Parameter importance | Chart with a table view (HPO-1.5) | study | at the end |
+| Optimisation history | Value per trial, best so far | study | yes |
+| Test evaluation | The single test result of the best configuration, labelled "computed once" (HPO-1.4) | study | at the end |
+
+**Actions.** Open the best model (SCR-11); *Start a run from the best configuration* (prefills SCR-09); cancel a running study.
+
+**Empty.** A study with no finished trial: "No trial has finished yet." with the first trial's job link.
+
+### SCR-11 — Model registry and comparison (M8; comparison M11)
+
+**Purpose.** Every trained model: where it came from, how good it is, what its weights cost on disk, and what retention will do.
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Lineages | Name, task, versions, latest metrics, disk use; filter by state (REG-1.2) | `GET /models` *planned*, M8 | |
+| Versions of a lineage | Version, state (base, partial, trained), weights status, dataset version, config hash, key metrics, created, pinned | `GET /models/{lineage}` *planned*, M8 | |
+| Version detail (drawer) | Full resolved config, dataset version, job, parent, metrics (EVAL-1.2 sets once written) (REG-1.1) | `GET /model-versions/{id}` *planned*, M8 | |
+| Disk use | Base, latest, intermediate, pinned and checkpoints for the lineage, against the bytes on disk (REG-2.11) | registry *planned*, M8 | |
+| Retention | The lineage's `keep_intermediate` (or the global one), a dry-run preview of what would go and the bytes, and the last run's deletions (REG-2.9) | retention plan *planned*, M8 | |
+| Try it | A sample input, the prediction, and the device that served it (REG-1.4, ADR-0016) | `POST /models/{version}/predict` *planned*, M8 | |
+| Comparison (M11) | Three or more versions on one test split, side by side, with per-class detail (EVAL-1.3) | *planned*, M11 | |
+
+**Actions.** Pin and unpin (REG-2.5); run retention after its preview, with a confirmation that lists the exact versions and sizes when N is lowered (REG-2.10); *Re-train* a version whose weights were deleted (REG-2.7); open the job, the dataset version or the parent.
+
+**Empty.** "No models yet." with *Build a model* (SCR-08).
+
+### SCR-13 — System monitor (M11)
+
+**Purpose.** The machine over time, beyond any one job: where the resources went, what alerted, and why things were slow.
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Resource history | CPU, RAM, GPU, VRAM and temperature for a chosen range; one-minute averages beyond 7 days (NFR-12), marked as such | telemetry *planned*, M11 | yes |
+| Alerts | Each alert with the action taken (pause, fail, smaller batch) (MON-2.6, MON-2.7) | events | yes |
+| Diagnostics | Expected against observed bottleneck per running stage, in words (MON-3.2) | *planned*, M11 | yes |
+| Load and unload | Each model load and unload with VRAM before and after (MON-3.3) | events | yes |
+| Compare two jobs | Their resource curves overlaid (MON-4.4) | telemetry | |
+| History | Throughput and peaks across the last N jobs (MON-4.5, P2) | job summaries | |
+
+**Actions.** Pick a range; pick two jobs to compare; open any job. NVML's "GPU utilisation" keeps its tooltip (MON-2 interpretation note).
+
+**Empty.** Before any sample: "No telemetry yet: the monitor has not reported." with the monitor's health.
+
+### SCR-14 — Settings (M8; thresholds M11)
+
+**Purpose.** The defaults and thresholds the owner can change, with validation from the API.
+
+| Section | Settings | Requirement |
+|---|---|---|
+| Training | Checkpoint interval (5 min), temperature pause and resume (83 °C, 75 °C), stall timeout (300 s) | RUN-1.3, RUN-1.6, RUN-1.7 (OC-3) |
+| Retention | Global `keep_intermediate`; per-lineage overrides; lowering N asks first, with the versions and sizes | REG-2.3, REG-2.4, REG-2.10 (OC-9) |
+| Monitoring (M11) | Sampling intervals; alert thresholds (VRAM 90 % of the card, RAM 85 % of the VM) | MON-2.2, MON-2.6 (OC-7) |
+| Appearance | Theme | – |
+
+Every section is a form generated from its schema (UI-2.3), saved with `PUT /settings` (*planned*, M8).
+
+### SCR-03 v2 additions (M11)
+
+Raw against cleaned distributions and the rejection reasons per stage (UI-2.2); the difference from another version: rows added, removed and changed (DATA-3.5, P2); semantic-duplicate clusters, shown like duplicate groups (DATA-2.3, ADR-0013).
+
 ## 4. Later screens (outline)
 
 Detailed at each phase kickoff, when their interfaces are specified. Listed now so the shell and the phase-1 screens leave room.
@@ -220,9 +350,23 @@ Each step names the screen, what the person does, and the call behind it. Flows 
 
 In phase 1 a retry reuses the stage's own config; changing a value means starting a new run from the last good version (*Start pipeline* with `from_version`, also reused). Pause and resume from a checkpoint, and stalled-job handling, join this flow in phase 2 (RUN-1.2, RUN-1.3, RUN-1.7).
 
+**Phase 2 (v2).** A training job that runs out of memory fails with a suggested batch size and *Start again with 16* on SCR-04, which opens SCR-09 prefilled, since a training retry with the same batch would fail the same way. A job paused for heat resumes by itself below 75 °C; one paused by the person waits for *Resume*. A job with no progress for 5 minutes turns `stalled`: SCR-04's banner shows its last activity, and SCR-13 (M11) says which resource it is waiting on. A crash or a lost worker resumes from the last checkpoint, at most 5 minutes back.
+
 ### Flow 4 — Dataset → build model → train → evaluate (phase 2)
 
 SCR-03 (pick a version) → SCR-08 (stack layers; input and output locked from the dataset type; invalid stacks blocked) → SCR-09 (training config, device, optionally an HPO study) → SCR-04 (live run: loss, metrics, VRAM, checkpoints) → SCR-10 (if HPO: best trial, one test evaluation) → SCR-11 (the registered version with test metrics; compare with others).
+
+Step by step (v2), as the phase-2 acceptance runs it on CIFAR-10:
+
+| # | Screen | The person… | Behind it |
+|---|---|---|---|
+| 1 | SCR-02, SCR-03 | opens the split version of the CIFAR-10 dataset (labelled images) and clicks *Build a model* | `GET /versions/{id}` |
+| 2 | SCR-08 | stacks convolution, pooling and linear layers; input is locked at 3×32×32 and output at 10; a mismatched layer is flagged before going on | `POST /model-specs/validate` |
+| 3 | SCR-09 | sets epochs, batch size and learning rate, leaves device on auto, clicks *Start run* | `POST /jobs` (kind `train`) → `202` |
+| 4 | SCR-04 | watches loss and accuracy; pauses and resumes once | job stream; `POST /jobs/{id}/pause`, `/resume` |
+| 5 | SCR-11 | finds the trained version, with its test metrics and the dataset version it came from | `GET /models/{lineage}` |
+| 6 | SCR-09 → SCR-10 (M10) | tunes the learning rate in a study and reads the single test evaluation of the best trial | studies |
+| 7 | SCR-11 (M11) | compares three versions on the same test split | comparison |
 
 ### Flow 5 — Chat request → router → model → answer (phases 3–5)
 
@@ -244,3 +388,4 @@ SCR-12: the person types a request in Auto mode → the router classifies it and
 | Version | Date | Changes |
 |---|---|---|
 | v1 | 2026-11-15 | First version, for Gate 1 review. Approved the same day; open point 1 then decided by the owner as option (a), recorded in place |
+| v2 | 2026-11-17 | Phase-2 kickoff: §3a details SCR-04 v2 (training runs), SCR-07 v2 (pause, resume), SCR-08 to SCR-11, SCR-13, SCR-14 and SCR-03's M11 additions, from the approved phase-2 plan and ADR-0014 to ADR-0016; Flow 4 in steps; Flow 3's phase-2 part. Approved by the owner the same day |

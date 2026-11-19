@@ -1,0 +1,68 @@
+/* SCR-14 copied from docs/design/screens/SCR-14_v1.html (G2 approved), scoped under .scr14. Tokens only. Changes for a live page: "live:". */
+.content:has(> .scr14) { padding: var(--sp-4) var(--sp-5); overflow: auto; }
+.scr14 .btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.scr14 .group-btns { display: inline-flex; }
+.scr14 .group-btns .btn { border-radius: 0; margin-left: -1px; }
+.scr14 .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; }
+.scr14 .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.scr14 .count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.scr14 .phead { display: flex; align-items: center; gap: var(--sp-3); }
+.scr14 .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.scr14 .toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.scr14 .search { position: relative; width: 200px; }
+.scr14 .search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; }
+.scr14 .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.scr14 .t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.scr14 .t tr.sec td .count { margin-left: var(--sp-1); }
+.scr14 .acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.scr14 .t td.acts-cell { width: 120px; text-align: right; }
+.scr14 .field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); display: flex; align-items: center; gap: var(--sp-2); }
+.scr14 .phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.scr14 .typeconfirm { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-3); font-size: var(--fs-12); }
+.scr14 .typeconfirm .input { font: var(--fs-13) var(--font-mono); }
+.scr14 .cols { display: grid; grid-template-columns: 168px 1fr; gap: var(--sp-5); min-height: 0; }
+.scr14 .index { display: flex; flex-direction: column; gap: 2px; }
+.scr14 .index a { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); text-decoration: none; }
+.scr14 .index a[aria-current=true] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); }
+.scr14 .index a[aria-disabled=true] { color: var(--text-muted); }
+.scr14 .index a .count, .scr14 .index a .badge { margin-left: auto; }
+.scr14 .secs { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.scr14 .sec { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); display: flex; flex-direction: column; }
+.scr14 .sec > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.scr14 .sec > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.scr14 .sec > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.scr14 .sec > header .aside { font-size: var(--fs-12); color: var(--text-secondary); }
+.scr14 .frow { display: grid; grid-template-columns: 380px 1fr; gap: var(--sp-6); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); align-items: start; }
+.scr14 .frow .input.num { width: 132px; }
+.scr14 .frow .mod { display: flex; align-items: center; gap: var(--sp-2); }
+.scr14 .applies { display: flex; flex-direction: column; gap: var(--sp-2); padding-top: 22px; font-size: var(--fs-12); color: var(--text-secondary); }
+.scr14 .applies .badge svg.i { width: 11px; height: 11px; }
+.scr14 .ctx { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.scr14 .ctx b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr14 .ctx .sq { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res-temp); margin-right: var(--sp-1); }
+.scr14 .rules-note { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-4); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr14 .rules-note svg.i { color: var(--text-muted); margin-top: 2px; }
+.scr14 .savebar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-top: var(--bw) solid var(--border); background: var(--surface-raised); border-radius: 0 0 var(--r-md) var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr14 .savebar b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr14 .ovr { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); border-bottom: var(--bw) solid var(--border); }
+.scr14 .ovr h3 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.scr14 .t td .input { height: var(--h-sm); width: 72px; font-size: var(--fs-12); }
+.scr14 .t td.dim { color: var(--text-secondary); }
+.scr14 .t.dense td { height: 36px; }
+[data-theme="dark"] .scr14 .t tr[aria-selected=true] .pill, [data-theme="dark"] .scr14 .t tr.is-hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }
+/* live: the page itself; dialog contents are wrapped in .scr14 too, since they render outside it. */
+.scr14.page { display: flex; flex-direction: column; gap: var(--sp-3); }
+/* live: native selects and the search box at the toolbar's small height, as on SCR-07. */
+.scr14 .toolbar .select { width: auto; height: var(--h-sm); font-size: var(--fs-12); }
+.scr14 .search .input { height: var(--h-sm); padding: 0 var(--sp-6) 0 26px; font-size: var(--fs-12); }
+.scr14 .modal-body > b, .scr14 b.em { color: var(--text-primary); }
+/* Frame F: below 1280 px the index becomes a row of buttons above the sections, and the
+   slowdown point moves into the pause field's tooltip. */
+@media (max-width: 1279px) {
+  .scr14 .cols { grid-template-columns: 1fr; gap: var(--sp-3); }
+  .scr14 .index { flex-direction: row; flex-wrap: wrap; }
+  .scr14 .index a { border: var(--bw) solid var(--border-strong); height: var(--h-sm); font-size: var(--fs-12); }
+  .scr14 .index a .count, .scr14 .index a .badge { margin-left: var(--sp-1); }
+  .scr14 .frow { grid-template-columns: 300px 1fr; gap: var(--sp-4); }
+  .scr14 .ctx .slowdown { display: none; }
+}

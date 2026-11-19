@@ -18,6 +18,10 @@ COLLECTOR_GROUP = "collector"
 LIVE_GLOBAL = "stratal:live:global"
 ACTIVE_HASH = "stratal:active"
 SYSTEM_KEY = "stratal:system"
+GPU_WANTED_KEY = "stratal:gpu:wanted"
+"""A job waiting for the GPU lease names itself here; the inference service gives it up."""
+INFERENCE_LOADED_KEY = "stratal:inference:loaded"
+"""What the inference service holds: ``{version_id, device, since}`` (ADR-0016 rule 6)."""
 
 
 def live_channel(job_id: str) -> str:
@@ -130,6 +134,25 @@ class Bus:
 
     def get_system(self) -> dict[str, Any] | None:
         raw: Any = self._client.get(SYSTEM_KEY)
+        return json.loads(raw) if raw else None
+
+    # -- what the inference service holds: inference -> retention (REG-2.8) --
+
+    def set_gpu_wanted(self, holder: str, *, ttl_s: float) -> None:
+        self._client.set(GPU_WANTED_KEY, holder, px=max(1, int(ttl_s * 1000)))
+
+    def get_gpu_wanted(self) -> str | None:
+        value: Any = self._client.get(GPU_WANTED_KEY)
+        return value
+
+    def set_inference_loaded(self, info: dict[str, Any] | None) -> None:
+        if info is None:
+            self._client.delete(INFERENCE_LOADED_KEY)
+        else:
+            self._client.set(INFERENCE_LOADED_KEY, json.dumps(info, separators=(",", ":")))
+
+    def get_inference_loaded(self) -> dict[str, Any] | None:
+        raw: Any = self._client.get(INFERENCE_LOADED_KEY)
         return json.loads(raw) if raw else None
 
     def flush_all(self) -> None:

@@ -22,6 +22,7 @@ export function runningStage(job: Job): JobStage | null {
   return (
     job.stages.find((s) => s.name === job.current_stage) ??
     job.stages.find((s) => s.status === "running") ??
+    job.stages.find((s) => s.status === "paused") ??
     job.stages.find((s) => s.status === "queued") ??
     null
   );
@@ -76,4 +77,33 @@ export function liveProgress(stage: JobStage | null, latest: StreamEvent | null)
     eta: num(metrics.eta_s) ?? base.eta,
     activity: latest.message,
   };
+}
+
+/** The model a training job trains (`kind: train`), or null for other jobs. */
+export function trainingModel(job: Job): string | null {
+  if (job.kind !== "train") return null;
+  const model = (job.stages[0]?.config as { model?: { name?: unknown } } | undefined)?.model;
+  return typeof model?.name === "string" ? model.name : null;
+}
+
+export interface TrainingPosition {
+  epoch: number | null;
+  epochs: number | null;
+  /** The step within the epoch, from the global step and the steps per epoch. */
+  step: number | null;
+}
+
+/** Where a training stage stands: epoch of epochs, and the step within the epoch. */
+export function trainingPosition(stage: JobStage | null): TrainingPosition {
+  const metrics = stage?.metrics ?? {};
+  const epoch = num(metrics.epoch);
+  const epochs = num((stage?.config as { epochs?: unknown } | undefined)?.epochs);
+  const perEpoch = stage?.total && epochs ? stage.total / epochs : null;
+  const step = stage?.step && epoch && perEpoch ? Math.round(stage.step - (epoch - 1) * perEpoch) : null;
+  return { epoch, epochs, step };
+}
+
+/** A training run's final validation accuracy, when it has one. */
+export function valAccuracy(job: Job): number | null {
+  return num(job.stages[0]?.metrics?.val_accuracy);
 }

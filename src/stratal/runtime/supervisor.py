@@ -29,11 +29,18 @@ from stratal.mon import probes
 from stratal.mon.backfill import backfill_job
 from stratal.mon.events import Event, utc_now
 from stratal.mon.store import insert_events, refresh_summary
-from stratal.runtime.child import EXIT_CANCELLED, EXIT_OK
-from stratal.runtime.jobs import Enqueue, after_commit, cancel_unfinished_stages
+from stratal.runtime.child import EXIT_CANCELLED, EXIT_HANDOFF, EXIT_OK, EXIT_PAUSED
+from stratal.runtime.jobs import (
+    Enqueue,
+    after_commit,
+    cancel_unfinished_stages,
+    retention_after_run,
+)
 from stratal.runtime.states import transition
 
-Outcome = Literal["completed", "failed", "cancelled", "not_claimed", "superseded"]
+Outcome = Literal[
+    "completed", "failed", "cancelled", "paused", "handed_off", "not_claimed", "superseded"
+]
 EnqueueFn = Callable[[Enqueue], None]
 
 # A wall-clock jump this much larger than the monotonic clock's means the machine slept.
@@ -47,6 +54,12 @@ class Claim:
     attempt: int
     stage: str
     queue: str
+
+
+def _pause_reason(job: Job) -> str:
+    if job.pause_reason == "thermal":
+        return "paused at a safe point: the GPU is too hot (RUN-1.6)"
+    return "paused at a safe point by the user"
 
 
 def worker_name() -> str:
@@ -68,6 +81,12 @@ def claim(job_id: str, idx: int, worker: str) -> Claim | None:
             cancel_unfinished_stages(session, job_id)
             return None
         now = utc_now()
+        if job.desired_state == "paused" and job.state == "running":
+            # Paused between stages: this stage waits for the resume (RUN-1.2).
+            stage.status = "paused"
+            job.desired_state = None
+            transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")
+            return None
         if job.state == "queued":
             job.attempt += 1
             job.started_at = job.started_at or now
@@ -93,7 +112,7 @@ def heartbeat(job_id: str, attempt: int) -> tuple[bool, str | None]:
     with Session(get_engine()) as session, session.begin():
         row = session.execute(
             update(Job)
-            .where(Job.id == job_id, Job.attempt == attempt, Job.state == "running")
+            .where(Job.id == job_id, Job.attempt == attempt, Job.state.in_(("running", "stalled")))
             .values(heartbeat_at=func.now())
             .returning(Job.desired_state)
         ).first()
@@ -167,18 +186,29 @@ def finalize(
         stage = session.get(JobStage, (job_id, idx))
         if job is None or stage is None:
             return "superseded", None
-        if job.attempt != held.attempt or job.state != "running":
+        if job.attempt != held.attempt or job.state not in ("running", "stalled"):
             return "superseded", None  # the watchdog gave this job to someone else
+        if job.state == "stalled":  # the stage ended, so it was not hung after all (RUN-1.7)
+            transition(session, job, "running", reason="the stage finished", actor="supervisor")
         now = utc_now()
         stage.finished_at = now
         cancel_requested = cancel_requested or job.desired_state == "cancelled"
+        pause_requested = job.desired_state == "paused" and not cancel_requested
         following = session.get(JobStage, (job_id, idx + 1))
         outcome: Outcome
         enqueue: Enqueue | None = None
 
         if code == EXIT_OK:
             stage.status = "completed"
-            if following is not None and not cancel_requested:
+            if following is not None and pause_requested:
+                # Paused between stages: the next one waits for the resume (RUN-1.2).
+                following.status = "paused"
+                following.input_version_id = stage.output_version_id
+                job.current_stage_idx = following.idx
+                job.desired_state = None
+                transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")
+                outcome = "paused"
+            elif following is not None and not cancel_requested:
                 following.status = "queued"
                 following.input_version_id = stage.output_version_id
                 job.current_stage_idx = following.idx
@@ -196,6 +226,25 @@ def finalize(
                     session, job, "completed", reason="all stages completed", actor="supervisor"
                 )
                 outcome = "completed"
+        elif code == EXIT_HANDOFF and not cancel_requested and not pause_requested:
+            # The child recorded the stage's new queue; run it again there (RUN-1.9).
+            session.refresh(stage)
+            stage.status = "queued"
+            stage.finished_at = None
+            transition(
+                session,
+                job,
+                "queued",
+                reason=f"moved to the {stage.queue} queue: faster there (RUN-1.9)",
+                actor="supervisor",
+            )
+            enqueue = Enqueue(job_id, idx, stage.queue)
+            outcome = "handed_off"
+        elif code in (EXIT_PAUSED, EXIT_HANDOFF) and not cancel_requested:  # a pause wins
+            stage.status = "paused"
+            job.desired_state = None
+            transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")
+            outcome = "paused"
         elif cancel_requested or code == EXIT_CANCELLED:
             stage.status = "cancelled"
             transition(
@@ -326,16 +375,32 @@ def run_stage(
     )
     log.info("stage_finished", job_id=job_id, stage=held.stage, exit_code=code, outcome=outcome)
     _backfill(job_id, settings)
+    cleanup = _retention_after(job_id) if outcome in ("completed", "cancelled") else None
     if outcome != "superseded":
         with contextlib.suppress(Exception):
-            if following is None:
+            if following is None or outcome == "paused":
                 bus.clear_control(job_id)
         after_commit(bus, job_id)
         if following is not None:
             enqueue(following)
+        if cleanup is not None:
+            after_commit(bus, cleanup.job_id)
+            enqueue(cleanup)
     with contextlib.suppress(Exception):
         bus.close()
     return outcome
+
+
+def _retention_after(job_id: str) -> Enqueue | None:
+    """Queue retention for a training run's lineage once the run has ended (REG-2.2,
+    REG-2.6). A failure here never changes the run's outcome; the next run cleans up."""
+    try:
+        with Session(get_engine()) as session, session.begin():
+            job = session.get(Job, job_id)
+            return retention_after_run(session, job) if job is not None else None
+    except Exception as exc:
+        log.warning("retention_not_queued", job_id=job_id, reason=str(exc))
+        return None
 
 
 def _backfill(job_id: str, settings: Settings) -> None:

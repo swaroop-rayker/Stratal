@@ -1,0 +1,166 @@
+"""GPU memory in training: the VRAM manager v2 and out-of-memory handling (RUN-1.4, RUN-1.5).
+
+Owner units (ADR-0012), written by the agent at the owner's request on 2026-11-19,
+to the contracts below, which the owner approved with the stubs. How and why they
+work is explained in ``docs/learning/sys-design.md``.
+
+Training reuses the phase-1 :class:`~stratal.label.vram.VramManager`: it loads one
+GPU model at a time, refuses a load that does not fit, and proves after unloading
+that allocated memory is back at its baseline (RUN-1.4.AC1). What is new in
+training is *what* must be freed. Besides the weights there are their gradients
+and the optimizer's state (Adam keeps two values per parameter), so
+:class:`TrainingState` is the object the manager loads and unloads, and its
+``close()`` is what has to free all of it.
+
+Out-of-memory in training fails the job with a suggested batch size instead of
+halving the batch and carrying on, as captioning does: a different batch size
+changes the optimisation, so the owner of the run chooses (ADR-0006 rule 5,
+ADR-0014 rule 10).
+
+PyTorch is installed only in the GPU and ML images, so this module does not
+import it; the model and optimizer are typed ``Any``.
+
+Tests: ``tests/unit/test_RUN_1_4_training_state.py``,
+``tests/unit/test_RUN_1_5_training_oom.py`` (CPU, with plain fakes) and
+``tests/gpu/test_RUN_1_4_training_unload.py`` (the real card).
+"""
+
+import math
+from typing import Any
+
+from stratal.core.errors import GpuOom
+from stratal.label.models import ModelInfo
+
+SAFETY_MARGIN = 0.9
+"""Share of the VRAM cap a suggested batch may plan to use (RUN-1.5).
+
+Activation memory per sample is measured at the failed batch and is only an
+estimate; the allocator also fragments. Planning for 90 % of the cap leaves room.
+"""
+
+
+class TrainingState:
+    """A model and its optimizer, as one thing the VRAM manager loads and unloads (RUN-1.4).
+
+    The constructor and ``info`` are plumbing. ``close()`` is the owner unit.
+
+    ``close()`` must satisfy:
+
+    1. Every parameter's gradient is set to ``None`` (not zeroed: a zeroed
+       gradient still holds its memory).
+    2. The optimizer's per-parameter state is emptied (for Adam: the two
+       running averages per parameter), and so is any other state it keeps on
+       the device.
+    3. This object drops its own references: ``model`` and ``optimizer`` become
+       ``None``. The caller promises to hold no other reference (as in v1).
+    4. Calling it twice is harmless.
+    5. After ``close()``, :meth:`VramManager.unload` finds allocated memory back
+       at the baseline it measured before the load, within v1's tolerance
+       (RUN-1.4.AC1). This is checked on the card, after a few real training
+       steps with Adam, in ``tests/gpu/test_RUN_1_4_training_unload.py``.
+    6. ``optimizer`` may be ``None``: the inference service (ADR-0016) holds a
+       trained model with no optimizer and unloads it through the same class.
+       Rules 1, 3, 4 and 5 still hold; rule 2 has nothing to do. (Added
+       2026-11-18; ``test_RUN_1_4_close_accepts_a_model_without_an_optimizer``.)
+    """
+
+    def __init__(self, model: Any, optimizer: Any, *, info: ModelInfo) -> None:
+        self.model: Any = model
+        self.optimizer: Any = optimizer
+        self._info = info
+
+    @property
+    def info(self) -> ModelInfo:
+        return self._info
+
+    def close(self) -> None:
+        model, optimizer = self.model, self.optimizer
+        # Rule 3 first: whatever happens below, this object no longer pins anything.
+        self.model = None
+        self.optimizer = None
+        if model is not None:
+            # Rule 1, for every parameter, including any the optimizer does not hold.
+            for parameter in model.parameters():
+                parameter.grad = None
+        if optimizer is not None:
+            optimizer.zero_grad(set_to_none=True)
+            # Rule 2: Adam's exp_avg and exp_avg_sq live here, one pair per parameter.
+            optimizer.state.clear()
+            # The groups list every parameter, so an optimizer someone still holds
+            # (a learning-rate scheduler keeps one) would otherwise pin the weights.
+            optimizer.param_groups.clear()
+
+
+def suggest_batch_size(
+    *, failed_batch: int, fixed_mb: float, per_sample_mb: float, cap_mb: float
+) -> int | None:
+    """The batch size to suggest after a training step ran out of VRAM (RUN-1.5).
+
+    ``fixed_mb`` is what does not grow with the batch: weights, gradients,
+    optimizer state and the CUDA context. ``per_sample_mb`` is the activation
+    memory one sample needs, measured at the failed batch. ``cap_mb`` is the
+    PyTorch allocator's cap (0.85 of the card, ADR-0006).
+
+    Must satisfy:
+
+    1. Returns the largest power of two ``b`` with ``b < failed_batch`` and
+       ``fixed_mb + b * per_sample_mb <= SAFETY_MARGIN * cap_mb``.
+    2. Returns ``None`` when no such ``b`` exists: even a batch of 1 would not
+       fit, or ``failed_batch`` is already 1.
+    3. Raises ``ValueError`` when ``failed_batch < 1``, or when ``fixed_mb``,
+       ``per_sample_mb`` or ``cap_mb`` is negative or not finite, or ``cap_mb`` is 0.
+    4. Depends on nothing but its arguments.
+    """
+    if failed_batch < 1:
+        raise ValueError(f"failed_batch must be at least 1, got {failed_batch}")
+    for name, value in (
+        ("fixed_mb", fixed_mb),
+        ("per_sample_mb", per_sample_mb),
+        ("cap_mb", cap_mb),
+    ):
+        if not math.isfinite(value) or value < 0:
+            raise ValueError(f"{name} must be a finite number of MB, at least 0, got {value!r}")
+    if cap_mb == 0:
+        raise ValueError("cap_mb must be more than 0")
+    budget = SAFETY_MARGIN * cap_mb
+    if failed_batch == 1:
+        return None
+    batch = 1 << ((failed_batch - 1).bit_length() - 1)  # the largest power of two below it
+    while batch >= 1:
+        if fixed_mb + batch * per_sample_mb <= budget:
+            return batch
+        batch //= 2
+    return None
+
+
+def training_oom_error(
+    *, failed_batch: int, suggested: int | None, peak_mb: float, cap_mb: float
+) -> GpuOom:
+    """The typed error a training job fails with after running out of VRAM (RUN-1.5, MON-1.3).
+
+    Must satisfy:
+
+    1. Returns (does not raise) a :class:`~stratal.core.errors.GpuOom`.
+    2. With a suggestion, its message contains ``"reduce batch size from
+       <failed> → <suggested>"`` exactly as MON-1.3.AC1 writes it (``"from 32 →
+       16"``), and its ``suggested_action`` tells the person to set the run's
+       ``batch_size`` to the suggestion and start it again.
+    3. Without one, the message says that even a batch of 1 does not fit, and
+       ``suggested_action`` offers a smaller model or ``device: cpu``.
+    4. The detail gives ``peak_mb`` and ``cap_mb`` in GB to one decimal
+       (MB / 1024, as the VRAM manager's messages do), so the event explains
+       itself: 5100 MB is "5.0 GB", 5220 MB is "5.1 GB".
+    """
+    usage = f"peak {peak_mb / 1024:.1f} GB of the {cap_mb / 1024:.1f} GB cap"
+    if suggested is None:
+        return GpuOom(
+            f"Training ran out of GPU memory at batch size {failed_batch} ({usage}); "
+            "even a batch of 1 does not fit.",
+            suggested_action="Train a smaller model, or set device: cpu to train on the processor.",
+        )
+    return GpuOom(
+        f"Training ran out of GPU memory at batch size {failed_batch} ({usage}): "
+        f"reduce batch size from {failed_batch} → {suggested}.",
+        suggested_action=f"Set the run's batch_size to {suggested} and start it again. A "
+        "smaller batch changes the optimisation, so its results will differ from this run's.",
+    )

@@ -26,6 +26,9 @@ Step "unit + meta"  { docker compose run --rm --no-deps dev pytest -q }
 Step "frontend"     { docker compose run --rm --no-deps frontend-tools sh -c "npm run typecheck && npm run lint && npm test && npm run build" }
 if (-not $Fast) {
     Step "integration" { docker compose run --rm dev pytest -q -m "integration and not benchmark" }
+    # Tests that need PyTorch (training, M8) run in the GPU worker's image, against the
+    # current source. In the dev image they are skipped.
+    Step "integration (torch)" { docker compose run --rm -v ./src:/app/src:ro -v ./migrations:/app/migrations:ro worker-gpu pytest -q -m "integration and torch" tests/integration }
 }
 if ($Gpu) {
     Step "gpu" { docker compose run --rm --no-deps worker-gpu pytest -q -m gpu tests/gpu }

@@ -95,3 +95,45 @@
   .scr04 .logbox { flex: none; height: 360px; }
 }
 [data-theme="light"] .scr04 .seg b { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); } /* the owner's light-theme rule (components.css), over this screen's own .seg b */
+
+/* SCR-04 v2 training runs (G2 approved 2026-11-17, docs/design/screens/SCR-04v2_v1.html),
+   scoped under .scr04. Train is data-viz categorical 1, validation categorical 2. */
+.scr04 .prog.train { grid-template-columns: 1fr 48px auto 140px; }
+.scr04 .jhead .sub .why { color: var(--text-secondary); }
+.scr04 .epochs { display: flex; gap: 3px; height: 34px; flex: none; }
+.scr04 .ep { flex: 1; min-width: 30px; position: relative; border-radius: var(--r-sm); display: flex; align-items: flex-end; padding: 2px 5px; font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); background: color-mix(in srgb, var(--c) 18%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 45%, transparent); white-space: nowrap; }
+.scr04 .ep.completed { --c: var(--state-completed); } .scr04 .ep.running { --c: var(--state-running); color: var(--text-primary); border-width: 2px; } .scr04 .ep.pending { --c: var(--state-queued); background: transparent; border-style: dashed; } .scr04 .ep.failed { --c: var(--state-failed); }
+.scr04 .ep .ck { position: absolute; top: -5px; right: -4px; width: 9px; height: 9px; transform: rotate(45deg); border: var(--bw) solid var(--text-secondary); background: var(--bg); }
+.scr04 .ep .ck.kept { background: var(--text-primary); border-color: var(--text-primary); }
+.scr04 .ep.gap { --c: var(--state-paused); flex: 0 0 52px; border-style: dashed; justify-content: center; align-items: center; color: var(--c); }
+.scr04 .eplegend { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-muted); flex: none; }
+.scr04 .eplegend .ck { display: inline-block; width: 8px; height: 8px; transform: rotate(45deg); border: var(--bw) solid var(--text-secondary); margin-right: var(--sp-2); }
+.scr04 .eplegend .ck.kept { background: var(--text-primary); border-color: var(--text-primary); }
+.scr04 .tcharts { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1fr; gap: var(--sp-2); flex: none; }
+.scr04 .tchart { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); min-width: 0; cursor: pointer; }
+.scr04 .tchart:hover { border-color: var(--border-strong); }
+.scr04 .tchart .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.scr04 .tchart .k .spacer { flex: 1; }
+.scr04 .tchart .v { font: var(--fw-medium) var(--fs-20)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.scr04 .tchart .d { font: var(--fs-11) var(--font-mono); color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scr04 .tchart .d b { color: var(--text-secondary); font-weight: var(--fw-medium); }
+.scr04 .tchart svg.ch { display: block; width: 100%; height: 58px; margin-top: var(--sp-2); }
+.scr04 .tchart svg .grid { stroke: var(--border); stroke-width: 1; }
+.scr04 .series { display: flex; gap: var(--sp-3); font-size: var(--fs-11); color: var(--text-secondary); text-transform: none; letter-spacing: 0; }
+.scr04 .series i { display: inline-block; width: 10px; height: 2px; margin-right: var(--sp-1); vertical-align: middle; background: var(--c); }
+.scr04 .series i.dot { width: 6px; height: 6px; border-radius: var(--r-pill); }
+.scr04 .state-banner { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3) var(--sp-4); background: color-mix(in srgb, var(--c) 12%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 45%, transparent); border-left: 3px solid var(--c); border-radius: var(--r-md); flex: none; }
+.scr04 .state-banner.paused { --c: var(--state-paused); } .scr04 .state-banner.stalled { --c: var(--state-stalled); }
+.scr04 .state-banner > svg.i { color: var(--c); width: 18px; height: 18px; flex: none; }
+.scr04 .state-banner h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.scr04 .state-banner p { margin: 2px 0 0; font-size: var(--fs-13); color: var(--text-secondary); } .scr04 .state-banner p b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr04 .bench { display: grid; grid-template-columns: 48px 1fr 120px; gap: var(--sp-2) var(--sp-3); align-items: center; font: var(--fs-12) var(--font-mono); color: var(--text-secondary); max-width: 640px; flex: none; }
+.scr04 .bench b { color: var(--text-primary); font-weight: var(--fw-medium); }
+[data-theme="light"] .scr04 .ep.gap { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); }
+/* Frame F: at 1024 px the charts take two rows of three. */
+@media (max-width: 1279px) {
+  .scr04 .tcharts { grid-template-columns: 1fr 1fr 1fr; }
+}
+.scr04 .seg.paused { --c: var(--state-paused); }
+/* live: the running epoch carries "7 · 45%"; it widens to fit instead of spilling into the next. */
+.scr04 .ep.running { min-width: max-content; }

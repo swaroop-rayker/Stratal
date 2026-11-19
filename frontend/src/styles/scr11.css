@@ -1,0 +1,76 @@
+/* SCR-11 copied from docs/design/screens/SCR-11_v1.html (G2 approved), scoped under .scr11. Tokens only. Changes for a live page: "live:". */
+.content:has(> .scr11) { padding: var(--sp-4) var(--sp-5); overflow: auto; }
+.scr11 .btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.scr11 .group-btns { display: inline-flex; }
+.scr11 .group-btns .btn { border-radius: 0; margin-left: -1px; }
+.scr11 .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; }
+.scr11 .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.scr11 .count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.scr11 .phead { display: flex; align-items: center; gap: var(--sp-3); }
+.scr11 .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.scr11 .toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.scr11 .search { position: relative; width: 200px; }
+.scr11 .search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; }
+.scr11 .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.scr11 .t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.scr11 .t tr.sec td .count { margin-left: var(--sp-1); }
+.scr11 .acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.scr11 .t td.acts-cell { width: 120px; text-align: right; }
+.scr11 .vbase { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); color: var(--text-secondary); border: var(--bw) solid var(--border-strong); }
+.scr11 .latest { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); margin-left: var(--sp-1); }
+.scr11 .phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.scr11 .phead .sub .mono { color: var(--text-secondary); }
+.scr11 .phead h1 .mono { font-family: var(--font-mono); }
+.scr11 .cols { display: grid; grid-template-columns: 1fr 340px; gap: var(--sp-3); min-height: 0; }
+.scr11 .card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.scr11 .card h2 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.scr11 .card h2 .num { font: var(--fs-13) var(--font-mono); color: var(--text-primary); font-weight: var(--fw-regular); }
+.scr11 .stackbar { display: flex; height: 12px; border-radius: var(--r-xs); overflow: hidden; background: var(--surface-sunken); border: var(--bw) solid var(--border); }
+.scr11 .stackbar i { display: block; height: 100%; background: var(--c); }
+.scr11 .parts { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr11 .parts > span:nth-child(even) { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--text-primary); }
+.scr11 .parts i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); margin-right: var(--sp-2); }
+.scr11 .parts .ok { color: var(--success); }
+.scr11 .drop { border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); height: 64px; display: grid; place-items: center; color: var(--text-secondary); font-size: var(--fs-12); }
+.scr11 .pred { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font: var(--fs-12) var(--font-mono); }
+.scr11 .pred b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr11 .thumb { width: 64px; height: 64px; border-radius: var(--r-sm); background: repeating-linear-gradient(45deg, var(--surface-raised) 0 6px, var(--border) 6px 7px); flex: none; }
+.scr11 .weights-gone { color: var(--text-muted); }
+.scr11 .pinbtn { background: none; border: 0; color: var(--text-muted); cursor: pointer; padding: 2px; }
+.scr11 .pinbtn.on { color: var(--text-primary); }
+.scr11 .pinbtn svg.i { width: 14px; height: 14px; }
+.scr11 .pinbtn.on svg.i { fill: currentColor; }
+.scr11 .kv { display: grid; grid-template-columns: 130px 1fr; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); }
+.scr11 .kv .mono { color: var(--text-primary); }
+.scr11 .code { font: var(--fs-12)/1.6 var(--font-mono); background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-sm); padding: var(--sp-2) var(--sp-3); white-space: pre; color: var(--text-secondary); margin: 0; }
+.scr11 .callout { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--text-muted); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr11 .callout.busy { border-left-color: var(--danger); background: var(--danger-soft); }
+.scr11 .typeconfirm { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-3); font-size: var(--fs-12); }
+.scr11 .typeconfirm .input { height: var(--h-md); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); padding: 0 var(--sp-2); display: flex; align-items: center; font: var(--fs-13) var(--font-mono); color: var(--text-primary); }
+.scr11 .t td.m2 { font-family: var(--font-mono); font-size: var(--fs-12); }
+[data-theme="dark"] .scr11 .t tr[aria-selected=true] .pill, [data-theme="dark"] .scr11 .t tr.is-hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }
+/* live: the page itself; dialog contents are wrapped in .scr11 too, since they render outside it. */
+.scr11.page { display: flex; flex-direction: column; gap: var(--sp-3); }
+/* live: native selects and the search box at the toolbar's small height, as on SCR-07. */
+.scr11 .toolbar .select { width: auto; height: var(--h-sm); font-size: var(--fs-12); }
+.scr11 .search .input { height: var(--h-sm); padding: 0 var(--sp-6) 0 26px; font-size: var(--fs-12); }
+.scr11 .modal-body > b, .scr11 b.em { color: var(--text-primary); }
+/* live: the drop zone holds two buttons (choose a file, pick from the dataset), so it grows. */
+.scr11 .drop { height: auto; min-height: 64px; padding: var(--sp-2); text-align: center; }
+.scr11 .drop .btn { height: auto; padding: 0 2px; text-decoration: underline; text-underline-offset: 2px; }
+/* Frame G: below 1280 px the right-hand column becomes two tabs beside Versions, and the
+   created column folds into the drawer. */
+.scr11 .narrow-tabs { display: none; }
+@media (max-width: 1279px) {
+  .scr11 .narrow-tabs { display: inline-flex; align-self: flex-start; }
+  .scr11 .cols { grid-template-columns: 1fr; }
+  .scr11 .cols[data-tab="versions"] > .side-col { display: none !important; }
+  .scr11 .cols:not([data-tab="versions"]) > .main-col { display: none !important; }
+  .scr11 .cols[data-tab="disk"] > .side-col > [aria-label="Try it"] { display: none; }
+  .scr11 .cols[data-tab="try"] > .side-col > [aria-label="Disk use"],
+  .scr11 .cols[data-tab="try"] > .side-col > [aria-label="Retention"] { display: none; }
+  .scr11 .t .c-created { display: none; }
+}
+/* live: in a selected row, muted text uses text-secondary, as SCR-02's selected row does
+   (owner's decision at SCR-02's G3): "deleted" measured 4.45:1 there in dark. */
+.scr11 .t tr[aria-selected=true] .weights-gone, .scr11 .t tr[aria-selected=true] td[style*="text-muted"] { color: var(--text-secondary) !important; }

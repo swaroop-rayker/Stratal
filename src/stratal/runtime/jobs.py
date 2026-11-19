@@ -19,12 +19,27 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from stratal.core.bus import LIVE_GLOBAL, Bus, live_channel
-from stratal.core.errors import FieldProblem, NotFound, SourceNotFound, ValidationFailed
+from stratal.core.errors import (
+    Conflict,
+    FieldProblem,
+    InvalidStateTransition,
+    NotFound,
+    SourceNotFound,
+    ValidationFailed,
+)
 from stratal.data import registry
-from stratal.db.models import Dataset, Job, JobStage
+from stratal.db.models import Checkpoint, Dataset, Job, JobStage
 from stratal.mon.events import utc_now
+from stratal.registry import store as model_registry
 from stratal.runtime import stages as stage_registry
-from stratal.runtime.states import TERMINAL, check_transition, record_creation, transition
+from stratal.runtime.states import (
+    TERMINAL,
+    Actor,
+    check_transition,
+    record_creation,
+    transition,
+)
+from stratal.train.config import TrainConfig, TrainRequest
 
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{1,62}$")
 
@@ -60,6 +75,12 @@ class PipelineRequest(BaseModel):
         description="Per-stage overrides of the default config.",
     )
     until_stage: str | None = Field(default=None, description="Stop after this stage.")
+    dataset_type: Literal["image_caption", "labelled_images"] | None = Field(
+        default=None,
+        description="Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest "
+        "to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from "
+        "class folders. Null: the type of 'from_version' if it has one, else image_caption.",
+    )
 
     @model_validator(mode="after")
     def _one_start(self) -> "PipelineRequest":
@@ -97,10 +118,12 @@ def create_job_from_plan(
     plan: list[tuple[str, dict[str, Any]]],
     dataset_id: int | None = None,
     input_version_id: str | None = None,
+    queues: dict[str, str] | None = None,
 ) -> tuple[Job, Enqueue]:
     """Insert a queued job with one stage per ``(name, config)`` in ``plan``.
 
-    ``input_version_id`` is the version the first stage consumes, if any.
+    ``input_version_id`` is the version the first stage consumes, if any. ``queues``
+    overrides a stage's queue by name (a training run on the CPU, ADR-0014 rule 8).
     """
     job = Job(
         id=next_job_id(session),
@@ -119,14 +142,15 @@ def create_job_from_plan(
         definition = stage_registry.get_stage(name)
         if definition is None:
             raise ValidationFailed(f"Unknown stage {name!r}.")
+        queue = (queues or {}).get(name, definition.queue)
         if idx == 0:
-            first_queue = definition.queue
+            first_queue = queue
         session.add(
             JobStage(
                 job_id=job.id,
                 idx=idx,
                 name=name,
-                queue=definition.queue,
+                queue=queue,
                 status="queued" if idx == 0 else "pending",
                 config=config,
                 config_hash=config_hash(config),
@@ -150,8 +174,11 @@ def _field_problems(stage: str, exc: ValidationError) -> list[FieldProblem]:
     ]
 
 
-def _start_from_version(session: Session, request: PipelineRequest) -> tuple[str, str, str]:
-    """For ``from_version``: the version ID, its dataset's slug and the stage that made it."""
+def _start_from_version(
+    session: Session, request: PipelineRequest
+) -> tuple[str, str, str, str | None]:
+    """For ``from_version``: the version ID, its dataset's slug, the stage that made it
+    and its dataset type."""
     version_id = str(request.from_version)
     try:
         version = registry.get_version(session, version_id)
@@ -168,18 +195,69 @@ def _start_from_version(session: Session, request: PipelineRequest) -> tuple[str
             f"Version {version_id} belongs to dataset {slug!r}, not {request.dataset!r}.",
             suggested_action="Leave 'dataset' out, or name the version's own dataset.",
         )
-    return version_id, slug, version.stage
+    return version_id, slug, version.stage, version.dtype
+
+
+def _dataset_type(request: PipelineRequest, version_dtype: str | None) -> str:
+    """The pipeline's dataset type: as requested, else the input version's, else image_caption."""
+    if request.dataset_type is None:
+        return version_dtype or stage_registry.IMAGE_CAPTION
+    # Versions of an image–caption pipeline have no type until the filter stage validates it.
+    actual = version_dtype or stage_registry.IMAGE_CAPTION
+    if request.from_version is not None and actual != request.dataset_type:
+        raise ValidationFailed(
+            f"Version {request.from_version} is {actual}, not {request.dataset_type}.",
+            suggested_action="Leave 'dataset_type' out to use the version's own type.",
+            errors=[FieldProblem(loc=["dataset_type"], msg="does not match", code="conflict")],
+        )
+    return request.dataset_type
+
+
+def _stage_overrides(dtype: str, request: PipelineRequest, name: str) -> dict[str, Any]:
+    """The type's defaults for stage ``name`` with the request's overrides on top."""
+    return {
+        **stage_registry.TYPE_DEFAULTS.get(dtype, {}).get(name, {}),
+        **request.stages.get(name, {}),
+    }
+
+
+def _label_problems(dtype: str, plan: list[tuple[str, dict[str, Any]]]) -> list[FieldProblem]:
+    """A labelled-images dataset needs labels from ingest; an image–caption one has none."""
+    for name, config in plan:
+        if name != "ingest":
+            continue
+        wants = dtype == stage_registry.LABELLED_IMAGES
+        if wants != (config.get("label_from") is not None):
+            msg = (
+                "labelled_images needs label_from 'folder'"
+                if wants
+                else "label_from is only for dataset_type labelled_images"
+            )
+            return [FieldProblem(loc=["stages", "ingest", "label_from"], msg=msg, code="invalid")]
+    return []
 
 
 def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job, Enqueue]:
     """Validate a pipeline request, resolve every stage's config and queue the job."""
     available = stage_registry.registered()
-    names = [name for name in stage_registry.PIPELINE_ORDER if name in available]
-    all_names = list(names)
     input_version_id: str | None = None
+    version_dtype: str | None = None
+    made_by: str | None = None
     if request.from_version is not None:
-        input_version_id, slug, made_by = _start_from_version(session, request)
-        order = stage_registry.PIPELINE_ORDER
+        input_version_id, slug, made_by, version_dtype = _start_from_version(session, request)
+    else:
+        slug = str(request.dataset)
+    dtype = _dataset_type(request, version_dtype)
+    order = stage_registry.PIPELINE_ORDERS[dtype]
+    names = [name for name in order if name in available]
+    all_names = list(names)
+    if made_by is not None:
+        if made_by not in order:
+            raise ValidationFailed(
+                f"Version {input_version_id} was made by {made_by!r}, which a {dtype} "
+                "pipeline does not run.",
+                suggested_action=f"A {dtype} pipeline runs: {', '.join(order)}.",
+            )
         names = [n for n in names if order.index(n) > order.index(made_by)]
         if not names:
             raise ValidationFailed(
@@ -187,8 +265,6 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
                 "there is nothing after it to run.",
                 suggested_action=f"Stages available now: {', '.join(all_names)}.",
             )
-    else:
-        slug = str(request.dataset)
     if not _SLUG.match(slug):
         raise ValidationFailed(
             f"Dataset name {slug!r} is not a valid slug.",
@@ -218,11 +294,14 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
     problems: list[FieldProblem] = []
     for name in names:
         try:
-            model = available[name].config_model.model_validate(request.stages.get(name, {}))
+            model = available[name].config_model.model_validate(
+                _stage_overrides(dtype, request, name)
+            )
         except ValidationError as exc:
             problems.extend(_field_problems(name, exc))
             continue
         plan.append((name, model.model_dump(mode="json")))
+    problems.extend(_label_problems(dtype, plan))
     if problems:
         raise ValidationFailed(
             "A stage config did not pass validation.",
@@ -238,6 +317,7 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
     )
     spec = request.model_dump(mode="json")
     spec["dataset"] = slug
+    spec["dataset_type"] = dtype
     spec["stages"] = dict(plan)
     return create_job_from_plan(
         session,
@@ -246,6 +326,59 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
         plan=plan,
         dataset_id=dataset.id,
         input_version_id=input_version_id,
+    )
+
+
+def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqueue]:
+    """Validate a training request and queue a one-stage ``train`` job (RUN-1.1, ADR-0014).
+
+    The dataset version must be a split of a labelled-images dataset. A run on
+    ``device: cpu`` goes to the CPU queue; ``gpu`` and ``auto`` to the GPU queue.
+    """
+    version_id = request.dataset_version
+    loc: list[str | int] = ["dataset_version"]
+    try:
+        version = registry.get_version(session, version_id)
+    except NotFound as exc:
+        raise ValidationFailed(
+            f"dataset_version {version_id!r} is not a known dataset version.",
+            suggested_action="List versions with GET /datasets/{slug}/versions and use one.",
+            errors=[FieldProblem(loc=loc, msg="unknown version", code="not_found")],
+        ) from exc
+    if version.dtype != stage_registry.LABELLED_IMAGES or version.stage != "split":
+        made = f"a {version.stage} version of type {version.dtype or 'none'}"
+        raise ValidationFailed(
+            f"Version {version_id} is {made}; training needs a split of a labelled-images dataset.",
+            suggested_action="Run a labelled_images pipeline through the split stage and "
+            "train on its output version.",
+            errors=[FieldProblem(loc=loc, msg="not a labelled split", code="invalid")],
+        )
+    dataset = session.get(Dataset, version.dataset_id)
+    resolved = request.config
+    if "checkpoint_every_s" not in resolved.model_fields_set:
+        # The default comes from the settings saved on SCR-14 (OC-9), fixed into the
+        # run's config now, so a later change never alters a running job (NFR-4).
+        from stratal.core.settings import get_settings
+        from stratal.runtime import limits
+
+        minutes = limits.read(session, get_settings()).checkpoint_interval_min
+        resolved = resolved.model_copy(update={"checkpoint_every_s": 60 * minutes})
+    config = resolved.model_dump(mode="json")
+    plan = [("train", config)]
+    spec: dict[str, Any] = {
+        "kind": "train",
+        "dataset": dataset.slug if dataset is not None else None,
+        "dataset_version": version_id,
+        "stages": {"train": config},
+    }
+    return create_job_from_plan(
+        session,
+        kind="train",
+        spec=spec,
+        plan=plan,
+        dataset_id=version.dataset_id,
+        input_version_id=version_id,
+        queues={"train": "cpu" if request.config.device == "cpu" else "gpu"},
     )
 
 
@@ -263,7 +396,7 @@ def stages_of(session: Session, job_id: str) -> list[JobStage]:
 
 def cancel_unfinished_stages(session: Session, job_id: str) -> None:
     for stage in stages_of(session, job_id):
-        if stage.status in ("pending", "queued", "running"):
+        if stage.status in ("pending", "queued", "running", "paused"):
             stage.status = "cancelled"
             stage.finished_at = stage.finished_at or utc_now()
 
@@ -277,12 +410,60 @@ def request_cancel(session: Session, job_id: str) -> tuple[Job, bool]:
     """
     job = get_job(session, job_id, lock=True)
     check_transition(job.id, job.state, "cancelled")
-    if job.state == "running":
+    if job.state in ("running", "stalled"):  # a child is still at work: it stops itself
         job.desired_state = "cancelled"
         return job, True
     transition(session, job, "cancelled", reason="cancelled by the user", actor="user")
     cancel_unfinished_stages(session, job_id)
     return job, False
+
+
+def request_pause(
+    session: Session, job_id: str, *, reason: Literal["user", "thermal"] = "user"
+) -> Job:
+    """Ask a running job to pause (RUN-1.2, ADR-0014 rule 6).
+
+    Sets ``desired_state = paused``. The stage stops at its next safe point (a
+    training run writes a checkpoint first) and the supervisor makes the
+    transition; a job between stages pauses before its next stage starts.
+    """
+    job = get_job(session, job_id, lock=True)
+    check_transition(job.id, job.state, "paused")
+    if job.desired_state == "cancelled":
+        raise Conflict(
+            f"Job {job_id} is being cancelled.",
+            suggested_action="Wait for the cancellation to finish.",
+        )
+    job.desired_state = "paused"
+    job.pause_reason = reason
+    return job
+
+
+def request_resume(
+    session: Session, job_id: str, *, actor: Actor = "user", reason: str = "resumed by the user"
+) -> tuple[Job, Enqueue]:
+    """Requeue a paused job from the stage that was paused (RUN-1.2); the watchdog also
+    resumes jobs it paused for heat (RUN-1.6)."""
+    job = get_job(session, job_id, lock=True)
+    if job.state != "paused":
+        raise InvalidStateTransition(
+            f"Job {job_id} is {job.state}, not paused.",
+            suggested_action="Only a paused job can be resumed; a failed one is retried.",
+        )
+    stages = stages_of(session, job_id)
+    resume = next((s for s in stages if s.status == "paused"), None) or next(
+        (s for s in stages if s.status not in ("completed", "skipped")), None
+    )
+    if resume is None:
+        raise ValidationFailed(f"Job {job_id} has no stage left to resume.")
+    resume.status = "queued"
+    resume.error = None
+    resume.finished_at = None
+    job.current_stage_idx = resume.idx
+    job.desired_state = None
+    job.pause_reason = None
+    transition(session, job, "queued", reason=reason, actor=actor)
+    return job, Enqueue(job.id, resume.idx, resume.queue)
 
 
 def request_retry(session: Session, job_id: str) -> tuple[Job, Enqueue]:
@@ -334,6 +515,7 @@ def stage_view(stage: JobStage) -> dict[str, Any]:
         "throughput": stage.throughput,
         "eta_seconds": stage.eta_seconds,
         "activity": stage.activity,
+        "last_progress_at": _iso(stage.last_progress_at),
         "metrics": stage.metrics,
         "peaks": stage.peaks,
         "started_at": _iso(stage.started_at),
@@ -346,16 +528,21 @@ def job_view(session: Session, job: Job) -> dict[str, Any]:
     """A job with its stages, as the API returns it."""
     stages = stages_of(session, job.id)
     current = next((s.name for s in stages if s.idx == job.current_stage_idx), None)
+    version = model_registry.run_version(session, job.id) if job.kind == "train" else None
     return {
         "id": job.id,
         "kind": job.kind,
         "state": job.state,
         "desired_state": job.desired_state,
+        "pause_reason": job.pause_reason,
+        "heartbeat_at": _iso(job.heartbeat_at),
         "attempt": job.attempt,
         "dataset": job.spec.get("dataset"),
         "current_stage": current if job.state not in TERMINAL else None,
         "stages": [stage_view(stage) for stage in stages],
         "output_version_id": job.output_version_id,
+        "model_version_id": version.id if version is not None else None,
+        "model_lineage_id": version.lineage_id if version is not None else None,
         "error": job.error,
         "summary": job.summary,
         "created_at": _iso(job.created_at),
@@ -392,3 +579,64 @@ def create_report_job(
         dataset_id=version.dataset_id,
         input_version_id=version_id,
     )
+
+
+# -- registry jobs (M8, REG-2.2 to REG-2.10, ADR-0015) -----------------------------
+
+
+def create_retention_job(
+    session: Session,
+    *,
+    lineage_ids: list[str] | None = None,
+    dry_run: bool = False,
+    confirmed: list[str] | None = None,
+    reason: str = "requested",
+) -> tuple[Job, Enqueue]:
+    """Queue a one-stage ``retention`` job on the CPU queue (REG-2.9)."""
+    config = stage_registry.RetentionConfig(
+        lineage_ids=lineage_ids, dry_run=dry_run, confirmed=confirmed, reason=reason
+    ).model_dump(mode="json")
+    spec: dict[str, Any] = {
+        "kind": "retention",
+        "lineage_ids": lineage_ids,
+        "dry_run": dry_run,
+        "reason": reason,
+        "stages": {"retention": config},
+    }
+    return create_job_from_plan(session, kind="retention", spec=spec, plan=[("retention", config)])
+
+
+def retention_after_run(session: Session, job: Job) -> Enqueue | None:
+    """After a training run completes or is cancelled, clean its lineage (REG-2.2, REG-2.6).
+    ``None`` when the run never reached a lineage."""
+    if job.kind != "train" or job.state not in ("completed", "cancelled"):
+        return None
+    version = model_registry.run_version(session, job.id)
+    lineage_id = version.lineage_id if version is not None else None
+    if lineage_id is None:
+        checkpoint = session.get(Checkpoint, job.id)
+        lineage_id = checkpoint.lineage_id if checkpoint is not None else None
+    if lineage_id is None:
+        return None
+    _, enqueue = create_retention_job(
+        session, lineage_ids=[lineage_id], reason=f"after {job.id} {job.state}"
+    )
+    return enqueue
+
+
+def create_retrain_job(session: Session, version_id: str) -> tuple[Job, Enqueue]:
+    """A new run with a version's exact config and dataset version (REG-2.7)."""
+    version = model_registry.get_version(session, version_id)
+    if version.state != "trained" or version.dataset_version_id is None:
+        raise Conflict(
+            f"{version_id} is a {version.state} version; only trained versions are re-trained.",
+            suggested_action="Re-train a trained version, or start a new run.",
+        )
+    request = TrainRequest(
+        kind="train",
+        dataset_version=version.dataset_version_id,
+        config=TrainConfig.model_validate(version.config),
+    )
+    job, enqueue = create_train_job(session, request)
+    job.spec = {**job.spec, "retrain_of": version_id}
+    return job, enqueue

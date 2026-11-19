@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-04 v2 training runs — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px; }
+.spacer { flex: 1; }
+/* SCR-04 */
+.jhead { display: flex; align-items: center; gap: 10px; }
+.jhead .id { font: 600 20px var(--mono); }
+.jhead .sub { color: var(--ink-3); font-size: 12px; } .jhead .sub .mono { color: var(--ink-2); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; }
+.pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.danger { border-color: var(--ink); color: var(--ink); border-width: 2px; } .btn.off { opacity: .45; }
+.activity { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; }
+.activity .msg { font: 600 14px var(--mono); }
+.prog { display: grid; grid-template-columns: 1fr auto auto auto; gap: 16px; align-items: center; font: 12px var(--mono); color: var(--ink-2); }
+.bar { height: 10px; border: 1px solid var(--ink-3); border-radius: 5px; position: relative; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); border-radius: 5px; }
+.timeline { display: flex; gap: 3px; height: 44px; }
+.seg { flex: var(--w, 1); min-width: 112px; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; display: flex; flex-direction: column; justify-content: center; font-size: 11px; background: var(--fill); }
+.seg b { font-size: 12px; } .seg span { font-family: var(--mono); color: var(--ink-2); }
+.seg.run { border: 2px solid var(--ink); background: #fff; } .seg.pend { border-style: dashed; background: transparent; color: var(--ink-3); } .seg.sel { outline: 2px solid var(--ink); outline-offset: 2px; } .seg.fail { border: 2px solid var(--ink); background: repeating-linear-gradient(45deg, #fff 0 4px, var(--fill-2) 4px 8px); }
+.res { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.tile { border: 1px solid var(--line); border-top: 3px solid var(--ink-3); border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; gap: 1px; }
+.tile small { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); } .tile b { font: 600 18px var(--mono); } .tile span { font: 11px var(--mono); color: var(--ink-3); }
+.chart { height: 46px; margin-top: 4px; border-bottom: 1px solid var(--soft); position: relative; background: repeating-linear-gradient(0deg, transparent 0 14px, #f4f4f4 14px 15px); }
+.chart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.log { border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.loghead { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.loghead b { font-size: 13px; }
+.seg2 { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; } .seg2 span { padding: 2px 8px; font-size: 11px; } .seg2 .on { background: var(--fill-2); font-weight: 600; }
+.lines { font: 12px/1.7 var(--mono); overflow: hidden; }
+.ln { display: grid; grid-template-columns: 70px 50px 86px 1fr; gap: 10px; padding: 0 10px; white-space: nowrap; }
+.ln .t, .ln .s { color: var(--ink-3); }
+.ln.warn { background: #f4f4f4; border-left: 3px solid var(--ink-2); } .ln.err { background: #ededed; border-left: 3px solid var(--ink); }
+.ln .why { grid-column: 4; white-space: normal; color: var(--ink-2); font-family: system-ui, sans-serif; font-size: 12px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.panel { border: 2px solid var(--ink); border-radius: 6px; padding: 10px 14px; display: flex; gap: 12px; align-items: flex-start; background: #f7f7f7; }
+.panel .ico { width: 22px; height: 22px; border: 2px solid var(--ink); border-radius: 50%; flex: none; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; } .kv span:nth-child(odd) { color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 32px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 520px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font-size: 15px; }
+.drawer .body { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+.bigchart { height: 110px; border: 1px solid var(--soft); border-radius: 4px; position: relative; background: repeating-linear-gradient(0deg, transparent 0 21px, #f4f4f4 21px 22px); }
+.bigchart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 460px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.tip { position: absolute; padding: 4px 8px; background: var(--ink); color: #fff; border-radius: 4px; font-size: 11px; max-width: 260px; white-space: normal; z-index: 6; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+/* SCR-04 v2 additions: training charts, epoch segments with checkpoints, state banners */
+.tcharts { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1fr; gap: 8px; }
+.tchart { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; }
+.tchart small { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); display: flex; gap: 6px; }
+.tchart b { font: 600 15px var(--mono); } .tchart span.d { font: 11px var(--mono); color: var(--ink-3); }
+.tchart .chart { height: 58px; }
+.ep { flex: 1; min-width: 40px; border: 1px solid var(--line); border-radius: 3px; position: relative; background: var(--fill); font: 10px var(--mono); color: var(--ink-3); display: flex; align-items: flex-end; padding: 2px 4px; }
+.ep.run { border: 2px solid var(--ink); background: #fff; color: var(--ink-2); } .ep.pend { border-style: dashed; background: transparent; }
+.ep .ck { position: absolute; top: -6px; right: -5px; width: 10px; height: 10px; transform: rotate(45deg); border: 1px solid var(--ink-2); background: #fff; }
+.ep .ck.keep { background: var(--ink-2); }
+.gap { flex: 0 0 26px; border: 1px dashed var(--ink-3); border-radius: 3px; display: grid; place-items: center; font-size: 10px; color: var(--ink-3); }
+.banner { border: 2px dashed var(--ink-2); border-radius: 6px; padding: 10px 14px; display: flex; gap: 12px; align-items: center; background: #f7f7f7; }
+.banner b { font-size: 14px; } .banner .why { color: var(--ink-2); font-size: 12px; }
+.bench { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 12px; align-items: center; font: 12px var(--mono); max-width: 640px; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-04 v2 — Live job view, training runs · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: RUN-1.2, RUN-1.3, RUN-1.5, RUN-1.6, RUN-1.7, RUN-1.8, RUN-1.9; MON-4.1–4.3 as in v1</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §3a SCR-04 v2 (approved v2)</span><span>Route: <span class="mono">/jobs/:job_id</span></span><span>2026-11-17</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-01 shell (faint). Blue numbers are annotations. A training job uses the same page as a pipeline job (approved SCR-04 v1): the same header, activity line, resource tiles and activity log. What changes is the middle: training charts instead of a stage-only view, and a timeline of epochs instead of stages. The data: <span class="mono">job_0031</span>, a small CNN on the CIFAR-10 split, epoch 7 of 20.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Same page, same five bands as v1</b>, so a person reads a training run exactly as a pipeline run: who and what state; what it is doing now and how far; the timeline; then (new) the training charts; the resources; the log.</li>
+<li><b>Progress counts epochs and steps.</b> The bar is the whole run; the line under it says "epoch 7 / 20 · step 140 / 312", samples per second and ETA, in fixed-width columns as in v1.</li>
+<li><b>Five small training charts in one row</b>, loss and accuracy wider than the rest: loss (train per step as a line, validation per epoch as dots), accuracy (train and validation), learning rate, gradient norm, step time. Each has its latest value in large mono and a table view (the accessibility rule).</li>
+<li><b>The timeline shows epochs</b> as equal segments. A diamond marks each checkpoint; the filled one is the one kept (only the latest is: REG-2.6). A pause appears as a dashed gap with its reason.</li>
+<li><b>Device and why</b> sit in the header line, because "why is this on the CPU?" is the first question about a slow run (RUN-1.9).</li>
+<li><b>One banner per unusual state</b>, above the activity line: paused (by the person, or by heat with the temperatures), stalled (no progress for 5 minutes), each with its one action.</li>
+<li><b>Actions by state:</b> running: Pause and Cancel; paused: Resume and Cancel; failed with out-of-memory: <i>Start again with 128</i> (opens SCR-09 prefilled); completed: Open the model (SCR-11).</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Running: epoch 7 of 20</h2>
+<div class="frame" style="height:800px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav on">Jobs</div><div class="nav">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b> / <span class="mono">job_0031</span></span><span class="spacer"></span><span>[ Running · job_0031 · train · 33% ]</span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0031</span><span class="pill">● Running</span><span class="sub">train · <span class="mono">small_cnn</span> on <span class="mono">ds_c1f4a09e2b77</span> (cifar10, split) · GPU, auto: 12 ms/step against 41 on the CPU · attempt 1 · 9m 12s</span><span class="spacer"></span><span class="btn">❚❚ Pause</span><span class="btn danger">Cancel job</span></div>
+      <div class="activity"><span class="pill" style="border-style:dotted">train</span><span class="msg">▶ Epoch 7/20 · step 140/312 · small_cnn · bs=128 · lr 0.0008 · fp32</span></div>
+      <div class="prog"><div class="bar" style="--p:33%"></div><span><b>33%</b></span><span>epoch 7 / 20 · step 140 / 312 · 10,640 samples/s</span><span>ETA <b>18m 40s</b></span></div>
+      <div class="timeline" style="height:34px; gap:4px; margin-top:6px">
+        <div class="ep">1<i class="ck"></i></div><div class="ep">2<i class="ck"></i></div><div class="ep">3<i class="ck"></i></div><div class="ep">4<i class="ck"></i></div><div class="ep">5<i class="ck"></i></div><div class="ep">6<i class="ck keep"></i></div><div class="ep run">7 · 45%</div>
+        <div class="ep pend">8</div><div class="ep pend">9</div><div class="ep pend">10</div><div class="ep pend">11</div><div class="ep pend">12</div><div class="ep pend">13</div><div class="ep pend">14</div><div class="ep pend">15</div><div class="ep pend">16</div><div class="ep pend">17</div><div class="ep pend">18</div><div class="ep pend">19</div><div class="ep pend">20</div>
+      </div>
+      <div class="tcharts">
+        <div class="tchart"><small>Loss <span class="k">table</span></small><b>0.712</b><span class="d">train · val 0.804 (epoch 6)</span><div class="chart"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><polyline points="0,4 10,12 20,18 30,22 40,25 50,27 60,28 70,30" fill="none" stroke="#555" stroke-width="1.2"/><circle cx="14" cy="14" r="1.6" fill="#222"/><circle cx="28" cy="20" r="1.6" fill="#222"/><circle cx="42" cy="23" r="1.6" fill="#222"/><circle cx="56" cy="25" r="1.6" fill="#222"/></svg></div></div>
+        <div class="tchart"><small>Accuracy <span class="k">table</span></small><b>74.9%</b><span class="d">train · val 71.8% (epoch 6)</span><div class="chart"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><polyline points="0,36 10,28 20,22 30,18 40,15 50,13 60,12 70,11" fill="none" stroke="#555" stroke-width="1.2"/><polyline points="0,37 14,30 28,24 42,20 56,17" fill="none" stroke="#999" stroke-dasharray="2 2" stroke-width="1.2"/></svg></div></div>
+        <div class="tchart"><small>Learning rate</small><b>8.0e-4</b><span class="d">cosine</span><div class="chart"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><polyline points="0,4 70,12" fill="none" stroke="#555" stroke-width="1.2"/></svg></div></div>
+        <div class="tchart"><small>Grad norm</small><b>1.84</b><span class="d">median 2.1</span><div class="chart"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><polyline points="0,10 10,18 20,22 30,20 40,24 50,23 60,25 70,24" fill="none" stroke="#555" stroke-width="1.2"/></svg></div></div>
+        <div class="tchart"><small>Step time</small><b>12 ms</b><span class="d">p95 15 ms</span><div class="chart"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><polyline points="0,20 10,21 20,20 30,22 40,20 50,21 60,20 70,21" fill="none" stroke="#555" stroke-width="1.2"/></svg></div></div>
+      </div>
+      <div class="res">
+        <div class="tile"><small>CPU</small><b>34%</b><span>loader 4 workers</span><div class="chart"></div></div>
+        <div class="tile"><small>RAM</small><b>4.1</b><span>/ 9.7 GB</span><div class="chart"></div></div>
+        <div class="tile"><small>GPU</small><b>88%</b><span>util · tooltip</span><div class="chart"></div></div>
+        <div class="tile"><small>VRAM</small><b>1.9</b><span>/ 6.0 GB · alloc 1.2 · rsv 1.6</span><div class="chart"></div></div>
+        <div class="tile"><small>GPU temp</small><b>71 °C</b><span>pause at 83</span><div class="chart"></div></div>
+      </div>
+      <div class="log">
+        <div class="loghead"><b>Activity</b><span class="seg2"><span class="on">This job</span><span>All jobs</span></span><span class="select">INFO and above ▾</span><span class="spacer"></span><span class="btn sm ghost">Jump to latest</span></div>
+        <div class="lines">
+          <div class="ln"><span class="t">14:21:40</span><span>INFO</span><span class="s">train</span><span>Epoch 7/20 · step 140/312 · loss 0.712 · acc 74.9%</span></div>
+          <div class="ln"><span class="t">14:20:02</span><span>INFO</span><span class="s">train</span><span>Saved checkpoint after epoch 6 (14.8 MB, 0.3 s); removed the one after epoch 5</span></div>
+          <div class="ln"><span class="t">14:20:01</span><span>INFO</span><span class="s">train</span><span>Epoch 6/20 done · val loss 0.804 · val acc 71.8%</span></div>
+          <div class="ln"><span class="t">14:12:30</span><span>INFO</span><span class="s">train</span><span>Benchmarked devices: GPU 12 ms/step, CPU 41 ms/step → GPU</span></div>
+        </div>
+      </div>
+    </section>
+    <footer class="status"><span>CPU 34%</span><span>RAM 4.1 / 9.7 GB</span><span>GPU 88%</span><span>VRAM 1.9 / 6.0 GB</span><span class="spacer"></span><span>● live</span></footer>
+  </div>
+  <span class="n" style="left:226px; top:62px">1</span>
+  <span class="n" style="left:226px; top:110px">2</span>
+  <span class="n" style="left:226px; top:156px">3</span>
+  <span class="n" style="left:226px; top:198px">4</span>
+  <span class="n" style="left:226px; top:252px">5</span>
+  <span class="n" style="left:226px; top:356px">6</span>
+  <span class="n" style="left:226px; top:530px">7</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Source</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Header</td><td>Job, state, model on dataset version, device and why, attempt, elapsed; Pause and Cancel</td><td><span class="mono">GET /jobs/{id}</span> (training fields planned, M8); <span class="mono">POST /jobs/{id}/pause</span> (planned, M8)</td><td>yes</td></tr>
+<tr><td><span class="num">2</span></td><td>Activity line</td><td>What the run is doing now, with its key parameters (MON-1.2)</td><td>job stream: latest activity</td><td>yes</td></tr>
+<tr><td><span class="num">3</span></td><td>Progress</td><td>Whole-run bar, epoch and step, samples/s, ETA</td><td>job stream progress events</td><td>yes</td></tr>
+<tr><td><span class="num">4</span></td><td>Epoch timeline</td><td>Epochs, checkpoints (filled = kept), pauses as gaps</td><td>events</td><td>yes</td></tr>
+<tr><td><span class="num">5</span></td><td>Training charts</td><td>Loss, accuracy, learning rate, gradient norm, step time, each with a table view (RUN-1.8)</td><td>event metrics; <span class="mono">GET /jobs/{id}/events</span> for history</td><td>yes</td></tr>
+<tr><td><span class="num">6</span></td><td>Resource tiles</td><td>As v1; the CPU tile names the loader's workers; the temperature tile shows the pause limit (RUN-1.6)</td><td>job stream samples</td><td>yes</td></tr>
+<tr><td><span class="num">7</span></td><td>Activity log</td><td>As v1, with epoch, checkpoint, benchmark, pause and resume lines</td><td>events</td><td>yes</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Paused by heat, and paused by the person</h2>
+<div class="frame" style="height:340px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Jobs</b> / <span class="mono">job_0031</span></span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0031</span><span class="pill dash">❚❚ Paused</span><span class="sub">train · <span class="mono">small_cnn</span> · checkpoint after epoch 9, step 201 kept</span><span class="spacer"></span><span class="btn primary">▶ Resume now</span><span class="btn danger">Cancel job</span></div>
+      <div class="banner"><span class="ico" style="width:22px;height:22px;border:2px solid var(--ink);border-radius:50%"></span><div><b>Paused for heat: the GPU reached 84 °C (limit 83 °C)</b><div class="why">It resumes by itself when the GPU is below 75 °C; it is 79 °C now. Nothing is lost: the run continues from the checkpoint.</div></div></div>
+      <div class="banner" style="border-style:solid"><div><b>Paused by you at 14:31</b><div class="why">It waits for Resume. The checkpoint is kept until it is resumed or cancelled (REG-2.6).</div></div></div>
+      <div class="timeline" style="height:30px; gap:4px"><div class="ep">8</div><div class="ep">9<i class="ck keep"></i></div><div class="gap">heat</div><div class="ep pend">10</div><div class="ep pend">11</div><div class="ep pend">12</div></div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">Only one banner shows at a time; both are drawn here to compare. "Resume now" on a heat pause asks first if the GPU is still above 75 °C.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Stalled</h2>
+<div class="frame" style="height:220px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Jobs</b> / <span class="mono">job_0031</span></span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0031</span><span class="pill">⧖ Stalled</span><span class="spacer"></span><span class="btn danger">Cancel job</span></div>
+      <div class="banner" style="border-style:solid; border-width:2px"><div><b>No progress for 5 min 12 s</b><div class="why">The worker is alive (heartbeat 3 s ago). Last activity: "Epoch 12/20 · step 88/312". It returns to Running by itself if progress resumes; SCR-13 (M11) shows which resource it waits on.</div></div></div>
+    </section><footer class="status"></footer></div>
+</div>
+
+<!-- ===================================================================== D -->
+<h2>D · Failed: out of memory</h2>
+<div class="frame" style="height:260px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Jobs</b> / <span class="mono">job_0032</span></span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0032</span><span class="pill">✕ Failed</span><span class="sub">train · <span class="mono">wide_cnn</span> · bs=256 · epoch 1, step 3</span></div>
+      <div class="panel"><span class="ico"></span><div><b>GPU out of memory: reduce batch size from 256 → 128</b><div class="kv" style="margin-top:6px"><span>code</span><span class="mono">gpu_oom</span><span>peak</span><span>5.0 GB of the 5.1 GB cap</span><span>do</span><span>Set the run's batch_size to 128 and start it again.</span></div></div><span class="spacer"></span><span class="btn primary">Start again with 128</span></div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">"Start again with 128" opens SCR-09 prefilled with the same model, data and config, batch size 128. A retry with the same batch would fail the same way, so it is not offered here.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Starting: benchmarking devices</h2>
+<div class="frame" style="height:240px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Jobs</b> / <span class="mono">job_0033</span></span></header>
+    <section class="content">
+      <div class="jhead"><span class="id">job_0033</span><span class="pill">● Running</span><span class="sub">train · <span class="mono">tiny_mlp</span> (0.2 M parameters) · device auto</span></div>
+      <div class="activity"><span class="msg">▶ Benchmarking devices: 20 steps on each</span></div>
+      <div class="bench"><span>GPU</span><div class="bar" style="--p:100%"></div><span>9 ms/step</span><span>CPU</span><div class="bar" style="--p:60%"></div><span>measuring…</span></div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">Shown only for small models on auto (under 1 M parameters). If the CPU wins, the job moves to the CPU queue through a checkpoint, and the header says so.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame w1024" style="height:300px">
+  <div class="shell rail"><aside class="side"></aside><header class="top"><span><b>Jobs</b> / <span class="mono">job_0031</span></span></header>
+    <section class="content">
+      <div class="jhead"><span class="id" style="font-size:16px">job_0031</span><span class="pill">● Running</span><span class="spacer"></span><span class="btn">❚❚ Pause</span><span class="btn danger">Cancel</span></div>
+      <div class="activity"><span class="msg" style="font-size:12px">▶ Epoch 7/20 · step 140/312 · small_cnn · bs=128</span></div>
+      <div class="tcharts" style="grid-template-columns: 1fr 1fr 1fr">
+        <div class="tchart"><small>Loss</small><b>0.712</b><div class="chart"></div></div>
+        <div class="tchart"><small>Accuracy</small><b>74.9%</b><div class="chart"></div></div>
+        <div class="tchart"><small>LR · grad · step</small><b style="font-size:12px">8.0e-4 · 1.84 · 12 ms</b><div class="chart"></div></div>
+      </div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">At 1024 px the three small charts fold into one tile with three values; its table view still lists all three series. The epoch timeline shows at most 20 segments and then groups them ("1–10 ✓").</p>
+</main>
+</body>
+</html>

@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,7 @@ from stratal.core.errors import StratalError, ValidationFailed
 from stratal.data import registry
 from stratal.data.clean import OWNER_UNITS, CleanConfig, DedupeUnits, run_clean
 from stratal.data.commit import VersionRecord
-from stratal.data.ingest import IngestConfig, run_ingest
+from stratal.data.ingest import LABELLED_IMAGES, IngestConfig, run_ingest
 from stratal.data.preprocess import PreprocessConfig, run_preprocess
 from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
 from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitUnits, run_split
@@ -37,11 +37,33 @@ from stratal.mon.events import MetricValue
 from stratal.runtime.context import JobContext
 from stratal.runtime.gpu_lease import gpu_lease
 from stratal.storage.derivations import PgDerivationCache
+from stratal.train.config import TrainConfig
 
 Queue = Literal["cpu", "gpu"]
 
 # Order of the phase-1 pipeline (ARCHITECTURE.md §3). Only registered stages run.
 PIPELINE_ORDER = ("ingest", "clean", "preprocess", "label", "filter", "split", "evaluate")
+
+IMAGE_CAPTION = "image_caption"
+PIPELINE_ORDERS: dict[str, tuple[str, ...]] = {
+    IMAGE_CAPTION: PIPELINE_ORDER,
+    # No captions or CLIP scores: the labels come from class folders (ADR-0014 rule 3).
+    LABELLED_IMAGES: ("ingest", "clean", "preprocess", "split"),
+}
+"""Each dataset type's stages, in order (DATA-5.2)."""
+TYPE_DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
+    LABELLED_IMAGES: {
+        "ingest": {"label_from": "folder"},
+        # pHash on small images (CIFAR-10's 32 px) is coarse: at the COCO thresholds, 11 %
+        # (clean, 8 bits) and 53 % (split, 12 bits) of matched pairs crossed classes, and the
+        # split's groups chained into one of 8,814 rows. At 4 and 6 bits: 1.0 % and 2.8 %,
+        # largest group 27 (measured on CIFAR-10; the owner's choice, 2026-11-18, OC-5).
+        "clean": {"phash_max_distance": 4},
+        # The class is the source folder; there is no CLIP score to stratify on.
+        "split": {"stratum_keys": ["source_folder"], "leakage_distance": 6},
+    },
+}
+"""Stage settings a dataset type changes from the stage's own defaults. A request overrides them."""
 
 
 @dataclass(frozen=True)
@@ -53,6 +75,8 @@ class StageRun:
     input_version_id: str | None
     data_dir: Path
     engine: Engine
+    queue: str = "cpu"
+    """The queue this stage was claimed from, so a stage can tell which worker it is on."""
 
 
 @dataclass(frozen=True)
@@ -206,6 +230,9 @@ def run_derived_stage(
 
     output = body(DerivedInput(parent.version_id, manifest, resolved))
     record = output.record
+    if record.dtype is None and parent.dtype is not None:
+        # A stage that keeps the rows keeps the dataset type (DATA-5.2).
+        record = dataclasses.replace(record, dtype=parent.dtype)
     run.ctx.set_version(record.version_id)
     with Session(run.engine) as session, session.begin():
         dataset = session.get(Dataset, dataset_id)
@@ -486,3 +513,66 @@ def make_evaluate_runner(stats: ReportStats) -> Callable[[StageRun], StageResult
 
 
 register(StageDef("evaluate", "cpu", EvaluateConfig, make_evaluate_runner(OWNER_STATS)))
+
+
+def _run_train(run: StageRun) -> StageResult:
+    """The train stage (RUN-1.1, ADR-0014). PyTorch is imported only here, in the worker."""
+    try:
+        from stratal.train import stage as train_stage
+    except ImportError as exc:
+        raise StratalError(
+            f"This worker cannot train: {exc}.",
+            suggested_action="Train with device 'gpu' or 'auto', which run on the GPU worker; "
+            "CPU training needs worker-cpu built with the ml-cpu extra (ADR-0014 rule 11).",
+        ) from exc
+    return train_stage.run_train(run)
+
+
+register(StageDef("train", "gpu", TrainConfig, _run_train))
+
+
+class RetentionConfig(BaseModel):
+    """A retention run (REG-2.9, ADR-0015 rule 4)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    lineage_ids: list[str] | None = Field(
+        default=None, description="The lineages to clean; null for every lineage."
+    )
+    dry_run: bool = Field(default=False, description="List what would go; change nothing.")
+    confirmed: list[str] | None = Field(
+        default=None,
+        description="Delete only these versions: the plan the owner confirmed (REG-2.10).",
+    )
+    reason: str = Field(default="requested", description="Why the run was started.")
+
+
+def _run_retention(run: StageRun) -> StageResult:
+    """The retention stage (REG-2.2 to REG-2.9). Torch-free; runs on the CPU queue."""
+    from stratal.core.bus import Bus
+    from stratal.core.settings import get_settings
+    from stratal.registry import retention
+
+    config = RetentionConfig.model_validate(run.config)
+    bus = Bus(get_settings().redis_url, timeout_s=2.0)
+
+    def emit(**fields: Any) -> None:
+        run.ctx.emit(stage="retention", **fields)
+
+    try:
+        metrics = retention.run(
+            run.engine,
+            run.data_dir,
+            emit,
+            job_id=run.ctx.job_id,
+            lineage_ids=config.lineage_ids,
+            dry_run=config.dry_run,
+            confirmed=config.confirmed,
+            read_loaded=bus.get_inference_loaded,
+        )
+    finally:
+        bus.close()
+    return StageResult(metrics=metrics)
+
+
+register(StageDef("retention", "cpu", RetentionConfig, _run_retention))

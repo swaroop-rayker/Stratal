@@ -14,13 +14,13 @@ from stratal.testing.synthetic import make_image_folder
 
 
 def _ingest(
-    source: Path, data_dir: Path, **config: int
+    source: Path, data_dir: Path, *, min_size: int = IngestConfig().min_size
 ) -> tuple[IngestResult, list[Row], ListSink]:
     sink = ListSink()
     result = run_ingest(
         source=source,
         data_dir=data_dir,
-        config=IngestConfig(**config),
+        config=IngestConfig(min_size=min_size),
         derive=fake_version_identity,
         sink=sink,
     )

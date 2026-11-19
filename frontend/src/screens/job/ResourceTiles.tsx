@@ -111,7 +111,24 @@ function Tile({ res, label, value, unit, detail, children, unavailable, info }: 
 
 const fmt = (v: number | null | undefined, digits = 0) => (typeof v === "number" ? v.toFixed(digits) : "—");
 
-export function ResourceTiles({ points, cores, gpuError }: { points: Point[]; cores: number | null; gpuError: string | null }) {
+function max0(points: Point[], k: Key): number | null {
+  const xs = values(points, k);
+  return xs.length ? Math.max(...xs) : null;
+}
+
+/** `training` (SCR-04 v2, region 6): the CPU tile names the loader's workers and the
+ * temperature tile the pause limit (RUN-1.6). */
+export function ResourceTiles({ points, cores, gpuError, training }: {
+  points: Point[];
+  cores: number | null;
+  gpuError: string | null;
+  training?: { loaderWorkers: number | null; pauseAt: number | null };
+}) {
+  const workers = training?.loaderWorkers ?? null;
+  const pauseAt = training?.pauseAt ?? null;
+  const cpuDetail = workers !== null
+    ? `loader: ${String(workers)} ${workers === 1 ? "worker" : "workers"}`
+    : `${cores ? `${String(cores)} cores · ` : ""}max ${fmt(max0(points, "cpu_percent"))}%`;
   const has = points.length > 0;
   const gpuNull = has && last(points, "gpu_util_percent") === null;
   const unavailable = gpuNull ? `NVML not reachable${gpuError ? ` · ${gpuError}` : ""}` : null;
@@ -123,7 +140,7 @@ export function ResourceTiles({ points, cores, gpuError }: { points: Point[]; co
   const power = last(points, "gpu_power_w");
   return (
     <div className="res">
-      <Tile res="--res-cpu" label="CPU" value={fmt(last(points, "cpu_percent"))} unit="%" detail={`${cores ? `${String(cores)} cores · ` : ""}max ${fmt(max("cpu_percent"))}%`}>
+      <Tile res="--res-cpu" label="CPU" value={fmt(last(points, "cpu_percent"))} unit="%" detail={cpuDetail}>
         <Chart points={points} keys={[{ key: "cpu_percent" }]} max={100} color="var(--res-cpu)" />
       </Tile>
       <Tile res="--res-ram" label="RAM" value={gb(last(points, "ram_used_mb"))} unit={` / ${gb(ramTotal)} GB`} detail={`job RSS ${gb(last(points, "rss_mb"))} GB`}>
@@ -155,7 +172,7 @@ export function ResourceTiles({ points, cores, gpuError }: { points: Point[]; co
         label="GPU temp · power"
         value={fmt(last(points, "gpu_temp_c"))}
         unit=" °C"
-        detail={`${typeof power === "number" ? `${power.toFixed(0)} W · ` : ""}max ${fmt(max("gpu_temp_c"))} °C`}
+        detail={`${typeof power === "number" ? `${power.toFixed(0)} W · ` : ""}${pauseAt !== null ? `pauses at ${String(pauseAt)} °C` : `max ${fmt(max("gpu_temp_c"))} °C`}`}
         unavailable={unavailable}
       >
         <Chart points={points} keys={[{ key: "gpu_temp_c" }]} max={100} color="var(--res-temp)" />

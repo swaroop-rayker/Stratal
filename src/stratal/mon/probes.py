@@ -85,6 +85,19 @@ class GpuProbe:
         value: Any = self._try(lambda: nvml.nvmlDeviceGetName(handle))
         return value.decode() if isinstance(value, bytes) else value
 
+    def slowdown_c(self) -> float | None:
+        """The temperature at which the card slows itself down (NVML's slowdown threshold);
+        the most ``thermal_pause_c`` may be (SCR-14)."""
+        nvml, handle = self._nvml, self._handle
+        if nvml is None or handle is None:
+            return None
+        value: Any = self._try(
+            lambda: nvml.nvmlDeviceGetTemperatureThreshold(
+                handle, nvml.NVML_TEMPERATURE_THRESHOLD_SLOWDOWN
+            )
+        )
+        return float(value) if value else None
+
     def _try(self, read: Callable[[], Any]) -> Any:
         try:
             return read()

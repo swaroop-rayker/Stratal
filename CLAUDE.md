@@ -84,9 +84,9 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 
 | Purpose | Command |
 |---|---|
-| Start postgres, redis, api, worker-cpu, monitor, beat and frontend | `docker compose up -d` (add `--profile gpu` for the GPU worker) |
+| Start postgres, redis, api, worker-cpu, monitor, beat and frontend | `docker compose up -d` (add `--profile gpu` for the GPU worker and the inference service) |
 | Stop them | `docker compose down` |
-| All quality gates (format, lint, types, tests, integration) | `.\scripts\check.ps1` |
+| All quality gates (format, lint, types, tests, integration; training tests in worker-gpu) | `.\scripts\check.ps1` |
 | Same, without integration tests | `.\scripts\check.ps1 -Fast` |
 | Same, plus GPU-marked tests | `.\scripts\check.ps1 -Gpu` |
 | Same, plus the timing benchmarks (NFR-11; needs a quiet machine) | `.\scripts\check.ps1 -Bench` |
@@ -94,6 +94,7 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 | Keep Windows awake while jobs run; report sleeps | `.\host\stratal-host.ps1` |
 | One tool | `docker compose run --rm --no-deps dev ruff check .` (or `ruff format .`, `pyright`, `pytest -q`) |
 | Integration tests | `docker compose run --rm dev pytest -q -m "integration and not benchmark"` |
+| Training integration tests (need PyTorch; skipped in dev) | `docker compose run --rm -v ./src:/app/src:ro -v ./migrations:/app/migrations:ro worker-gpu pytest -q -m "integration and torch" tests/integration` |
 | Anything on the GPU | `docker compose run --rm worker-gpu python <script>` |
 | Re-lock after editing `pyproject.toml` | `docker run --rm -v "D:\Stratal:/app" -w /app stratal-base uv lock`, then `docker compose --profile dev --profile gpu build` |
 | Health check | `http://127.0.0.1:8000/api/v1/health` |
@@ -107,7 +108,7 @@ Run from `D:\Stratal` in PowerShell. Everything executes in containers.
 | Pull the allowed pretrained models (the only hub access) | `docker compose run --rm dev python -m stratal.cli models pull --all` (`models list` shows what is pulled) |
 | Rebuild the phase-1 source folder (COCO 2017, 10k) | `docker compose run --rm dev python -I scripts/datasets/coco10k.py fetch` (`select` first if `sources/coco10k-meta` is missing); add `--size 20000` before `select` or `fetch` for `coco20k`, which contains coco10k |
 
-The `stratal-base` image is built with `docker build --target base -t stratal-base -f docker/Dockerfile .`. Rebuild `dev` after changing dependencies; source changes need no rebuild because the repository is bind-mounted into `dev`. The `api`, `worker-cpu` and `monitor` services share one image that copies the source, so run `docker compose build api` and `docker compose up -d` to see code changes there. Integration tests use their own database (`stratal_test`), Redis database 15 and a temporary data folder. Source folders for ingestion go under `.\sources` (or `STRATAL_SOURCES_DIR`) and are seen as `/sources/<name>`.
+The `stratal-base` image is built with `docker build --target base -t stratal-base -f docker/Dockerfile .`. Rebuild `dev` after changing dependencies; source changes need no rebuild because the repository is bind-mounted into `dev`. The `api`, `monitor` and `beat` services share one image that copies the source; `worker-cpu` has its own (`stratal-worker-cpu`, the same plus PyTorch's CPU build), and so does `worker-gpu`. Run `docker compose --profile gpu build api worker-cpu worker-gpu` and `docker compose up -d` to see code changes there. Integration tests use their own database (`stratal_test`), Redis database 15 and a temporary data folder. Source folders for ingestion go under `.\sources` (or `STRATAL_SOURCES_DIR`) and are seen as `/sources/<name>`.
 
 ## Learning notes
 

@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # NFR-12: raw telemetry is kept this many days, then averaged per minute by `beat`.
     telemetry_keep_days: float = 7.0
     downsample_every_s: float = 3600.0
+    # RUN-1.6 (OC-3): pause GPU jobs at this temperature, resume those below the second.
+    thermal_pause_c: float = 83.0
+    thermal_resume_c: float = 75.0
+    # RUN-1.7 (OC-3): a running stage with no progress or activity for this long is stalled.
+    stall_timeout_s: float = 300.0
     # Time a cancelled child gets to stop by itself before its process group is killed.
     cancel_grace_s: float = 10.0
     # The job's own reporter thread (process RSS, PyTorch allocator).
@@ -44,6 +49,18 @@ class Settings(BaseSettings):
     event_stream_maxlen: int = 100_000
     # Where source folders are mounted in the api and worker containers.
     sources_dir: Path = Path("/sources")
+    # REG-1.4, ADR-0016: the inference service, reached by the API on the Compose network.
+    inference_url: str = "http://inference:8100"
+    inference_port: int = 8100
+    # Decision 2: below this many parameters a model runs on the CPU while a job holds the
+    # GPU; at or above it the request is refused with gpu_busy. 50 M is about 200 MB of fp32.
+    inference_cpu_max_parameters: int = 50_000_000
+    # Rule 5: the lease goes back after this long without a GPU request.
+    inference_idle_release_s: float = 60.0
+    # How often the service checks for idleness and for a waiting job.
+    inference_check_interval_s: float = 1.0
+    # How long the API waits for a prediction, including a model load on the CPU.
+    inference_timeout_s: float = 120.0
 
 
 @lru_cache

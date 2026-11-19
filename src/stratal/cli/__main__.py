@@ -1,6 +1,6 @@
 """Stratal command line.
 
-  python -m stratal.cli ingest --dataset NAME --source /path [--min-size 256]
+  python -m stratal.cli ingest --dataset NAME --source /path [--min-size 256] [--label-from folder]
   python -m stratal.cli versions --dataset NAME
   python -m stratal.cli lineage VERSION_ID
   python -m stratal.cli models list
@@ -51,7 +51,7 @@ def _ingest(args: argparse.Namespace) -> dict[str, Any]:
     result = run_ingest(
         source=Path(args.source),
         data_dir=settings.data_dir,
-        config=IngestConfig(min_size=args.min_size),
+        config=IngestConfig(min_size=args.min_size, label_from=args.label_from),
         derive=derive_version_identity,
         sink=LogSink(),
     )
@@ -124,6 +124,18 @@ def _models_list(_args: argparse.Namespace) -> list[dict[str, Any]]:
     return rows
 
 
+def _registry_backfill(args: argparse.Namespace) -> list[dict[str, Any]]:
+    try:
+        from stratal.train.backfill import backfill
+    except ImportError as exc:
+        raise StratalError(
+            f"The registry backfill needs PyTorch, which this image lacks ({exc}).",
+            suggested_action="docker compose run --rm worker-cpu python -m stratal.cli "
+            "registry backfill",
+        ) from None
+    return backfill(get_engine(), get_settings().data_dir, dry_run=args.dry_run)
+
+
 def _models_pull(args: argparse.Namespace) -> list[dict[str, Any]]:
     names: list[str] = list(catalog.CATALOG) if args.all else list(args.names)
     if not names:
@@ -153,6 +165,12 @@ def main(argv: list[str] | None = None) -> int:
     ingest.add_argument("--dataset", required=True)
     ingest.add_argument("--source", required=True)
     ingest.add_argument("--min-size", type=int, default=IngestConfig().min_size)
+    ingest.add_argument(
+        "--label-from",
+        choices=["folder"],
+        default=None,
+        help="take each image's class label from its first folder (DATA-5.2)",
+    )
     ingest.set_defaults(run=_ingest)
 
     versions = commands.add_parser("versions", help="list a dataset's versions, newest first")
@@ -180,6 +198,16 @@ def main(argv: list[str] | None = None) -> int:
     pulling.add_argument("names", nargs="*")
     pulling.add_argument("--all", action="store_true")
     pulling.set_defaults(run=_models_pull)
+
+    registry_cmd = commands.add_parser("registry", help="the model registry (ADR-0015)")
+    registry_commands = registry_cmd.add_subparsers(dest="registry_command", required=True)
+    registry_backfill = registry_commands.add_parser(
+        "backfill",
+        help="register training runs finished before the registry (needs PyTorch: run it "
+        "in worker-cpu or worker-gpu)",
+    )
+    registry_backfill.add_argument("--dry-run", action="store_true")
+    registry_backfill.set_defaults(run=_registry_backfill)
 
     args = parser.parse_args(argv)
     configure_logging(get_settings().log_level, sys.stderr)

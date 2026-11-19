@@ -12,6 +12,7 @@ const ICON: Record<JobStage["status"], IconName> = {
   pending: "clock",
   queued: "clock",
   running: "play",
+  paused: "pause",
   completed: "check",
   failed: "x",
   skipped: "ban",

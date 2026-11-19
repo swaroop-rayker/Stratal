@@ -76,3 +76,15 @@ Frame D (empty, loading, error) uses the shared states; there is no way to empty
 - `test_RUN_1_2_retry_queues_a_failed_job_again_and_links_to_it`
 - `test_RUN_1_1_a_state_change_on_the_stream_moves_the_job_and_is_announced`
 - `test_RUN_1_1_j_and_k_move_between_rows_and_enter_opens_the_job`
+
+## Addendum: SCR-07 v2 with the registry (M8 part B, 2026-11-19)
+
+The two differences accepted at SCR-07 v2's Gate 3 (2026-11-18) are now built. **Approved by the owner on 2026-11-19.**
+
+| File | What it shows |
+|---|---|
+| `live-v2-registry-rows.jpg` | Finished training rows link their registered version (`mv_e56a61b2e5af · val acc 49.3%`) to SCR-11; retention rows say what they freed ("retention · freed 3.1 MB from 1 version"); Kind gains `retention` |
+
+- A retention run that deleted nothing reads "retention · nothing to delete"; a dry run "retention dry run · would delete N versions, X MB".
+- Retention rows have no dataset, so that column shows "–".
+- Test: `frontend/src/screens/jobs/Registry.test.ts`, `test_REG_2_9_a_retention_row_says_what_it_freed`.

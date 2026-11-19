@@ -1,14 +1,14 @@
 // Design-system components (DESIGN-SYSTEM.md c) as thin React wrappers over the approved
 // classes in styles/components.css. Tokens only; no one-off colours or sizes.
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 
 import type { JobState } from "../api/client";
 
 export type IconName =
   | "alert" | "back" | "ban" | "branch" | "chart" | "check" | "chevron" | "clock" | "copy"
   | "db" | "down" | "eye" | "folder" | "grid" | "heart" | "hourglass" | "info" | "keys"
-  | "layers" | "list" | "more" | "note" | "pause" | "play" | "plus" | "refresh" | "report"
-  | "search" | "sort" | "theme" | "x";
+  | "layers" | "list" | "more" | "note" | "pause" | "pin" | "play" | "plus" | "refresh"
+  | "report" | "search" | "sliders" | "sort" | "theme" | "x";
 
 export function Icon({ name, className, style }: {
   name: IconName;
@@ -98,7 +98,7 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export function Button({ variant = "secondary", size = "md", className, children, ...rest }: {
   variant?: ButtonVariant;
   size?: "sm" | "md" | "lg";
-} & ButtonHTMLAttributes<HTMLButtonElement>) {
+} & ComponentProps<"button">) {
   const classes = ["btn"];
   if (variant !== "secondary") classes.push(variant);
   if (size !== "md") classes.push(size);

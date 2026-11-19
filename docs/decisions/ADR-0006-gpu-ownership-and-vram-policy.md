@@ -44,5 +44,5 @@ Additions to the decision:
 
 - VRAM behaviour is deterministic and explainable from the event log.
 - Every job pays a model load. Models are small enough that this is seconds.
-- While a training job holds the lease, GPU inference is unavailable. Phase 2 must decide whether requests wait, fail fast, or fall back to CPU.
+- While a training job holds the lease, GPU inference is unavailable. Phase 2 must decide whether requests wait, fail fast, or fall back to CPU. **Decided 2026-11-17 in [ADR-0016](ADR-0016-inference-service.md):** small models fall back to the CPU, larger ones fail fast.
 - The cap fraction must be measured, because PyTorch's allocator does not account for the CUDA context's own memory (spike S-02).

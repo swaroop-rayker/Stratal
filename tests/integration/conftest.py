@@ -44,7 +44,7 @@ get_engine.cache_clear()
 _TABLES = (
     "events, resource_samples, process_samples, resource_samples_1m, process_samples_1m, "
     "job_transitions, job_stages, "
-    "review_items, review_sessions, dataset_versions, jobs, datasets, derivations"
+    "review_items, review_sessions, dataset_versions, jobs, datasets, derivations, settings"
 )
 
 

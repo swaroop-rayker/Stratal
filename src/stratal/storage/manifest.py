@@ -59,6 +59,7 @@ _FIELDS: list[tuple[str, pa.DataType]] = [
     ("clip_score", pa.float32()),
     ("clip_model", pa.string()),
     ("clip_model_revision", pa.string()),
+    ("label", pa.string()),
     ("split", pa.string()),
     ("split_group", pa.string()),
     ("split_stratum", pa.string()),

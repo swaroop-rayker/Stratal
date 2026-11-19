@@ -68,16 +68,18 @@ flowchart LR
 | `postgres` | System of record: jobs, events, telemetry, dataset versions, lineage, reviews, reports | M0 | no | 0.5 GB |
 | `redis` | Celery broker, event stream buffer, live fan-out, control flags | M0 | no | 0.25 GB |
 | `api` | HTTP and SSE. Loads no models and does not import PyTorch | M0 | no | 0.4 GB |
-| `worker-cpu` | CPU stages: ingest, clean, preprocess, filter, split, evaluate | M2 | no | 2.5 GB |
-| `worker-gpu` | GPU stages, one at a time: label, and later training | M2 | yes | 4.5 GB |
+| `worker-cpu` | CPU stages: ingest, clean, preprocess, filter, split, evaluate; since M8 also training on the CPU, from its own image with PyTorch's CPU build (`ml-cpu` extra, ADR-0014 rule 11; 1.97 GB against `api`'s 650 MB) | M2 | no | 2.5 GB |
+| `worker-gpu` | GPU stages, one at a time: label and training | M2 | yes | 3.5 GB (4.5 GB until M8) |
 | `monitor` | Collector (events to Postgres), sampler (psutil + NVML), watchdog (dead and stalled jobs) | M2 | NVML only | 0.25 GB |
 | `frontend` | Vite dev server for the web UI (React, SPEC §7.4); proxies `/api` to `api`. Its checks run on demand in `frontend-tools` (1.5 GB, profile `dev`, like `dev`) | M6 | no | 0.4 GB |
 | `beat` | Scheduled maintenance: telemetry downsampling (NFR-12) | M7 | no | 0.2 GB |
-| `inference` | Long-lived process that holds at most one model for `/predict` (REG-1.4) | Phase 2 | yes | to be set |
+| `inference` | Long-lived process that holds at most one model for `/predict` (REG-1.4, ADR-0016); the `worker-gpu` image, profile `gpu`, port 8100 on the Compose network only | M8 | yes | 1.0 GB |
 | `ollama` | Local LLM serving (LLM-1.1) | Phase 3 | yes | to be set |
 | Host script | PowerShell on Windows: keeps the laptop awake while jobs run, reports sleep and resume | M2 | – | – |
 
 The limits sum to 9.0 GB, which is how NFR-2 is enforced. Spike S-07 ([RISKS.md](RISKS.md)) measured them while labelling 2,000 images on 2026-11-15: every container stayed under half its limit (worker-gpu 2.2 of 4.5 GB, worker-cpu 0.9 of 2.5 GB), so they are kept, with worker-gpu's headroom left for training in phase 2.
+
+**Revised in M8 (2026-11-18, ADR-0016 rule 7).** `inference` takes 1 GB from `worker-gpu`, so the sum stays 9.0 GB. Measured from each container's cgroup (`memory.peak`): `worker-gpu` peaked at 1,631 MiB training on CIFAR-10 with 4 loader workers (job_0033, a 2-epoch MLP; the per-process RSS sum said 6.3 GB, counting shared pages once per worker), against 2.2 GB while labelling; `inference` at 397 MiB serving `small_cnn` on the CPU.
 
 ## 3. The phase-1 pipeline
 
@@ -92,6 +94,10 @@ A pipeline run is one **job**. It has one **stage** per step, and each stage run
 | 4 | `filter` | cpu | Mark pairs below the CLIP threshold; validate the image–caption schema | LABEL-1.4, DATA-5.1 | agent for the rule, at the owner's request (ADR-0012); owner for the threshold (OC-5) |
 | 5 | `split` | cpu | Group near-copies (12 bits), stratify, assign train / val / test carrying the previous split over, check for leaks, report | DATA-4.1–4.7 | agent, at the owner's request (ADR-0012); shell, lookup, leakage check and report by the agent |
 | 6 | `evaluate` | cpu | Build the phase-1 report and store it in `eval_reports`; makes no version and passes its input on | EVAL-1.1 | agent for the statistics, at the owner's request (ADR-0012), and for the assembly |
+
+A **labelled-images** dataset (DATA-5.2, M8, [ADR-0014](decisions/ADR-0014-training-jobs.md) rule 3) runs `ingest → clean → preprocess → split`: ingest records each image's class from its first folder (`label_from: folder`), there is no label, filter or evaluate stage, and the split takes the preprocess version and stratifies by that folder. The request's `dataset_type` picks the order and these defaults (API.md §3.3); clean, preprocess and split keep their parent's `dtype`.
+
+A **training run** (RUN-1.1, M8, [ADR-0014](decisions/ADR-0014-training-jobs.md)) is a job of kind `train` with one stage, `train`, run by the same supervisor and child process as any pipeline stage. It reads a labelled split, builds a reference model (`stratal.train.reference`), and trains it on the GPU under the lease and the 0.85 cap, or on the CPU. A checkpoint is written after every epoch and every `checkpoint_every_s` (`stratal.train.checkpoint`: safetensors plus JSON, temporary name then rename, only the latest kept); a retry of a killed run resumes from it and replays the rest of the epoch in the same order. With `device: auto`, a model under 1 M parameters times 20 training steps on each device inside the GPU lease and keeps the faster (RUN-1.9); the timings are cached in `cache/device_choice/` per model, input shape and batch size. If the CPU wins, the stage raises `StageHandoff`, the child records the stage's new queue and exits with code 5, and the supervisor requeues the stage on the CPU queue (`running → queued`), where `worker-cpu` trains it. PyTorch is imported only inside the stage, so the API, monitor and beat stay without it.
 
 Manual review (LABEL-1.5) is not a stage. It is a human activity attached to a version (API.md §3.5), and the report uses the version's newest closed review. A report can be built again at any time without a pipeline: `POST /versions/{id}/reports` runs `evaluate` alone, as a job of kind `report`.
 
@@ -160,10 +166,10 @@ stateDiagram-v2
   running --> completed
   running --> failed
   running --> cancelled: cancel
-  running --> paused: pause (phase 2)
+  running --> paused: pause, or the GPU too hot
   running --> stalled: no progress for T seconds
   running --> queued: interrupted, will resume
-  paused --> queued: resume
+  paused --> queued: resume (or cooled, if paused for heat)
   paused --> cancelled: cancel
   stalled --> running: progress resumes
   stalled --> failed: gave up
@@ -176,17 +182,18 @@ stateDiagram-v2
 
 Any transition not drawn is rejected, and every transition is written to `job_transitions` with its reason and who caused it (RUN-1.1.AC1). A separate `desired_state` field holds a pause or cancel request until the job reaches a safe point, so the UI can show "cancelling" honestly.
 
-Stages have their own simpler status: pending, queued, running, completed, failed, skipped, cancelled.
+Stages have their own simpler status: pending, queued, running, paused (M8), completed, failed, skipped, cancelled. A `stalled` job's stage stays `running`: the stage has not stopped, it has gone quiet.
 
 ### 4.3 Stopping and recovering
 
 | Situation | What happens |
 |---|---|
 | User cancels | `desired_state` is set and a Redis flag raised. The child stops at the next safe point. If it has not stopped after a grace period, the supervisor kills the child's process group |
-| User pauses (phase 2) | Same flag. The child checkpoints and exits. Resume is a new task that starts from the checkpoint |
+| User pauses (M8, RUN-1.2) | Same flag, set to `pause`. A pipeline stage stops at its next safe point and exits with code 4; a training stage checkpoints at its current step first. The supervisor moves the stage and the job to `paused` and clears the flag. Paused between stages, the next stage waits as `paused`. There is no grace-period kill: the work since the last safe point would be lost. Resume is a new attempt that starts from the checkpoint or the caches |
 | Child crashes | Supervisor records `failed` with the reason. Finished stages and cached batches are kept |
 | Worker container dies | The watchdog in `monitor` sees the heartbeat go stale and either requeues the job (work is resumable) or marks it failed |
-| No progress for T seconds | The watchdog marks the job `stalled` (RUN-1.7, phase 2) |
+| No progress for T seconds (M8, RUN-1.7) | The watchdog marks the job `stalled` when its running stage has reported no progress or activity for `stall_timeout_s` (300 s, OC-3) while the heartbeat is fresh, so the worker is alive. Progress or activity moves it back to `running`; if the stage ends meanwhile, the supervisor finishes it as usual. The supervisor keeps heartbeating a stalled job, and a stalled job with a stale heartbeat is requeued like a running one. Cancel works as for a running job |
+| GPU too hot (M8, RUN-1.6) | The watchdog reads the GPU temperature from the monitor's newest sample. At `thermal_pause_c` (83 °C) it pauses the running GPU job as a user pause would, with `pause_reason: thermal`. Below `thermal_resume_c` (75 °C) it resumes the jobs paused for heat, and only those; between the two nothing changes, so the job does not flap. The three limits are the `training` settings saved on SCR-14 (DATA_MODEL §4.13), read before every check |
 | Laptop sleeps | See [§8](#8-sleep-and-suspend) |
 
 ## 5. Events and telemetry
@@ -226,9 +233,10 @@ Everything Stratal owns lives on one Docker volume, `stratal-data`, on the Linux
 /data
 ├── blobs/sha256/ab/cd/<hash>     immutable files, named by content hash
 ├── manifests/<version_id>.parquet  one immutable manifest per dataset version
-├── jobs/<job_id>/                per-job log, event spool, in-run checkpoints
+├── jobs/<job_id>/                per-job log, event spool; for training, checkpoints/ (in-run, latest only)
 ├── models/<name>/<revision>/     pretrained models from the allow-list, verified by `models pull`
-├── registry/                     trained weights (phase 2)
+├── registry/<lineage>/<version>/ model.safetensors + model.json for a base or trained version (M8,
+│                                 ADR-0015); written as <version>.part/ and renamed into place
 └── tmp/                          staging area for atomic writes
 ```
 
@@ -237,6 +245,8 @@ Everything Stratal owns lives on one Docker volume, `stratal-data`, on the Linux
 - **Rows are never dropped, only marked.** A manifest carries every row forward with a status (`accepted`, `rejected`, `duplicate`, `filtered`), the stage that decided it, and a reason. Any version can therefore report rejection counts for every stage (EVAL-1.1), and nothing silently disappears (BUG1).
 - **Writes are atomic.** A file is written under `tmp/`, flushed, then renamed into place. A crash leaves either the old state or the new one. A version row is inserted in Postgres only after its manifest is in place.
 - **One read path.** All code reads a dataset through `load_version(version_id)`, which streams the manifest in batches. Nothing loads a whole dataset into memory (NFR-2).
+- **Model weights are registered after they are in place** (M8, ADR-0015). The first run of a lineage writes its base before step 1; every later run of the lineage loads it. At the end the stage writes the version's folder, then marks the version `trained` and commits, and only then removes its checkpoints. A crash in between leaves a registered version and stale checkpoints, which the retry removes without training again.
+- **Retention is a job** (M8, ADR-0015 rule 4). After a training run completes or is cancelled, the supervisor queues a `retention` job for its lineage on the CPU queue; `POST /retention/run` queues one on demand. The keep rule (`stratal.registry.policy`) is a pure function, so the dry run, the confirmation of a smaller `keep_intermediate` and the real run work from the same list. Each delete marks the version `deleting` and commits, removes the folder, then records `weights_deleted`; a run first finishes any `deleting` left by a crash and ends by sweeping folders no row accounts for. Writers of registry files and retention share one advisory lock per lineage, so a sweep never removes a folder whose row is still uncommitted.
 
 The version ID is derived from the manifest's content hash and the stage's config hash (DATA-3.2). The exact derivation is the owner's to implement; the contract it must satisfy is in [DATA_MODEL.md](DATA_MODEL.md#3-identifiers).
 
@@ -249,6 +259,7 @@ VRAM handling is owner-implemented (RUN-1.4, RUN-1.5). The architecture fixes th
 - **A hard cap below the card's limit.** Each GPU process limits PyTorch to a fraction of VRAM chosen so the driver-reported peak stays under 5.5 GB. PyTorch then raises a catchable out-of-memory error at a known point, whatever the Windows driver would have done (NFR-1, BUG2).
 - **OOM is handled at the batch boundary.** For inference-style stages such as captioning, the batch is halved and retried, with a WARN event that says so. For training (phase 2) the job fails cleanly with a suggested batch size (RUN-1.5).
 - **Unload is verified, not assumed.** Where a process outlives a model (the phase-2 `inference` service), every unload is followed by a check that allocated VRAM returned to baseline. If it did not, the process restarts itself (RUN-1.4.AC1).
+- **Training uses the same manager (M8).** A GPU run loads its model and optimizer as one `TrainingState` and unloads it at the end; `close()` sets gradients to `None` and empties the optimizer's state, and the unload proves allocated memory is back at its baseline before the process exits. A training OOM is caught outside the failed step, once its tensors are gone: what stays allocated is the fixed part, the rest of the step's peak is divided per sample, and the run fails with `gpu_oom` and the largest power of two below the batch that fits 90 % of the cap (RUN-1.5). When the step fails early, its peak is only a lower bound, so the suggestion tends to half the batch; it fit on the card. The inference service probes `close()` once and uses the GPU only if it works.
 - **RAM is bounded from outside.** Each container has a memory limit. A job that exceeds it is killed by the kernel, which cannot be caught in-process, so the supervisor detects it from the exit status and reports "killed: out of memory" with the peak it reached (BUG2, BUG3).
 - **Loading is streamed and bounded.** Decoders feed the GPU through bounded queues, so a slow GPU slows the loader instead of filling RAM. Worker counts are derived from the container's memory limit (BUG3).
 
@@ -272,7 +283,7 @@ Spike S-03 (one run, 705 s of Modern Standby) found the job and the GPU unharmed
 | **Errors** | One exception hierarchy with stable codes. The API maps it to RFC 9457 problem details. Job failures store the same code, a reason and a suggested action ([ADR-0011](decisions/ADR-0011-error-model.md)) |
 | **IDs** | Human-readable prefixes: `job_0142`, `ds_7f3a9c21b04e`, `rev_0007`. See [DATA_MODEL.md](DATA_MODEL.md#3-identifiers) |
 | **Reproducibility** | Locked dependencies (uv), pinned model revisions, seeds in config, deterministic row order in manifests, version IDs from content and config (NFR-4) |
-| **Security** | No `trust_remote_code`, safetensors for weights, skops for scikit-learn models, no pickle from outside. Models are downloaded only by an explicit pull command from an allow-list; at run time the model hub is offline (NFR-7, NFR-8) |
+| **Security** | No `trust_remote_code`, safetensors for weights, skops for scikit-learn models, no pickle from outside. Models are downloaded only by an explicit pull command from an allow-list; at run time the model hub is offline (NFR-7, NFR-8). Since M8 every read of a weights or checkpoint file goes through `train.weights.read_tensors`, which refuses anything that is not safetensors with `weights_unreadable`. Two tests keep it that way: a scan of `src/` and `scripts/` for any call that unpickles, and a tripwire (`stratal.testing.no_pickle`) that fails a whole training run, its resume and a `/predict` if anything unpickles |
 | **Testing** | Unit tests for domain logic on synthetic fixtures. Integration tests against real Postgres and Redis. GPU tests behind a marker, run locally. Kill tests for resilience. A meta-test checks every finished P0 has a `test_<ID>_*` (NFR-9) |
 | **Dependencies** | None added without naming the requirement that needs it. The API image carries no ML libraries |
 
@@ -286,7 +297,7 @@ Spike S-03 (one run, 705 s of Modern Standby) found the job and the GPU unharmed
 | **BUG4** sleep | Keep-awake while jobs run, sleep events on the timeline, per-batch commits, resume in a fresh process ([§8](#8-sleep-and-suspend)) | Freeze/unfreeze test; real sleep test in spike S-03 |
 | **BUG5** stale weights in VRAM | Process exit is the unload for jobs; verified unload plus self-restart for the inference service ([§7](#7-gpu-and-memory-policy)) | `test_RUN_1_4_*` |
 | **BUG6** VRAM bloat | One GPU lease across training, inference and Ollama; free-VRAM check before every load ([§7](#7-gpu-and-memory-policy)) | Lease contention test |
-| **BUG7** disk bloat | REG-2 retention as specified, one rolling in-run checkpoint, content-addressed files never duplicated, orphan sweep with dry-run | NFR-14 disk audit |
+| **BUG7** disk bloat | REG-2 retention as a job after every run, one rolling in-run checkpoint, content-addressed files never duplicated, orphan sweep and crash recovery in every retention run, a dry run | NFR-14 disk audit (`GET /models/{id}/disk`), `test_NFR_14_*`, `test_BUG7_*`, `test_NFR_15_*` |
 
 ## 11. Code layout
 
@@ -304,10 +315,15 @@ Stratal/
 │   ├── data/           ingest, clean, preprocess, split, dataset types, versioning
 │   ├── label/          captioning, CLIP scoring, filter, review
 │   ├── eval/           reports and metrics
+│   ├── train/          training: config, reference models, image loader, checkpoints, weights, the train stage (M8)
+│   ├── registry/       model registry store, the retention keep rule and the retention job (M8)
+│   ├── inference/      the inference service: the model holder and its /predict app (M8)
+│   ├── pretrained/     the pretrained-model allow-list and the pull command (M4)
 │   ├── runtime/        job model, state machine, supervisor, child, context, GPU lease, VRAM manager
 │   ├── mon/            event schema, emitter, collector, sampler, watchdog
 │   ├── api/            FastAPI app, routers, schemas, SSE
-│   └── cli/            command-line entry points
+│   ├── cli/            command-line entry points
+│   └── testing/        fakes, harness and fixtures shared by the tests (shipped so integration tests run in every image)
 ├── tests/              unit, integration, gpu, chaos, bench, meta
 ├── frontend/           React app (from M6)
 └── docs/
@@ -326,6 +342,5 @@ Domain code in `data/`, `label/` and `eval/` does not import Celery, Redis or Fa
 
 ## 13. Not decided yet
 
-- Exact memory limits per container (spike S-07).
 - Hibernate, battery, and a sleep in the middle of a large allocation (spike S-03 covered one clean Modern Standby run).
 - Everything marked as an open clarification in [SPEC.md Appendix B](SPEC.md#appendix-b--open-clarifications-not-yet-approved).

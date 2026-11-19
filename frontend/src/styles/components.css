@@ -188,3 +188,13 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center
    3.61–4.39:1; mixed 70% toward text-primary the lowest is 4.94:1 (80% left Cancelled at 4.46). */
 [data-theme="dark"] .t tr[aria-selected="true"] .pill,
 [data-theme="dark"] .t tbody tr:hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }
+
+/* Light theme: semantic badges on their own soft tint, and labels on a tinted panel, approved
+   by the owner with SCR-04 v2's hi-fi (2026-11-17). The error badge measured 3.86:1 and the
+   failure panel's labels 4.48:1; mixed 80% toward text-primary, and in text-secondary, they
+   reach 5.03:1 and 6.19:1. */
+[data-theme="light"] .badge.err { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.warn { color: color-mix(in srgb, var(--warning) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.info { color: color-mix(in srgb, var(--info) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.ok { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
+[data-theme="light"] .failure .kv > span:nth-child(odd) { color: var(--text-secondary); }

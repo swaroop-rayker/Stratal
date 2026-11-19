@@ -1,7 +1,7 @@
 # Stratal development stack.
 #
 #   docker compose up -d                      postgres, redis, api, worker-cpu, monitor
-#   docker compose --profile gpu up -d        the same plus the GPU worker
+#   docker compose --profile gpu up -d        the same plus the GPU worker and inference
 #   docker compose run --rm dev <command>     lint, type-check, tests
 #   docker compose run --rm worker-gpu <cmd>  anything that needs the GPU
 #
@@ -18,7 +18,7 @@ x-stratal-env: &stratal-env
   HF_HUB_OFFLINE: "1"
   TRANSFORMERS_OFFLINE: "1"
 
-# The api, worker-cpu and monitor services run the same image.
+# The api, monitor and beat services run the same image (worker-cpu adds PyTorch CPU).
 x-stratal-build: &stratal-build
   context: .
   dockerfile: docker/Dockerfile
@@ -89,8 +89,13 @@ services:
   # CPU stages: ingest now; clean, preprocess, filter, split and evaluate later.
   # Each task is a supervisor that runs the stage in a child process (ADR-0003).
   worker-cpu:
-    build: *stratal-build
-    image: stratal-api
+    # Its own image: the api image plus PyTorch's CPU build (ml-cpu extra, ADR-0014 rule 11),
+    # for training runs on the CPU (RUN-1.9). api, monitor and beat stay without ML libraries.
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: worker-cpu
+    image: stratal-worker-cpu
     command: ["celery", "-A", "stratal.runtime.celery_app", "worker", "-Q", "cpu", "-c", "2", "-n", "cpu@%h"]
     environment:
       <<: *stratal-env
@@ -227,7 +232,37 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    mem_limit: 4500m
+    mem_limit: 3500m  # 1 GB went to inference (ADR-0016 rule 7); peak measured 1.6 GB training, 2.2 GB labelling
+
+  inference:
+    # REG-1.4, ADR-0016: holds at most one model and serves the API's /predict. The
+    # worker-gpu image, for PyTorch with CUDA (also used on the CPU). Reachable only on
+    # the Compose network. It exits when an unload leaves VRAM behind; Compose restarts it.
+    profiles: ["gpu"]
+    image: stratal-worker-gpu
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: worker-gpu
+    command: ["python", "-m", "stratal.inference"]
+    environment:
+      <<: *stratal-env
+    volumes:
+      - stratal-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    mem_limit: 1000m
+    restart: unless-stopped
 
 volumes:
   stratal-pg:

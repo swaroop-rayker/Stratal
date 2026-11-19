@@ -68,7 +68,16 @@ class DatasetVersion(Base):
 
 
 JOB_STATES = ("queued", "running", "paused", "completed", "failed", "cancelled", "stalled")
-STAGE_STATUSES = ("pending", "queued", "running", "completed", "failed", "skipped", "cancelled")
+STAGE_STATUSES = (
+    "pending",
+    "queued",
+    "running",
+    "paused",
+    "completed",
+    "failed",
+    "skipped",
+    "cancelled",
+)
 EVENT_LEVELS = ("DEBUG", "INFO", "WARN", "ERROR")
 
 
@@ -84,6 +93,10 @@ class Job(Base):
             "desired_state IS NULL OR desired_state IN ('paused', 'cancelled')",
             name="ck_jobs_desired_state",
         ),
+        CheckConstraint(
+            "pause_reason IS NULL OR pause_reason IN ('user', 'thermal')",
+            name="ck_jobs_pause_reason",
+        ),
         Index("ix_jobs_state", "state"),
         Index("ix_jobs_created", "created_at"),
         Index(
@@ -95,6 +108,9 @@ class Job(Base):
     kind: Mapped[str] = mapped_column(Text)
     state: Mapped[str] = mapped_column(Text)
     desired_state: Mapped[str | None] = mapped_column(Text)
+    pause_reason: Mapped[str | None] = mapped_column(Text)
+    """Why a paused job is paused: 'user' or 'thermal' (RUN-1.6). Only thermal pauses are
+    resumed by the watchdog."""
     spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
     dataset_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("datasets.id"))
     input_version_id: Mapped[str | None] = mapped_column(
@@ -372,3 +388,147 @@ class EvalReport(Base):
         Text, ForeignKey("jobs.id", name="fk_eval_reports_job")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# -- model registry (M8, ADR-0015, DATA_MODEL §4.12) ---------------------------------
+
+VERSION_STATES = ("base", "partial", "trained")
+WEIGHTS_STATUSES = ("present", "deleting", "weights_deleted")
+
+
+class ModelLineage(Base):
+    """One model on one task: a model spec trained on one dataset's inputs and classes
+    (ADR-0015 rule 1). Its ID is derived from that key, so the same key finds it again."""
+
+    __tablename__ = "model_lineages"
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    key_hash: Mapped[str] = mapped_column(Text, unique=True)
+    name: Mapped[str] = mapped_column(Text)
+    task: Mapped[str] = mapped_column(Text)
+    model_spec: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    dataset_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("datasets.id"))
+    input_shape: Mapped[list[int]] = mapped_column(JSONB)
+    classes: Mapped[list[str]] = mapped_column(JSONB)
+    parameters: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ModelVersion(Base):
+    """A lineage's base weights, or one training run's result (REG-1.1, REG-1.2)."""
+
+    __tablename__ = "model_versions"
+    __table_args__ = (
+        CheckConstraint(_one_of("state", VERSION_STATES), name="ck_model_versions_state"),
+        CheckConstraint(
+            _one_of("weights_status", WEIGHTS_STATUSES), name="ck_model_versions_weights_status"
+        ),
+        CheckConstraint(
+            "weights_status <> 'present' OR (weights_path IS NOT NULL "
+            "AND weights_bytes IS NOT NULL) OR state = 'partial'",
+            name="ck_model_versions_present_has_files",
+        ),
+        Index("ix_model_versions_lineage_created", "lineage_id", "created_at"),
+        Index(
+            "uq_model_versions_base",
+            "lineage_id",
+            unique=True,
+            postgresql_where=text("state = 'base'"),
+        ),
+        Index(
+            "uq_model_versions_run",
+            "job_id",
+            unique=True,
+            postgresql_where=text("state <> 'base'"),
+        ),
+        Index("ix_model_versions_parent", "parent_version_id"),
+    )
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    lineage_id: Mapped[str] = mapped_column(Text, ForeignKey("model_lineages.id"))
+    state: Mapped[str] = mapped_column(Text)
+    weights_status: Mapped[str] = mapped_column(Text)
+    parent_version_id: Mapped[str | None] = mapped_column(Text, ForeignKey("model_versions.id"))
+    job_id: Mapped[str | None] = mapped_column(
+        Text, ForeignKey("jobs.id", name="fk_model_versions_job")
+    )
+    """The run that made it; for a base, the run that created the lineage."""
+    dataset_version_id: Mapped[str | None] = mapped_column(
+        Text, ForeignKey("dataset_versions.version_id")
+    )
+    config: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    config_hash: Mapped[str] = mapped_column(Text)
+    metrics: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    history: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    weights_path: Mapped[str | None] = mapped_column(Text)
+    """Relative to the data folder: ``registry/<lineage>/<version>``."""
+    weights_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    trained_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    weights_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    weights_deleted_by_job_id: Mapped[str | None] = mapped_column(
+        Text, ForeignKey("jobs.id", name="fk_model_versions_deleted_by_job")
+    )
+    """The retention job that deleted the weights (REG-2.9)."""
+
+
+class Checkpoint(Base):
+    """A run's in-run checkpoint: one per job, the latest only (RUN-1.3, REG-2.6)."""
+
+    __tablename__ = "checkpoints"
+
+    job_id: Mapped[str] = mapped_column(
+        Text, ForeignKey("jobs.id", name="fk_checkpoints_job"), primary_key=True
+    )
+    lineage_id: Mapped[str] = mapped_column(Text, ForeignKey("model_lineages.id"))
+    path: Mapped[str] = mapped_column(Text)
+    """Relative to the data folder: the checkpoint's JSON file."""
+    bytes: Mapped[int] = mapped_column(BigInteger)
+    global_step: Mapped[int] = mapped_column(BigInteger)
+    epoch: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Pin(Base):
+    """A version exempt from retention until unpinned (REG-2.5)."""
+
+    __tablename__ = "pins"
+
+    version_id: Mapped[str] = mapped_column(Text, ForeignKey("model_versions.id"), primary_key=True)
+    pinned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class RetentionSetting(Base):
+    """``keep_intermediate``, globally (``lineage_id`` null) or for one lineage
+    (REG-2.3, REG-2.4, OC-9). Null ``keep_intermediate`` means "all"."""
+
+    __tablename__ = "retention_settings"
+    __table_args__ = (
+        CheckConstraint(
+            "keep_intermediate IS NULL OR keep_intermediate >= 0",
+            name="ck_retention_settings_keep",
+        ),
+        Index(
+            "uq_retention_settings_scope",
+            "lineage_id",
+            unique=True,
+            postgresql_nulls_not_distinct=True,
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    lineage_id: Mapped[str | None] = mapped_column(Text, ForeignKey("model_lineages.id"))
+    keep_intermediate: Mapped[int | None] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SettingsSection(Base):
+    """One section of the settings edited on SCR-14 (OC-9): its values as JSON. Retention
+    has its own table (``retention_settings``), keyed by lineage."""
+
+    __tablename__ = "settings"
+
+    section: Mapped[str] = mapped_column(Text, primary_key=True)
+    values: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

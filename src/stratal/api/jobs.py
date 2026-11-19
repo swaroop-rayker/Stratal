@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -28,6 +28,7 @@ from stratal.mon.store import insert_events
 from stratal.runtime import jobs as job_service
 from stratal.runtime.jobs import Enqueue, PipelineRequest
 from stratal.runtime.states import ACTIVE, TRANSITIONS
+from stratal.train.config import TrainRequest
 
 router = APIRouter()
 
@@ -137,11 +138,17 @@ def _page(rows: list[EventRow], limit: int, *, tail: bool = False) -> Json:
 # -- jobs ----------------------------------------------------------------------
 
 
+JobRequest = Annotated[PipelineRequest | TrainRequest, Field(discriminator="kind")]
+
+
 @router.post("/jobs", status_code=202, tags=["jobs"], response_model=schemas.Job)
-def create_job(request: PipelineRequest, session: Db, enqueue: Queue, bus: Redis) -> Json:
-    """Start a job. Phase 1 accepts ``kind: pipeline``."""
+def create_job(request: JobRequest, session: Db, enqueue: Queue, bus: Redis) -> Json:
+    """Start a job: ``kind: pipeline``, or ``kind: train`` (M8, RUN-1.1)."""
     with session.begin():
-        job, first = job_service.create_pipeline_job(session, request)
+        if isinstance(request, TrainRequest):
+            job, first = job_service.create_train_job(session, request)
+        else:
+            job, first = job_service.create_pipeline_job(session, request)
         view = job_service.job_view(session, job)
     enqueue(first)
     job_service.after_commit(bus, view["id"])
@@ -199,13 +206,43 @@ def get_job(job_id: str, session: Db) -> Json:
 
 
 @router.post("/jobs/{job_id}/cancel", status_code=202, tags=["jobs"], response_model=schemas.Job)
-def cancel_job(job_id: str, session: Db, bus: Redis) -> Json:
-    """Request cancellation. ``409`` if the job has already finished."""
+def cancel_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
+    """Request cancellation. ``409`` if the job has already finished. Cancelling a paused
+    training run also queues retention, which removes its checkpoint (REG-2.6)."""
     with session.begin():
         job, running = job_service.request_cancel(session, job_id)
+        cleanup = None if running else job_service.retention_after_run(session, job)
         view = job_service.job_view(session, job)
     if running:
         bus.set_control(job_id, "cancel")  # fast path; jobs.desired_state is the durable copy
+    job_service.after_commit(bus, job_id)
+    if cleanup is not None:
+        enqueue(cleanup)
+        job_service.after_commit(bus, cleanup.job_id)
+    return view
+
+
+@router.post("/jobs/{job_id}/pause", status_code=202, tags=["jobs"], response_model=schemas.Job)
+def pause_job(job_id: str, session: Db, bus: Redis) -> Json:
+    """Ask a running job to pause at its next safe point (RUN-1.2). ``409`` if it is not
+    running, or is being cancelled."""
+    with session.begin():
+        job = job_service.request_pause(session, job_id)
+        view = job_service.job_view(session, job)
+    bus.set_control(job_id, "pause")  # fast path; jobs.desired_state is the durable copy
+    job_service.after_commit(bus, job_id)
+    return view
+
+
+@router.post("/jobs/{job_id}/resume", status_code=202, tags=["jobs"], response_model=schemas.Job)
+def resume_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
+    """Requeue a paused job from the stage that paused (RUN-1.2). ``409`` if it is not
+    paused."""
+    with session.begin():
+        job, resume = job_service.request_resume(session, job_id)
+        view = job_service.job_view(session, job)
+    bus.clear_control(job_id)
+    enqueue(resume)
     job_service.after_commit(bus, job_id)
     return view
 

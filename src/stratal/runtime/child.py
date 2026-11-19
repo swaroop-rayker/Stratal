@@ -15,6 +15,7 @@ import os
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import IO, Any
 
 from sqlalchemy.orm import Session
@@ -28,12 +29,23 @@ from stratal.db.models import Job, JobStage
 from stratal.mon import probes
 from stratal.mon.emitter import KIND_PROCESS_SAMPLE, Emitter, NullEmitter, StreamEmitter
 from stratal.mon.events import MetricValue, utc_now
-from stratal.runtime.context import JobCancelled, JobContext
+from stratal.runtime.context import JobCancelled, JobContext, JobPaused, StageHandoff
 from stratal.runtime.stages import StageResult, StageRun, get_stage
 
 EXIT_OK = 0
 EXIT_FAILED = 1
 EXIT_CANCELLED = 3
+EXIT_PAUSED = 4
+"""The stage stopped at a safe point because the job was paused (RUN-1.2)."""
+EXIT_HANDOFF = 5
+"""The stage asks to run again on another queue; it recorded which (RUN-1.9)."""
+
+FORBID_UNPICKLING_ENV = "STRATAL_TEST_FORBID_UNPICKLING"
+"""Test-only (NFR-8): a file path. When set, the stage runs with every unpickling refused
+(:func:`stratal.testing.no_pickle.forbid_unpickling`), and each attempt is appended to
+that file as it happens, so a test can prove a whole run unpickled nothing, even an
+attempt that was killed. Needs ``loader_workers: 0``,
+since loader workers pass batches between processes as pickles."""
 
 log = get_logger(__name__)
 
@@ -102,24 +114,25 @@ class ProcessReporter(threading.Thread):
 
 
 class _StopFlag:
-    """Asks Redis whether the job was told to stop, at most twice a second."""
+    """Asks Redis whether the job was told to stop (cancel or pause), at most twice a second."""
 
     def __init__(self, redis_url: str, job_id: str) -> None:
         self._redis_url = redis_url
         self._job_id = job_id
         self._bus: Bus | None = None
         self._checked_at = 0.0
-        self._stop = False
+        self._stop: str | None = None
 
-    def __call__(self) -> bool:
+    def __call__(self) -> str | None:
         now = time.monotonic()
-        if self._stop or now - self._checked_at < 0.5:
+        if self._stop == "cancel" or now - self._checked_at < 0.5:
             return self._stop
         self._checked_at = now
         try:
             if self._bus is None:
                 self._bus = Bus(self._redis_url, timeout_s=1.0)
-            self._stop = self._bus.get_control(self._job_id) == "cancel"
+            value = self._bus.get_control(self._job_id)
+            self._stop = value if value in ("cancel", "pause") else None
         except Exception:
             self._bus = None  # Redis is down: keep working, the supervisor can still kill us
         return self._stop
@@ -162,6 +175,7 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
             return EXIT_FAILED
         spec, name = dict(job.spec), stage.name
         config, input_version_id = dict(stage.config), stage.input_version_id
+        queue = stage.queue
 
     emitter: Emitter = (
         StreamEmitter(
@@ -201,6 +215,7 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
                 input_version_id=input_version_id,
                 data_dir=settings.data_dir,
                 engine=get_engine(),
+                queue=queue,
             )
         )
         if result.output_version_id is not None:
@@ -219,6 +234,17 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
     except JobCancelled:
         ctx.event("activity", f"Stage {name} stopped at a safe point on request")
         return EXIT_CANCELLED
+    except JobPaused:
+        ctx.event("activity", f"Stage {name} paused at a safe point")
+        return EXIT_PAUSED
+    except StageHandoff as handoff:
+        _record(job_id, idx, queue=handoff.queue)
+        ctx.event(
+            "action",
+            f"Stage {name} moves to the {handoff.queue.upper()} queue: {handoff.reason}",
+            metrics={"code": "device_handoff", "queue": handoff.queue},
+        )
+        return EXIT_HANDOFF
     except StratalError as exc:
         return _fail(
             ctx,
@@ -260,7 +286,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--stage", type=int, required=True)
     parser.add_argument("--attempt", type=int, required=True)
     args = parser.parse_args(argv)
-    return run(args.job, args.stage, args.attempt, get_settings())
+    report = os.environ.get(FORBID_UNPICKLING_ENV)
+    if not report:
+        return run(args.job, args.stage, args.attempt, get_settings())
+    from stratal.testing.no_pickle import forbid_unpickling
+
+    with contextlib.suppress(ImportError):  # imported first, so torch.load is patched too
+        import torch  # noqa: F401  # pyright: ignore[reportMissingImports, reportUnusedImport]
+    with forbid_unpickling(Path(report)):
+        return run(args.job, args.stage, args.attempt, get_settings())
 
 
 if __name__ == "__main__":

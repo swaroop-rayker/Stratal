@@ -5,7 +5,7 @@ import type { KeyboardEvent, ReactNode } from "react";
 
 import { Icon } from "./ui";
 
-export function Drawer({ open, onOpenChange, title, heading, keys, className, children, footer, width, onKeyDown }: {
+export function Drawer({ open, onOpenChange, title, heading, keys, className, children, footer, width, onKeyDown, returnFocus }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** The accessible title; shown as an h2 unless `heading` replaces it. */
@@ -18,6 +18,9 @@ export function Drawer({ open, onOpenChange, title, heading, keys, className, ch
   footer?: ReactNode;
   width?: number;
   onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
+  /** Where focus goes on close, when the drawer was opened by a URL rather than a trigger
+   * (a row of a table): Radix would otherwise return it to the page body. */
+  returnFocus?: () => HTMLElement | null;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -28,6 +31,13 @@ export function Drawer({ open, onOpenChange, title, heading, keys, className, ch
           style={width ? { width } : undefined}
           aria-describedby={undefined}
           onKeyDown={onKeyDown}
+          onCloseAutoFocus={(event) => {
+            const target = returnFocus?.();
+            if (target) {
+              event.preventDefault();
+              target.focus();
+            }
+          }}
         >
           <header>
             <Dialog.Title asChild>{heading ?? <h2>{title}</h2>}</Dialog.Title>

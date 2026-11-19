@@ -21,7 +21,7 @@ An entry is `fixed` when the change is in, and `verified` only when its guard te
 
 ## Inherited bugs
 
-These seven come from the owner's input (SPEC §8.2). They describe failures the design must prevent. Nothing is built yet, so none can be verified: each is **prevention designed, not yet verified** until its guard test passes.
+These seven come from the owner's input (SPEC §8.2). They describe failures the design must prevent. Each was **prevention designed, not yet verified** until its guard test passed; the last column says in which milestone that happened. All seven are now verified, BUG2 and BUG5 for training too since M8 (`test_RUN_1_5_an_oversized_batch_fails_cleanly_and_the_suggested_batch_fits`, `test_RUN_1_4_memory_allocated_returns_to_baseline_after_training`, both on the card).
 
 | Bug | As written in the input | Design answer | Guard test | Verified in |
 |---|---|---|---|---|
@@ -31,9 +31,49 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 | BUG4 | Training interrupted when laptop goes into sleep mode and improper handling of this situation | Keep-awake, sleep events, per-batch commits, resume in a fresh process ([ADR-0008](decisions/ADR-0008-sleep-and-suspend-handling.md)) | `test_BUG4_*` | M2 |
 | BUG5 | Stale weights persist in the VRAM after training completion, tests, evals, model transfers or changes during inferencing | Process exit is the unload; verified unload for long-lived processes ([ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)) | `test_BUG5_*` | M4 |
 | BUG6 | Improper handling of VRAM occupancy, bloated by stale weights | One GPU lease; free-VRAM check before every load ([ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)) | `test_BUG6_*` | M4 |
-| BUG7 | Data bloat during model training runs, pauses or checkpoints and poor versioning issues | Retention policy (REG-2), one rolling checkpoint, content-addressed files | `test_NFR_14_*`, `test_BUG7_*` (planned) | M8 (planned) |
+| BUG7 | Data bloat during model training runs, pauses or checkpoints and poor versioning issues | Retention as a job after every run (REG-2), one rolling in-run checkpoint removed on success or cancel, atomic deletes with crash recovery and an orphan sweep, a dry run, and a disk report checked against the bytes on disk ([ADR-0015](decisions/ADR-0015-model-registry-and-retention.md)) | `test_NFR_14_*`, `test_BUG7_*`, `test_NFR_15_*` | M8 (2026-11-18: 10 runs with default retention leave base + latest + one in-progress checkpoint, also after a cancelled pause and a crash with retry; on the live stack the M8 demo's retention freed exactly what its dry run listed) |
 
 ## Log
+
+### E-015 — The pause toast named a step before the one the run paused at
+
+- **Date:** 2026-11-19
+- **Seen:** In the M8 demo, SCR-07's toast said `job_0051 paused at epoch 9, step 193`, but the pause's checkpoint was at step 260 of epoch 9 (global step 3,244), and the resume started there.
+- **Where:** M8, the train stage's pause (RUN-1.2) and SCR-07's toast, which reads the stage's `step`.
+- **Cause:** Progress is reported at most once a second, and the stage's `step` is the last report. The pause checkpointed up to a second of steps later and reported nothing more.
+- **Fix:** At a pause, after the checkpoint, the stage sends one last progress report (substage `pause`) with the checkpoint's step and epoch.
+- **Guard:** `test_RUN_1_2_a_paused_run_checkpoints_and_resumes_where_it_stopped` checks that the paused stage's `step` and `epoch` are the checkpoint's.
+- **Status:** verified (the full `check.ps1 -Gpu`, 2026-11-19)
+
+### E-014 — An unreadable weights file came back as a 500
+
+- **Date:** 2026-11-19
+- **Seen:** While writing M8's NFR-8 tests, a pickle saved as a version's `model.safetensors` made `/predict` return `500 internal_error` with safetensors' own message (`Error while deserializing header: header too large`). A run resuming from such a checkpoint failed as `stage_failed`.
+- **Where:** M8, every safetensors read: `train/weights.py`, `train/checkpoint.py`, `inference/holder.py`, `train/backfill.py`; NFR-8, ADR-0011.
+- **Cause:** `safetensors.torch.load_file` raises `SafetensorError`, which is not a typed error. Nothing ran (safetensors parses no code), but clients got no stable code and no suggested action.
+- **Fix:** `weights.read_tensors` turns it into `weights_unreadable` (409) with "Re-train the version" or "Cancel the run and start it again"; every read uses it.
+- **Guard:** `test_NFR_8_a_pickle_planted_as_weights_or_a_checkpoint_is_refused_and_never_runs`, `test_NFR_8_a_run_resuming_from_a_planted_checkpoint_fails_typed_and_runs_nothing` (`test_M8_nfr.py`), `test_NFR_8_a_pickle_planted_as_a_versions_weights_is_refused_and_never_runs` (`test_M8_inference.py`).
+- **Status:** verified (the full `check.ps1 -Gpu`, 2026-11-19)
+
+### E-013 — A job killed by a signal could not be read through the API
+
+- **Date:** 2026-11-18
+- **Seen:** While writing M8's registry tests, `GET /jobs/{id}` for a training job killed by the test crash point returned 500: `ResponseValidationError ... ('response', 'error', 'detail'): Input should be a valid string, input: {'signal': 'SIGKILL'}`.
+- **Where:** `describe_exit` in the supervisor (M2) writes `detail` as facts (`{"signal": ...}`, `{"exit_code": ...}`); the response model `JobError.detail` (M6) allowed only text. The job screens render `detail` as text too, so a killed job would also have broken SCR-04 and SCR-07 once the API returned it.
+- **Cause:** Two ends of one field written at different times. Earlier kill tests read jobs through the harness, not the API, so none caught it.
+- **Fix:** `JobError.detail` is text or an object; the frontend shows an object as words through `errorDetail` (`signal SIGKILL · peak rss mb 2410`).
+- **Guard:** `test_REG_1_1_a_retry_after_the_weights_were_registered_trains_nothing` reads a killed job through the API; `errorDetail (E-013)` in `format.test.ts`.
+- **Status:** verified (the full `check.ps1`, 2026-11-19)
+
+### E-012 — After Modern Standby, WSL lost the GPU
+
+- **Date:** 2026-11-18
+- **Seen:** Starting a GPU container for the M8 training tests failed: `nvidia-container-cli: initialization error: WSL environment detected but no adapters were found`. The GPU worker that had been running for two hours reported `Failed to initialize NVML: Generic operating system error`. Windows itself still saw the RTX 4050 (driver 621.24, 37 °C, P8, 0 MiB used), and Device Manager showed both adapters as OK.
+- **Where:** Docker Desktop on WSL2, host side; any GPU work (M8 training, ADR-0006); BUG4
+- **Cause:** The laptop was in Modern Standby from 11:09 to 13:17 (System log, events 506 and 507). After it woke, WSL's virtual GPU device no longer had the adapter. Spike S-03 (M0) found no such loss after a short standby, so this depends on how long or deep the standby is, or on the dGPU being powered down meanwhile.
+- **Fix:** Restart WSL (`wsl --shutdown`, then start Docker Desktop again). Prevention is ADR-0008's: keep the laptop awake while jobs run (`host/stratal-host.ps1`).
+- **Guard:** none automatic yet. A GPU job started in this state fails at once with `cuda_unavailable` and says what to do; the supervisor's sleep detection puts the suspend on the timeline (BUG4).
+- **Status:** open
 
 ### E-011 — Two jobs making the same version at once: the second failed
 
@@ -101,8 +141,8 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 - **Where:** M0, spike S-02; relates to BUG2, BUG3 and BUG6
 - **Cause:** Under WSL2 the Windows driver satisfies requests beyond dedicated VRAM from shared system memory instead of refusing them. NVML reports only dedicated memory, so the overflow is invisible there. This is a likely contributor to the owner's original symptoms: "VRAM bloat" that monitoring did not explain, RAM contention, and jobs that degrade instead of failing.
 - **Fix:** Every GPU process caps PyTorch's allocator at 0.85 of the card, which makes PyTorch raise a catchable `OutOfMemoryError` at 5.1 GB (ADR-0006, items 8 to 10). Verified in the same spike.
-- **Guard:** `test_NFR_1_*` and `test_BUG2_*` in M4, when the owner implements the VRAM manager. Until then the cap exists only in the spike script.
-- **Status:** cause confirmed; fix demonstrated in a spike; not yet in product code
+- **Guard:** `test_BUG2_an_oom_becomes_cuda_out_of_memory_and_frees_what_it_took` and `test_NFR_1_peak_vram_of_the_label_stage_stays_under_5_5_gb` (M4, on the card). Training sets the same cap (`train/stage.py`, `VRAM_FRACTION`) and `test_NFR_1_peak_vram_of_a_training_run_stays_under_5_5_gb_and_is_logged` measures it (M8); a training OOM fails with a suggested batch that then fits (RUN-1.5, on the card).
+- **Status:** verified (label stage, M4; training's cap, M8)
 
 ### E-004 — Type checker could not resolve the test client
 

@@ -1,0 +1,169 @@
+{
+  "version": "ds_f8e67211dd94",
+  "classes": [
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck"
+  ],
+  "rows": {
+    "train": 47704,
+    "val": 5963,
+    "test": 5963
+  },
+  "torch": "2.15.0+cu132",
+  "cuda": "13.2",
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "cpu_count": 16,
+  "torch_threads": 8,
+  "container_memory_limit_mb": 4500,
+  "input": {
+    "loader": {
+      "0": {
+        "images": 10240,
+        "seconds": 6.52,
+        "images_per_s": 1570
+      },
+      "2": {
+        "images": 10240,
+        "seconds": 1.31,
+        "images_per_s": 7826
+      },
+      "4": {
+        "images": 10240,
+        "seconds": 0.81,
+        "images_per_s": 12691
+      }
+    },
+    "preload": {
+      "images": 47704,
+      "seconds": 22.6,
+      "rss_added_mb": 575,
+      "tensor_mb": 559
+    }
+  },
+  "steps": [
+    {
+      "model": "mlp",
+      "device": "cuda",
+      "batch": 128,
+      "parameters": 820874,
+      "median_step_ms": 3.56,
+      "samples_per_s": 35952,
+      "peak_allocated_mb": 22.3,
+      "peak_reserved_mb": 42.0
+    },
+    {
+      "model": "mlp",
+      "device": "cuda",
+      "batch": 256,
+      "parameters": 820874,
+      "median_step_ms": 4.05,
+      "samples_per_s": 63186,
+      "peak_allocated_mb": 23.9,
+      "peak_reserved_mb": 44.0
+    },
+    {
+      "model": "mlp",
+      "device": "cpu",
+      "batch": 128,
+      "parameters": 820874,
+      "median_step_ms": 6.14,
+      "samples_per_s": 20833
+    },
+    {
+      "model": "mlp",
+      "device": "cpu",
+      "batch": 256,
+      "parameters": 820874,
+      "median_step_ms": 6.62,
+      "samples_per_s": 38696
+    },
+    {
+      "model": "small_cnn",
+      "device": "cuda",
+      "batch": 128,
+      "parameters": 288746,
+      "median_step_ms": 11.77,
+      "samples_per_s": 10878,
+      "peak_allocated_mb": 149.0,
+      "peak_reserved_mb": 226.0
+    },
+    {
+      "model": "small_cnn",
+      "device": "cuda",
+      "batch": 256,
+      "parameters": 288746,
+      "median_step_ms": 22.42,
+      "samples_per_s": 11417,
+      "peak_allocated_mb": 284.0,
+      "peak_reserved_mb": 422.0
+    },
+    {
+      "model": "small_cnn",
+      "device": "cpu",
+      "batch": 128,
+      "parameters": 288746,
+      "median_step_ms": 126.33,
+      "samples_per_s": 1013
+    },
+    {
+      "model": "small_cnn",
+      "device": "cpu",
+      "batch": 256,
+      "parameters": 288746,
+      "median_step_ms": 354.5,
+      "samples_per_s": 722
+    }
+  ],
+  "run": {
+    "model": "small_cnn",
+    "batch": 128,
+    "loader_workers": 4,
+    "epochs": [
+      {
+        "epoch": 1,
+        "train_seconds": 4.2,
+        "images_per_s": 11297,
+        "val_accuracy": 0.5667,
+        "last_loss": 0.8688
+      },
+      {
+        "epoch": 2,
+        "train_seconds": 3.8,
+        "images_per_s": 12634,
+        "val_accuracy": 0.6797,
+        "last_loss": 0.6321
+      },
+      {
+        "epoch": 3,
+        "train_seconds": 3.7,
+        "images_per_s": 12744,
+        "val_accuracy": 0.7037,
+        "last_loss": 0.6859
+      }
+    ],
+    "peak_allocated_mb": 149.0,
+    "peak_reserved_mb": 420.0,
+    "process_peak_rss_mb": 2898
+  },
+  "checkpoint_small_cnn": {
+    "tensors": 78,
+    "bytes": 3475756,
+    "save_ms": 18.2,
+    "load_ms": 1.5
+  },
+  "checkpoint_mlp": {
+    "tensors": 18,
+    "bytes": 9852352,
+    "save_ms": 26.9,
+    "load_ms": 0.6
+  },
+  "process_peak_rss_mb": 2898
+}

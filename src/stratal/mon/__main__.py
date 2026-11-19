@@ -10,9 +10,11 @@ import threading
 import time
 from collections.abc import Callable
 
+from sqlalchemy.engine import Engine
+
 from stratal.core.bus import Bus
 from stratal.core.logging import configure_logging, get_logger
-from stratal.core.settings import get_settings
+from stratal.core.settings import Settings, get_settings
 from stratal.db.engine import get_engine
 from stratal.mon.collector import Collector
 from stratal.mon.sampler import MachineProbe, Sampler
@@ -64,6 +66,11 @@ def main() -> None:
         enqueue=enqueue_stage,
         stale_after_s=settings.heartbeat_stale_after_s,
         max_attempts=settings.max_attempts,
+        bus=registry_bus,
+        stall_after_s=settings.stall_timeout_s,
+        thermal_pause_c=settings.thermal_pause_c,
+        thermal_resume_c=settings.thermal_resume_c,
+        limits=lambda: _training_limits(engine, settings),
     )
 
     def watch() -> None:
@@ -84,6 +91,21 @@ def main() -> None:
     log.info("monitor_stopped")
 
 
+def _training_limits(engine: Engine, settings: Settings) -> tuple[float, float, float]:
+    """``(stall_timeout_s, thermal_pause_c, thermal_resume_c)`` as saved on SCR-14 (OC-9)."""
+    from sqlalchemy.orm import Session
+
+    from stratal.runtime import limits
+
+    with Session(engine) as session:
+        values = limits.read(session, settings)
+    return (
+        float(values.stall_timeout_s),
+        float(values.thermal_pause_c),
+        float(values.thermal_resume_c),
+    )
+
+
 def publish_system(bus: Bus, probe: MachineProbe) -> None:
     """Describe the machine once for ``GET /system`` (SCR-01). The API has no NVML."""
     import os
@@ -96,6 +118,7 @@ def publish_system(bus: Bus, probe: MachineProbe) -> None:
             {
                 "gpu_name": probe.gpu.name(),
                 "gpu_error": probe.gpu.error,
+                "gpu_slowdown_c": probe.gpu.slowdown_c(),
                 "vram_total_mb": gpu.vram_total_mb if gpu is not None else None,
                 "ram_total_mb": psutil.virtual_memory().total / 2**20,
                 "cpu_count": os.cpu_count(),

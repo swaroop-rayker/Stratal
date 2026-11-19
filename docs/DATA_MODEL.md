@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 and §4.11 built in M5 (2026-11-16) |
+| Status | §4.1–4.2 built in M1; §4.3–4.8 and the Redis keys built in M2 (2026-11-14); §4.9 built in M3 (2026-11-15); §4.10 and §4.11 built in M5 (2026-11-16); §4.12 and §4.13 built in M8 (2026-11-18, 2026-11-19) |
 | Detail level | Phase-1 tables are specified. Phase 2+ tables are outlined in [§9](#9-planned-for-later-phases) |
 | Rule | Any schema change updates this file in the same change. Applied migrations are never edited |
 
@@ -10,11 +10,12 @@
 
 | Store | Holds | Why this store |
 |---|---|---|
-| **PostgreSQL** | Jobs, stages, state transitions, events, telemetry, dataset versions and lineage, derivation cache, reviews, reports | Several processes write at once (API, workers, monitor); needs transactions and migrations |
+| **PostgreSQL** | Jobs, stages, state transitions, events, telemetry, dataset versions and lineage, derivation cache, reviews, reports; since M8 the model registry and the settings edited on SCR-14 | Several processes write at once (API, workers, monitor); needs transactions and migrations |
 | **Parquet manifests** | One file per dataset version: one row per item with status, hashes and per-stage columns | Columnar, compact, streamable in batches, queryable with DuckDB |
 | **Blob store** | Image files (originals and preprocessed copies), named by content hash | Immutable, deduplicated by construction |
 | **Redis** | Task queue, event stream buffer, live fan-out, control flags | Transient. Nothing in Redis is the only copy of anything that matters |
 | **Per-job files** | Structured log, event spool, in-run checkpoints | Local durability that does not depend on any service being up |
+| **Registry files** | Model weights as safetensors with `model.json` beside them, one folder per version (`registry/<lineage>/<version>/`, M8). Nothing here or in a checkpoint is pickled; a file that is not safetensors is refused with `weights_unreadable` (NFR-8) | Deletable by retention, so not content-addressed (ADR-0015) |
 
 ## 2. Entity overview
 
@@ -31,6 +32,14 @@ erDiagram
   DATASET_VERSIONS ||--o{ REVIEW_SESSIONS : "reviewed in"
   REVIEW_SESSIONS ||--|{ REVIEW_ITEMS : contains
   DATASET_VERSIONS ||--o{ EVAL_REPORTS : "described by"
+  DATASETS ||--o{ MODEL_LINEAGES : "trains"
+  MODEL_LINEAGES ||--|{ MODEL_VERSIONS : has
+  MODEL_VERSIONS ||--o{ MODEL_VERSIONS : "parent of"
+  DATASET_VERSIONS ||--o{ MODEL_VERSIONS : "trained on"
+  JOBS ||--o| MODEL_VERSIONS : makes
+  JOBS ||--o| CHECKPOINTS : keeps
+  MODEL_VERSIONS ||--o| PINS : "pinned by"
+  MODEL_LINEAGES ||--o| RETENTION_SETTINGS : "overridden by"
 ```
 
 ## 3. Identifiers
@@ -41,6 +50,8 @@ erDiagram
 | Dataset version | `ds_` + 12 hex characters | `ds_7f3a9c21b04e` | derived from content hash and config hash (DATA-3.2) |
 | Job | `job_` + zero-padded sequence | `job_0142` | Postgres sequence |
 | Review session | `rev_` + zero-padded sequence | `rev_0007` | Postgres sequence |
+| Model lineage | `ml_` + 12 hex characters | `ml_319245b543d4` | SHA-256 of the lineage key (model spec, dataset slug, input shape, classes) as canonical JSON (M8) |
+| Model version | `mv_` + 12 hex characters | `mv_23763657482f` | random (`secrets.token_hex(6)`); weights are not content-addressed (ADR-0015) |
 | Blob | 64 hex characters (SHA-256 of the file's bytes) | `9f86d0…` | computed while copying |
 | Event | UUID | – | the emitting process |
 
@@ -62,7 +73,7 @@ The spec's examples show six hex characters. Six collide too easily (about a 3% 
 - A null and an absent column are the same, so a new empty column does not change existing IDs.
 - A known-answer test pins the algorithm. Changing it changes every stored version ID, so that needs an ADR and a migration plan.
 
-## 4. PostgreSQL schema (phase 1)
+## 4. PostgreSQL schema
 
 Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 
@@ -88,7 +99,7 @@ Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 | `content_hash` | text | no | 64 hex |
 | `config_hash` | text | no | 64 hex |
 | `config` | jsonb | no | fully resolved stage config |
-| `dtype` | text | yes | dataset type this version validates against, e.g. `image_caption` (DATA-5); null before it qualifies. Set to `image_caption` by the filter stage, which validates the schema (DATA-5.1, since M5); split versions keep it |
+| `dtype` | text | yes | dataset type this version validates against, `image_caption` or `labelled_images` (DATA-5); null before it qualifies. Set to `image_caption` by the filter stage, which validates the schema (DATA-5.1, since M5); set to `labelled_images` by ingest with `label_from: folder` (DATA-5.2, since M8). A stage that keeps the rows (clean, preprocess, split) keeps its parent's type |
 | `manifest_path` | text | no | relative to the data root |
 | `manifest_bytes` | bigint | no | |
 | `row_count` | integer | no | |
@@ -106,9 +117,10 @@ Indexes: `(dataset_id, created_at desc)`; `(stage, parent_version_id, config_has
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | `id` | text | no | PK, `job_…` |
-| `kind` | text | no | `pipeline` in phase 1; later `train`, `hpo_study`, `hpo_trial`, `eval`, `maintenance` |
+| `kind` | text | no | `pipeline`; since M8 also `train` (RUN-1.1) and `retention` (REG-2.2); later `hpo_study`, `hpo_trial`, `eval`, `maintenance` |
 | `state` | text | no | `queued`, `running`, `paused`, `completed`, `failed`, `cancelled`, `stalled` (check constraint) |
 | `desired_state` | text | yes | `paused` or `cancelled` while a request is pending |
+| `pause_reason` | text | yes | why a paused job is paused: `user` or `thermal` (M8, RUN-1.6); set with the pause request, kept while paused, cleared on resume. The watchdog resumes only `thermal` pauses |
 | `spec` | jsonb | no | the fully resolved request |
 | `dataset_id` | bigint | yes | FK |
 | `input_version_id` | text | yes | FK |
@@ -131,7 +143,7 @@ Indexes: `(state)`; `(created_at desc)`; partial `(heartbeat_at) where state = '
 | `idx` | integer | no | PK part; order within the job |
 | `name` | text | no | stage name |
 | `queue` | text | no | `cpu` or `gpu` |
-| `status` | text | no | `pending`, `queued`, `running`, `completed`, `failed`, `skipped`, `cancelled` |
+| `status` | text | no | `pending`, `queued`, `running`, `paused` (M8, RUN-1.2: stopped by a pause, or next to run when the job paused between stages), `completed`, `failed`, `skipped`, `cancelled` |
 | `config` | jsonb | no | |
 | `config_hash` | text | no | |
 | `input_version_id`, `output_version_id` | text | yes | FK |
@@ -142,7 +154,7 @@ Indexes: `(state)`; `(created_at desc)`; partial `(heartbeat_at) where state = '
 | `activity` | text | yes | latest plain-language message (MON-1.2) |
 | `metrics` | jsonb | yes | latest stage metrics (MON-3) |
 | `peaks` | jsonb | yes | peak VRAM, peak RAM, max temperature (MON-2.5) |
-| `last_progress_at` | timestamptz | yes | used for stall detection |
+| `last_progress_at` | timestamptz | yes | the last progress report or activity message from the stage (activity counts since M8, ADR-0014 rule 7); the watchdog's stall detection (RUN-1.7) compares it with `stall_timeout_s` |
 | `started_at`, `finished_at` | timestamptz | yes | |
 | `error` | jsonb | yes | |
 
@@ -256,6 +268,55 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 
 `id` (bigint identity, PK), `version_id` (FK), `kind` (`phase1_dataset`), `report` (jsonb), `review_session_id` (FK, nullable), `job_id` (FK, nullable), `created_at`. Index: `(version_id, created_at desc)`. Built in M5 (2026-11-16). The `report` document is described in [API.md §3.6](API.md#36-evaluation-eval-11).
 
+### 4.12 Model registry (M8, REG-1.1, REG-1.2, [ADR-0015](decisions/ADR-0015-model-registry-and-retention.md))
+
+**`model_lineages`**: one model on one task (ADR-0015 rule 1).
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | text | no | PK, `ml_…`, derived from the key |
+| `key_hash` | text | no | unique; the full SHA-256 of the key: model spec, dataset slug, input shape and class list. Any difference is another lineage, since weights for one shape or class list cannot start a run for another |
+| `name` | text | no | `<model> · <dataset>`, e.g. `small_cnn · cifar10` |
+| `task` | text | no | `classification` in M8 |
+| `model_spec` | jsonb | no | the train config's `model` |
+| `dataset_id` | bigint | no | FK |
+| `input_shape` | jsonb | no | `[C, H, W]` |
+| `classes` | jsonb | no | class names in label order |
+| `parameters` | bigint | no | |
+| `created_at` | timestamptz | no | |
+
+**`model_versions`**: a lineage's base, or one training run's result.
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `id` | text | no | PK, `mv_…` |
+| `lineage_id` | text | no | FK |
+| `state` | text | no | `base`, `partial` (its run is paused), `trained` (REG-1.2) |
+| `weights_status` | text | no | `present`, `deleting`, `weights_deleted` (NFR-15, REG-2.7) |
+| `parent_version_id` | text | yes | FK → `model_versions`; the version the run started from. In M8 every run starts from its lineage's base. Null for a base, and for runs registered by the backfill that did not start from it |
+| `job_id` | text | yes | FK; the run that made it. A base records the run that created the lineage, so uniqueness is per run: partial unique index on `job_id` where `state <> 'base'` |
+| `dataset_version_id` | text | yes | FK; the exact data (REG-1.1) |
+| `config`, `config_hash` | jsonb, text | no | the run's resolved train config and its SHA-256 over canonical JSON (REG-1.1) |
+| `metrics` | jsonb | yes | the stage's final metrics; null while partial |
+| `history` | jsonb | yes | one entry per finished epoch |
+| `weights_path` | text | yes | `registry/<lineage>/<version>`, relative to the data folder; null while partial (its weights are the run's checkpoint) |
+| `weights_bytes` | bigint | yes | both files |
+| `note` | text | yes | how it came to be, where that is unusual (a base's seed; a backfilled run without a parent) |
+| `created_at`, `trained_at`, `weights_deleted_at` | timestamptz | mixed | a base has no `trained_at` |
+| `weights_deleted_by_job_id` | text | yes | FK → `jobs`; the retention job that deleted the weights (REG-2.9; added with retention, migration `19c70056c3ce`) |
+
+Constraints: state and weights status check constraints; `present` needs a path and size unless `partial`; one base per lineage (partial unique index on `lineage_id` where `state = 'base'`). Indexes `(lineage_id, created_at)`, `(parent_version_id)`.
+
+**`checkpoints`**: a run's in-run checkpoint, the latest only (REG-2.6). `job_id` (PK, FK), `lineage_id` (FK), `path` (the checkpoint's JSON file, relative to the data folder), `bytes` (both files), `global_step`, `epoch`, `updated_at`. Written at every save, removed when the run completes; retention removes those of cancelled runs. A failed run keeps its checkpoint, since a retry resumes from it.
+
+**`pins`**: `version_id` (PK, FK), `pinned_at`. Only trained versions with weights on disk are pinned (REG-2.5).
+
+**`retention_settings`**: `id` (identity), `lineage_id` (FK, null for the global row; unique with nulls not distinct, so one global row), `keep_intermediate` (integer ≥ 0, null for "all"), `updated_at`. The migration inserts the global row with 0 (REG-2.3's default). Saved through `PUT /settings` (API.md §3.10).
+
+### 4.13 `settings` (M8, OC-9, SCR-14)
+
+`section` (text, PK), `values` (jsonb), `updated_at`. One row per section of SCR-14 other than retention, which has its own table above. In M8 the only row is `training`: `{checkpoint_interval_min, thermal_pause_c, thermal_resume_c, stall_timeout_s}` (`stratal.runtime.limits.TrainingValues`). Until it is saved the environment's `STRATAL_THERMAL_PAUSE_C`, `STRATAL_THERMAL_RESUME_C` and `STRATAL_STALL_TIMEOUT_S` are the values, so a fresh install behaves as before. The watchdog reads it before every check; `checkpoint_interval_min` becomes `checkpoint_every_s` of new training runs that do not set it.
+
 ## 5. Manifest schema
 
 One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accumulate as stages run; a column is null until its stage has run.
@@ -281,11 +342,12 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 | `caption_model`, `caption_model_revision` | string | label | LABEL-1.1.AC1 |
 | `clip_score` | float32 | label | |
 | `clip_model`, `clip_model_revision` | string | label | |
+| `label` | string | ingest | the class label of a labelled-images row (DATA-5.2): with `label_from: folder`, the first folder of `row_key`, e.g. `airplane`; null in every other dataset type. Added in M8 as a nullable column, so no existing version ID changed (DATA-3.2: a null value and an absent column hash the same) |
 | `split` | string | split | `train`, `val` or `test` on every accepted row, null on all others (DATA-4.1). Built in M5 |
 | `split_group` | string | split | content hash (`sha256`) of the split group's anchor, its member with the smallest `sha256`; rows sharing a duplicate group or within the leakage distance share it (DATA-4.2). Built in M5 |
 | `split_stratum` | string | split | the row's stratum, its keys joined by `\|`, e.g. `q3\|landscape\|train2017`, or `q3\|landscape\|.` for a file at the source's root, as in the flat COCO sources (DATA-4.3; `.` chosen by the owner 2026-11-16). Built in M5 |
 
-Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`.
+Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`. M8 adds `no_label` (ingest with `label_from: folder`, for a file at the source's root) and `missing_label` (the labelled-images validator).
 
 `corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. In clean and preprocess, a file missing from the blob store is not a reason code: it fails the stage (BUG1). The filter stage is the exception: its schema validation (DATA-5.1) marks a row whose original or preprocessed file is missing `rejected` with `missing_file`, warns, and lists it in `counts.validation` (the owner's choice, 2026-11-16).
 
@@ -307,6 +369,8 @@ File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.pa
 | `stratal:job:<job_id>:control` | string | `pause` or `cancel`. Fast path only; `jobs.desired_state` is the durable copy |
 | `stratal:active` | hash | job ID → `{stage, queue, since}`. Read by the sampler to tag samples and pick the interval |
 | `stratal:system` | string | JSON `{gpu_name, gpu_error, vram_total_mb, ram_total_mb, cpu_count}`, written by the monitor when it starts; read by `GET /system` (M6) |
+| `stratal:gpu:wanted` | string | the holder name of a job waiting for the GPU lease, set with a 5 s life and renewed while it waits; the inference service then releases the lease (ADR-0016 rule 5, M8) |
+| `stratal:inference:loaded` | string | JSON `{version_id, device, since}`: the model the inference service holds, absent when it holds none (ADR-0016 rule 6). Retention treats that version as in use; if Redis cannot be read, it deletes nothing the rule does not keep anyway (REG-2.8, M8) |
 | Celery's own keys | – | queues `cpu` and `gpu` |
 
 ## 8. Invariants
@@ -327,6 +391,10 @@ Each of these is to be enforced by a constraint or covered by a test.
 | INV-10 | Every WARN or ERROR event has a `reason` and a `suggested_action` |
 | INV-11 | A derivation is never overwritten: the same `(kind, input_hash, params_hash)` always means the same value |
 | INV-12 | At most one process holds the GPU lease |
+| INV-13 | A lineage has exactly one base, and retention never deletes it (REG-2.1): partial unique index; the keep rule |
+| INV-14 | A version is `present` (not partial) only if its folder is on disk, and every folder under `registry/<lineage>/` belongs to a `present` version: the disk report's `matches`; retention's orphan sweep and recovery restore it after a crash (NFR-15) |
+| INV-15 | Model-version rows are never deleted; deleting weights only changes `weights_status` (REG-2.7) |
+| INV-16 | Every writer of registry files, and retention, holds the lineage's advisory lock while it writes or deletes them |
 
 ## 9. Planned for later phases
 
@@ -334,7 +402,7 @@ Outlined only. Each is specified at its phase kickoff, with an ADR where it is a
 
 | Phase | Tables | Notes |
 |---|---|---|
-| 2 | `model_lineages`, `model_versions`, `checkpoints`, `pins`, `retention_settings` | Version state (`base`, `partial`, `trained`), weights status (`present`, `weights_deleted`), parent version, dataset version, config, metrics, size on disk. Retention deletions are logged as events (REG-2.9). Delete order per NFR-15 |
+| 2 | ~~`model_lineages`, `model_versions`, `checkpoints`, `pins`, `retention_settings`~~ | Built in M8: [§4.12](#412-model-registry-m8-reg-11-reg-12-adr-0015) |
 | 2 | Optuna's own tables, in a separate schema | Studies and trials (HPO) |
 | 3 | `corpora`, `rag_indexes`, `chat_sessions`, `inference_requests` | Index versions for hit@k (LLM-2.2); request latency for NFR-6 |
 | 4 | adapter columns on `model_versions` | LoRA deltas with a parent base (REG-1.3, REG-2.8) |

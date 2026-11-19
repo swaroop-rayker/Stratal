@@ -5,9 +5,12 @@ import { Crash } from "./screens/Crash";
 import { DatasetsScreen } from "./screens/datasets/DatasetsScreen";
 import { JobScreen } from "./screens/job/JobScreen";
 import { JobsScreen } from "./screens/jobs/JobsScreen";
+import { LineageScreen } from "./screens/models/LineageScreen";
+import { ModelsScreen } from "./screens/models/ModelsScreen";
 import { Placeholder } from "./screens/Placeholder";
 import { ReportScreen } from "./screens/report/ReportScreen";
 import { ReviewScreen } from "./screens/review/ReviewScreen";
+import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { VersionScreen } from "./screens/version/VersionScreen";
 import { AppShell } from "./shell/AppShell";
 
@@ -28,6 +31,9 @@ export const router = createBrowserRouter([
           { path: "jobs/:jobId", element: <JobScreen /> },
           { path: "reviews/:reviewId", element: <ReviewScreen /> },
           { path: "versions/:versionId/report", element: <ReportScreen /> },
+          { path: "models", element: <ModelsScreen /> },
+          { path: "models/:lineageId", element: <LineageScreen /> },
+          { path: "settings", element: <SettingsScreen /> },
           { path: "*", element: <Placeholder screen="Not found" crumb="Not found" /> },
         ],
       },

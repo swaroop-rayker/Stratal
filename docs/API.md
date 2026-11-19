@@ -39,15 +39,20 @@ Every error response uses RFC 9457 problem details with media type `application/
 | `validation_error` | 422 | The request body or a config value failed validation |
 | `not_found` | 404 | No such dataset, version, job, review or report |
 | `invalid_state_transition` | 409 | The requested action is not allowed in the job's current state |
-| `conflict` | 409 | The resource already exists, e.g. a dataset slug |
+| `conflict` | 409 | The resource already exists, e.g. a dataset slug; or settings changed since they were read (the problem then carries `version`) |
+| `confirmation_required` | 409 | The change would delete data. The problem carries `plan`; send the request again with `confirm` set to `plan.token` (REG-2.10, §3.10) |
 | `source_not_found` | 422 | The source folder does not exist or is not readable from the workers |
 | `dependency_unavailable` | 503 | Postgres, Redis or the data volume is unreachable |
 | `model_not_allowed` | 422 | A model name that is not on the allow-list (NFR-8) |
 | `model_integrity_failed` | 502 | A downloaded model file did not match its pinned size or hash; it was not kept (NFR-8) |
 | `vram_insufficient` | 409 | A model load was refused: free VRAM is below its estimate (ADR-0006) |
 | `gpu_busy` | 409 | Another process holds the GPU lease; the detail names it (BUG6) |
+| `weights_deleted` | 409 | The version's weights were deleted by retention; re-train it (REG-2.7) |
+| `weights_unreadable` | 409 | A weights or checkpoint file is not valid safetensors (a planted pickle, say); it was refused before any of it was used. Re-train the version, or cancel the run and start it again (NFR-8) |
 | `model_not_pulled` | 409 | An allowed model that has not been downloaded; run time never downloads (NFR-7) |
 | `internal_error` | 500 | Anything unexpected. The detail carries the request ID, not a stack trace |
+
+A problem may carry extension members (RFC 9457 §3.2) beside the standard ones, such as `plan` or `version` above; each is named where the error is described.
 
 Jobs that fail carry the same idea in `job.error`. These codes appear there and in ERROR events, never as HTTP statuses:
 
@@ -69,7 +74,7 @@ Jobs that fail carry the same idea in `job.error`. These codes appear there and 
 | `GET /health` | Liveness and dependency checks | `200 {"status": "ok", "checks": {"postgres": "ok", "redis": "ok", "data_volume": "ok"}, "version": "…"}`; `503` problem if a check fails |
 | `GET /system` | Hardware and limits as Stratal sees them: GPU name, VRAM total, RAM total (the VM's), VRAM cap | `200` |
 
-`GET /system` built in M6 (2026-11-16): `{gpu_name, gpu_error, vram_total_mb, vram_cap_fraction, vram_cap_mb, ram_total_mb, cpu_count}`. The API has no NVML, so the monitor describes the machine when it starts (Redis key `stratal:system`); the latest resource sample fills in the totals if it has not. Unknown values are null, never zero. The cap is the label stage's default `vram_fraction` of the card. Container memory limits are not included: the API can read only its own, and they are fixed in `compose.yaml`.
+`GET /system` built in M6 (2026-11-16): `{gpu_name, gpu_error, vram_total_mb, vram_cap_fraction, vram_cap_mb, ram_total_mb, cpu_count}`. The API has no NVML, so the monitor describes the machine when it starts (Redis key `stratal:system`); the latest resource sample fills in the totals if it has not. Unknown values are null, never zero. The cap is the label stage's default `vram_fraction` of the card. Container memory limits are not included: the API can read only its own, and they are fixed in `compose.yaml`. M8 adds `thermal_pause_c`, `thermal_resume_c` and `stall_timeout_s`, the limits the watchdog applies (RUN-1.6, RUN-1.7; as saved on SCR-14, §3.10), so SCR-07 and SCR-04 can say when a paused job resumes, and `gpu_slowdown_c`, the card's slowdown temperature from NVML (null without a GPU).
 
 ### 3.2 Datasets and versions
 
@@ -122,7 +127,7 @@ Version (abridged):
 
 | Method and path | Purpose | Success |
 |---|---|---|
-| `POST /jobs` | Start a job. Body is a union on `kind`; phase 1 accepts `pipeline` | `202` Job |
+| `POST /jobs` | Start a job. Body is a union on `kind`: `pipeline`, and since M8 `train` (below) | `202` Job |
 | `GET /jobs` | List. Filters: `state` (one or a comma-separated list, `running,queued`), `kind`, `dataset` (slug), `q` (job-ID substring, for SCR-07's search). `counts` beside `items` gives jobs per state under the other filters, every state present. An unknown state is `422 validation_error`. The SCR-07 additions were accepted 2026-11-15 and built in M6 | `200` list of Job |
 | `GET /jobs/{job_id}` | One job with its stages | `200` Job |
 | `POST /jobs/{job_id}/cancel` | Request cancellation | `202` Job; `409` if already finished |
@@ -130,8 +135,28 @@ Version (abridged):
 | `GET /jobs/{job_id}/events` | Page through events. Filters: `level`, `stage`, `after` (event ID), `min_level` (that level and above) and `tail` (the newest `limit` matching events, still oldest first; added in M6 for SCR-04) | `200` list of Event |
 | `GET /jobs/{job_id}/telemetry` | Samples for charts. Params: `from`, `to`, `stage`, `max_points`. Samples older than 7 days come from the 1-minute averages (NFR-12, DATA_MODEL §4.8a): one point a minute, `cpu_per_core` empty | `200 {"resource": [...], "process": [...]}` |
 | `GET /jobs/{job_id}/stream` | Live feed for one job (SSE, [§4](#4-live-streams)) | `200 text/event-stream` |
+| `POST /jobs/{job_id}/pause` | Ask a running job to pause at its next safe point (M8, RUN-1.2, ADR-0014 rule 6). Sets `desired_state: "paused"` and the Redis control flag. A pipeline stage stops at its next safe point and runs again on resume from its caches; a training run writes a checkpoint at its current step first; a job between stages pauses before the next one starts. The supervisor then moves the job to `paused` and the stage to `paused` | `202` Job; `409 invalid_state_transition` if not running, `409 conflict` if being cancelled |
+| `POST /jobs/{job_id}/resume` | Requeue a paused job from its paused stage (M8, RUN-1.2): `paused → queued`, the next attempt continues from the checkpoint or the caches | `202` Job; `409 invalid_state_transition` if not paused |
 
-Pause and resume (`POST /jobs/{job_id}/pause`, `/resume`) arrive in phase 2 with RUN-1.2.
+A paused job can be cancelled (`paused → cancelled`, at once). Pausing a queued job is refused: cancel it instead.
+
+The Job also carries `heartbeat_at`, the supervisor's last heartbeat, and each stage `last_progress_at`, its last progress or activity; a stage's `status` can be `paused` (M8). The Job carries `pause_reason` (M8, RUN-1.6): `user` for a pause asked through the API, `thermal` for one the watchdog made when the GPU reached `thermal_pause_c` (83 °C); null when the job is not paused. The watchdog resumes `thermal` pauses below `thermal_resume_c` (75 °C) and never a `user` one. A job whose stage is alive but silent for `stall_timeout_s` (300 s) is `stalled` (RUN-1.7) and returns to `running` when the stage reports again; it can be cancelled like a running job. Each of these actions is an `action` event with `metrics.code` `thermal_pause`, `thermal_resume` or `stalled`.
+
+Training request (M8, RUN-1.1, [ADR-0014](decisions/ADR-0014-training-jobs.md)):
+
+```json
+{
+  "kind": "train",
+  "dataset_version": "ds_f8e67211dd94",
+  "config": {"model": {"name": "small_cnn"}, "epochs": 10, "batch_size": 128, "device": "auto"}
+}
+```
+
+- **`dataset_version`** must be a `split` version of a `labelled_images` dataset; anything else, or an unknown ID, is a `validation_error` at `["dataset_version"]`.
+- **`config`** is the `train` stage's config (`GET /config/schemas/train`): `model` (`mlp` or `small_cnn` until M9), `epochs`, `batch_size`, `optimizer` (`adam`, `sgd`), `learning_rate`, `momentum`, `weight_decay`, `schedule` (`cosine`, `constant`), `seed`, `deterministic`, `device` (`auto`, `cpu`, `gpu`; `auto` times a model under 1 M parameters on both devices and trains on the faster, RUN-1.9), `loader_workers` (null: 4 on the GPU worker, 1 on the CPU worker), `checkpoint_every_s` (300) and a read-only `algorithm_version`. Every field is recorded in the stage's config.
+- The job has kind `train` and one stage, `train`, on the `gpu` queue for `gpu` and `auto` and the `cpu` queue for `cpu` (CPU training needs the ml-cpu image, ADR-0014 rule 11). The stage makes no dataset version, so the job's `output_version_id` is null; its metrics are `epochs`, `steps`, `parameters`, `device`, `val_accuracy`, `val_loss`, `train_loss`, `checkpoint_bytes`, `weights_bytes`, `seconds` and, on the GPU, `peak_vram_allocated_mb` and `peak_vram_reserved_mb`. With `device: auto` and a small model they also carry `device_choice` (`gpu` or `cpu`), `device_gpu_step_ms`, `device_cpu_step_ms` and `device_benchmark_cached` (0 or 1). When the CPU wins, the job goes `running → queued` and the stage's `queue` becomes `cpu`; an `action` event with `metrics.code` `device_handoff` says why. The run registers a model version (§3.9): the job's `model_version_id` names it, `partial` while the job is paused and `trained` once it completes; the weights are in `registry/<lineage>/<version>/`, not in the job's folder. A retry of a run that had already registered its weights returns that result without training again.
+- **Events** (RUN-1.8): `substage` `setup` (model, device, rows), `train` progress reports at most once a second (`step`/`total` are global steps; metrics `epoch`, `loss`, `accuracy`, `learning_rate`, `grad_norm`, `step_ms`, `samples_per_s`), `validate` once per epoch (`train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`), `checkpoint` (`checkpoint_step`, `checkpoint_bytes`), `resume` when a retry continues from a checkpoint (`resumed_at_step`, `resumed_epoch`), `device` when `auto` chose a device (the timings), a second `setup` event naming the lineage and its base (`lineage_id`, `base_version_id`), `registry` when a pause records the version as partial, and `finish` (`model_version_id`).
+- `GET /config/schemas` and `/config/defaults` list pipeline stages only, so the Start pipeline drawer does not show `train`.
 
 Pipeline request:
 
@@ -148,7 +173,7 @@ Pipeline request:
 }
 ```
 
-Every key under `stages` is optional and overrides the stage's defaults. As of M4 the stages are `ingest`, `clean`, `preprocess`, `label` (GPU queue) and `filter`; a key that names any other stage is rejected with `validation_error`. `until_stage` stops the pipeline after the named stage (`"ingest"` runs ingestion alone); `null` runs every available stage.
+Every key under `stages` is optional and overrides the stage's defaults. As of M4 the stages are `ingest`, `clean`, `preprocess`, `label` (GPU queue) and `filter`; M5 added `split` and `evaluate`. Which of them a request runs depends on its `dataset_type` (below); a key that names any other stage is rejected with `validation_error`. `until_stage` stops the pipeline after the named stage (`"ingest"` runs ingestion alone); `null` runs every available stage.
 
 Give exactly one of `source` and `from_version`:
 
@@ -156,6 +181,15 @@ Give exactly one of `source` and `from_version`:
 - **`"from_version": "ds_…"`**: continue from an existing version. The stages after the one that made it run, and its output is the first stage's input. `dataset` may be left out; if given it must be the version's dataset. A version made by the last available stage has nothing after it and is rejected. An unknown version is a `validation_error` with `loc: ["from_version"]`.
 
 With either, a key under `stages` or an `until_stage` that names a stage the request would not run is rejected. A stage whose input and config match an existing version reuses it (`cache_hit: true`) instead of running again.
+
+**`dataset_type`** (M8, DATA-5.2) decides which stages run and some of their defaults:
+
+| `dataset_type` | Stages | Defaults it changes |
+|---|---|---|
+| `image_caption` | `ingest`, `clean`, `preprocess`, `label`, `filter`, `split`, `evaluate` | none |
+| `labelled_images` | `ingest`, `clean`, `preprocess`, `split` | `ingest.label_from: "folder"` (each image's class is its first folder); `clean.phash_max_distance: 4` and `split.leakage_distance: 6`, since pHash on small images is coarse (OC-5, the owner's choice 2026-11-18); `split.stratum_keys: ["source_folder"]`, so the split stratifies by class |
+
+Left out or null, it is the `from_version`'s type if that version has one, else `image_caption`. A request's own `stages` override the type's defaults. `label_from` set with `image_caption`, or unset with `labelled_images`, is a `validation_error` at `["stages", "ingest", "label_from"]`; continuing a version with another type is a `validation_error` at `["dataset_type"]`. The job's spec records the resolved type. CIFAR-10 at 32 px also needs `"ingest": {"min_size": 32}`.
 
 Job (abridged):
 
@@ -165,6 +199,8 @@ Job (abridged):
   "kind": "pipeline",
   "state": "running",
   "desired_state": null,
+  "pause_reason": null,
+  "heartbeat_at": "2026-11-14T13:58:02Z",
   "attempt": 1,
   "dataset": "coco10k",
   "current_stage": "label",
@@ -183,6 +219,8 @@ Job (abridged):
   "finished_at": null
 }
 ```
+
+A job's and a stage's `error` is `{code, reason, suggested_action, detail}`; `detail` is text or an object of facts, such as `{"signal": "SIGKILL", "peak_rss_mb": 2410, "limit_mb": 2560}` for a killed process (E-013). A training job also has `model_version_id` and `model_lineage_id` (§3.9), null for other kinds.
 
 ### 3.4 Activity log and telemetry
 
@@ -226,6 +264,43 @@ Built in M5 (2026-11-16). Details:
 - **Report:** `{id, version_id, kind, review_session_id, job_id, created_at, report}`. `report` is `{kind, version_id, stage, algorithm_version, confidence, rows: {total, accepted, by_split}, rejections: {total, accepted, by_stage: {stage: {reason: rows}}}, filter_rate, clip_scores: {edges, labelled, accepted, by_split: {split: …}}, review}`. Each distribution is `{count, mean, std, minimum, maximum, quantiles: {p05…p95}, edges, histogram, below, above}`. `review` is `{review_id, status, sample_size, seed, decided, acceptance: {sampled, undecided, overall, by_split}}`, or null. Each rate is `{decided, accepted, interval: {estimate, low, high, confidence}}`. `by_split` is null for a version that has not been split. The statistics are the owner's (§5), so the stage fails with the usual owner-unit message until they are written.
 - **Config** (`stages.evaluate`): `kind`, `review_id`, `score_edges` (default 0 to 0.5 in steps of 0.025, strictly increasing), `confidence` (0.95).
 - `GET …/reports/latest` gives `404 not_found` until the version has a report.
+
+### 3.9 Model registry (M8, REG-1.1, REG-1.2, [ADR-0015](decisions/ADR-0015-model-registry-and-retention.md))
+
+| Method and path | Purpose | Success |
+|---|---|---|
+| `GET /models?state=&task=&q=` | Lineages, most recently updated first. `state` (`base`, `partial`, `trained`) keeps lineages with a version in that state; `q` matches the name | `200 {items, next_cursor}` |
+| `GET /models/{lineage_id}?state=&weights=` | One lineage and its versions, newest first. `weights` is `present` or `deleted` | `200` lineage with `versions` |
+| `GET /model-versions/{version_id}` | Everything that made a version (REG-1.1) | `200` version detail |
+| `GET /models/{lineage_id}/disk` | Disk use measured on disk (REG-2.11) | `200 {lineage_id, parts: {base, latest, intermediate, pinned, checkpoints}, disk_bytes, registry_bytes, matches, orphans, missing}` |
+| `POST /model-versions/{version_id}/pin` | Exempt from retention (REG-2.5); `409 conflict` unless trained with weights on disk | `200` version detail |
+| `DELETE /model-versions/{version_id}/pin` | Unpin; deletes nothing now | `200` version detail |
+| `POST /model-versions/{version_id}/retrain` | A run with the version's exact config and dataset version (REG-2.7); `409 conflict` for a base or partial version | `202` Job |
+| `POST /models/{version_id}/predict` | A prediction (REG-1.4). Body `{image_b64}` or `{blob}` (a data-folder SHA-256, e.g. a row's `derived_sha256`) | `200 {version_id, lineage_id, device, fallback_reason, top: [{class, probability}], load_ms, total_ms}` |
+| `POST /retention/plan` | The dry run, answered at once (REG-2.9). Body `{lineage_id?, values?}`; `values` plans with other settings than the saved ones | `200` plan |
+| `POST /retention/run` | Queue a retention job with the saved settings. Body `{lineage_id?, dry_run?}` | `202` Job |
+
+- **Lineage:** `{id, name, task, model, dataset, input_shape, classes, parameters, counts: {base, partial, trained}, latest_version_id, latest_state, main_metric, weights_bytes, checkpoint_bytes, created_at, updated_at}`. `latest` is the newest trained version, or the base before any run completes (REG-2.2). `main_metric` is its `val_accuracy` until EVAL-1.2. `weights_bytes` sums the registry's records of weights on disk; `checkpoint_bytes` the lineage's in-run checkpoints. The measured disk use (REG-2.11) comes with retention.
+- **Version (in a lineage's list):** `{id, lineage_id, state, is_latest, weights_status, weights_bytes, pinned, parent_version_id, job_id, job_state, dataset_version_id, config_hash, main_metric, note, created_at, trained_at}`. A partial version has no `weights_bytes`: its weights are its run's checkpoint.
+- **Version detail** adds `{lineage_name, config, metrics, history, weights_path, weights_deleted_at}`.
+- Each version also carries `weights_deleted_by_job_id`, `retention_action` (`keep`, `delete` at the next cleanup, `blocked`, or `none` once deleted) and `retention_reason`, under the saved settings. A lineage's detail adds `retention: {keep_intermediate, source: global | lineage, last_run: {job_id, finished_at, versions_deleted, bytes_freed} | null}`.
+- **Plan:** `{lineages: [{lineage_id, name, keep_intermediate, source, latest_version_id, delete, keep, blocked, checkpoints, bytes_to_free}], versions_to_delete, bytes_to_free, token, settings_version}`. Each decision is `{version_id, reason, weights_bytes, main_metric, created_at}`; `blocked` lists versions the policy would delete that are in use or a parent (REG-2.8); `checkpoints` those of completed and cancelled runs (`{job_id, bytes, reason}`). `token` names this exact plan.
+- **Retention jobs** have kind `retention` and one `retention` stage on the CPU queue. The supervisor queues one for a run's lineage after every training run that completes or is cancelled; cancelling a paused run through the API does too. Events: `plan` (per lineage, and each would-be deletion in a dry run), `blocked` (WARN, with `reason` and `suggested_action`), `deleting` and `delete` (`version_id`, `lineage_id`, `bytes_freed`), `checkpoint` (`checkpoint_job_id`, `bytes_freed`), `recover` and `orphan` (WARN). Metrics: `lineages`, `dry_run`, and `versions_deleted`, `bytes_freed`, `checkpoints_removed`, `blocked`, `orphans_removed`, `recovered`, or for a dry run `would_delete` and `bytes_to_free`.
+- **Predict** (ADR-0016). The API forwards to the `inference` service (`inference_url`) with the standard library; the service holds one model. A model already on the GPU is used there; otherwise the GPU lease is tried once. While a job holds it, a model under `inference_cpu_max_parameters` (50 M) runs on the CPU and `fallback_reason` says why; a larger one is `409 gpu_busy` naming the job. If `TrainingState.close` (RUN-1.4) fails its probe at the service's first decision, the GPU is not used at all and `fallback_reason` says so (it was the case until 2026-11-19, when `close()` was written). A version whose weights were deleted is `409 weights_deleted`; a partial one `409 conflict`; an undecodable image `422`; the service not running `503 dependency_unavailable`, saying how to start it. The image is resized to the model's input with LANCZOS and normalised as in training.
+- Unknown IDs are `404 not_found`.
+
+### 3.10 Settings (M8, OC-9; SCR-14)
+
+| Method and path | Purpose | Success |
+|---|---|---|
+| `GET /settings` | Every section: `{sections: [{name, title, requirements, values, schema, version, lineages}]}` | `200` |
+| `PUT /settings` | Save one section. Body `{section, values, version, confirm?}` | `200 {section, job_id}` |
+
+- **Retention** (`retention`, REG-2.3, REG-2.4, REG-2.10): `values` is `{keep_intermediate: 0–100 | "all", overrides: {lineage_id: 0–100 | "all"}}`; `schema` is its JSON Schema, with `x-applies` on each field; `lineages` lists each lineage's `keep_intermediate` in force, its `source` and its current `intermediates` and `intermediates_bytes`. 
+- **Training** (`training`, RUN-1.3, RUN-1.6, RUN-1.7): `values` is `{checkpoint_interval_min: 1–60, thermal_pause_c: 60–100, thermal_resume_c, stall_timeout_s: 60–3600}`; `thermal_resume_c` must be at least 5 below `thermal_pause_c`, and `thermal_pause_c` at most the card's slowdown point. A field's problem is `422 validation_error` with `errors[].loc` = `["values", field]`. `context` is `{gpu_slowdown_c, gpu_temp_high_7d: {celsius, job_id, at} | null, running_jobs}`; `lineages` is null. The section is the retention section's sibling in `sections`; retention's `context` is null. The watchdog applies a saved section from its next check; the checkpoint interval applies to new runs (NFR-4).
+- `version` must be the one read; otherwise `409 conflict` with the current `version`.
+- A save that would delete weights is refused with `409 confirmation_required` and the `plan`; the same body with `confirm: plan.token` saves it and queues a retention job that deletes only that plan's versions (`job_id`). If anything changed in between, the token no longer matches and a new plan is returned the same way (ADR-0015 rule 7).
+- An unknown lineage in `overrides` is `422 validation_error`.
 
 ### 3.7 Configuration
 
@@ -281,6 +356,9 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 | Stratification | DATA-4.3 | `strata_for(items: Sequence[StratumItem], *, keys: Sequence[StratumKey]) -> dict[row_key, stratum]`: `clip_quartile` (`q1`–`q4`, interpolated boundaries, ties down), `orientation` of the upright image, `source_folder` (first `row_key` component, `.` at the root), joined by `\|` in key order; `all` without keys | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
 | Split assignment | DATA-4.1, 4.4, 4.5 | `assign_splits(groups: Sequence[GroupToAssign], *, proportions: Proportions, seed) -> dict[anchor, split]`: each `GroupToAssign(anchor, stratum, members: Member(row_key, previous))` carries its split where members agree, merges to the side with more members, and new groups fill each stratum's shortfall to within one group, per stratum and in total. The shell looks up `previous` and lists moved rows | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
 | Report statistics | EVAL-1.1 | In `stratal.eval.report_stats`: `rejection_counts(rows: Iterable[RowStatus]) -> RejectionCounts`, `filter_rate(counts) -> float \| None`, `score_distribution(scores, *, edges) -> ScoreDistribution` (type-7 quantiles, fixed bins), `wilson_interval(successes, trials, *, confidence=0.95) -> Interval`, `review_acceptance(items: Sequence[ReviewedItem], *, confidence) -> Acceptance` (overall and per split) | M5; written by the agent at the owner's request, 2026-11-16 (ADR-0012) |
+| Training state close | RUN-1.4 (v2) | `TrainingState(model, optimizer, *, info).close()` in `stratal.train.memory`: gradients set to `None`, optimizer state emptied, own references dropped, harmless twice; after it the v1 `VramManager.unload` finds allocated memory back at baseline | M8; stub, strict expected-failure tests and `FakeTrainingState` delivered 2026-11-17 |
+| Training out-of-memory | RUN-1.5 | `suggest_batch_size(*, failed_batch, fixed_mb, per_sample_mb, cap_mb) -> int \| None` (largest power of two below the failed batch that fits 90 % of the cap) and `training_oom_error(*, failed_batch, suggested, peak_mb, cap_mb) -> GpuOom` ("reduce batch size from 32 → 16") | M8; stubs, tests and fakes delivered 2026-11-17 |
+| Task metrics | EVAL-1.2 | In `stratal.eval.task_metrics`: `classification`, `regression`, `clustering`, `perplexity`, `translation` (BLEU, chrF), `cider_d`, `mean_clip_score`; pure functions; `metric_set(task)` names each task's metrics | M10; stubs and tests delivered 2026-11-17 (M8), so the CNN can be scored as soon as they exist |
 | Semantic-duplicate clustering | DATA-2.3, DATA-4.8 (P2) | CLIP image vectors → clusters in the label stage, joined by the split ([ADR-0013](decisions/ADR-0013-semantic-duplicates.md)) | M11 |
 
 What the plumbing gives each unit: a `JobContext` (emit an event, report progress, ask whether to stop), the derivation cache (`get_many`, `put_many`), `load_version` (stream manifest batches), the blob store (open a file by hash), and a model handle from the VRAM manager.
@@ -291,12 +369,13 @@ The CLI calls the same domain functions as the workers. It prints its result as 
 
 | Command | Does | Since |
 |---|---|---|
-| `python -m stratal.cli ingest --dataset NAME --source PATH [--min-size N]` | Ingests a folder as a raw version and registers it | M1 |
+| `python -m stratal.cli ingest --dataset NAME --source PATH [--min-size N] [--label-from folder]` | Ingests a folder as a raw version and registers it; `--label-from folder` records each image's class from its first folder (M8, DATA-5.2) | M1 |
 | `python -m stratal.cli versions --dataset NAME` | Lists a dataset's versions, newest first | M1 |
 | `python -m stratal.cli lineage VERSION_ID` | Shows a version's ancestry back to raw | M1 |
 
 | `python -m stratal.cli models list` | Lists the allowed models and whether each is pulled | M4 |
 | `python -m stratal.cli models pull NAME... \| --all` | Downloads and verifies allowed models; the only hub access (NFR-8) | M4 |
+| `python -m stratal.cli registry backfill [--dry-run]` | Registers training runs that finished before the registry: rebuilds a missing base from the run's seed, moves `jobs/<id>/weights/` into `registry/`, and gives a run a parent only if its initial weights equal the base. Needs PyTorch: run it in `worker-cpu` | M8 |
 
 Still planned for phase 1: run a pipeline.
 
@@ -364,13 +443,36 @@ Still planned for phase 1: run a pipeline.
 | Report statistics (EVAL-1.1) | `stratal.eval.report_stats` | `RowStatus`, `RejectionCounts`, `ScoreDistribution`, `Interval`, `ReviewedItem`, `AcceptanceRate`, `Acceptance`, `QUANTILES` and the five functions in §5 |
 | Test helpers | `stratal.testing` | `fakes`: `singleton_split_groups`, `one_stratum`, `hashed_splits`, `lumped_rejection_counts`, `no_filter_rate`, `crude_score_distribution`, `vacuous_interval`, `overall_only_acceptance`; `fake_split` (registers split with fakes); `stagekit.split(data_dir, parent, units, *, config, previous, sink)` |
 
+### Internal interfaces added in M8
+
+| Interface | Where | Shape |
+|---|---|---|
+| Training config (RUN-1.1) | `stratal.train.config` | `ModelSpec(name: "mlp" | "small_cnn")`, `TrainConfig` (fields in §3.3), `TrainRequest(kind, dataset_version, config)`; torch-free |
+| Reference models | `stratal.train.reference` | `build_model(spec, input_shape: (C, H, W), num_classes) -> nn.Module`, `parameter_count(model)` (PyTorch images only) |
+| Image loader | `stratal.train.data` | `split_items(rows, blobs) -> SplitItems(classes, by_split)`, `LabelledImages(items)`, `EpochOrder(size, *, seed, epoch, start=0)`, `to_tensor(image)` |
+| Checkpoints (RUN-1.3) | `stratal.train.checkpoint` | `Position(epoch, batches_done, global_step)`, `Checkpoint(position, config_hash, history)`, `save(folder, *, model, optimizer, scheduler, checkpoint)`, `latest(folder)`, `load(path) -> Loaded`, `restore(loaded, *, model, optimizer, scheduler)`, `remove_all(folder) -> bytes freed`, `checkpoint_dir(data_dir, job_id)` |
+| Train stage | `stratal.train.stage` | `run_train(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult`; `TrainUnits(state, suggest, oom_error)` are the RUN-1.4 and RUN-1.5 units (owner units, written by the agent at the owner's request, ADR-0012) |
+| Train jobs | `stratal.runtime.jobs` | `create_train_job(session, request) -> (Job, Enqueue)`; `create_job_from_plan` gained `queues` (a stage's queue by name) |
+| Test helpers | `stratal.testing.labelled` | `class_folders(root, *, per_class, size)`, `labelled_split(runner, root, slug) -> version_id` |
+| Registry rows (REG-1.1) | `stratal.registry.store` | `lineage_key(...) -> (lineage_id, key_hash)`, `ensure_lineage(session, ...)` (creates and locks), `base_of`, `run_version(session, job_id)`, `add_base`, `record_run(..., state)`, `record_checkpoint`, `drop_checkpoint`, `version_folder(lineage_id, version_id)`; views `list_lineages`, `lineage_detail`, `version_detail`; torch-free |
+| Registry files | `stratal.train.weights` | `write(folder, model, meta) -> bytes` (temporary folder, then rename), `load_into(model, folder)`, `size(folder)` (PyTorch images only) |
+| Backfill | `stratal.train.backfill` | `backfill(engine, data_dir, *, dry_run) -> list[report]` |
+| Crash point | `stratal.runtime.context` | `STRATAL_TEST_CRASH_AT` also takes `<stage>:substage:<name>` |
+| Keep rule (REG-2) | `stratal.registry.policy` | `plan_lineage(versions: [VersionFacts], keep_intermediate: int | None) -> LineagePlan(latest, delete, keep, blocked)`; pure |
+| Retention | `stratal.registry.retention` | `RetentionValues`, `read_values`, `write_values`, `values_version`, `effective_keep`; `in_use(session, loaded, *, redis_ok) -> InUse`; `build_plan(session, *, use, lineage_ids, values)`; `run(engine, data_dir, emit, *, job_id, lineage_ids, dry_run, confirmed, loaded, redis_ok)`; `disk_report`, `last_run`, `decisions` |
+| Lineage lock | `stratal.registry.store` | `lock_lineage(session, id)` (transaction), `holding_lineage(engine, id)` (a block): one Postgres advisory lock per lineage, taken by every writer of registry files and by retention |
+| Registry jobs | `stratal.runtime.jobs` | `create_retention_job(session, *, lineage_ids, dry_run, confirmed, reason)`, `retention_after_run(session, job)`, `create_retrain_job(session, version_id)` |
+| GPU lease for a long-lived holder | `stratal.runtime.gpu_lease` | `HeldLease(engine, *, holder)`: `try_acquire() -> bool` (never waits), `release()`, `held`; `gpu_lease(..., on_wait=)` calls `on_wait(holder)` while it waits, by default setting `stratal:gpu:wanted` |
+| Inference service | `stratal.inference` | `holder.ModelHolder(*, engine, settings, bus, gpu, state_cls, on_leak)`: `predict(version_id, image)`, `status()`, `tick()`, `run_checks(stop)`, `shutdown()`; `holder.decode_image`, `prepare_input`, `close_written`; `app.create_inference_app(holder, decode)` (`POST /predict`, `GET /status`); `python -m stratal.inference` |
+| Inference holdings | `stratal.core.bus` | `set_inference_loaded({version_id, device, since} | None)`, `get_inference_loaded()`: Redis key `stratal:inference:loaded`, written by the inference service (ADR-0016 rule 6), read by retention |
+
 ## 7. Later phases
 
 Listed so the phase-1 design leaves room. Each is specified at its phase kickoff.
 
 | Phase | Interfaces |
 |---|---|
-| 2 | `POST /jobs` with `kind: train`, `hpo_study`, `eval`; pause and resume; model specs and templates; registry (`/models`, `/models/{id}/versions`, pin, retention preview and run); `POST /models/{version}/predict` (REG-1.4); comparison views |
+| 2 | `hpo_study` and `eval` jobs; model specs and templates; `POST /models/{version}/predict` (REG-1.4); comparison views. Train jobs, pause and resume (§3.3), the registry and retention (§3.9) and settings (§3.10) are built |
 | 3 | Chat with token streaming over SSE; RAG corpora and indexes; router decisions; image search |
 | 4 | Image generation; LoRA jobs; export and import of remote bundles |
 | 5 | Translation; full chat with manual and auto mode |

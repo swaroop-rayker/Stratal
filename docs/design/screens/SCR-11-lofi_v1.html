@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-11 model registry — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+/* SCR-07 */
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.danger { border-width: 2px; border-color: var(--ink); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; } .select.off { color: var(--ink-3); }
+.search { height: 24px; width: 200px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; color: var(--ink-3); font-size: 11px; gap: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); } .pill.strike { text-decoration: line-through; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 40px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.hover td { background: #f7f7f7; }
+.t .sec td { height: 26px; background: var(--fill); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.bar { width: 80px; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; display: inline-block; position: relative; vertical-align: middle; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); }
+.muted { color: var(--ink-3); }
+.err-line { font-size: 11px; color: var(--ink-2); }
+.empty { display: grid; place-items: center; text-align: center; padding: 30px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 460px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.toast { position: absolute; right: 16px; bottom: 44px; width: 360px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.1); font-size: 12px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+/* SCR-11 additions */
+.cols { display: grid; grid-template-columns: 1fr 340px; gap: 12px; min-height: 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.stackbar { display: flex; height: 14px; border: 1px solid var(--ink-3); border-radius: 3px; overflow: hidden; }
+.stackbar i { display: block; height: 100%; border-right: 1px solid #fff; }
+.kvs { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px; } .kvs span:nth-child(even) { font-family: var(--mono); text-align: right; }
+.sw { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--ink-3); margin-right: 6px; vertical-align: middle; }
+.drop { border: 1.5px dashed var(--line); border-radius: 6px; height: 64px; display: grid; place-items: center; color: var(--ink-3); font-size: 12px; }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 480px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font: 600 15px var(--mono); }
+.drawer .body { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; font-size: 12px; }
+.code { font: 11px/1.5 var(--mono); background: var(--fill); border: 1px solid var(--soft); border-radius: 4px; padding: 8px; white-space: pre; color: var(--ink-2); }
+.pin { font-size: 13px; color: var(--ink-3); } .pin.on { color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-11 — Model registry · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: REG-1.1, REG-1.2, REG-1.4, REG-2.1–2.11 (M8); EVAL-1.2 metrics once written; EVAL-1.3 comparison in M11 (v2)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §3a SCR-11 (approved v2)</span><span>Routes: <span class="mono">/models</span>, <span class="mono">/models/:lineage</span></span><span>2026-11-17</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-01 shell (faint), whose navigation gains <i>Models</i>. Blue numbers are annotations. The data: one lineage, <span class="mono">small_cnn</span> trained on the CIFAR-10 split, with its base and five runs (ADR-0015). Side-by-side comparison of three or more models (EVAL-1.3) arrives in M11 as SCR-11 v2 and is not drawn.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Two levels, like datasets:</b> a list of lineages (<span class="mono">/models</span>), then one lineage with its versions (<span class="mono">/models/:lineage</span>). A lineage is one model on one task (ADR-0015); its versions are its base and its runs.</li>
+<li><b>The versions table answers "which weights do I have, and how good are they":</b> state (base, partial, trained), weights (present, deleted), the dataset version, the main metric, pinned. Filter by state (REG-1.2).</li>
+<li><b>A right-hand column holds what is about disk and retention</b>, beside the versions it acts on: disk use as one stacked bar split base / latest / intermediate / pinned / checkpoints, with the total against the bytes on disk (REG-2.11); the lineage's <span class="mono">keep_intermediate</span>; and <i>Preview cleanup</i>, a dry run that lists what would go (REG-2.9).</li>
+<li><b>Deleting is never one click.</b> Running retention, or lowering N, opens a dialog listing the exact versions and sizes (REG-2.10). Base and pinned versions, and versions in use, are marked and never listed for deletion (REG-2.1, REG-2.5, REG-2.8).</li>
+<li><b>A version opens in a drawer</b> with its full resolved config, dataset version, job, parent and metrics (REG-1.1), and the actions that apply to it: Pin, Re-train when its weights are gone (REG-2.7), Try it.</li>
+<li><b>Try it</b> takes a sample input and shows the prediction and the device that served it, because during training it is the CPU (REG-1.4, ADR-0016).</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Lineages</h2>
+<div class="frame" style="height:360px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav on">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b></span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><b>Models</b><span class="spacer"></span><span class="btn">Build a model…</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="group"><span class="btn sm on">All <span class="k">3</span></span><span class="btn sm">Trained <span class="k">3</span></span><span class="btn sm">Partial <span class="k">1</span></span></span><span class="select">Task: any ▾</span><span class="spacer"></span><span class="search">⌕ lineage <span class="k">/</span></span></div>
+      <table class="t">
+        <tr><th>Lineage</th><th>Task</th><th>Dataset type</th><th class="r">Versions</th><th>Latest</th><th class="r">Main metric</th><th class="r">Disk</th><th>Updated</th></tr>
+        <tr class="hover"><td class="m">small_cnn · cifar10</td><td>classification</td><td>labelled images</td><td class="r m">6</td><td class="m">mv_8c41d0e2a9f3 <span class="pill">✓ Trained</span></td><td class="r m">val acc 78.1%</td><td class="r m">3.6 MB</td><td>11:26</td></tr>
+        <tr><td class="m">tiny_mlp · cifar10</td><td>classification</td><td>labelled images</td><td class="r m">2</td><td class="m">mv_1a77e0c4d2b9 <span class="pill dash">❚❚ Partial</span></td><td class="r m">val acc 41.0%</td><td class="r m">3.2 MB</td><td>12:14</td></tr>
+        <tr><td class="m">wide_cnn · cifar10</td><td>classification</td><td>labelled images</td><td class="r m">1</td><td class="m">mv_5e02b9a1c7d4 <span class="pill">◇ Base</span></td><td class="r m muted">—</td><td class="r m">208 MB</td><td>10:50</td></tr>
+      </table>
+    </section>
+    <footer class="status">CPU 4% · RAM 3.2 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+  <span class="n" style="left:206px;top:100px">1</span>
+  <span class="n" style="left:206px;top:166px">2</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Filters</td><td>State (REG-1.2: a lineage with a partial or trained latest), task, search</td><td><span class="mono">GET /models?state=&amp;task=&amp;q=</span> (planned, M8)</td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Lineages</td><td>Name, task, dataset type, versions, latest with its state, main metric, disk use, updated</td><td>same</td><td>on <span class="mono">job</span> messages</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · One lineage: versions, disk use, retention, try it</h2>
+<div class="frame" style="height:640px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav on">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b> / <span class="mono">small_cnn · cifar10</span></span></header>
+    <section class="content">
+      <div class="phead"><b class="mono">small_cnn · cifar10</b><span class="muted" style="font-size:12px">classification · input 3×32×32 → 10 classes · 0.31 M parameters</span><span class="spacer"></span><span class="btn">Train again…</span></div>
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+          <div style="display:flex;gap:8px;align-items:center"><span class="group"><span class="btn sm on">All <span class="k">6</span></span><span class="btn sm">Trained <span class="k">5</span></span><span class="btn sm">Partial <span class="k">0</span></span><span class="btn sm">Base <span class="k">1</span></span></span><span class="select">Weights: any ▾</span></div>
+          <table class="t">
+            <tr><th>Version</th><th>State</th><th>Weights</th><th>Trained on</th><th class="r">val acc</th><th>Created</th><th></th></tr>
+            <tr class="on"><td class="m">mv_8c41d0e2a9f3</td><td><span class="pill">✓ Trained</span> <span class="k">latest</span></td><td>present · 1.2 MB</td><td class="m">ds_c1f4a09e2b77</td><td class="r m">78.1%</td><td>11:26</td><td><span class="pin">☆</span></td></tr>
+            <tr><td class="m">mv_3b90e1a4c5d8</td><td><span class="pill">✓ Trained</span></td><td>present · 1.2 MB</td><td class="m">ds_c1f4a09e2b77</td><td class="r m">76.4%</td><td>10:31</td><td><span class="pin on">★</span></td></tr>
+            <tr><td class="m">mv_e4d21c0b9a17</td><td><span class="pill">✓ Trained</span></td><td class="muted">deleted · retention</td><td class="m">ds_c1f4a09e2b77</td><td class="r m">74.9%</td><td>09:58</td><td><span class="pin">☆</span></td></tr>
+            <tr><td class="m">mv_77a0f3e2b1c6</td><td><span class="pill">✓ Trained</span></td><td class="muted">deleted · retention</td><td class="m">ds_c1f4a09e2b77</td><td class="r m">71.2%</td><td>09:20</td><td><span class="pin">☆</span></td></tr>
+            <tr><td class="m">mv_0d6e9b5a3f21</td><td><span class="pill">✓ Trained</span></td><td class="muted">deleted · retention</td><td class="m">ds_c1f4a09e2b77</td><td class="r m">66.0%</td><td>08:47</td><td><span class="pin">☆</span></td></tr>
+            <tr><td class="m">mv_9f1c2e7d4a06</td><td><span class="pill">◇ Base</span></td><td>present · 1.2 MB · never deleted</td><td class="m muted">—</td><td class="r m muted">—</td><td>08:15</td><td></td></tr>
+          </table>
+          <p style="margin:0;font-size:12px;color:var(--ink-3)">Deleted weights keep their metadata: open the version to re-train it with its exact config and data (REG-2.7).</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card"><h3>Disk use <span class="spacer"></span><span class="mono" style="font-weight:400">3.6 MB</span></h3>
+            <div class="stackbar"><i style="width:33%;background:#888"></i><i style="width:33%;background:#555"></i><i style="width:0"></i><i style="width:34%;background:#bbb"></i><i style="width:0"></i></div>
+            <div class="kvs"><span><i class="sw" style="background:#888"></i>base</span><span>1.2 MB</span><span><i class="sw" style="background:#555"></i>latest</span><span>1.2 MB</span><span><i class="sw"></i>intermediate</span><span>0</span><span><i class="sw" style="background:#bbb"></i>pinned</span><span>1.2 MB</span><span><i class="sw"></i>checkpoints</span><span>0</span><span class="muted">on disk</span><span>3.6 MB ✓</span></div></div>
+          <div class="card"><h3>Retention</h3>
+            <div style="font-size:12px">Keep <b>0</b> intermediate versions <span class="muted">(global default; override for this lineage ▾)</span></div>
+            <div style="display:flex;gap:6px"><span class="btn sm">Preview cleanup</span><span class="btn sm ghost">Change…</span></div>
+            <div style="font-size:11px" class="muted">Last run 11:27: freed 3.6 MB from 3 versions (<span class="mono">job_0036</span>)</div></div>
+          <div class="card"><h3>Try it <span class="spacer"></span><span class="mono" style="font-weight:400;font-size:11px">mv_8c41d0e2a9f3</span></h3>
+            <div class="drop">Drop an image, or pick one from the dataset</div></div>
+        </div>
+      </div>
+    </section>
+    <footer class="status"></footer>
+  </div>
+  <span class="n" style="left:206px;top:62px">3</span>
+  <span class="n" style="left:206px;top:100px">4</span>
+  <span class="n" style="left:206px;top:128px">5</span>
+  <span class="n" style="left:916px;top:100px">6</span>
+  <span class="n" style="left:916px;top:304px">7</span>
+  <span class="n" style="left:916px;top:454px">8</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">3</span></td><td>Header</td><td>Lineage, task, input and output, parameters; <i>Train again</i> opens SCR-09 from the latest</td><td><span class="mono">GET /models/{lineage}</span> (planned, M8)</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Filters</td><td>State, weights status</td><td>same</td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Versions</td><td>Version, state (latest marked), weights and size, dataset version, main metric, created, pin; click opens the drawer (frame C)</td><td>same</td><td>on <span class="mono">job</span> messages</td></tr>
+<tr><td><span class="num">6</span></td><td>Disk use</td><td>Stacked bar and the five parts, total against bytes on disk (REG-2.11)</td><td>registry disk report (planned, M8)</td><td>after retention</td></tr>
+<tr><td><span class="num">7</span></td><td>Retention</td><td>The lineage's N (or the global one), Preview cleanup (dry run), Change (frame D), the last run</td><td><span class="mono">POST /retention/plan</span>, <span class="mono">/run</span> (planned, M8)</td><td>–</td></tr>
+<tr><td><span class="num">8</span></td><td>Try it</td><td>A sample input for the latest version, or the version open in the drawer (frame E)</td><td><span class="mono">POST /models/{version}/predict</span> (planned, M8)</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · A version's drawer, its weights deleted</h2>
+<div class="frame" style="height:460px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Models</b> / <span class="mono">small_cnn · cifar10</span></span></header><section class="content"></section><footer class="status"></footer></div>
+  <div class="drawer">
+    <header><b>mv_e4d21c0b9a17</b><span class="pill">✓ Trained</span><span class="spacer"></span><span class="k">Esc</span></header>
+    <div class="body">
+      <div style="padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#f7f7f7">Weights deleted by retention at 11:27 (<span class="mono">job_0036</span>). Metadata kept. <span class="btn sm primary" style="margin-left:8px">Re-train</span></div>
+      <div class="kvs" style="grid-template-columns:120px 1fr"><span class="muted">Dataset version</span><span>ds_c1f4a09e2b77 ›</span><span class="muted">Job</span><span>job_0027 ›</span><span class="muted">Parent</span><span>mv_9f1c2e7d4a06 (base)</span><span class="muted">Config hash</span><span>7f3a…e21c</span><span class="muted">val acc · loss</span><span>74.9% · 0.81</span><span class="muted">test</span><span>not evaluated</span></div>
+      <div class="code">{ "model": "small_cnn", "epochs": 12, "batch_size": 128,
+  "optimizer": "adam", "lr": 0.001, "schedule": "cosine",
+  "seed": 7, "device": "auto → gpu" }</div>
+      <div style="display:flex;gap:6px"><span class="btn sm">☆ Pin</span><span class="btn sm off" style="opacity:.45">Try it</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption">Re-train starts a run with this exact config and dataset version (REG-2.7); its metrics match within NFR-4's tolerance, not exactly. "Try it" is unavailable without weights. Test metrics appear once EVAL-1.2 exists.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Lowering N from 2 to 0: the confirmation (earlier, while two intermediates were still kept)</h2>
+<div class="frame" style="height:340px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Models</b></span></header><section class="content"></section><footer class="status"></footer></div>
+  <div class="scrim"><div class="modal">
+    <header>Keep 0 intermediate versions of small_cnn · cifar10 (now 2)?</header>
+    <div class="b">This deletes the weights of <b>2 versions, 2.4 MB</b>. Their metadata stays, so each can be re-trained.
+      <table class="t" style="margin-top:8px"><tr><th>Version</th><th class="r">val acc</th><th class="r">Size</th></tr><tr><td class="m">mv_e4d21c0b9a17</td><td class="r m">74.9%</td><td class="r m">1.2 MB</td></tr><tr><td class="m">mv_77a0f3e2b1c6</td><td class="r m">71.2%</td><td class="r m">1.2 MB</td></tr></table>
+      <div style="margin-top:6px" class="muted">Kept: the base, the latest, and the pinned <span class="mono">mv_3b90e1a4c5d8</span>.</div></div>
+    <footer><span class="btn">Keep them</span><span class="btn danger">Delete 2 versions' weights</span></footer>
+  </div></div>
+</div>
+<p class="caption">The list is the dry run's result. If anything changes before the confirmation, the confirmation is refused and a new list is shown (ADR-0015 rule 7). "Keep them" has the focus.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Try it: a prediction, served on the CPU</h2>
+<div class="frame w1024" style="height:250px">
+  <div style="padding:16px;display:flex;gap:16px">
+    <div class="card" style="width:340px"><h3>Try it <span class="spacer"></span><span class="mono" style="font-weight:400;font-size:11px">mv_8c41d0e2a9f3</span></h3>
+      <div style="display:flex;gap:10px;align-items:center"><span style="width:64px;height:64px;border:1px solid var(--line);background:var(--fill-2);display:grid;place-items:center;font-size:10px" class="muted">image</span>
+        <div class="kvs" style="flex:1"><span><b>cat</b></span><span><b>0.82</b></span><span>dog</span><span>0.11</span><span>deer</span><span>0.03</span></div></div>
+      <div style="font-size:11px" class="muted">Served on the <b style="color:var(--ink)">CPU</b>: <span class="mono">job_0031</span> holds the GPU · 38 ms</div></div>
+    <div class="card" style="width:340px"><h3>Try it</h3><div style="padding:8px 10px;border:2px solid var(--ink);border-radius:6px;background:#f7f7f7;font-size:12px"><b>gpu_busy</b> · <span class="mono">wide_cnn</span> (52 M parameters) is too large for the CPU while <span class="mono">job_0031</span> holds the GPU. Try again when it finishes.</div></div>
+  </div>
+</div>
+<p class="caption">Left: a small model falls back to the CPU and says so. Right: a model over the 50 M-parameter threshold fails fast with the job that holds the GPU (ADR-0016).</p>
+
+<!-- ===================================================================== F -->
+<h2>F · Empty, loading and error</h2>
+<div class="frame" style="height:230px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Models</b></span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-content:start">
+      <div class="empty" style="height:150px"><div><b>No models yet</b><p style="margin:6px 0">A model appears here after its first training run.</p><span class="btn sm primary">Build a model</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px"><span class="skel" style="width:220px;height:18px"></span><span class="skel" style="height:24px"></span><span class="skel" style="height:24px"></span></div>
+      <div class="empty err" style="height:150px"><div><b>Models could not be loaded</b><p style="margin:6px 0"><span class="mono">dependency_unavailable</span> · Postgres is unreachable. Do check the postgres container, then retry.</p><span class="btn sm">Retry</span></div></div>
+    </section><footer class="status"></footer></div>
+</div>
+
+<!-- ===================================================================== G -->
+<h2>G · 1024 px</h2>
+<div class="frame w1024" style="height:300px">
+  <div class="shell rail"><aside class="side"></aside><header class="top"><span><b>Models</b> / <span class="mono">small_cnn · cifar10</span></span></header>
+    <section class="content">
+      <div style="display:flex;gap:8px"><span class="btn sm on">Versions</span><span class="btn sm">Disk and retention</span><span class="btn sm">Try it</span></div>
+      <table class="t"><tr><th>Version</th><th>State</th><th>Weights</th><th class="r">val acc</th><th></th></tr>
+        <tr><td class="m">mv_8c41d0e2a9f3</td><td><span class="pill">✓ Trained</span> <span class="k">latest</span></td><td>present</td><td class="r m">78.1%</td><td>☆</td></tr>
+        <tr><td class="m">mv_e4d21c0b9a17</td><td><span class="pill">✓ Trained</span></td><td class="muted">deleted</td><td class="r m">74.9%</td><td>☆</td></tr></table>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">At 1024 px the right-hand column becomes two tabs beside <i>Versions</i>; the dataset-version and created columns fold into the drawer.</p>
+</main>
+</body>
+</html>

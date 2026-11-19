@@ -542,6 +542,163 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `stratal.mon.retention.downsample`, one transaction per six hours of raw data (insert the averages, delete the raw rows); task `stratal.downsample_telemetry`; `GET /jobs/{id}/telemetry` returns both; tests `test_NFR_12_*`.
 - **Why:** In Postgres, the telemetry endpoint serves an old job's charts with the same query and no new reader. Insert and delete in one transaction make a crash or a rerun harmless. A queue of its own keeps maintenance from waiting behind an hour-long stage on `worker-cpu`; the solo pool halved `beat`'s memory (144 to 100 MB of its 200 MB) by not keeping a child process.
 
+## M8: training runtime and registry
+
+**The owner's M8 kickoff decisions** (2026-11-17)
+- **What:** CIFAR-10 for the CNN (download approved), scikit-learn's bundled tables, COCO captions as labelled text; `/predict` falls back to the CPU while training holds the GPU; a `worker-cpu` image with an `ml-cpu` extra; the proposed defaults (stall 300 s, checkpoint every epoch and every 5 minutes, 83 °C / 75 °C, alerts at 90 % VRAM and 85 % RAM); pause for pipelines too; retention settings in the database; classical-ML trials grouped. M8 is not split.
+- **How:** MILESTONES.md (phase-2 decisions table), SPEC Appendix B OC-3 and OC-7 to OC-10.
+- **Why:** The phase-2 plan listed these as open until M8's kickoff; each was put to the owner with a recommendation.
+
+**Labelled images: a pipeline per dataset type** (M8, DATA-5.2, ADR-0014 rule 3)
+- **What:** A pipeline request names its `dataset_type`; `labelled_images` runs ingest, clean, preprocess and split, with labels from class folders and the split stratified by class.
+- **How:** `label_from: folder` in ingest fills a new nullable `label` column and sets `dtype`; per-type stage orders and default overrides in the stage registry; derived stages keep their parent's `dtype`; the split takes a preprocess version for this type. Ingest's unset options are left out of the recorded config.
+- **Why:** CIFAR-10 has no captions; one runtime and one split (with its leakage check) for every type. Leaving unset options out, and the hash treating null as absent, keeps every existing version ID unchanged.
+
+**pHash thresholds for small images: clean 4 bits, split 6 bits** (M8, DATA-2.2, DATA-4.2, OC-5; the owner's choice, 2026-11-18)
+- **What:** Labelled-images pipelines default to near duplicates within 4 bits and split groups within 6, instead of COCO's 8 and 12.
+- **How:** Type defaults in the stage registry; a request can still override them. Measured on CIFAR-10's 60,000 pHash values by comparing every pair.
+- **Why:** At 8 and 12 bits, 11 % and 53 % of matched 32-px pairs crossed classes, and single linkage chained 8,814 accepted rows of every class into one split group, all in train: `automobile` ended with 56 % in train against 81–86 % for the others. At 4 and 6 bits the cross-class shares are 1.0 % and 2.8 % and the largest group has 27 rows.
+
+**CIFAR-10's training split: seed 1, `ds_f8e67211dd94`** (M8, DATA-4.5; the owner's choice, 2026-11-18)
+- **What:** M8 trains on the seed-1 split of `cifar10`: 59,630 accepted rows, every class exactly 80 / 10 / 10, largest split group 6 rows, no leaks (job_0029).
+- **How:** Split again from the 4-bit preprocess version `ds_bc4811eceb36` with `seed: 1`. No earlier split had that seed, so nothing was carried over. The two seed-0 splits (`ds_83371232f9df` from job_0027, `ds_fc9e7e4ee7a6` from job_0028) are kept, not deleted.
+- **Why:** The seed-0 splits carry job_0027's assignment, made while one 8,814-row group spanned every class: `automobile` had 57 % in train against 80–83 % for the others. Carrying over is right (DATA-4.5 keeps test rows out of train across versions), so the fix is a new lineage, not moving rows. A later seed-0 split of `cifar10` would continue the skewed one.
+
+**The train stage** (M8, RUN-1.1, RUN-1.3, RUN-1.8, ADR-0014)
+- **What:** Training is a `train` job with one `train` stage, on the GPU or CPU queue by `device`; it checkpoints after every epoch and every 5 minutes, resumes from its checkpoint on retry, and reports live metrics at most once a second.
+- **How:** A torch-free request and config (`stratal.train.config`) validated by the API; the stage imports PyTorch lazily. A checkpoint is a pair named by global step, `ckpt-NNNNNNNNN.safetensors` and `.json`, each written under a temporary name and renamed, the JSON last as the completion mark, then older pairs removed. Data loaders get their own generator, so making one never draws from the random state a checkpoint restores. The trained weights go to `jobs/<id>/weights/` until the registry exists. `/config/schemas` lists only pipeline stages.
+- **Why:** One runtime for pipelines and training (ADR-0014 rule 1). Two files with a completion mark keep a crash from leaving a half-written pair as the newest. A loader drawing from the global random state on creation would make a mid-epoch resume diverge. Listing `train` would put it in the Start pipeline drawer.
+
+**Pause and resume** (M8, RUN-1.2, ADR-0014 rule 6, OC-8)
+- **What:** Any running job can be paused and later resumed; a paused job can also be cancelled.
+- **How:** The API sets `desired_state: paused` and the Redis control flag to `pause`. The child turns it into `JobPaused` at its next safe point and exits with code 4; training checkpoints at its current step first, and lets a running validation finish. The supervisor marks the stage and the job `paused` and clears the flag; a job finishing a stage while a pause is pending marks its next stage `paused` instead of queuing it. Resume moves the job `paused → queued` and requeues the paused stage. A new stage status, `paused`, came with a hand-written migration.
+- **Why:** One flag and one exit path for every job kind, as cancel already had. No grace-period kill for a pause: killing would lose the work since the last safe point, which a pause exists to keep. Only running jobs pause: a queued job has nothing to keep, so cancel is the right action for it.
+
+**Watchdog v2: stall and heat** (M8, RUN-1.6, RUN-1.7, ADR-0014 rule 7, OC-3)
+- **What:** A running stage that is alive but silent for 300 s makes its job `stalled`, and it recovers when the stage speaks again; at 83 °C the running GPU job pauses, and below 75 °C jobs paused for heat resume.
+- **How:** Two more checks in the monitor's watchdog. Stall compares the stage's `last_progress_at`, which activity messages now also update, with the database clock while the heartbeat is fresh. Heat reads the newest resource sample's GPU temperature and reuses the job service's pause and resume, with a new `jobs.pause_reason` (`user`, `thermal`). The supervisor keeps heartbeating stalled jobs and turns a stalled job back to running when its stage ends. Limits are settings (`thermal_pause_c`, `thermal_resume_c`, `stall_timeout_s`) until SCR-14 stores them in the database.
+- **Why:** The watchdog already runs where the temperature and the heartbeats are. Two limits give hysteresis, so a job near 80 °C does not pause and resume every few seconds. Recording why a job paused keeps cooling from overriding a pause the user asked for. Counting activity as life follows ADR-0014: long silent phases report activity, and a hang reports nothing.
+
+**CPU training image** (M8, RUN-1.9, ADR-0014 rule 11; download approved by the owner 2026-11-18)
+- **What:** `worker-cpu` gets its own image with PyTorch's CPU-only build; `api`, `monitor` and `beat` keep the image without ML libraries.
+- **How:** An `ml-cpu` extra (torch, numpy, safetensors) taking torch from `download.pytorch.org/whl/cpu`, declared as conflicting with the `gpu` extra so the lockfile holds both builds (`2.15.0` and `2.15.0+cpu`); a `worker-cpu` build target. numpy and safetensors are now declared in both extras, since the training code imports them directly.
+- **Why:** CPU training (`device: cpu`, and `auto` choosing the CPU) needs PyTorch where CPU jobs run. Measured: the download was 200 MB, the image 1.97 GB against 650 MB (ADR-0014 estimated 700 MB more; PyTorch also brings sympy and networkx). A one-epoch CPU run of `small_cnn` on CIFAR-10 peaked at about 1.04 GB of the container's 2.5 GB.
+
+**Device auto: time, cache, hand off** (M8, RUN-1.9, ADR-0014 rule 8)
+- **What:** `device: auto` times a small model on both devices and trains on the faster; if that is the CPU, the job moves to the CPU worker.
+- **How:** `stratal.train.device` times 20 Adam steps after 5 warm-up steps on each device, on the run's own batches, inside the GPU lease, and caches the result on the data volume. A new `StageHandoff` request becomes exit code 5; the child records the stage's new queue and the supervisor requeues it there (a pending pause or cancel wins). The timings are in the stage's metrics (`device_choice`, `device_gpu_step_ms`, `device_cpu_step_ms`, `device_benchmark_cached`). `STRATAL_TEST_DEVICE_TIMINGS` plants timings in tests, as `STRATAL_TEST_CRASH_AT` plants crashes.
+- **Why:** Spike S-08 showed the parameter count does not predict the faster device, so the timing decides; caching makes it cost nothing the second time. Handing off before any training step needs no checkpoint, and reuses the runtime's claim and requeue instead of a second mechanism.
+
+**Unwritten VRAM manager v2 only warns** (M8, RUN-1.4; the owner left the choice to the agent, 2026-11-18)
+- **What:** If `TrainingState.close` is still the stub when a GPU run ends, the stage emits a WARN and completes, instead of failing.
+- **How:** The stage catches the stub's `NotImplementedError` from `VramManager.unload`. Out-of-memory handling still fails with the "owner unit not written" error, as the label stage does.
+- **Why:** The run's work is done and saved by then, and the child process exits right after, which frees the card (ADR-0006 rule 1). Failing a finished run would only hide its result; the unload check proves itself once the owner writes `close()`. Long-lived processes are different: the inference service (ADR-0016) keeps one model between requests, so there an unwritten `close()` will stop it from serving rather than warn.
+
+**A lineage is a model on one dataset's inputs and classes** (M8, REG-1.1, ADR-0015 rule 1; the owner's choice, 2026-11-18)
+- **What:** The lineage key is the model spec, the dataset, the input shape and the class list; its ID is `ml_` and the first 12 hex characters of the key's SHA-256.
+- **How:** `stratal.registry.store.ensure_lineage` inserts the lineage if new and locks its row for the transaction, so two runs starting together create one base. Named `<model> · <dataset>`.
+- **Why:** ADR-0015 says "a model spec on a dataset type", but weights for CIFAR-10's 10 classes cannot start a run on another labelled-images dataset's classes. Deriving the ID from the key finds the lineage again without a lookup table.
+
+**Every run of a lineage starts from its base** (M8, REG-2.1, ADR-0015 rule 1; the owner's choice, 2026-11-18)
+- **What:** The first run of a lineage saves its initial weights as the base before the first step; every later run loads the base, and records it as its parent. From the second run on, `seed` decides only the data order and dropout.
+- **How:** The stage always builds the model from the seed first and then, for an existing lineage, loads the base's safetensors into it, so the random state the run continues with is the same either way. Starting from a chosen trained version (`init_from`) waits for SCR-09 (M9).
+- **Why:** It makes "parent = base" true, and a re-train of a version whose weights were deleted exact (REG-2.7): the base is never deleted.
+
+**Weights are registered before checkpoints go** (M8, REG-1.1, REG-2.6, NFR-15)
+- **What:** A finished run writes `registry/<lineage>/<version>/`, then marks its version `trained` and commits, then removes its checkpoints. A pause records the version as `partial`, its weights being the checkpoint (`checkpoints` table). Version IDs are random (`mv_` + 12 hex).
+- **How:** The folder is written as `<version>.part/` and renamed. A retry finds the run's `trained` version by `job_id`, removes leftover checkpoints and returns the recorded metrics. A test crash point `train:substage:finish` proves it.
+- **Why:** Before, a crash between "weights written" and "checkpoints removed" sent the retry back to epoch 1, because the checkpoints were gone. Registering first leaves either a registered version or a resumable checkpoint.
+
+**`GET /models?state=` matches any version in that state** (M8, REG-1.2)
+- **What:** The lineage list's state filter keeps lineages with at least one version in the state, not only those whose latest version is in it.
+- **How:** `list_lineages` filters on the per-state counts it already computes.
+- **Why:** "Latest" is the newest trained version (REG-2.2), so filtering on it could never find a lineage with a paused run. SCR-11's mockup annotates the filter as "state of the latest version"; this is the reading that makes `partial` useful, and the filter looks the same.
+
+**Runs from before the registry: backfilled, base rebuilt from the seed** (M8, REG-1.1; the owner's choice, 2026-11-18)
+- **What:** `registry backfill` registered job_0030, job_0031 and job_0032 in `small_cnn · cifar10` (`ml_319245b543d4`). Their base `mv_3462e579d7dd` is job_0030's initial weights rebuilt from seed 0. job_0030 and job_0031 (seed 0) have it as parent; job_0032 (seed 1) has no parent and a note saying why.
+- **How:** The stage builds a model on the CPU right after seeding Python's and PyTorch's random state, so rebuilding it reproduces the initial weights bit for bit. A run gets the base as parent only if its own rebuilt initial weights equal the base's. Weights folders are moved into `registry/`, not copied; a failed registration moves them back.
+- **Why:** Those runs saved no base. Claiming that job_0032 descends from a base it never started from would make its lineage wrong.
+
+**The keep rule is a pure function** (M8, REG-2.1 to REG-2.5, REG-2.8, ADR-0015 rule 4)
+- **What:** `plan_lineage(versions, keep_intermediate)` returns what to delete, keep and refuse, each with a reason. The dry run, the confirmation and the real run all call it.
+- **How:** The caller gathers the facts: pins, children, and what is in use. In order: base, latest, the N before it, pinned; anything else trained with weights on disk is deleted, unless it is in use or a parent, which makes it *blocked*. Partial versions are left to their run.
+- **Why:** One list behind the preview, the confirmation and the deletion means the confirmation shows exactly what will go, and the rule is tested without a database.
+
+**What blocks a delete** (M8, REG-2.8; the owner's choices, 2026-11-18)
+- **What:** A version is *in use* when the inference service reports holding it, or a queued, running or paused run started from it. It is a *parent* when any other version names it as its parent, adapter or full fine-tune alike, following the SPEC's wording rather than ADR-0015's "adapter".
+- **How:** The inference service writes `stratal:inference:loaded` in Redis (ADR-0016 rule 6; the contract is set now, the service writes it in REG-1.4). If Redis cannot be read, every version the rule would delete is blocked. Each refusal is a WARN event with its reason.
+- **Why:** A re-train of a child needs its parent's weights (REG-2.7), whatever kind of child it is. Not knowing what inference holds must never mean deleting it. In M8 only bases are parents, so the parent rule first bites with M9's start-from-a-version option.
+
+**Failed runs keep their checkpoints** (M8, REG-2.6, RUN-1.3; the owner's choice, 2026-11-18)
+- **What:** Retention removes checkpoints of completed and cancelled runs. A failed run keeps its checkpoint until it is retried (the retry resumes from it) or cancelled.
+- **How:** Checkpoints are tracked in the `checkpoints` table and shown as "checkpoints" in the disk report, so the space they take is visible. A cancelled run's partial version keeps its row, with `weights_deleted`.
+- **Why:** Deleting a failed run's checkpoint would turn a resumable crash into a restart from epoch 1.
+
+**Deletes are atomic per version, and retention shares a lock with the writers** (M8, NFR-15, ADR-0015 rule 5)
+- **What:** Mark `deleting` and commit, remove the folder, then record `weights_deleted` with the time and the job. Each run first finishes any `deleting` versions, and ends by sweeping folders under `registry/<lineage>/` that no `present` version accounts for.
+- **How:** One Postgres advisory lock per lineage (`hashtextextended` of its ID). The train stage takes it for the transaction that writes a base or a trained version; retention holds it on its own connection for each lineage it cleans, across the several commits a delete needs.
+- **Why:** Without the lock, a sweep could remove the folder a run has just written but not yet committed, which would leave a row pointing at nothing. Recovery and the sweep make a kill at any point end in a consistent registry after the next run (NFR-15.AC1).
+
+**Confirmation by plan token** (M8, REG-2.10, ADR-0015 rule 7)
+- **What:** A settings save that would delete weights is refused with `409 confirmation_required` and the plan. The same request with `confirm` set to the plan's token saves it and queues a retention job limited to that plan's versions.
+- **How:** The token hashes the new settings and every version to delete with its size, so any change in between (a pin, a new run) gives another token, and the save is refused again with the new plan. Saves also carry the section's `version`, so a stale form gets `409 conflict`. Problem documents gained RFC 9457 extension members for this (`plan`, `version`).
+- **Why:** The owner sees the exact versions and sizes before anything is deleted, and nothing outside what was seen is deleted by that save. Runs after it apply the saved settings without asking, as REG-2.2 expects.
+
+**Inference serves on the CPU until RUN-1.4 is written** (M8, REG-1.4, ADR-0016 rule 3; the owner's choice, 2026-11-18)
+- **What:** While `TrainingState.close` is the stub, the inference service never uses the GPU: models under 50 M parameters run on the CPU, larger ones are refused, and `fallback_reason` names RUN-1.4. This replaces "it will stop it from serving" in the entry above.
+- **How:** At its first decision the service tries `close()` on a tiny CPU model with no optimizer; `NotImplementedError` means unwritten. `close()`'s contract gained rule 6 (the optimizer may be `None`) with a strict expected-failure test; the real card's check is `tests/gpu/test_REG_1_4_inference_gpu.py`.
+- **Why:** The guard exists because a GPU unload could not be proven; the CPU path never touches VRAM. Serving there keeps `/predict` usable and REG-1.4's test honest, while the GPU half stays visibly unfinished.
+
+**The inference service's GPU logic is tested on a fake card** (M8, REG-1.4)
+- **What:** Placement, one model at a time, verified unloads, exit on a leak, and giving the lease back are tested with `FakeGpuSide` (memory counted by `FakeGpu`, tensors on the CPU) and the real PostgreSQL lease.
+- **How:** `ModelHolder` takes the card as a `GpuSide`, the state class and the leak action as arguments; production passes `TorchGpuSide`, `TrainingState` and `os._exit(3)`. The inference app runs in the test process behind the API's `get_forward` dependency.
+- **Why:** The real GPU path cannot run before the owner's `close()` exists, and the decisions it makes are what REG-1.4 and ADR-0016 specify.
+
+**The API forwards with the standard library** (M8, REG-1.4, ADR-0016 rule 1)
+- **What:** `POST /api/v1/models/{id}/predict` posts to `inference_url` with `urllib.request` and passes problem documents through unchanged.
+- **How:** A connection failure is `503 dependency_unavailable` with the command that starts the service.
+- **Why:** No requirement asks for an HTTP client library, and the API image stays free of ML libraries.
+
+**Memory: 1 GB from worker-gpu to inference** (M8, ADR-0007, ADR-0016 rule 7)
+- **What:** `worker-gpu` 3.5 GB, `inference` 1.0 GB; the sum stays 9.0 GB.
+- **How:** Measured from cgroup `memory.peak`, not per-process RSS: a 2-epoch MLP on CIFAR-10 with 4 loader workers in its own lineage (job_0033, so `small_cnn · cifar10` was untouched) peaked at 1,631 MiB; the inference service at 397 MiB.
+- **Why:** Per-process RSS summed 6.3 GB for the same run, because each loader worker counts the shared PyTorch pages again; only the cgroup figure is what the limit enforces.
+
+**Retention runs after every run that ends** (M8, REG-2.2, REG-2.6, REG-2.9)
+- **What:** The supervisor queues a `retention` job for a run's lineage when the run completes or is cancelled; cancelling a paused run through the API does the same. It runs on the CPU queue, torch-free.
+- **How:** Queued after the run's outcome is committed, in its own transaction. If that fails, the run's outcome stands and the next run cleans up.
+- **Why:** REG-2.2 deletes the previous latest "after a run completes"; a cancelled run's checkpoint is garbage at once (REG-2.6). Queuing as a job gives the deletions an activity log and a history for free (REG-2.9).
+
+**The training limits live in the database** (M8, RUN-1.3, RUN-1.6, RUN-1.7, OC-9; the owner's choice, 2026-11-18)
+- **What:** `checkpoint_interval_min`, `thermal_pause_c`, `thermal_resume_c` and `stall_timeout_s` are the `training` section of the settings, edited on SCR-14. The environment's values stay their default until the section is saved.
+- **How:** A `settings` table, one row per section (`stratal.runtime.limits`). The watchdog reads it before every check, so a change applies at once; `checkpoint_interval_min` is written into a new run's config when the request leaves `checkpoint_every_s` out, so a running job never changes (NFR-4). Ranges come from the schema; `thermal_resume_c` must be 5 °C below the pause, and the pause at most the card's NVML slowdown point, which the monitor now publishes in `/system`.
+- **Why:** The owner chose database settings edited on a screen (OC-9) for retention; the training limits follow, so one page holds every limit. Reading on each check is cheap and needs no restart.
+
+**A settings save asks only about the deletions it causes** (M8, REG-2.10; found during SCR-14's Gate 3, 2026-11-19)
+- **What:** The confirmation lists versions the new settings delete and the current ones keep. Deletions the current settings would make anyway are left to that lineage's next cleanup.
+- **How:** `retention.caused_by(new_plan, current_plan)` removes the current plan's deletions from the new one and recomputes the token; the confirmed job deletes only what is left.
+- **Why:** `small_cnn · cifar10` had two deletions pending (no retention had run there since registration), so raising another lineage's N asked to confirm them, and confirming would have deleted them as a side effect of an unrelated change.
+
+**SCR-11 and SCR-14 as built** (M8, Gate 3; differences listed in `docs/design/g3/SCR-11.md`, `SCR-14.md`)
+- **What:** Each screen's CSS is copied from its approved mockup and scoped under `.scr11` / `.scr14`, without the mockup's own copies of shared components, so earlier contrast fixes keep applying. Below 1280 px SCR-11 turns its right column into tabs and SCR-14 its index into a row, as frames G and F show.
+- **How:** Dialogs render outside the page, so their content is wrapped in the screen's class. The deletion dialog is one component for both screens (the lineage name on SCR-11, "delete N versions" on SCR-14). A drawer opened from the URL names where focus returns (`Drawer.returnFocus`).
+- **Why:** The mockups are the approved design; scoping keeps a screen's rules from leaking into others. Tailwind's `fixed` utility collided with a mockup class (`fixed` → `rules-note`), which is why screen classes are checked against utility names.
+
+**NFR-8 for training: a scan, a tripwire, and a typed refusal** (M8, NFR-8; `weights_unreadable` approved by the owner, 2026-11-19)
+- **What:** Nothing in `src/` or `scripts/` can unpickle; a whole training run and its resume, and a `/predict`, run with unpickling refused; a pickle planted as weights or a checkpoint fails with `weights_unreadable` (409) before any of it runs.
+- **How:** An AST scan for `pickle`/`torch.load`/`np.load(allow_pickle)`-style calls and pickle-based libraries. `stratal.testing.no_pickle.forbid_unpickling` arms a `pickle.find_class` audit hook and swaps `pickle.load(s)`, `pickle.Unpickler` (for a refusing subclass, since libraries subclass it on import) and `torch.load`; the child arms it for a whole stage when `STRATAL_TEST_FORBID_UNPICKLING` names a report file. Every safetensors read goes through `weights.read_tensors`, which turns `SafetensorError` into the typed error.
+- **Why:** NFR-8.AC1 is a code review checklist; the scan makes the review repeatable, and the tripwire proves no library unpickles behind the code's back. The planted-file test showed that an unreadable file reached clients as a 500 `internal_error` (ERRORS.md E-014).
+
+**RUN-1.4 and RUN-1.5 written by the agent** (M8, RUN-1.4, RUN-1.5; the owner's request, 2026-11-19, ADR-0012)
+- **What:** `TrainingState.close`, `suggest_batch_size` and `training_oom_error`, to the contracts unchanged. The train stage no longer catches a missing unit: a GPU run proves its unload before exiting, and a training OOM fails with `gpu_oom` and a suggested batch. The inference service's probe now finds `close()` working, so it uses the GPU. This supersedes "Unwritten VRAM manager v2 only warns".
+- **How:** `close()` drops its references first, sets every parameter's gradient to `None`, then empties the optimizer's `state` and `param_groups` (a scheduler still holding the optimizer would otherwise pin the weights). The suggestion walks down the powers of two below the failed batch. The stage now leaves the `except` block before measuring after an OOM, and drops the step's tensors, so `fixed_mb` is weights, optimizer state and context only; `optimizer.step()` moved inside the guarded block, since Adam allocates its state there.
+- **Why:** The owner asked. Measured on the card: the CNN on 256-px images at batch 128 failed at the 5.1 GB cap with "reduce batch size from 128 → 64", and 64 completed. A step that fails early peaks at about the cap, so per-sample memory is a lower bound and the suggestion tends to half the batch; a probe step on a few samples would estimate it better, but the contract measures at the failed batch, so that is left as a possible change for the owner.
+
+**A pause reports its step** (M8, RUN-1.2; ERRORS.md E-015)
+- **What:** After a pause's checkpoint, the train stage sends one more progress report (substage `pause`) with the checkpoint's step and epoch.
+- **How:** `_stop_if_asked` emits it before raising `JobPaused`; the collector sets the stage's `step` and `metrics.epoch` from it, which is what SCR-07's toast reads. Charts ignore it (they plot only `train` progress).
+- **Why:** Progress is reported at most once a second, so the toast named the last report's step (193) while the run had paused at 260.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

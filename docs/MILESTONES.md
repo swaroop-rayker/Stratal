@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
 | Planning style | Phases 1 and 2 (M0–M11) are planned in detail; phase 2's detail was approved on 2026-11-17. Phases 3–5 (M12–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -25,7 +25,7 @@
 | M5 | Splits, review, eval report | 1 | M | Done 2026-11-16 |
 | M6 | Phase-1 screens | 1 | L | Done 2026-11-17 |
 | M7 | Phase-1 acceptance | 1 | M | Done 2026-11-17 |
-| M8 | Training runtime and registry | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M8 | Training runtime and registry | 2 | L | Done 2026-11-19 |
 | M9 | Model builder | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
@@ -323,7 +323,20 @@ Approvals are logged in `docs/design/APPROVALS.md`. Only an explicit "approved" 
 
 ### Decisions needed before M8 starts
 
-Each has a recommendation; none is taken until the owner decides.
+**Decided by the owner on 2026-11-17, at M8's kickoff:**
+
+| # | Decision |
+|---|---|
+| 1 | CIFAR-10 for the CNN (download approved); scikit-learn's bundled datasets for tabular; COCO captions labelled with their image's category for text |
+| 2 | `/predict` falls back to the CPU while training holds the GPU; models too large for it fail fast |
+| 3 | A `worker-cpu` image target with an `ml-cpu` extra; `api` and `monitor` stay free of ML libraries |
+| 4 | All four defaults as proposed (SPEC OC-3, OC-7) |
+| 5 | Pause and resume for pipeline jobs too (SPEC OC-8) |
+| 6 | Retention settings in the database, edited on SCR-14 (SPEC OC-9) |
+| 7 | Classical-ML trials grouped in one job; each deep-learning trial its own job (SPEC OC-10) |
+| 8 | **Not split:** M8 stays one milestone, one branch and one merge |
+
+The proposals as they were put to the owner:
 
 1. **Phase-2 datasets.**
    - **Labelled images, for the CNN (needed from M8).** (a) *Recommended:* CIFAR-10, about 170 MB from the University of Toronto: 60,000 images of 32×32 px in 10 classes with clean labels. A small CNN's accuracy on it is well known, so a wrong result points at a bug in the training loop rather than at the data. Ingest's 256 px minimum (DATA-1.3) is lowered for this dataset in its config. (b) COCO 2017 classes derived from the annotations already on disk, no download: each image labelled with the category covering most of it. Multi-object photos make those labels noisy, so a low accuracy would prove little.
@@ -397,9 +410,15 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 | G2 | SCR-13, SCR-03 v2 (distributions, diff and semantic clusters), SCR-11 v2 (comparison) | alongside M10 | M11's screens |
 | G3 | Each screen compared with its mockup, contrast and keyboard checked | in the milestone that builds it | – |
 
+- [x] G1 revision approved (SCREENS.md v2, 2026-11-17)
+- [x] G2: SCR-04 v2 (low-fi v1 and hi-fi v1 approved 2026-11-17; `docs/design/screens/SCR-04v2_v1.html`)
+- [x] G2: SCR-07 v2 (low-fi v1 and hi-fi v1 approved 2026-11-17; `docs/design/screens/SCR-07v2_v1.html`)
+- [x] G2: SCR-11 (low-fi v1 and hi-fi v1 approved 2026-11-17; `docs/design/screens/SCR-11_v1.html`)
+- [x] G2: SCR-14 (low-fi v1 approved 2026-11-17, hi-fi v1 approved 2026-11-18; `docs/design/screens/SCR-14_v1.html`)
+
 ## M8 — Training runtime and registry
 
-**Size** L (decision 8: M8a and M8b, M each) · **Branch** `m8-training-registry` (or `m8a-training-runtime`, `m8b-registry`) · **Serves** RUN-1.1–1.9, REG-1.1, REG-1.2, REG-1.4, REG-2.1–2.11, NFR-14, NFR-15; BUG7; NFR-1, NFR-4, NFR-5 and NFR-8 for training
+**Size** L (one milestone, the owner's decision 8) · **Branch** `m8-training-registry` · **Serves** RUN-1.1–1.9, REG-1.1, REG-1.2, REG-1.4, REG-2.1–2.11, NFR-14, NFR-15; BUG7; NFR-1, NFR-4, NFR-5 and NFR-8 for training
 
 **Before starting:** decisions 1 to 7; ADR-0014, ADR-0015 and ADR-0016 approved; the G1 revision approved; the phase-2 image dataset downloaded if decision 1 is CIFAR-10.
 
@@ -426,44 +445,44 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] Decisions 1 to 7 recorded; ADR-0014, ADR-0015 and ADR-0016 approved
-- [ ] S-08 report delivered; ADR-0007's limits revised from it if needed, still summing to 9 GB or less
-- [ ] `test_RUN_1_1_*`: a training job moves through every state; invalid transitions are rejected and every transition is logged
-- [ ] `test_RUN_1_2_*`: start, pause, resume and cancel each work on a running job
-- [ ] `test_RUN_1_3_*`: kill mid-training, resume from the checkpoint; the metrics match an uninterrupted run within NFR-4's tolerance
-- [ ] 👤 `test_RUN_1_4_*` (gpu): after a training model is unloaded, `torch.cuda.memory_allocated` is back at baseline
-- [ ] 👤 `test_RUN_1_5_*` (gpu): a deliberately oversized batch fails cleanly with a smaller batch suggested, and nothing crashes
-- [ ] `test_RUN_1_6_*`: a simulated high temperature pauses the job; it resumes when the temperature falls
-- [ ] `test_RUN_1_7_*`: a simulated hang becomes `stalled` after T seconds
-- [ ] `test_RUN_1_8_*`: SCR-04 updates live during a training run
-- [ ] `test_RUN_1_9_*`: a tiny model defaults to the faster device measured by the benchmark; a forced device is used as given
-- [ ] `test_REG_1_1_*`: any trained version traces to its exact dataset version and config
-- [ ] `test_REG_1_2_*`: the three states are shown and filterable
-- [ ] `test_REG_1_4_*`: `/predict` returns a result for a sample input, also while a training job holds the GPU
-- [ ] `test_REG_2_1_*`: base weights are still present after 10 training runs
-- [ ] `test_REG_2_2_*`: default settings, 3 runs: only base and run-3 weights on disk
-- [ ] `test_REG_2_3_*`: N = 2, 5 runs: base, runs 3 and 4, and run 5 on disk
-- [ ] `test_REG_2_4_*`: global N = 0 with lineage X at N = 3: only X keeps intermediates
-- [ ] `test_REG_2_5_*`: a pinned run 2 survives N = 0 cleanup
-- [ ] `test_REG_2_6_*`: a completed run leaves no checkpoint; a paused run is still resumable after cleanup
-- [ ] `test_REG_2_7_*`: a version whose weights were deleted still shows its metrics and offers re-training
-- [ ] `test_REG_2_8_*`: pruning an in-use or parent version is blocked and logged
-- [ ] `test_REG_2_9_*`: the dry run lists what would go; the real run frees the bytes it reported
-- [ ] `test_REG_2_10_*`: the confirmation lists the exact versions and their sizes
-- [ ] `test_REG_2_11_*`: disk use per lineage matches the bytes on disk
-- [ ] `test_NFR_14_*` and `test_BUG7_*`: after 10 runs with default retention, the disk audit matches base + latest + one in-progress checkpoint
-- [ ] `test_NFR_15_*`: a kill during cleanup, then a rerun: no orphaned files and no dangling registry rows
-- [ ] `test_NFR_1_*` (gpu) and `test_NFR_8_*` extended to training: peak VRAM under 5.5 GB; weights only as safetensors, never unpickled
-- [ ] G3 for SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14
-- [ ] Demo: train the reference CNN on the phase-2 image dataset; pause and resume it from the UI; find it in the registry; run retention; get a prediction
+- [x] Decisions 1 to 7 recorded; ADR-0014, ADR-0015 and ADR-0016 approved (2026-11-17; decision 8 too: M8 not split)
+- [x] S-08 report delivered (2026-11-18, `docs/spikes/S-08-training.md`): the GPU is faster for both reference models; no tensor cache; checkpoint cadence kept. ADR-0007's limits not revised; per-container RAM with loader workers is measured with the training stage
+- [x] `test_RUN_1_1_*`: a training job moves through every state; invalid transitions are rejected and every transition is logged (2026-11-18: `test_M8_training.py`, `test_M8_pause_resume.py`, `test_M8_watchdog.py`, with the state machine's unit tests)
+- [x] `test_RUN_1_2_*`: start, pause, resume and cancel each work on a running job (2026-11-18: `test_M8_pause_resume.py` for pipeline jobs, `test_M8_training.py` for a training run, whose resumed weights match an uninterrupted run)
+- [x] `test_RUN_1_3_*`: kill mid-training, resume from the checkpoint; the metrics match an uninterrupted run within NFR-4's tolerance (2026-11-18: the weights match within 1e-6 on the CPU, `test_M8_training.py`)
+- [x] 👤 `test_RUN_1_4_*` (gpu): after a training model is unloaded, `torch.cuda.memory_allocated` is back at baseline (2026-11-19, written by the agent at the owner's request, ADR-0012: on the card after Adam steps; a GPU training run's own unload is proven too; inference now uses the GPU, `test_REG_1_4_an_inference_model_unloads_to_baseline_on_the_card`)
+- [x] 👤 `test_RUN_1_5_*` (gpu): a deliberately oversized batch fails cleanly with a smaller batch suggested, and nothing crashes (2026-11-19, written by the agent at the owner's request: the CNN on 256-px images at batch 128 fails with `gpu_oom`, "reduce batch size from 128 → 64"; the next run at 64 completes in the same worker)
+- [x] `test_RUN_1_6_*`: a simulated high temperature pauses the job; it resumes when the temperature falls (2026-11-18, `test_M8_watchdog.py`: 84 °C pauses the GPU job, 78 °C keeps it paused, 72 °C resumes it; CPU jobs and user pauses are left alone)
+- [x] `test_RUN_1_7_*`: a simulated hang becomes `stalled` after T seconds (2026-11-18, `test_M8_watchdog.py`, T shortened to 1 s; it becomes running again when progress returns)
+- [x] `test_RUN_1_8_*`: SCR-04 updates live during a training run (2026-11-18: progress events carry the metrics, `Training.test.tsx` derives the charts from them; checked live at SCR-04 v2's Gate 3)
+- [x] `test_RUN_1_9_*`: a tiny model defaults to the faster device measured by the benchmark; a forced device is used as given (2026-11-18, `test_M8_training.py`: planted timings send a run to either device, a real measurement keeps the faster and is cached, a forced device skips the benchmark)
+- [x] `test_REG_1_1_*`: any trained version traces to its exact dataset version and config (2026-11-18, `test_M8_registry.py`: the version's dataset version, config and hash match the run's; its safetensors load; later runs start from the base; a retry after registration trains nothing; job_0030–0032 backfilled)
+- [x] `test_REG_1_2_*`: the three states are shown and filterable (2026-11-18, `test_M8_registry.py`: a paused run is `partial`, then `trained`, and both list filters work; 2026-11-19, `Models.test.tsx`: SCR-11 shows the three labels and filters by state and weights; checked live)
+- [x] `test_REG_1_4_*`: `/predict` returns a result for a sample input, also while a training job holds the GPU (2026-11-18, `test_M8_inference.py`: on the CPU while a job holds the lease, `gpu_busy` for a model over the limit, one model at a time, unloads verified and the lease given back, on a fake card; checked live with job_0032's model. The GPU path on the real card waits for RUN-1.4: `tests/gpu/test_REG_1_4_inference_gpu.py`, a strict expected failure)
+- [x] `test_REG_2_1_*`: base weights are still present after 10 training runs (2026-11-18, `test_M8_retention.py`: byte-identical after 10 runs)
+- [x] `test_REG_2_2_*`: default settings, 3 runs: only base and run-3 weights on disk (2026-11-18, `test_M8_retention.py`; each deletion logged with its bytes)
+- [x] `test_REG_2_3_*`: N = 2, 5 runs: base, runs 3 and 4, and run 5 on disk (2026-11-18, `test_M8_retention.py`, with the keep rule's unit tests)
+- [x] `test_REG_2_4_*`: global N = 0 with lineage X at N = 3: only X keeps intermediates (2026-11-18, `test_M8_retention.py`: an MLP and a small CNN on one dataset)
+- [x] `test_REG_2_5_*`: a pinned run 2 survives N = 0 cleanup (2026-11-18, `test_M8_retention.py`; unpinning deletes nothing by itself)
+- [x] `test_REG_2_6_*`: a completed run leaves no checkpoint; a paused run is still resumable after cleanup (2026-11-18, `test_M8_retention.py`; a cancelled paused run's checkpoint is removed)
+- [x] `test_REG_2_7_*`: a version whose weights were deleted still shows its metrics and offers re-training (2026-11-18, `test_M8_retention.py`: the re-train has the same config hash, data and base, and the same val loss on the CPU)
+- [x] `test_REG_2_8_*`: pruning an in-use or parent version is blocked and logged (2026-11-18, `test_M8_retention.py`: loaded for inference, parent of a fine-tune, and Redis unreachable)
+- [x] `test_REG_2_9_*`: the dry run lists what would go; the real run frees the bytes it reported (2026-11-18, `test_M8_retention.py`)
+- [x] `test_REG_2_10_*`: the confirmation lists the exact versions and their sizes (2026-11-18, `test_M8_retention.py`: the API's `confirmation_required`; a changed plan is refused with a new one. SCR-11's dialog comes with its Gate 3)
+- [x] `test_REG_2_11_*`: disk use per lineage matches the bytes on disk (2026-11-18, `test_M8_retention.py`: all five parts, against a walk of the folders)
+- [x] `test_NFR_14_*` and `test_BUG7_*`: after 10 runs with default retention, the disk audit matches base + latest + one in-progress checkpoint (2026-11-18, `test_M8_retention.py`; BUG7's guard adds a cancelled pause and a crash with retry)
+- [x] `test_NFR_15_*`: a kill during cleanup, then a rerun: no orphaned files and no dangling registry rows (2026-11-18, `test_M8_retention.py`: killed after marking `deleting`, plus an orphan folder; the retry recovers both)
+- [x] `test_NFR_1_*` (gpu) and `test_NFR_8_*` extended to training: peak VRAM under 5.5 GB; weights only as safetensors, never unpickled (2026-11-19, `test_M8_nfr.py`: on the card, the job's logged peak reserved is 0.04 GB for the MLP and 0.23 GB for the CNN at batch 128, 0.79 GB for the CNN at batch 512, each plus 0.09 GB of context. A run and its resume, and a `/predict`, unpickle nothing under a tripwire; checkpoints and the registry hold only safetensors and JSON; a pickle planted as weights or a checkpoint fails with `weights_unreadable` and its payload never runs; `test_NFR_8_no_unpickling.py` scans `src/` and `scripts/` for any call that unpickles)
+- [x] G3 for SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 (SCR-07 v2 and SCR-04 v2 approved 2026-11-18; SCR-11, SCR-14 and the registry additions to SCR-07 v2 and SCR-04 v2 approved 2026-11-19: `docs/design/g3/SCR-11.md`, `SCR-14.md`, the addenda in `SCR-07.md` and `SCR-04.md`)
+- [x] Demo: train the reference CNN on the phase-2 image dataset; pause and resume it from the UI; find it in the registry; run retention; get a prediction (2026-11-19, README "Training demo": `job_0051`, 30 epochs on the GPU, 84.3 %; paused and resumed on SCR-07 at the checkpoint's step 3,244; `partial`, then `trained` and latest on SCR-11; retention `job_0052` deleted job_0030's and job_0031's weights and kept the pinned `mv_e80834ce01b0`, as the owner chose; the dry run and disk report on SCR-11 agree; SCR-11's try-out predicted on the CPU in 146 ms)
 - [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS for BUG7; learning notes)
-- [ ] Owner's OK to merge
+- [x] Owner's OK to merge ("Merge M8", 2026-11-19)
 
 ## M9 — Model builder
 
 **Size** L · **Branch** `m9-model-builder` · **Serves** BUILD-1.1–1.9, UI-2.3, DATA-5.2, DATA-5.5
 
-**Before starting:** ADR-0017 approved; G2 for SCR-08 and SCR-09 approved; React Flow approved as a frontend dependency (SPEC §7.4 names it).
+**Before starting:** ADR-0017 approved, including the tabular input width and categorical embeddings (M10's open points 8 and 10); G2 for SCR-08 and SCR-09 approved; React Flow approved as a frontend dependency (SPEC §7.4 names it).
 
 **Scope**
 
@@ -500,7 +519,22 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Size** L · **Branch** `m10-ml-hpo-metrics` · **Serves** ML-1.1–1.5, HPO-1.1–1.5, EVAL-1.2, DATA-1.4, DATA-2.4
 
-**Before starting:** ADR-0018 approved; G2 for SCR-10 and SCR-09's HPO part approved; the tabular and labelled-text datasets settled (decision 1).
+**Before starting:** ADR-0018 approved; G2 for SCR-10 and SCR-09's HPO part approved; the tabular and labelled-text datasets settled (decision 1); and these open points decided, in an ADR of their own or an addendum to ADR-0016 (raised by the owner on 2026-11-18):
+
+- **Serving tabular models** (REG-1.4, ML-1.5):
+  1. Which process serves skops models. `inference` is built from the `worker-gpu` image, which has neither scikit-learn nor skops (ADR-0014 rule 11 puts them in `ml-cpu`). They run on the CPU, so they never need the GPU lease.
+  2. The `/predict` request and response for a table. In: one record of named fields, checked against the dataset's column schema. Out, by task: a class with probabilities, a value, a cluster ID or a PCA projection.
+  3. The registry storing skops files beside safetensors (ADR-0015): storage, disk use per lineage (REG-2.11) and retention.
+  4. Whether batch prediction (a CSV in, predictions out) and serving cluster assignments are in scope.
+- **Neural networks on tabular data** (BUILD-1.3, ML-1.3, RUN-1.1):
+  5. `train` requests accepting a tabular split, with a loader that turns rows into a feature tensor and a target. Today only `labelled_images` splits are accepted.
+  6. How the target column is named: in the request or in the dataset's metadata.
+  7. Preprocessing for networks (scaling, encoding, imputation) fitted on the train split only, as ML-1.3 requires of pipelines. It is stored with the weights (for example as JSON beside the safetensors) and applied again by `/predict`.
+  8. The input width taken after encoding, since one-hot encoding widens it, so the builder can lock it (BUILD-1.3).
+  9. Regression in the training runtime: MSE loss and regression metrics. Today it trains classifiers only.
+  10. Categorical columns through `Embedding`: a tabular input block, or graph specs (BUILD-1.9, P2).
+
+  Points 8 and 10 shape the model spec, so they belong in ADR-0017, before M9.
 
 **Scope**
 

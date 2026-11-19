@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-14 settings — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.danger { border-width: 2px; border-color: var(--ink); } .btn.off { opacity: .45; }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 34px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 520px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.toast { position: absolute; right: 16px; bottom: 44px; width: 380px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.1); font-size: 12px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+/* SCR-14 additions */
+.cols { display: grid; grid-template-columns: 180px 1fr; gap: 20px; min-height: 0; }
+.index { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--ink-2); }
+.index a { height: 28px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; color: inherit; text-decoration: none; gap: 6px; } .index a.on { background: var(--fill-2); font-weight: 600; color: var(--ink); } .index a.off { color: var(--ink-3); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); display: inline-block; }
+.sec { border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; }
+.sec > header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--soft); } .sec > header b { font-size: 14px; }
+.sec .rows { display: flex; flex-direction: column; }
+.field { display: grid; grid-template-columns: 260px 220px 1fr; gap: 16px; align-items: start; padding: 10px 14px; border-bottom: 1px solid var(--soft); }
+.field:last-child { border-bottom: 0; }
+.field .lab b { display: block; font-size: 12px; } .field .lab span { font-size: 11px; color: var(--ink-3); }
+.field .help { font-size: 11px; color: var(--ink-3); padding-top: 2px; }
+.input { height: 28px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font: 12px var(--mono); gap: 6px; background: #fff; }
+.input .u { margin-left: auto; color: var(--ink-3); font-family: system-ui; font-size: 11px; }
+.input.dirty { border-width: 2px; border-color: var(--ink); }
+.input.bad { border-width: 2px; border-color: var(--ink); border-style: dashed; }
+.errmsg { font-size: 11px; color: var(--ink); margin-top: 4px; }
+.changed { font-size: 10px; border: 1px solid var(--ink-2); border-radius: 3px; padding: 0 4px; color: var(--ink-2); }
+.savebar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); background: var(--fill); font-size: 12px; }
+.fixed { font-size: 11px; color: var(--ink-3); padding: 8px 14px; border-top: 1px dashed var(--soft); }
+.live { font: 11px var(--mono); color: var(--ink-2); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-14 — Settings · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: RUN-1.3, RUN-1.6, RUN-1.7 (OC-3); REG-2.3, REG-2.4, REG-2.10 (OC-9); UI-2.3 (M8). MON-2.2, MON-2.6 (OC-7) in M11</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §3a SCR-14 (approved v2)</span><span>Route: <span class="mono">/settings</span></span><span>2026-11-17</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-01 shell (faint), whose navigation gains <i>Settings</i> at the bottom. Blue numbers are annotations. The values are the accepted defaults (OC-3) and the same three lineages as SCR-11. The Monitoring section arrives in M11 and is only listed.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>One page, one card per section, with an index on the left.</b> There are four short sections; one scrolling page keeps everything findable with Ctrl+F. The index marks a section with unsaved changes with a dot.</li>
+<li><b>Each section saves on its own.</b> A Save and Discard bar appears under a section only when it has changes, with how many fields changed. Leaving the page with unsaved changes asks first. A retention change waiting on its confirmation never holds up a training change.</li>
+<li><b>Every field comes from the API's JSON schema (UI-2.3):</b> label, unit, help, default, minimum and maximum. A changed value shows <i>changed</i> and a <i>reset to default</i> link. The page has no field list of its own, so a new setting needs no UI change (UI-2.3.AC1).</li>
+<li><b>Each field says when it takes effect.</b> The temperature limits and the stall timeout apply to running jobs at once, since the watchdog reads them on every check. The checkpoint interval applies to jobs started after the save, because a job's config is fixed when it starts (NFR-4).</li>
+<li><b>The thermal fields show the live context:</b> the GPU's temperature now, the highest in the last 7 days and which job reached it, and the card's own slowdown point read from NVML. The pause limit's maximum is that slowdown point; resume must be at least 5 °C below pause. The 87 °C drawn here is an example; the real value is read from this card.</li>
+<li><b>The ranges are proposals for you to accept:</b> checkpoint interval 1–60 min, pause 60 °C to the slowdown point, a 5 °C gap between pause and resume, stall timeout 60–3600 s, N from 0 to 100 or <i>all</i>. SPEC gives only the defaults (OC-3).</li>
+<li><b>Retention has a global default and a table of per-lineage overrides (REG-2.4).</b> N is a number or <i>all</i>. Lowering N, globally or for one lineage, first runs the dry run and opens the confirmation with the exact versions and sizes (REG-2.10), as on SCR-11. Lineages that have an override are listed as not affected by a global change.</li>
+<li><b>Two values in SPEC's <span class="mono">retention.yaml</span> example are not settings.</b> <span class="mono">delete_checkpoints_on_success</span> is shown as a fixed rule, because REG-2.6 requires it. <span class="mono">dry_run</span> is an action (<i>Preview cleanup</i> on SCR-11 and the confirmation here), not a stored value.</li>
+<li><b>Theme stays in the browser.</b> The design system stores it per browser and follows the system on first visit, so the Appearance card says so and writes nothing to the database.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Training section, one unsaved change</h2>
+<div class="frame" style="height:630px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div style="height:300px"></div><div class="nav on">Settings</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Settings</b></span><span class="spacer"></span><span>[ ● job_0031 running · epoch 4/12 ]</span></header>
+    <section class="content">
+      <div class="phead"><b>Settings</b><span class="muted" style="font-size:12px">Defaults and limits for every job. Stored in the database (OC-9).</span></div>
+      <div class="cols">
+        <nav class="index"><a class="on" href="#">Training <span class="dot"></span></a><a href="#">Retention</a><a class="off" href="#">Monitoring <span class="k">M11</span></a><a href="#">Appearance</a></nav>
+        <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+          <div class="sec">
+            <header><b>Training</b><span class="muted" style="font-size:11px">RUN-1.3, RUN-1.6, RUN-1.7</span></header>
+            <div class="rows">
+              <div class="field"><div class="lab"><b>Checkpoint interval</b><span>at most this long between checkpoints</span></div><div><div class="input">5<span class="u">min</span></div></div><div class="help">Also after every epoch. 1–60 min, default 5. <b>Applies to jobs started after saving.</b></div></div>
+              <div class="field"><div class="lab"><b>Pause when the GPU reaches</b><span>thermal pause (RUN-1.6)</span></div><div><div class="input">83<span class="u">°C</span></div></div><div class="help">60–87 °C, default 83; the maximum is the card's slowdown point. <b>Applies at once.</b><div class="live" style="margin-top:4px">now 64 °C · highest in 7 days 74 °C (job_0026) · slowdown 87 °C (NVML)</div></div></div>
+              <div class="field"><div class="lab"><b>Resume when it cools below</b><span>thermal resume</span></div><div><div class="input">75<span class="u">°C</span></div></div><div class="help">At least 5 °C below the pause limit, default 75. <b>Applies at once.</b></div></div>
+              <div class="field"><div class="lab"><b>Stall timeout</b><span>no progress for this long marks a job stalled (RUN-1.7)</span></div><div><div class="input dirty">600<span class="u">s</span></div><div style="margin-top:4px;font-size:11px"><span class="changed">changed</span> <a href="#" style="color:var(--ink-2)">reset to default (300)</a></div></div><div class="help">60–3600 s, default 300. <b>Applies at once</b>, also to <span class="mono">job_0031</span>.</div></div>
+            </div>
+            <div class="fixed">Fixed by the requirements, not settings: a checkpoint after every epoch (RUN-1.3); one GPU job at a time (ADR-0003).</div>
+            <div class="savebar"><span>1 unsaved change</span><span class="spacer"></span><span class="btn sm">Discard</span><span class="btn sm primary">Save training</span></div>
+          </div>
+          <div class="sec"><header><b>Retention</b><span class="muted" style="font-size:11px">REG-2.3, REG-2.4, REG-2.10</span></header><div style="height:40px"></div></div>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 18% · RAM 5.1 / 9.7 GB · GPU 92% · VRAM 2.4 / 6.0 GB · 64 °C<span class="spacer"></span>● live</footer>
+  </div>
+  <span class="n" style="left:214px;top:104px">1</span>
+  <span class="n" style="left:414px;top:112px">2</span>
+  <span class="n" style="left:414px;top:162px">3</span>
+  <span class="n" style="left:940px;top:252px">4</span>
+  <span class="n" style="left:414px;top:424px">5</span>
+  <span class="n" style="left:414px;top:462px">6</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Index</td><td>The sections, a dot on one with unsaved changes; Monitoring is listed and disabled until M11</td><td>static, from the schema's sections</td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Section card</td><td>Title and the requirements it serves</td><td><span class="mono">GET /settings</span> (planned, M8): values, JSON schema per section, a version for saving</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Fields</td><td>Label, input with unit, range, default, when it applies; <i>changed</i> and reset on a value that differs from the default</td><td>same (schema: <span class="mono">title</span>, <span class="mono">description</span>, <span class="mono">minimum</span>, <span class="mono">maximum</span>, <span class="mono">default</span>, and an <span class="mono">x-applies</span> of <span class="mono">now</span> or <span class="mono">next_job</span>)</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Thermal context</td><td>GPU °C now, the 7-day high and its job, the card's slowdown point</td><td><span class="mono">sample</span> messages on <span class="mono">GET /stream</span>; 7-day high from telemetry; slowdown from <span class="mono">GET /system</span> (NVML, planned, M8)</td><td>now: yes</td></tr>
+<tr><td><span class="num">5</span></td><td>Fixed rules</td><td>What looks like a setting but is a requirement</td><td>static</td><td>–</td></tr>
+<tr><td><span class="num">6</span></td><td>Save bar</td><td>Count of changes, Discard, Save for this section only; a toast confirms the save</td><td><span class="mono">PUT /settings</span> (planned, M8): one section's values and the version read</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Retention section and Appearance</h2>
+<div class="frame" style="height:560px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div style="height:300px"></div><div class="nav on">Settings</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Settings</b></span></header>
+    <section class="content">
+      <div class="cols">
+        <nav class="index"><a href="#">Training</a><a class="on" href="#">Retention</a><a class="off" href="#">Monitoring <span class="k">M11</span></a><a href="#">Appearance</a></nav>
+        <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+          <div class="sec">
+            <header><b>Retention</b><span class="muted" style="font-size:11px">REG-2.3, REG-2.4, REG-2.10</span><span class="spacer"></span><span class="muted" style="font-size:11px">Base and latest weights are always kept (REG-2.1, REG-2.2)</span></header>
+            <div class="rows">
+              <div class="field"><div class="lab"><b>Keep intermediate versions</b><span>default for every lineage (REG-2.3)</span></div><div style="display:flex;gap:6px"><span class="group"><span class="btn sm on">Number</span><span class="btn sm">All</span></span><div class="input" style="width:70px">0</div></div><div class="help">0 keeps only base and latest; <i>All</i> keeps every version. Default 0. Lowering it asks first, with the versions and sizes it would delete.</div></div>
+              <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px"><b style="font-size:12px">Per-lineage overrides</b><span class="muted" style="font-size:11px">(REG-2.4)</span><span class="spacer"></span><span class="btn sm">+ Add override</span></div>
+                <table class="t">
+                  <tr><th>Lineage</th><th>Keeps</th><th class="r">Intermediates now</th><th class="r">Their size</th><th></th></tr>
+                  <tr><td class="m">tiny_mlp · cifar10</td><td><div class="input" style="width:70px;height:24px">3</div></td><td class="r m">0</td><td class="r m">0</td><td class="r"><span class="btn sm ghost">Remove</span></td></tr>
+                  <tr><td class="m muted">small_cnn · cifar10</td><td class="muted">default (0)</td><td class="r m">0</td><td class="r m">0</td><td class="r"><span class="btn sm ghost">Override…</span></td></tr>
+                  <tr><td class="m muted">wide_cnn · cifar10</td><td class="muted">default (0)</td><td class="r m">0</td><td class="r m">0</td><td class="r"><span class="btn sm ghost">Override…</span></td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="fixed">Fixed by the requirements: a run's checkpoint is deleted when it completes, and kept while it is paused or partial (REG-2.6). Pinned versions are never deleted (REG-2.5). <span class="mono">dry_run</span> is the <i>Preview cleanup</i> action on SCR-11.</div>
+          </div>
+          <div class="sec">
+            <header><b>Appearance</b><span class="spacer"></span><span class="muted" style="font-size:11px">stored in this browser, not the database</span></header>
+            <div class="field"><div class="lab"><b>Theme</b><span>also <span class="k">t</span> anywhere</span></div><div><span class="group"><span class="btn sm on">Dark</span><span class="btn sm">Light</span></span></div><div class="help">Applies at once. Follows the system setting on first visit.</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer class="status"></footer>
+  </div>
+  <span class="n" style="left:414px;top:128px">7</span>
+  <span class="n" style="left:428px;top:222px">8</span>
+  <span class="n" style="left:414px;top:372px">9</span>
+  <span class="n" style="left:414px;top:460px">10</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">7</span></td><td>Global N</td><td>Number or <i>All</i>; saving a lower value goes through frame C</td><td><span class="mono">GET /settings</span>, then <span class="mono">POST /retention/plan</span> with the new value (planned, M8)</td><td>–</td></tr>
+<tr><td><span class="num">8</span></td><td>Overrides</td><td>Every lineage: its own N or the default, how many intermediates it keeps now and their size; add, change or remove an override (removing one that kept more also asks first)</td><td><span class="mono">GET /settings</span> and <span class="mono">GET /models</span> (planned, M8)</td><td>after retention</td></tr>
+<tr><td><span class="num">9</span></td><td>Fixed rules</td><td>The retention rules that are not settings</td><td>static</td><td>–</td></tr>
+<tr><td><span class="num">10</span></td><td>Appearance</td><td>Theme, saved in the browser at once (no save bar)</td><td>browser storage</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · Lowering the global N from 2 to 0: the confirmation (earlier, same data as SCR-11 frame D)</h2>
+<div class="frame" style="height:430px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Settings</b></span></header><section class="content"></section><footer class="status"></footer></div>
+  <div class="scrim"><div class="modal">
+    <header>Keep 0 intermediate versions by default (now 2)?</header>
+    <div class="b">This deletes the weights of <b>2 versions in 1 lineage, 2.4 MB</b>. Their metadata stays, so each can be re-trained.
+      <table class="t" style="margin-top:8px"><tr><th>Lineage</th><th>Version</th><th class="r">val acc</th><th class="r">Size</th></tr><tr><td class="m">small_cnn · cifar10</td><td class="m">mv_e4d21c0b9a17</td><td class="r m">74.9%</td><td class="r m">1.2 MB</td></tr><tr><td></td><td class="m">mv_77a0f3e2b1c6</td><td class="r m">71.2%</td><td class="r m">1.2 MB</td></tr></table>
+      <div style="margin-top:6px" class="muted">Not affected: <span class="mono">tiny_mlp · cifar10</span> (its override keeps 3); <span class="mono">wide_cnn · cifar10</span> (base only). Kept in every lineage: the base, the latest and pinned versions.</div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px"><span>Type <b class="mono">delete 2 versions</b> to confirm</span><div class="input"><span style="border-left:1px solid var(--ink);height:14px"></span></div><span class="muted" style="font-size:11px">Empty, so the delete button stays disabled and says why.</span></div></div>
+    <footer><span class="btn">Keep them</span><span class="btn danger off">Delete 2 versions' weights</span></footer>
+  </div></div>
+</div>
+<p class="caption">The list is the dry run's result; if anything changes before the confirmation, it is refused and a new list is shown (ADR-0015 rule 7). "Keep them" has the focus. A global change spans lineages, so there is no single name to type; the phrase names the count instead. Confirming saves the setting and starts the retention job, which SCR-11 and the jobs list then show. Raising N, or a change that deletes nothing, saves without this dialog.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · The API refuses a save: a field error, and a stale version</h2>
+<div class="frame" style="height:440px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Settings</b></span></header>
+    <section class="content">
+      <div class="sec" style="width:820px">
+        <header><b>Training</b></header>
+        <div class="field"><div class="lab"><b>Pause when the GPU reaches</b></div><div><div class="input dirty">80<span class="u">°C</span></div></div><div class="help">60–87 °C, default 83.</div></div>
+        <div class="field"><div class="lab"><b>Resume when it cools below</b></div><div><div class="input bad">78<span class="u">°C</span></div><div class="errmsg">⚠ Must be at most 75 °C: 5 °C below the pause limit (80 °C).</div></div><div class="help">At least 5 °C below the pause limit, default 75.</div></div>
+        <div class="savebar"><span>⚠ 1 field to fix</span><span class="spacer"></span><span class="btn sm">Discard</span><span class="btn sm primary">Save training</span></div>
+      </div>
+    </section><footer class="status"></footer></div>
+  <div class="toast"><b>Settings changed elsewhere</b><div class="muted" style="margin-top:2px">Retention was saved in another tab after this page loaded (<span class="mono">conflict</span>). Your training changes are kept.</div><div style="margin-top:6px;display:flex;gap:6px"><span class="btn sm">Reload retention</span></div></div>
+</div>
+<p class="caption">Range checks run in the browser from the schema, and the API checks again; its <span class="mono">422 validation_error</span> points at the field, and the message is shown under it. A save sends the version it read; if another tab saved since, the API answers <span class="mono">409 conflict</span> and only the stale section reloads, so unsaved changes elsewhere on the page survive.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Empty, loading and error</h2>
+<div class="frame" style="height:270px">
+  <div class="shell"><aside class="side"></aside><header class="top"><span><b>Settings</b></span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-content:start">
+      <div class="empty" style="height:160px"><div><b>No per-lineage overrides</b><p style="margin:6px 0">Every lineage keeps the default. Models appear here after their first run.</p><span class="btn sm">+ Add override</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px"><span class="skel" style="width:160px;height:18px"></span><span class="skel" style="height:28px"></span><span class="skel" style="height:28px"></span><span class="skel" style="height:28px"></span></div>
+      <div class="empty err" style="height:160px"><div><b>Settings could not be loaded</b><p style="margin:6px 0"><span class="mono">dependency_unavailable</span> · Postgres is unreachable. Jobs keep the last values they read. Check the postgres container, then retry.</p><span class="btn sm">Retry</span></div></div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">Left: the overrides table with none set (the global default is never empty; it falls back to the schema's default). Middle: loading. Right: the page cannot load; nothing can be edited until it does.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame w1024" style="height:360px">
+  <div class="shell rail"><aside class="side"></aside><header class="top"><span><b>Settings</b></span></header>
+    <section class="content">
+      <div style="display:flex;gap:8px"><span class="btn sm on">Training ●</span><span class="btn sm">Retention</span><span class="btn sm off">Monitoring</span><span class="btn sm">Appearance</span></div>
+      <div class="sec">
+        <div class="field" style="grid-template-columns:220px 160px 1fr"><div class="lab"><b>Checkpoint interval</b></div><div><div class="input">5<span class="u">min</span></div></div><div class="help">1–60 min, default 5. Jobs started after saving.</div></div>
+        <div class="field" style="grid-template-columns:220px 160px 1fr"><div class="lab"><b>Pause when the GPU reaches</b></div><div><div class="input">83<span class="u">°C</span></div></div><div class="help">60–87 °C. At once.<div class="live">now 64 °C · 7-day high 74 °C</div></div></div>
+        <div class="field" style="grid-template-columns:220px 160px 1fr"><div class="lab"><b>Stall timeout</b></div><div><div class="input dirty">600<span class="u">s</span></div></div><div class="help">60–3600 s, default 300. At once.</div></div>
+        <div class="savebar"><span>1 unsaved change</span><span class="spacer"></span><span class="btn sm">Discard</span><span class="btn sm primary">Save training</span></div>
+      </div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">At 1024 px the index becomes a row of buttons above the cards and the help column narrows; the NVML slowdown point moves into the field's tooltip.</p>
+</main>
+</body>
+</html>

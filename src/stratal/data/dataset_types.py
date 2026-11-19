@@ -1,7 +1,8 @@
 """Dataset types and their schema validation (DATA-5).
 
-M1 defines the image–caption pairs type (DATA-5.1). Other types, and the
-compatible model families each declares (DATA-5.5), arrive in phase 2.
+M1 defines the image–caption pairs type (DATA-5.1); M8 adds labelled images
+(DATA-5.2, delivered early for training). Tabular and labelled text, and the
+compatible model families each type declares (DATA-5.5), arrive in M9.
 """
 
 from collections.abc import Callable, Iterable, Iterator, Mapping
@@ -76,6 +77,39 @@ def validate_image_caption(
     return report
 
 
+def validate_labelled_images(
+    rows: Iterable[Mapping[str, Any]], blob_exists: Callable[[str], bool]
+) -> ValidationReport:
+    """Check accepted rows against the labelled-images schema (DATA-5.2).
+
+    Like :func:`validate_image_caption`, with a class label in place of the
+    caption: a row fails if its image or preprocessed copy is missing from the
+    blob store, or if its ``label`` is absent or blank.
+    """
+    report = ValidationReport(dtype="labelled_images")
+    for row in rows:
+        if row.get("status") != STATUS_ACCEPTED:
+            continue
+        report.checked += 1
+        key = str(row["row_key"])
+        sha256 = row.get("sha256")
+        derived = row.get("derived_sha256")
+        label = row.get("label")
+        if not isinstance(sha256, str) or not blob_exists(sha256):
+            report.problems.append(
+                RowProblem(key, "missing_file", "image file is not in the store")
+            )
+        elif isinstance(derived, str) and not blob_exists(derived):
+            report.problems.append(
+                RowProblem(key, "missing_file", "preprocessed copy is not in the store")
+            )
+        elif not isinstance(label, str) or not label.strip():
+            report.problems.append(RowProblem(key, "missing_label", "row has no class label"))
+        else:
+            report.valid += 1
+    return report
+
+
 def apply_report(
     rows: Iterable[Mapping[str, Any]], report: ValidationReport, *, stage: str
 ) -> Iterator[Row]:
@@ -94,4 +128,7 @@ def apply_report(
         yield out
 
 
-DATASET_TYPES: dict[str, Validator] = {"image_caption": validate_image_caption}
+DATASET_TYPES: dict[str, Validator] = {
+    "image_caption": validate_image_caption,
+    "labelled_images": validate_labelled_images,
+}

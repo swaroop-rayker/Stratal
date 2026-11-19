@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-07 v2 jobs list with pause and resume — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+/* SCR-07 */
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.danger { border-width: 2px; border-color: var(--ink); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; } .select.off { color: var(--ink-3); }
+.search { height: 24px; width: 200px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; color: var(--ink-3); font-size: 11px; gap: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); } .pill.strike { text-decoration: line-through; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 40px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.hover td { background: #f7f7f7; }
+.t .sec td { height: 26px; background: var(--fill); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.bar { width: 80px; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; display: inline-block; position: relative; vertical-align: middle; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); }
+.muted { color: var(--ink-3); }
+.err-line { font-size: 11px; color: var(--ink-2); }
+.empty { display: grid; place-items: center; text-align: center; padding: 30px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.3); display: grid; place-items: center; }
+.modal { width: 460px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.modal header { padding: 14px 16px 0; font-weight: 600; font-size: 15px; } .modal .b { padding: 10px 16px; color: var(--ink-2); font-size: 12px; } .modal footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--soft); }
+.toast { position: absolute; right: 16px; bottom: 44px; width: 360px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.1); font-size: 12px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-07 v2 — Jobs list with pause and resume · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: RUN-1.1, RUN-1.2 (pause and resume, OC-8), RUN-1.6, RUN-1.7; the phase-1 slice as approved</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> §3a SCR-07 v2 (approved v2)</span><span>Route: <span class="mono">/jobs</span></span><span>2026-11-17</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-01 shell (faint). Blue numbers are annotations. It starts from the screen as built and approved at G3 (2026-11-17): row actions always visible, Kind a real filter, job-ID search. Only what v2 adds is new: pause and resume, paused and stalled jobs, training and retention jobs.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Pause on running rows, Resume on paused ones</b>, beside Cancel, for pipelines and training alike (OC-8). Pause asks no confirmation, because it loses nothing and is undone by Resume; the pill reads "Pausing…" until the job reaches its next safe point.</li>
+<li><b>Paused and stalled jobs stay in Active</b>, because they need a decision. "Now / outcome" says why: paused by you, or for heat with the temperatures; stalled with how long.</li>
+<li><b>A training row reads "model on dataset"</b> in the Dataset column, its progress in epochs, and its outcome as the registered model version with its validation score.</li>
+<li><b>A training job that ran out of memory offers "Start again with 128"</b> instead of Retry, as on SCR-04 v2: the same batch would fail the same way. A failed pipeline keeps Retry.</li>
+<li><b>Retention jobs</b> (ADR-0015) are listed too; their outcome is what they freed. Kind gains <i>train</i> and <i>retention</i>.</li>
+<li><b>The state group keeps its five buttons.</b> Active now counts queued, running, paused and stalled.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · All jobs, with paused, stalled, training and retention jobs</h2>
+<div class="frame" style="height:740px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav on">Jobs</div><div class="nav">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Jobs</b></span><span class="spacer"></span><span>[ Running · job_0031 · train · 33% ]</span></header>
+    <section class="content">
+      <div class="phead"><b>Jobs</b><span class="spacer"></span><span class="btn">Start a pipeline…</span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="group"><span class="btn sm on">All <span class="k">12</span></span><span class="btn sm">Active <span class="k">4</span></span><span class="btn sm">Failed <span class="k">2</span></span><span class="btn sm">Completed <span class="k">5</span></span><span class="btn sm">Cancelled <span class="k">1</span></span></span>
+        <span class="select">Dataset: any ▾</span><span class="select">Kind: any ▾</span><span class="spacer"></span><span class="search">⌕ job ID <span class="k">/</span></span>
+      </div>
+      <table class="t">
+        <tr><th>Job</th><th>State</th><th>Dataset</th><th>Now / outcome</th><th class="r">Attempt</th><th>Created</th><th class="r">Duration</th><th></th></tr>
+        <tr class="sec"><td colspan="8">Active · 4</td></tr>
+        <tr class="hover"><td class="m">job_0031</td><td><span class="pill">● Running</span></td><td><span class="mono">small_cnn</span> on <span class="mono">cifar10</span></td><td>epoch 7/20 · <span class="bar" style="--p:33%"></span> 33% · ETA 18m 40s</td><td class="r m">1</td><td>14:12</td><td class="r m">9m 12s</td><td><span class="btn sm">❚❚ Pause</span> <span class="btn sm danger">Cancel</span></td></tr>
+        <tr><td class="m">job_0034</td><td><span class="pill dash">❚❚ Paused</span></td><td class="m">coco10k</td><td class="muted">paused for heat in <span class="mono">label</span> · resumes below 75 °C (79 °C now)</td><td class="r m">1</td><td>13:40</td><td class="r m">22m 05s</td><td><span class="btn sm primary">▶ Resume</span> <span class="btn sm danger">Cancel</span></td></tr>
+        <tr><td class="m">job_0030</td><td><span class="pill dash">❚❚ Paused</span></td><td><span class="mono">tiny_mlp</span> on <span class="mono">cifar10</span></td><td class="muted">paused by you at epoch 4 · checkpoint kept</td><td class="r m">1</td><td>12:10</td><td class="r m">3m 40s</td><td><span class="btn sm primary">▶ Resume</span> <span class="btn sm danger">Cancel</span></td></tr>
+        <tr><td class="m">job_0035</td><td><span class="pill">⧖ Stalled</span></td><td class="m">demo</td><td class="muted">no progress for 5 min 12 s in <span class="mono">preprocess</span> · worker alive</td><td class="r m">1</td><td>14:15</td><td class="r m">6m 30s</td><td><span class="btn sm danger">Cancel</span></td></tr>
+        <tr class="sec"><td colspan="8">Finished · 8</td></tr>
+        <tr><td class="m">job_0029</td><td><span class="pill">✓ Completed</span></td><td><span class="mono">small_cnn</span> on <span class="mono">cifar10</span></td><td>→ <span class="mono">mv_8c41d0e2a9f3</span> · val acc 78.1%</td><td class="r m">1</td><td>11:02</td><td class="r m">24m 10s</td><td></td></tr>
+        <tr><td class="m">job_0036</td><td><span class="pill">✓ Completed</span></td><td class="muted">—</td><td>retention · freed 412 MB from 3 versions</td><td class="r m">1</td><td>11:27</td><td class="r m">2 s</td><td></td></tr>
+        <tr class="on"><td class="m">job_0032</td><td><span class="pill">✕ Failed</span></td><td><span class="mono">wide_cnn</span> on <span class="mono">cifar10</span></td><td><span class="err-line"><span class="mono">gpu_oom</span> · reduce batch size from 256 → 128</span></td><td class="r m">1</td><td>10:50</td><td class="r m">14 s</td><td><span class="btn sm">Start again with 128</span></td></tr>
+        <tr><td class="m">job_0022</td><td><span class="pill">✕ Failed</span></td><td class="m">demo</td><td><span class="err-line"><span class="mono">stage_failed</span> in ingest · IntegrityError…</span></td><td class="r m">1</td><td>Nov 17</td><td class="r m">15 s</td><td><span class="btn sm">↻ Retry</span></td></tr>
+        <tr><td class="m">job_0026</td><td><span class="pill">✓ Completed</span></td><td class="m">coco20k</td><td>→ <span class="mono">ds_005e3e700ee8</span></td><td class="r m">1</td><td>Nov 17</td><td class="r m">27m 24s</td><td></td></tr>
+      </table>
+      <p style="margin:0;font-size:12px;color:var(--ink-3)">Showing 9 of 12 · older jobs load as you scroll</p>
+    </section>
+    <footer class="status">CPU 34% · RAM 4.1 / 9.7 GB · GPU 88% · VRAM 1.9 / 6.0 GB<span class="spacer"></span>● live · 1 s</footer>
+  </div>
+  <span class="n" style="left:206px;top:100px">1</span>
+  <span class="n" style="left:206px;top:168px">2</span>
+  <span class="n" style="left:600px;top:184px">3</span>
+  <span class="n" style="left:1250px;top:184px">4</span>
+  <span class="n" style="left:206px;top:398px">5</span>
+  <span class="n" style="left:1250px;top:478px">6</span>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Filters</td><td>As approved; Active counts queued, running, paused and stalled; Kind gains <i>train</i> and <i>retention</i></td><td><span class="mono">GET /jobs?state=&amp;kind=&amp;dataset=&amp;q=</span>, <span class="mono">counts</span></td><td>counts</td></tr>
+<tr><td><span class="num">2</span></td><td>Active section</td><td>Running, paused, stalled and queued jobs; each with its reason in Now / outcome</td><td><span class="mono">GET /jobs?state=queued,running,paused,stalled</span></td><td>yes</td></tr>
+<tr><td><span class="num">3</span></td><td>Now / outcome</td><td>Training: epoch, progress, ETA; outcome the model version and validation score. Paused: who or what paused it. Stalled: for how long. Retention: what it freed</td><td>job view (training fields planned, M8)</td><td>yes</td></tr>
+<tr><td><span class="num">4</span></td><td>Row actions</td><td>Pause (running), Resume (paused), Cancel (any active); Retry or "Start again with N" (failed)</td><td><span class="mono">POST /jobs/{id}/pause</span>, <span class="mono">/resume</span> (planned, M8), <span class="mono">/cancel</span>, <span class="mono">/retry</span></td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Finished: training</td><td>The registered version, a link to SCR-11</td><td><span class="mono">output</span> model version (planned, M8)</td><td>–</td></tr>
+<tr><td><span class="num">6</span></td><td>Out of memory</td><td>"Start again with 128" opens SCR-09 prefilled</td><td>job error with the suggested batch (RUN-1.5)</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Pausing, then paused</h2>
+<div class="frame" style="height:250px">
+  <div class="shell">
+    <aside class="side"></aside>
+    <header class="top"><span><b>Jobs</b></span></header>
+    <section class="content">
+      <table class="t">
+        <tr class="sec"><td colspan="5">Active · 1</td></tr>
+        <tr><td class="m">job_0031</td><td><span class="pill dash">❚❚ Pausing…</span></td><td><span class="mono">small_cnn</span> on <span class="mono">cifar10</span></td><td class="muted">stopping after step 141 · writing a checkpoint</td><td><span class="btn sm off" style="opacity:.45">❚❚ Pause</span> <span class="btn sm danger">Cancel</span></td></tr>
+      </table>
+      <div class="toast" style="position:static;width:420px">❚❚ <b>job_0031 paused</b> at epoch 7, step 141 · checkpoint kept <span class="btn sm ghost" style="margin-left:8px">▶ Resume</span></div>
+    </section>
+    <footer class="status"></footer>
+  </div>
+</div>
+<p class="caption">A pipeline pauses the same way, between batches; its toast says which stage it stopped in. Pause is disabled while pausing.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Filtered to training jobs</h2>
+<div class="frame" style="height:220px">
+  <div class="shell">
+    <aside class="side"></aside>
+    <header class="top"><span><b>Jobs</b></span></header>
+    <section class="content">
+      <div style="display:flex;gap:8px;align-items:center"><span class="group"><span class="btn sm on">All <span class="k">4</span></span><span class="btn sm">Active <span class="k">2</span></span><span class="btn sm">Failed <span class="k">1</span></span><span class="btn sm">Completed <span class="k">1</span></span><span class="btn sm">Cancelled <span class="k">0</span></span></span><span class="select">Kind: train ▾</span></div>
+      <table class="t">
+        <tr><td class="m">job_0031</td><td><span class="pill">● Running</span></td><td><span class="mono">small_cnn</span> on <span class="mono">cifar10</span></td><td>epoch 7/20 · 33%</td><td><span class="btn sm">❚❚ Pause</span> <span class="btn sm danger">Cancel</span></td></tr>
+        <tr><td class="m">job_0030</td><td><span class="pill dash">❚❚ Paused</span></td><td><span class="mono">tiny_mlp</span> on <span class="mono">cifar10</span></td><td class="muted">paused by you at epoch 4</td><td><span class="btn sm primary">▶ Resume</span> <span class="btn sm danger">Cancel</span></td></tr>
+      </table>
+    </section>
+    <footer class="status"></footer>
+  </div>
+</div>
+<p class="caption">Counts follow the other filters, as approved. Training jobs have no dataset slug of their own; the dataset filter matches the dataset of the version they train on.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · 1024 px</h2>
+<div class="frame w1024" style="height:250px">
+  <div class="shell rail">
+    <aside class="side"></aside>
+    <header class="top"><span><b>Jobs</b></span></header>
+    <section class="content">
+      <table class="t">
+        <tr><th>Job</th><th>State</th><th>Now / outcome</th><th class="r">Duration</th><th></th></tr>
+        <tr><td class="m">job_0031</td><td><span class="pill">● Running</span></td><td>epoch 7/20 · 33% · ETA 18m</td><td class="r m">9m 12s</td><td><span class="btn sm">❚❚</span> <span class="btn sm danger">Cancel</span></td></tr>
+        <tr><td class="m">job_0034</td><td><span class="pill dash">❚❚ Paused</span></td><td class="muted">heat · resumes below 75 °C</td><td class="r m">22m 05s</td><td><span class="btn sm primary">▶</span> <span class="btn sm danger">Cancel</span></td></tr>
+      </table>
+    </section>
+    <footer class="status"></footer>
+  </div>
+</div>
+<p class="caption">At 1024 px the dataset, attempt and created columns fold away, as approved, and Pause and Resume become icon buttons with their names as accessible labels and tooltips.</p>
+</main>
+</body>
+</html>
