@@ -23,7 +23,9 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from safetensors.torch import load_file, save_file
+from safetensors.torch import save_file
+
+from stratal.train.weights import read_tensors
 
 FORMAT = 1
 _PREFIX = "ckpt-"
@@ -139,7 +141,10 @@ def load(meta_path: Path) -> Loaded:
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     if meta.get("format") != FORMAT:
         raise ValueError(f"checkpoint {meta_path.name} has format {meta.get('format')!r}")
-    tensors = load_file(str(meta_path.with_suffix(".safetensors")))
+    tensors = read_tensors(
+        meta_path.with_suffix(".safetensors"),
+        suggested_action="Cancel the run, which removes its checkpoint, and start it again.",
+    )
     checkpoint = Checkpoint(
         Position(**meta["position"]), str(meta["config_hash"]), list(meta["history"])
     )

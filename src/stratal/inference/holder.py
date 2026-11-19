@@ -39,7 +39,6 @@ from typing import Any, Literal, Protocol
 
 import torch
 from PIL import Image, UnidentifiedImageError
-from safetensors.torch import load_file
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from torch import nn
@@ -66,6 +65,7 @@ from stratal.train.config import ModelSpec
 from stratal.train.data import to_tensor
 from stratal.train.memory import TrainingState
 from stratal.train.reference import build_model
+from stratal.train.weights import read_tensors
 
 log = get_logger(__name__)
 
@@ -344,7 +344,9 @@ class ModelHolder:
                 )
             folder = self._settings.data_dir / current.weights_path
             meta = json.loads((folder / store.META_FILE).read_text(encoding="utf-8"))
-            tensors = load_file(str(folder / store.WEIGHTS_FILE))
+            tensors = read_tensors(
+                folder / store.WEIGHTS_FILE, suggested_action="Re-train the version (REG-2.7)."
+            )
         shape = tuple(meta["input_shape"])
         model = build_model(ModelSpec.model_validate(meta["model"]), shape, len(meta["classes"]))
         model.load_state_dict(tensors, strict=True)

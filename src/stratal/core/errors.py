@@ -126,6 +126,15 @@ class WeightsDeleted(StratalError):
     http_status = 409
 
 
+class WeightsUnreadable(StratalError):
+    """A weights or checkpoint file is not valid safetensors. It was refused before any of
+    it was used, and nothing in it ran (NFR-8)."""
+
+    code = "weights_unreadable"
+    title = "Weights unreadable"
+    http_status = 409
+
+
 class GpuBusy(StratalError):
     """Another process holds the GPU lease (BUG6, ADR-0006 rule 2)."""
 

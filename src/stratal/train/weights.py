@@ -15,9 +15,10 @@ from pathlib import Path
 from typing import Any
 
 import torch
+from safetensors import SafetensorError
 from safetensors.torch import load_file, save_file
 
-from stratal.core.errors import StratalError
+from stratal.core.errors import StratalError, WeightsUnreadable
 from stratal.registry.store import META_FILE, WEIGHTS_FILE
 
 
@@ -51,4 +52,21 @@ def load_into(model: torch.nn.Module, folder: Path) -> None:
             suggested_action="Check the data folder; base weights are never deleted by "
             "retention (REG-2.1).",
         )
-    model.load_state_dict(load_file(str(path)), strict=True)
+    model.load_state_dict(
+        read_tensors(path, suggested_action="Re-train the version (REG-2.7)."), strict=True
+    )
+
+
+def read_tensors(path: Path, *, suggested_action: str) -> dict[str, torch.Tensor]:
+    """Read a safetensors file, refusing anything else (NFR-8).
+
+    safetensors parses a JSON header and raw tensor bytes and never runs code, so a
+    pickle saved under a ``.safetensors`` name fails here before any of it is used.
+    """
+    try:
+        return load_file(str(path))
+    except SafetensorError as exc:
+        raise WeightsUnreadable(
+            f"{path.name} is not a valid safetensors file ({exc}); nothing in it was loaded.",
+            suggested_action=suggested_action,
+        ) from exc

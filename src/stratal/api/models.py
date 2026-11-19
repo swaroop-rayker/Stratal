@@ -240,7 +240,9 @@ class PredictRequest(BaseModel):
 @router.post(
     "/models/{version_id}/predict",
     response_model=schemas.Prediction,
-    responses={409: {"description": "gpu_busy, weights_deleted or a partial version"}},
+    responses={
+        409: {"description": "gpu_busy, weights_deleted, weights_unreadable or a partial version"}
+    },
 )
 def predict(
     version_id: str,

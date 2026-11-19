@@ -23,7 +23,6 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from safetensors.torch import load_file
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -104,7 +103,10 @@ def _one(
         else:
             assert base.weights_path is not None
             base_id = base.id
-            saved = load_file(str(data_dir / base.weights_path / store.WEIGHTS_FILE))
+            saved = weights.read_tensors(
+                data_dir / base.weights_path / store.WEIGHTS_FILE,
+                suggested_action="Restore the data folder from a backup.",
+            )
             from_base = _same(own_start.state_dict(), saved)
         if base is None and not dry_run:
             base_bytes = weights.write(

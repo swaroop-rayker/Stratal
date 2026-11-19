@@ -15,6 +15,7 @@ import os
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import IO, Any
 
 from sqlalchemy.orm import Session
@@ -38,6 +39,13 @@ EXIT_PAUSED = 4
 """The stage stopped at a safe point because the job was paused (RUN-1.2)."""
 EXIT_HANDOFF = 5
 """The stage asks to run again on another queue; it recorded which (RUN-1.9)."""
+
+FORBID_UNPICKLING_ENV = "STRATAL_TEST_FORBID_UNPICKLING"
+"""Test-only (NFR-8): a file path. When set, the stage runs with every unpickling refused
+(:func:`stratal.testing.no_pickle.forbid_unpickling`), and each attempt is appended to
+that file as it happens, so a test can prove a whole run unpickled nothing, even an
+attempt that was killed. Needs ``loader_workers: 0``,
+since loader workers pass batches between processes as pickles."""
 
 log = get_logger(__name__)
 
@@ -278,7 +286,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--stage", type=int, required=True)
     parser.add_argument("--attempt", type=int, required=True)
     args = parser.parse_args(argv)
-    return run(args.job, args.stage, args.attempt, get_settings())
+    report = os.environ.get(FORBID_UNPICKLING_ENV)
+    if not report:
+        return run(args.job, args.stage, args.attempt, get_settings())
+    from stratal.testing.no_pickle import forbid_unpickling
+
+    with contextlib.suppress(ImportError):  # imported first, so torch.load is patched too
+        import torch  # noqa: F401  # pyright: ignore[reportMissingImports, reportUnusedImport]
+    with forbid_unpickling(Path(report)):
+        return run(args.job, args.stage, args.attempt, get_settings())
 
 
 if __name__ == "__main__":

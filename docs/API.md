@@ -48,6 +48,7 @@ Every error response uses RFC 9457 problem details with media type `application/
 | `vram_insufficient` | 409 | A model load was refused: free VRAM is below its estimate (ADR-0006) |
 | `gpu_busy` | 409 | Another process holds the GPU lease; the detail names it (BUG6) |
 | `weights_deleted` | 409 | The version's weights were deleted by retention; re-train it (REG-2.7) |
+| `weights_unreadable` | 409 | A weights or checkpoint file is not valid safetensors (a planted pickle, say); it was refused before any of it was used. Re-train the version, or cancel the run and start it again (NFR-8) |
 | `model_not_pulled` | 409 | An allowed model that has not been downloaded; run time never downloads (NFR-7) |
 | `internal_error` | 500 | Anything unexpected. The detail carries the request ID, not a stack trace |
 

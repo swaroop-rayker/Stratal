@@ -684,6 +684,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Dialogs render outside the page, so their content is wrapped in the screen's class. The deletion dialog is one component for both screens (the lineage name on SCR-11, "delete N versions" on SCR-14). A drawer opened from the URL names where focus returns (`Drawer.returnFocus`).
 - **Why:** The mockups are the approved design; scoping keeps a screen's rules from leaking into others. Tailwind's `fixed` utility collided with a mockup class (`fixed` → `rules-note`), which is why screen classes are checked against utility names.
 
+**NFR-8 for training: a scan, a tripwire, and a typed refusal** (M8, NFR-8; `weights_unreadable` approved by the owner, 2026-11-19)
+- **What:** Nothing in `src/` or `scripts/` can unpickle; a whole training run and its resume, and a `/predict`, run with unpickling refused; a pickle planted as weights or a checkpoint fails with `weights_unreadable` (409) before any of it runs.
+- **How:** An AST scan for `pickle`/`torch.load`/`np.load(allow_pickle)`-style calls and pickle-based libraries. `stratal.testing.no_pickle.forbid_unpickling` arms a `pickle.find_class` audit hook and swaps `pickle.load(s)`, `pickle.Unpickler` (for a refusing subclass, since libraries subclass it on import) and `torch.load`; the child arms it for a whole stage when `STRATAL_TEST_FORBID_UNPICKLING` names a report file. Every safetensors read goes through `weights.read_tensors`, which turns `SafetensorError` into the typed error.
+- **Why:** NFR-8.AC1 is a code review checklist; the scan makes the review repeatable, and the tripwire proves no library unpickles behind the code's back. The planted-file test showed that an unreadable file reached clients as a 500 `internal_error` (ERRORS.md E-014).
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

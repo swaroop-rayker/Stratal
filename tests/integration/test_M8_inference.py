@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
+from sqlalchemy import text
 
 torch = pytest.importorskip("torch")
 
@@ -30,6 +31,7 @@ from stratal.runtime.gpu_lease import gpu_lease  # noqa: E402
 from stratal.testing.fake_models import FakeGpu  # noqa: E402
 from stratal.testing.harness import Runner  # noqa: E402
 from stratal.testing.labelled import labelled_split  # noqa: E402
+from stratal.testing.no_pickle import forbid_unpickling, plant_pickle  # noqa: E402
 from stratal.testing.pipeline import PipelineApi  # noqa: E402
 from stratal.train.memory import TrainingState  # noqa: E402
 
@@ -320,3 +322,38 @@ def test_REG_1_4_the_api_says_how_to_start_a_missing_service(
     problem = response.json()
     assert problem["code"] == "dependency_unavailable"
     assert "--profile gpu up -d inference" in problem["suggested_action"]
+
+
+def _weights_folder(version_id: str) -> Any:
+    with get_engine().connect() as connection:
+        path = connection.execute(
+            text("SELECT weights_path FROM model_versions WHERE id = :v"), {"v": version_id}
+        ).scalar_one()
+    return get_settings().data_dir / path
+
+
+def test_NFR_8_predict_loads_a_version_without_unpickling_anything(service: Service) -> None:
+    version = service.train()
+
+    with forbid_unpickling() as attempts:
+        response = service.predict(version)
+
+    assert response.status_code == 200, response.text
+    assert attempts == []
+
+
+def test_NFR_8_a_pickle_planted_as_a_versions_weights_is_refused_and_never_runs(
+    service: Service, tmp_path: Any
+) -> None:
+    version = service.train()
+    marker = tmp_path / "PWNED"
+    plant_pickle(_weights_folder(version) / "model.safetensors", marker)
+
+    response = service.predict(version)
+
+    assert response.status_code == 409, response.text
+    problem = response.json()
+    assert problem["code"] == "weights_unreadable", problem
+    assert "Re-train" in problem["suggested_action"]
+    assert not marker.exists(), "the payload never ran"
+    assert service.holder.status()["loaded"] is None, "nothing stayed loaded"

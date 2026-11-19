@@ -35,6 +35,16 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-014 — An unreadable weights file came back as a 500
+
+- **Date:** 2026-11-19
+- **Seen:** While writing M8's NFR-8 tests, a pickle saved as a version's `model.safetensors` made `/predict` return `500 internal_error` with safetensors' own message (`Error while deserializing header: header too large`). A run resuming from such a checkpoint failed as `stage_failed`.
+- **Where:** M8, every safetensors read: `train/weights.py`, `train/checkpoint.py`, `inference/holder.py`, `train/backfill.py`; NFR-8, ADR-0011.
+- **Cause:** `safetensors.torch.load_file` raises `SafetensorError`, which is not a typed error. Nothing ran (safetensors parses no code), but clients got no stable code and no suggested action.
+- **Fix:** `weights.read_tensors` turns it into `weights_unreadable` (409) with "Re-train the version" or "Cancel the run and start it again"; every read uses it.
+- **Guard:** `test_NFR_8_a_pickle_planted_as_weights_or_a_checkpoint_is_refused_and_never_runs`, `test_NFR_8_a_run_resuming_from_a_planted_checkpoint_fails_typed_and_runs_nothing` (`test_M8_nfr.py`), `test_NFR_8_a_pickle_planted_as_a_versions_weights_is_refused_and_never_runs` (`test_M8_inference.py`).
+- **Status:** fixed
+
 ### E-013 — A job killed by a signal could not be read through the API
 
 - **Date:** 2026-11-18
