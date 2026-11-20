@@ -73,7 +73,7 @@
 | Mockup | [`screens/SCR-09v2_v1.html`](../screens/SCR-09v2_v1.html), G2 approved 2026-11-20, frames A–D, G and H (the training entry). Fine-tuning (frames E, F and the study row in G, RUN-1.10) is not built yet and has its own Gate 3 |
 | Built | `frontend/src/screens/build/TrainDrawer.tsx` (new), `RunScreen.tsx`, `BuilderScreen.tsx`, `models/ModelsScreen.tsx`, `version/VersionScreen.tsx`; styles appended to `drawer.css`. Routes: `/runs/new?version=…&kind=network\|classical`; without a kind SCR-09 opens the drawer |
 | Checked | 2026-11-20, live on the running stack. The pane was about 600 px wide, so the drawer filled most of it: content, behaviour and contrast were checked through the page. SCR-11 → wine `ds_6448d354c9c6` → Classical → SCR-09 classical (keyboard only: arrow, Enter); SCR-03 on cifar10 `ds_f8e67211dd94` (Classical disabled with its reason) → *Open the builder* with both selects filled; coco20k `ds_005e3e700ee8` (nothing trainable); coco10k-captions `ds_53f72c42aa5a` (tokenize); SCR-03 on `ds_499bfa2ee3d3` (clean_table, button disabled); `/runs/new?version=ds_98c3fdfd7edc` with no kind; *Train again…* from `job_0066` (diabetes) → *Change…* → Classical with the warning |
-| Status | Awaiting the owner's sign-off |
+| Status | **Approved by the owner on 2026-11-20** ("Approved"), with the listed differences |
 
 ## Fixed during the check
 

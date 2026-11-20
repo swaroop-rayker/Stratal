@@ -639,7 +639,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 **Done when**
 
 - [ ] ADR-0020 (alerts and diagnostics) approved; the RUN-1.10 addendum to ADR-0014 and ADR-0015 approved (K3)
-- [ ] G1 revision for choosing the model kind after the split approved (SCREENS.md, Flow 4); its G2 approved with SCR-09 v2
+- [x] G1 revision for choosing the model kind after the split approved (SCREENS.md, Flow 4); its G2 approved with SCR-09 v2 (G1 v3 and G2 approved 2026-11-20)
 - [ ] G2 for SCR-09 v2, SCR-11 v2, SCR-03 v2 and SCR-13 approved, in that order (K11)
 - [ ] Semantic-duplicate threshold chosen by the owner from the coco10k measurement (K1)
 - [ ] `test_MON_2_6_*`: each alert fires in a simulated test
@@ -649,7 +649,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] `test_MON_4_4_*`: two runs' curves overlay
 - [ ] `test_MON_4_5_*` (P2, if time): trends shown for the last N jobs
 - [ ] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included
-- [ ] `test_UI_2_1_*` (training entry, Vitest): a tabular split reaches SCR-09's classical mode without SCR-08; a non-tabular split shows *Classical* greyed with its reason; SCR-09 opened without a kind goes to step 2; G3 passed with SCR-09 v2
+- [x] `test_UI_2_1_*` (training entry, Vitest): a tabular split reaches SCR-09's classical mode without SCR-08; a non-tabular split shows *Classical* greyed with its reason; SCR-09 opened without a kind goes to step 2; G3 passed with SCR-09 v2 (the entry's G3 approved 2026-11-20; fine-tuning's G3 follows with RUN-1.10)
 - [ ] `test_UI_2_2_*`: charts for any dataset version
 - [ ] `test_EVAL_1_3_*`: three or more models compared in one view
 - [ ] `test_RUN_1_10_*`: a run from a version starts at its weights and records it as parent; frozen layers are unchanged; a shape mismatch is refused unless the head is reset
