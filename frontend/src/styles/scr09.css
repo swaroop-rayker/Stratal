@@ -51,3 +51,37 @@
 .scr09 .field > label { display: flex; align-items: center; gap: var(--sp-2); }
 .scr09 .field .type { font: var(--fs-11) var(--font-mono); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); }
 .scr09 .field .checks { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-13); color: var(--text-primary); }
+/* M10 study part, copied from docs/design/screens/SCR-09hpo_v1.html (G2 approved). */
+.scr09 .tune { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 6px; margin-left: auto; border: var(--bw) solid var(--border); border-radius: var(--r-sm); background: transparent; color: var(--text-muted); font: var(--fw-medium) var(--fs-11) var(--font-ui); cursor: pointer; }
+.scr09 .tune svg.i { width: 12px; height: 12px; }
+.scr09 .tune[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); }
+.scr09 .field > label { flex-wrap: wrap; row-gap: 2px; }
+.scr09 .field.tuned .input { border-color: var(--accent); }
+.scr09 .field small .bad, .scr09 .field small.bad { color: var(--danger); display: inline-flex; gap: var(--sp-1); align-items: center; }
+.scr09 .range { display: flex; gap: var(--sp-1); align-items: center; }
+.scr09 .range .input { width: auto; flex: 1; min-width: 0; }
+.scr09 .range .input.step { flex: 0 0 56px; }
+.scr09 .range .sep { color: var(--text-muted); font-size: var(--fs-12); }
+.scr09 .range .select { height: var(--h-md); width: auto; }
+.scr09 .chips { display: flex; gap: var(--sp-1); align-items: center; flex-wrap: wrap; min-height: var(--h-md); padding: 0 var(--sp-1); border: var(--bw) solid var(--accent); border-radius: var(--r-sm); background: var(--surface-sunken); }
+.scr09 .chip { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 6px; border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.scr09 .chip svg.i { width: 10px; height: 10px; color: var(--text-muted); }
+.scr09 .chip.add { border-style: dashed; color: var(--text-muted); font-family: var(--font-ui); width: 64px; }
+.scr09 .chip-x, .scr09 .chip-mode { background: none; border: 0; padding: 0; color: var(--text-muted); cursor: pointer; font: var(--fs-11) var(--font-ui); }
+.scr09 .chip-mode { margin-left: auto; padding: 0 var(--sp-1); }
+.scr09 .card > header .group-btns { margin-left: var(--sp-2); }
+.scr09 .sp-head { font: var(--fw-semibold) var(--fs-11) var(--font-ui); letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.scr09 .t.space td { height: 36px; vertical-align: middle; }
+.scr09 .t td .err-line { display: flex; gap: var(--sp-1); align-items: center; color: var(--danger); font-size: var(--fs-11); white-space: normal; }
+.scr09 .t td .err-line svg.i { width: 11px; height: 11px; }
+.scr09 .t tr.bad td { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--danger) 45%, transparent); }
+.scr09 .sform { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3) var(--sp-4); }
+.scr09 .field.small { max-width: 240px; }
+.scr09 .placeholder { display: flex; gap: var(--sp-2); align-items: center; color: var(--text-muted); }
+.scr09 .popover { width: 520px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-3); }
+.scr09 .popover > header { display: flex; gap: var(--sp-2); align-items: center; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+.scr09 .popover > header .input { width: 160px; }
+.scr09 .popover .note { padding: var(--sp-2) var(--sp-3); margin: 0; }
+.scr09 .popover tr.clickable { cursor: pointer; }
+.scr09 .popover td.p { font-family: var(--font-mono); font-size: var(--fs-12); text-align: right; }
+.scr09 .spacer { flex: 1; }

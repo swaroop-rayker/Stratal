@@ -876,6 +876,17 @@ def stage_view(stage: JobStage) -> dict[str, Any]:
     }
 
 
+def _study_link(job: Job) -> dict[str, Any] | None:
+    """An HPO study's job, or one of its trials: which study, and the trial's number."""
+    if job.kind not in ("hpo_study", "hpo_trial") or not job.spec.get("study_id"):
+        return None
+    return {
+        "id": job.spec["study_id"],
+        "trial": job.spec.get("trial"),
+        "study_job": job.spec.get("study_job"),
+    }
+
+
 def job_view(session: Session, job: Job) -> dict[str, Any]:
     """A job with its stages, as the API returns it."""
     stages = stages_of(session, job.id)
@@ -895,6 +906,7 @@ def job_view(session: Session, job: Job) -> dict[str, Any]:
         "output_version_id": job.output_version_id,
         "model_version_id": version.id if version is not None else None,
         "model_lineage_id": version.lineage_id if version is not None else None,
+        "study": _study_link(job),
         "error": job.error,
         "summary": job.summary,
         "created_at": _iso(job.created_at),

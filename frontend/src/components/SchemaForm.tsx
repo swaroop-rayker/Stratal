@@ -13,11 +13,23 @@ import type {
   WidgetProps,
 } from "@rjsf/utils";
 import validator from "@rjsf/validator-ajv8";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 
 import { Icon } from "./ui";
 
 type Values = Record<string, unknown>;
+
+/** Per-field additions a page may make (SCR-09's Tune toggle and range, HPO-1.1): a control
+ * after the label, an input that replaces the field's own, and the helper text. */
+export interface FieldDecor {
+  label?: (name: string, schema: RJSFSchema) => ReactNode;
+  replace?: (name: string, schema: RJSFSchema) => ReactNode;
+  helper?: (name: string, schema: RJSFSchema) => ReactNode;
+  className?: (name: string) => string | null;
+  /** Changes whenever what the functions above return changes: rjsf compares its props
+   * deeply but ignores functions, so without it the fields would not re-render. */
+  key: string;
+}
 
 function typeName(schema: RJSFSchema): string {
   if (schema.enum) return "enum";
@@ -52,20 +64,25 @@ function helper(schema: RJSFSchema): string {
 }
 
 function FieldTemplate(props: FieldTemplateProps) {
-  const { id, schema, children, rawErrors, hidden, fieldPathId } = props;
+  const { id, schema, children, rawErrors, hidden, fieldPathId, registry } = props;
   if (fieldPathId.path.length === 0) return children; // the root object
   if (hidden || schema.readOnly) return null; // set by the system, not by the user
   const name = String(fieldPathId.path[fieldPathId.path.length - 1]);
-  const error = rawErrors?.[0];
+  const decor = (registry.formContext as { decor?: FieldDecor } | undefined)?.decor;
+  const replaced = decor?.replace?.(name, schema) ?? null;
+  const own = decor?.helper?.(name, schema) ?? null;
+  const error = replaced ? undefined : rawErrors?.[0];
+  const extra = decor?.className?.(name);
   return (
-    <div className={error ? "field error" : "field"}>
+    <div className={["field", error ? "error" : null, extra].filter(Boolean).join(" ")}>
       <label htmlFor={id}>
         <span className="mono">{name}</span>
         <span className="type">{typeName(schema)}</span>
+        {decor?.label?.(name, schema)}
       </label>
-      {children}
+      {replaced ?? children}
       <small id={`${id}__help`}>
-        {error ? (
+        {own !== null ? own : error ? (
           <>
             <Icon name="x" style={{ width: 12, height: 12 }} />
             {error}
@@ -195,12 +212,13 @@ function uiSchemaFor(schema: RJSFSchema, placeholders: Record<string, string> = 
   return ui;
 }
 
-export function SchemaForm({ schema, values, onChange, serverErrors, placeholders }: {
+export function SchemaForm({ schema, values, onChange, serverErrors, placeholders, decor }: {
   schema: RJSFSchema;
   values: Values;
   onChange: (values: Values, valid: boolean) => void;
   serverErrors?: Record<string, string>;
   placeholders?: Record<string, string>;
+  decor?: FieldDecor;
 }) {
   const extra: ErrorSchema = {};
   for (const [field, message] of Object.entries(serverErrors ?? {})) {
@@ -223,6 +241,7 @@ export function SchemaForm({ schema, values, onChange, serverErrors, placeholder
         })
       }
       extraErrors={extra}
+      formContext={{ decor, decorKey: decor?.key }}
       templates={{ FieldTemplate, ObjectFieldTemplate, BaseInputTemplate }}
       widgets={{ SelectWidget, CheckboxWidget, CheckboxesWidget }}
       onChange={(event) => {

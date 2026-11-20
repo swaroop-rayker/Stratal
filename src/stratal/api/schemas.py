@@ -65,6 +65,12 @@ class JobStage(_Model):
     error: JobError | None
 
 
+class JobStudy(_Model):
+    id: str
+    trial: int | None = None
+    study_job: str | None = None
+
+
 class Job(_Model):
     id: str
     kind: str
@@ -82,6 +88,8 @@ class Job(_Model):
     model_version_id: str | None = None
     """A training job's registry version, partial or trained (REG-1.1); null otherwise."""
     model_lineage_id: str | None = None
+    study: JobStudy | None = None
+    """For an HPO study's job or one of its trials (M10): the study, and the trial's number."""
     """That version's lineage, for a link to SCR-11."""
     error: JobError | None
     summary: Json | None
@@ -769,3 +777,76 @@ class Prediction(_Model):
     load_ms: float | None
     """Time to load the model, when this request loaded it."""
     total_ms: float
+
+
+# ------------------------------------------------------------------ studies (M10, HPO-1.5)
+
+
+class StudyCounts(_Model):
+    started: int
+    complete: int
+    pruned: int
+    failed: int
+    running: int
+    interrupted: int
+
+
+class StudyBest(_Model):
+    trial: int
+    value: float | None
+    params: dict[str, Any]
+
+
+class Study(_Model):
+    """An HPO study (API.md §3.12): what SCR-10's header, best card, importance and test
+    evaluation read."""
+
+    id: str
+    job_id: str
+    kind: Literal["classical", "deep"]
+    dataset_version: str
+    objective: str
+    direction: Literal["maximize", "minimize"]
+    limits: dict[str, int]
+    pruning: bool
+    cv_folds: int | None
+    seed: int
+    space: list[dict[str, Any]]
+    base: dict[str, Any]
+    state: Literal["running", "closed", "completed", "cancelled", "failed"]
+    ended_by: Literal["n_trials", "timeout"] | None
+    elapsed_s: float
+    trials: StudyCounts
+    best: StudyBest | None
+    importance: dict[str, Any] | None
+    best_version_id: str | None
+    test_metrics: dict[str, Any] | None
+    test_evaluated_at: str | None
+    created_at: str | None
+    finished_at: str | None
+
+
+class StudyList(_Model):
+    items: list[Study]
+
+
+class StudyTrial(_Model):
+    """One trial (HPO-1.3): its state in words, value, the step it reached and why it was
+    pruned or failed, each epoch's or fold's value."""
+
+    number: int
+    state: Literal["running", "complete", "pruned", "failed"]
+    params: dict[str, Any]
+    value: float | None
+    step: int | None
+    prune_reason: Literal["median", "budget"] | None
+    code: str | None
+    intermediate: list[list[float]]
+    duration_s: float | None
+    job_id: str | None
+    started_at: str | None
+    finished_at: str | None
+
+
+class StudyTrialList(_Model):
+    items: list[StudyTrial]

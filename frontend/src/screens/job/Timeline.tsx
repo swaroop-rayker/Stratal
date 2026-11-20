@@ -24,6 +24,7 @@ function detail(stage: JobStage, seconds: number | null): string {
   if (stage.status === "pending") return "pending";
   if (stage.status === "queued") return "queued";
   if (stage.status === "skipped") return "not run";
+  if (stage.status === "waiting") return "waiting for its trial";
   if (stage.status === "completed" && stage.cache_hit) return `cached · ${duration(seconds)}`;
   const pct = stage.status === "running" ? stagePercent(stage.step, stage.total) : null;
   if (stage.status === "failed" && stage.step !== null && stage.total !== null) {

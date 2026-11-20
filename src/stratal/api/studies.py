@@ -15,25 +15,26 @@ from typing import Any
 
 from fastapi import APIRouter, Query
 
+from stratal.api import schemas
 from stratal.api.jobs import Db
 from stratal.hpo import store
 
 router = APIRouter(tags=["studies"])
 
 
-@router.get("/studies")
+@router.get("/studies", response_model=schemas.StudyList)
 def list_studies(session: Db, limit: int = Query(50, ge=1, le=200)) -> dict[str, Any]:
     """Studies, newest first."""
     return {"items": store.list_studies(session, limit=limit)}
 
 
-@router.get("/studies/{study_id}")
+@router.get("/studies/{study_id}", response_model=schemas.Study)
 def get_study(study_id: str, session: Db) -> dict[str, Any]:
     """A study (HPO-1.5)."""
     return store.study_view(session, store.get_study(session, study_id))
 
 
-@router.get("/studies/{study_id}/trials")
+@router.get("/studies/{study_id}/trials", response_model=schemas.StudyTrialList)
 def get_trials(study_id: str, session: Db) -> dict[str, Any]:
     """Its trials with their states, values, steps and why they were pruned (HPO-1.3)."""
     store.get_study(session, study_id)

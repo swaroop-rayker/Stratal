@@ -751,6 +751,7 @@ Newest entries go at the bottom of their section. All entries below date from th
 **Studies of networks** (M10, HPO-1.2 to HPO-1.4, ADR-0018 rules 5 to 8) — [ADR-0018](decisions/ADR-0018-hpo-execution.md)
 - **What:** A network's study runs each trial as its own `hpo_trial` training job and advances itself in short CPU steps between them; only its best trial is registered, and tested once.
 - **How:** The `study` stage settles the trial that ended, asks Optuna for the next configuration, checks it like a normal request, creates the trial job and waits (stage `waiting`); the trial's supervisor queues the next step, and the watchdog covers a lost one. The trial reports each epoch to the median pruner and the budget clock, and keeps its weights in its job folder until the study decides.
+- **Also:** TPE is seeded per process from the study's seed and the trials already asked, so a new process continues the draws rather than repeating them; Optuna's storage opens under an advisory lock, so two studies can start at once.
 - **Why:** A process waiting hours for trials would hold one of two CPU slots (rule 5). A trial as an ordinary training job keeps checkpoints, pause, thermal pause and out-of-memory handling without a second copy. Keeping trial weights out of the registry keeps the registry to models someone chose.
 
 ## GPU

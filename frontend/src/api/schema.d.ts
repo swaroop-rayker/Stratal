@@ -1765,6 +1765,7 @@ export interface components {
             model_version_id?: string | null;
             /** Model Lineage Id */
             model_lineage_id?: string | null;
+            study?: components["schemas"]["JobStudy"] | null;
             error: components["schemas"]["JobError"] | null;
             /** Summary */
             summary: {
@@ -1857,6 +1858,15 @@ export interface components {
             /** Finished At */
             finished_at: string | null;
             error: components["schemas"]["JobError"] | null;
+        };
+        /** JobStudy */
+        JobStudy: {
+            /** Id */
+            id: string;
+            /** Trial */
+            trial?: number | null;
+            /** Study Job */
+            study_job?: string | null;
         };
         /** LSTM */
         LSTM: {
@@ -3270,6 +3280,107 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * Study
+         * @description An HPO study (API.md §3.12): what SCR-10's header, best card, importance and test
+         *     evaluation read.
+         */
+        Study: {
+            /** Id */
+            id: string;
+            /** Job Id */
+            job_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "classical" | "deep";
+            /** Dataset Version */
+            dataset_version: string;
+            /** Objective */
+            objective: string;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "maximize" | "minimize";
+            /** Limits */
+            limits: {
+                [key: string]: number;
+            };
+            /** Pruning */
+            pruning: boolean;
+            /** Cv Folds */
+            cv_folds: number | null;
+            /** Seed */
+            seed: number;
+            /** Space */
+            space: {
+                [key: string]: unknown;
+            }[];
+            /** Base */
+            base: {
+                [key: string]: unknown;
+            };
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "running" | "closed" | "completed" | "cancelled" | "failed";
+            /** Ended By */
+            ended_by: ("n_trials" | "timeout") | null;
+            /** Elapsed S */
+            elapsed_s: number;
+            trials: components["schemas"]["StudyCounts"];
+            best: components["schemas"]["StudyBest"] | null;
+            /** Importance */
+            importance: {
+                [key: string]: unknown;
+            } | null;
+            /** Best Version Id */
+            best_version_id: string | null;
+            /** Test Metrics */
+            test_metrics: {
+                [key: string]: unknown;
+            } | null;
+            /** Test Evaluated At */
+            test_evaluated_at: string | null;
+            /** Created At */
+            created_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+        };
+        /** StudyBest */
+        StudyBest: {
+            /** Trial */
+            trial: number;
+            /** Value */
+            value: number | null;
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+        };
+        /** StudyCounts */
+        StudyCounts: {
+            /** Started */
+            started: number;
+            /** Complete */
+            complete: number;
+            /** Pruned */
+            pruned: number;
+            /** Failed */
+            failed: number;
+            /** Running */
+            running: number;
+            /** Interrupted */
+            interrupted: number;
+        };
+        /** StudyList */
+        StudyList: {
+            /** Items */
+            items: components["schemas"]["Study"][];
+        };
+        /**
          * StudyRequest
          * @description ``POST /jobs`` with ``kind: hpo_study``: a base run, what to tune, the limits.
          */
@@ -3328,6 +3439,47 @@ export interface components {
              * @default 0
              */
             seed: number;
+        };
+        /**
+         * StudyTrial
+         * @description One trial (HPO-1.3): its state in words, value, the step it reached and why it was
+         *     pruned or failed, each epoch's or fold's value.
+         */
+        StudyTrial: {
+            /** Number */
+            number: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "running" | "complete" | "pruned" | "failed";
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /** Value */
+            value: number | null;
+            /** Step */
+            step: number | null;
+            /** Prune Reason */
+            prune_reason: ("median" | "budget") | null;
+            /** Code */
+            code: string | null;
+            /** Intermediate */
+            intermediate: number[][];
+            /** Duration S */
+            duration_s: number | null;
+            /** Job Id */
+            job_id: string | null;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+        };
+        /** StudyTrialList */
+        StudyTrialList: {
+            /** Items */
+            items: components["schemas"]["StudyTrial"][];
         };
         /** System */
         System: {
@@ -5486,9 +5638,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["StudyList"];
                 };
             };
             /** @description Validation Error */
@@ -5519,9 +5669,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Study"];
                 };
             };
             /** @description Validation Error */
@@ -5552,9 +5700,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["StudyTrialList"];
                 };
             };
             /** @description Validation Error */

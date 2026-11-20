@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 import optuna
+from sqlalchemy import func, select
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
@@ -69,6 +70,43 @@ def storage_url() -> str:
     return url.update_query_dict({"options": "-csearch_path=optuna"}).render_as_string(
         hide_password=False
     )
+
+
+STORAGE_LOCK = "stratal:optuna-storage"
+
+
+def sampler(engine: Any, study_id: str, seed: int) -> optuna.samplers.TPESampler:
+    """TPE, seeded for this process from the study's seed and how many trials it has asked.
+
+    A new process starts its random generator again. Seeded with the study's seed alone,
+    each step of a network study (one process per trial) and each resumed classical study
+    drew the same configuration again during TPE's random start-up. Folding in the trial
+    count keeps the study reproducible (same seed, same history, same suggestions) while
+    every process draws on from where the last one stopped."""
+    import random
+
+    with Session(engine) as session:
+        asked = session.scalar(
+            select(func.count()).select_from(StudyTrial).where(StudyTrial.study_id == study_id)
+        )
+    return optuna.samplers.TPESampler(seed=random.Random(f"{seed}:{asked or 0}").getrandbits(32))
+
+
+def rdb_storage() -> optuna.storages.RDBStorage:
+    """Optuna's storage, opened under a PostgreSQL advisory lock. The first opening creates
+    Optuna's tables and types in schema ``optuna``; two studies starting at once would both
+    try, and one would fail on a duplicate type. The lock makes them take turns."""
+    from sqlalchemy import text
+
+    from stratal.db.engine import get_engine
+
+    with get_engine().connect() as connection:
+        key = {"key": STORAGE_LOCK}
+        connection.execute(text("SELECT pg_advisory_lock(hashtextextended(:key, 0))"), key)
+        try:
+            return optuna.storages.RDBStorage(storage_url())
+        finally:
+            connection.execute(text("SELECT pg_advisory_unlock(hashtextextended(:key, 0))"), key)
 
 
 def suggest(trial: optuna.Trial, marker: Marker) -> Any:
@@ -149,9 +187,9 @@ class ClassicalStudy:
         )
         return optuna.create_study(
             study_name=self.study_id,
-            storage=optuna.storages.RDBStorage(storage_url()),
+            storage=rdb_storage(),
             direction=self.direction,
-            sampler=optuna.samplers.TPESampler(seed=self.seed),
+            sampler=sampler(self.engine, self.study_id, self.seed),
             pruner=pruner,
             load_if_exists=True,
         )
@@ -427,9 +465,9 @@ class DeepStudy:
         optuna.logging.set_verbosity(optuna.logging.WARNING)
         return optuna.create_study(
             study_name=self.study_id,
-            storage=optuna.storages.RDBStorage(storage_url()),
+            storage=rdb_storage(),
             direction=self.direction,
-            sampler=optuna.samplers.TPESampler(seed=self.seed),
+            sampler=sampler(self.engine, self.study_id, self.seed),
             pruner=pruner(self.pruning, warmup=WARMUP_EPOCHS),
             load_if_exists=True,
         )

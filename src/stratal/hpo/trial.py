@@ -60,12 +60,12 @@ class TrialLink:
 
     def _optuna(self) -> optuna.Trial:
         if self._trial is None:
-            from stratal.hpo.runner import storage_url
+            from stratal.hpo.runner import rdb_storage
 
             optuna.logging.set_verbosity(optuna.logging.WARNING)
             study = optuna.load_study(
                 study_name=self.study_id,
-                storage=optuna.storages.RDBStorage(storage_url()),
+                storage=rdb_storage(),
                 pruner=pruner(self.pruning, warmup=WARMUP_EPOCHS),
             )
             trial_id = study._storage.get_trial_id_from_study_id_trial_number(

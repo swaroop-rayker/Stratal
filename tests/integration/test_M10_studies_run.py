@@ -182,3 +182,23 @@ def test_HPO_1_5_the_trial_table_best_config_and_importance_are_served(
     assert all(t["duration_s"] is not None for t in trials)
     depth = best["classical"]["model"]["params"]["max_depth"]
     assert depth == study["best"]["params"]["/classical/model/params/max_depth"]
+
+
+def test_HPO_1_2_two_studies_starting_at_once_both_open_optunas_storage() -> None:
+    """The first opening creates Optuna's tables and types; two at once used to race on
+    ``CREATE TYPE studydirection`` and fail one study (found on the dev stack, 2026-11-20)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from sqlalchemy import text
+
+    from stratal.hpo.runner import rdb_storage
+
+    with get_engine().begin() as connection:  # the test database's schema, empty again
+        connection.execute(text("DROP SCHEMA IF EXISTS optuna CASCADE"))
+        connection.execute(text("CREATE SCHEMA optuna"))
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        opened = list(pool.map(lambda _i: rdb_storage(), range(3)))
+
+    assert len(opened) == 3
+    assert opened[0].get_all_studies() == []

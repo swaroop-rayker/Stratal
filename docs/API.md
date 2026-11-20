@@ -248,7 +248,7 @@ Job (abridged):
 }
 ```
 
-A job's and a stage's `error` is `{code, reason, suggested_action, detail}`; `detail` is text or an object of facts, such as `{"signal": "SIGKILL", "peak_rss_mb": 2410, "limit_mb": 2560}` for a killed process (E-013). A training job also has `model_version_id` and `model_lineage_id` (§3.9), null for other kinds.
+A job's and a stage's `error` is `{code, reason, suggested_action, detail}`; `detail` is text or an object of facts, such as `{"signal": "SIGKILL", "peak_rss_mb": 2410, "limit_mb": 2560}` for a killed process (E-013). A training job also has `model_version_id` and `model_lineage_id` (§3.9), null for other kinds. Since M10 a job also has `study`: for an `hpo_study` job `{id}` and for an `hpo_trial` job `{id, trial, study_job}` (§3.12), null for other kinds.
 
 ### 3.4 Activity log and telemetry
 
@@ -358,7 +358,7 @@ Built in M5 (2026-11-16). Details:
 | `GET /studies?limit=` | Studies, newest first | `200 {items}` |
 | `GET /studies/{id}` | `{id, job_id, kind, dataset_version, objective, direction, limits, pruning, cv_folds, seed, space, base, state, ended_by, elapsed_s, trials: {started, complete, pruned, failed, running, interrupted}, best: {trial, value, params} \| null, importance, best_version_id, test_metrics, test_evaluated_at, created_at, finished_at}` | `200` |
 | `GET /studies/{id}/trials` | `{items: [{number, state, params, value, step, prune_reason, code, intermediate: [[step, value]], duration_s, job_id, started_at, finished_at}]}`, oldest first | `200` |
-| `GET /studies/{id}/best-config` | The base with the best trial's values set, for SCR-09 to prefill (HPO-1.5); `404` before a trial completes | `200` |
+| `GET /studies/{id}/best-config` | The base with the best trial's values set, for SCR-09 to prefill (`/runs/new?study=`, HPO-1.5); `404` before a trial completes | `200` |
 
 - **States:** a study is `running`, then `closed` (no further trial; `ended_by` `n_trials` or `timeout`), then `completed` once its best configuration is registered (`best_version_id`) and tested once (`test_metrics`, HPO-1.4); or `cancelled`. For a network the registration happens when the study closes and the test in `test_eval`. A trial is `complete`, `pruned` (`prune_reason` `median` or `budget`, `step` the fold or epoch it stopped at), `failed` (`code` `invalid_combination` or `over_vram`, never trained; a trial job's error code, such as `gpu_oom`; `cancelled`; or `interrupted` by a pause or crash, which does not count against `n_trials`) or `running`.
 - **`importance`** is `{method: "fanova", values: {path: share}}`, or `{reason}` when it cannot be computed (one field tuned, fewer than two complete trials, or every trial scoring the same).

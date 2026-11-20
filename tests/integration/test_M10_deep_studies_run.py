@@ -146,6 +146,8 @@ def test_HPO_1_2_a_network_study_runs_each_trial_as_a_job_and_registers_only_its
     assert [j.state for j in trial_jobs] == ["completed"] * 4
     assert [t["job_id"] for t in trials] == [j.id for j in trial_jobs]
     assert all(len(t["intermediate"]) == 3 for t in trials), "one value per epoch"
+    drawn = {tuple(sorted(t["params"].items())) for t in trials}
+    assert len(drawn) == 4, "each step, a new process, draws a new configuration"
     with Session(get_engine()) as session:
         registered = session.scalars(
             select(ModelVersion).where(ModelVersion.job_id.in_([j.id for j in trial_jobs]))
