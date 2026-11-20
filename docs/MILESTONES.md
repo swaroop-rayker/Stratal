@@ -28,7 +28,7 @@
 | M8 | Training runtime and registry | 2 | L | Done 2026-11-19 |
 | M9 | Model builder | 2 | L | Done 2026-11-19 |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
-| M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M11 | Dashboards and monitoring completion | 2 | L | In progress (kickoff decisions K1–K12, 2026-11-20) |
 | M11b | Tabular transforms | 2 | M | Not started (added at the owner's request 2026-11-19; outline) |
 | M12 | LLM serving and RAG | 3 | L | Outline |
 | M13 | Router, tools, caption refinement | 3 | L | Outline |
@@ -598,7 +598,24 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Size** L · **Branch** `m11-phase2-acceptance` · **Serves** MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, UI-2.1, UI-2.2, EVAL-1.3, DATA-3.5, RUN-1.10; DATA-2.3 and DATA-4.8 (phase 1, P2, moved from M7); the phase-2 done-definition
 
-**Before starting:** G2 for SCR-13, SCR-03 v2 and SCR-11 v2 approved. The alerts and diagnostics add work to `monitor`, so NFR-11 is measured again here.
+**Decided by the owner at M11's kickoff (2026-11-20, "Accept all twelve"):**
+
+| # | Decision |
+|---|---|
+| K1 | DATA-2.3 and DATA-4.8 are written by the agent (ADR-0012's log). The threshold is proposed from a measurement on coco10k in `worker-gpu`: planted crops of one image against unrelated pairs and against pairs of one category; for each candidate threshold the clusters, the rows in them and the largest cluster (union-find chains pairs, so a low threshold can merge a large share of the rows and upset the split's proportions). If that happens, an ADR-0013 amendment is proposed rather than a workaround |
+| K2 | DATA-4.8.AC1's "one scene from different angles" is a synthetic pair: two overlapping crops of one COCO photo, one warped in perspective, checked far apart by pHash and close by CLIP. No download. The owner may add two of their own photos of one scene under `sources/` for a live check |
+| K3 | A new ADR-0020, alerts and diagnostics (MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4); RUN-1.10 as an addendum to ADR-0014 and ADR-0015. Each is approved before what it covers is built |
+| K4 | Alerts are evaluated in `monitor` (NFR-13: if it crashes, alerts stop and jobs go on). Temperature pauses (RUN-1.6), no progress marks the job stalled (RUN-1.7), VRAM > 90 % and RAM > 85 % warn only; an out-of-memory failure after a VRAM warning is linked to it (the smaller-batch action, RUN-1.5). An alert fires after 5 s over its threshold, once per crossing, and re-arms 5 points below it. With no job running it is stored without one and shown on SCR-13. An action records the alert that caused it (a schema change, DATA_MODEL.md) |
+| K5 | `process_samples` gains the job process's CPU in cores (a migration). `monitor` compares each running stage's expected resource (the MON-3 table) with what it observes over 30 s; three first rules for a GPU stage with the GPU under 30 %: the job's CPU saturated → data loading is the bottleneck, increase DataLoader workers; high disk reads → disk is the bottleneck; everything low → small batches or waiting on synchronisation. A diagnostic is a WARN event with its reason and action (in SCR-04's log), and SCR-13 has a panel for them |
+| K6 | MON-3.3 shows PyTorch's allocated memory (the process's own) and, beside it, the card's NVML figure |
+| K7 | MON-4.4 aligns two runs by time since start with pauses removed; two training runs can also be aligned by epoch |
+| K8 | EVAL-1.3 compares only versions tested on the same split version, across lineages, classical and network alike; others are greyed with the reason. No new evaluation jobs in M11. Accuracy with a Wilson 95 % interval, per-class F1 side by side. No paired test (it needs per-item predictions, which are not stored) |
+| K9 | RUN-1.10: the new version joins the lineage its key gives (same spec, dataset, shape and classes: the same lineage; otherwise a new one whose parent is in another). Retention protects any version that is the parent of a version with weights. Layers are frozen by spec node ID, and a frozen layer is in eval mode, so its BatchNorm statistics stay too. The optimizer starts fresh. One validation pass before the first step, logged as epoch 0 (AC1). Tables reuse the parent's fitted preprocessing; texts are refused unless the vocabulary is identical, naming the mismatch; classical models are refused; in a study `init_from` is a fixed field, not tunable |
+| K10 | UI-2.2's distributions and DATA-3.5's diff are computed by the API from the manifests on request, cached by version ID. The diff compares two versions of one dataset by `row_key`; "changed" names the fields that differ. DATA-3.5 and MON-4.5 (P2) stay "if time" |
+| K11 | G2 order: SCR-09 v2 (fine-tuning form), SCR-11 v2 (comparison, the parent, *Try it* for table records and texts, M10's open point 2), SCR-03 v2 (distributions, diff, semantic clusters, models trained from the version: UI-2.1's training part), SCR-13. Low-fi, then hi-fi, one screen at a time. SCR-14's monitoring section and SCR-04's alert and diagnostic lines are addenda checked at G3 without a mockup |
+| K12 | `inference` 1.0 → 1.25 GB and `worker-gpu` 3.5 → 3.25 GB (the sum stays 9,024 MiB; both peaks checked in the acceptance run). Phase-2 acceptance: the Small CNN template on the CIFAR-10 split, 10 epochs, through the API with the spec SCR-08 produces (SCR-08 itself checked at the demo); NFR-1 and NFR-2 during training; NFR-4 by two runs with one seed, test accuracy within 1 percentage point; NFR-5 by killing the worker mid-run, at most 10 minutes lost; a README section. NFR-11 rerun with `-Bench`, after asking for a quiet machine. M10's open point 3 (a study's stage duration on SCR-04) fixed as BUG8 with `test_BUG8_*`; open point 4 (the pruning test that failed once) watched in every `check.ps1 -Gpu`. No new dependency is expected; any that arises is asked for first |
+
+**Before starting:** G2 for SCR-09 v2 (RUN-1.10), SCR-13, SCR-03 v2 and SCR-11 v2 approved. The alerts and diagnostics add work to `monitor`, so NFR-11 is measured again here.
 
 **Scope**
 
@@ -615,6 +632,9 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
+- [ ] ADR-0020 (alerts and diagnostics) approved; the RUN-1.10 addendum to ADR-0014 and ADR-0015 approved (K3)
+- [ ] G2 for SCR-09 v2, SCR-11 v2, SCR-03 v2 and SCR-13 approved, in that order (K11)
+- [ ] Semantic-duplicate threshold chosen by the owner from the coco10k measurement (K1)
 - [ ] `test_MON_2_6_*`: each alert fires in a simulated test
 - [ ] `test_MON_2_7_*`: an alert and its action are shown together in the event log
 - [ ] `test_MON_3_2_*`: the diagnostic fires in a simulated slow-loader test
@@ -631,6 +651,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] G3 for SCR-13, SCR-03 v2 and SCR-11 v2
 - [ ] Phase-2 acceptance (`tests/acceptance`): a CNN built on SCR-08, trained on a dataset version, test metrics on SCR-11; NFR-1, NFR-2, NFR-4 and NFR-5 measured for training
 - [ ] `test_NFR_11_*` rerun with alerts and diagnostics on
+- [ ] `test_BUG8_*`: a study job's stage duration on SCR-04 covers all its steps, not the last (M10's open point 3)
+- [ ] `inference` at 1.25 GB and `worker-gpu` at 3.25 GB, both peaks measured in the acceptance run (K12)
 - [ ] Meta-test green: every phase-2 P0 (32) has a passing ID-named test
 - [ ] M12–M13 detailed and approved by the owner
 - [ ] Owner's OK to merge; tag `phase-2`
