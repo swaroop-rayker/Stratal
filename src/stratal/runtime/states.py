@@ -89,3 +89,8 @@ def transition(session: Session, job: Job, to_state: str, *, reason: str, actor:
         job.finished_at = None
     session.flush()
     _log_change(session, job, from_state, reason, actor)
+    if job.kind == "hpo_study" and to_state in ("cancelled", "failed"):
+        # The study row and its current trial follow the study's job (ADR-0018 rule 5).
+        from stratal.hpo.control import study_job_ended
+
+        study_job_ended(session, job, to_state)

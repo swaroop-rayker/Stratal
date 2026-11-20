@@ -73,6 +73,7 @@ STAGE_STATUSES = (
     "queued",
     "running",
     "paused",
+    "waiting",
     "completed",
     "failed",
     "skipped",
@@ -565,7 +566,8 @@ class Checkpoint(Base):
     job_id: Mapped[str] = mapped_column(
         Text, ForeignKey("jobs.id", name="fk_checkpoints_job"), primary_key=True
     )
-    lineage_id: Mapped[str] = mapped_column(Text, ForeignKey("model_lineages.id"))
+    lineage_id: Mapped[str | None] = mapped_column(Text, ForeignKey("model_lineages.id"))
+    """Null for an HPO trial whose lineage does not exist yet (ADR-0018 rule 7)."""
     path: Mapped[str] = mapped_column(Text)
     """Relative to the data folder: the checkpoint's JSON file."""
     bytes: Mapped[int] = mapped_column(BigInteger)

@@ -216,9 +216,10 @@ def cancel_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
     with session.begin():
         job, running = job_service.request_cancel(session, job_id)
         cleanup = None if running else job_service.retention_after_run(session, job)
+        targets = job_service.signal_targets(session, job, running=running)
         view = job_service.job_view(session, job)
-    if running:
-        bus.set_control(job_id, "cancel")  # fast path; jobs.desired_state is the durable copy
+    for target in targets:  # fast path; jobs.desired_state is the durable copy
+        bus.set_control(target, "cancel")
     job_service.after_commit(bus, job_id)
     if cleanup is not None:
         enqueue(cleanup)
@@ -232,8 +233,10 @@ def pause_job(job_id: str, session: Db, bus: Redis) -> Json:
     running, or is being cancelled."""
     with session.begin():
         job = job_service.request_pause(session, job_id)
+        targets = job_service.signal_targets(session, job, running=job.state == "running")
         view = job_service.job_view(session, job)
-    bus.set_control(job_id, "pause")  # fast path; jobs.desired_state is the durable copy
+    for target in targets:  # fast path; jobs.desired_state is the durable copy
+        bus.set_control(target, "pause")
     job_service.after_commit(bus, job_id)
     return view
 

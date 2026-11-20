@@ -117,7 +117,7 @@ Indexes: `(dataset_id, created_at desc)`; `(stage, parent_version_id, config_has
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | `id` | text | no | PK, `job_…` |
-| `kind` | text | no | `pipeline`; since M8 also `train` (RUN-1.1) and `retention` (REG-2.2); later `hpo_study`, `hpo_trial`, `eval`, `maintenance` |
+| `kind` | text | no | `pipeline`; since M8 also `train` (RUN-1.1) and `retention` (REG-2.2); since M10 `hpo_study` and `hpo_trial` (HPO-1.2); later `eval`, `maintenance` |
 | `state` | text | no | `queued`, `running`, `paused`, `completed`, `failed`, `cancelled`, `stalled` (check constraint) |
 | `desired_state` | text | yes | `paused` or `cancelled` while a request is pending |
 | `pause_reason` | text | yes | why a paused job is paused: `user` or `thermal` (M8, RUN-1.6); set with the pause request, kept while paused, cleared on resume. The watchdog resumes only `thermal` pauses |
@@ -143,7 +143,7 @@ Indexes: `(state)`; `(created_at desc)`; partial `(heartbeat_at) where state = '
 | `idx` | integer | no | PK part; order within the job |
 | `name` | text | no | stage name |
 | `queue` | text | no | `cpu` or `gpu` |
-| `status` | text | no | `pending`, `queued`, `running`, `paused` (M8, RUN-1.2: stopped by a pause, or next to run when the job paused between stages), `completed`, `failed`, `skipped`, `cancelled` |
+| `status` | text | no | `pending`, `queued`, `running`, `paused` (M8, RUN-1.2: stopped by a pause, or next to run when the job paused between stages), `waiting` (M10, ADR-0018 rule 5: a network study's `study` stage between steps, while its trial job runs), `completed`, `failed`, `skipped`, `cancelled` |
 | `config` | jsonb | no | |
 | `config_hash` | text | no | |
 | `input_version_id`, `output_version_id` | text | yes | FK |
@@ -307,7 +307,7 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 
 Constraints: state and weights status check constraints; `present` needs a path and size unless `partial`; one base per lineage (partial unique index on `lineage_id` where `state = 'base'`). Indexes `(lineage_id, created_at)`, `(parent_version_id)`.
 
-**`checkpoints`**: a run's in-run checkpoint, the latest only (REG-2.6). `job_id` (PK, FK), `lineage_id` (FK), `path` (the checkpoint's JSON file, relative to the data folder), `bytes` (both files), `global_step`, `epoch`, `updated_at`. Written at every save, removed when the run completes; retention removes those of cancelled runs. A failed run keeps its checkpoint, since a retry resumes from it.
+**`checkpoints`**: a run's in-run checkpoint, the latest only (REG-2.6). `job_id` (PK, FK), `lineage_id` (FK; null for an HPO trial's, which belongs to its study, M10), `path` (the checkpoint's JSON file, relative to the data folder), `bytes` (both files), `global_step`, `epoch`, `updated_at`. Written at every save, removed when the run completes; retention removes those of cancelled runs. A failed run keeps its checkpoint, since a retry resumes from it.
 
 **`pins`**: `version_id` (PK, FK), `pinned_at`. Only trained versions with weights on disk are pinned (REG-2.5).
 
@@ -328,6 +328,8 @@ A graph spec is also stored, as part of its run's config, in `job_stages.config`
 `studies`: `id` (`st_` + 12 hex), `job_id` (unique, FK), `kind` (`classical`, `deep`), `dataset_version_id`, `base` (jsonb: the base run, defaults filled in), `space` (jsonb: the markers), `objective`, `direction` (`maximize`, `minimize`), `limits` (jsonb `{n_trials, timeout_s}`), `pruning`, `cv_folds`, `seed`, `state` (`running`, `closed`, `completed`, `cancelled`, `failed`), `ended_by` (`n_trials`, `timeout`), `elapsed_s` (running time, pauses excluded), `best_trial`, `best_value`, `best_params` (jsonb, by path), `importance` (jsonb), `best_version_id` (FK `model_versions`), `test_metrics` (jsonb), `test_evaluated_at` (set once, HPO-1.4), `created_at`, `finished_at`.
 
 `study_trials`: `study_id`, `number` (the PK together), `job_id` (a deep-learning trial's job, else null), `state` (`running`, `complete`, `pruned`, `failed`), `params` (jsonb), `value`, `step`, `prune_reason` (`median`, `budget`), `code` (`invalid_combination`, `interrupted`, …), `intermediate` (jsonb `[[step, value]]`), `duration_s`, `started_at`, `finished_at`.
+
+A network trial's weights live in its job's folder until its study's next step: `jobs/<job>/trial/initial` (when its lineage is new), `trial/trained` and `trial/result.json`. Only the best trial's are kept, and they are deleted once copied into the registry (ADR-0018 rule 7).
 
 `model_versions.study_id` (FK, null) names the study whose best trial a version is. Optuna's own tables live in schema `optuna`, created empty by the migration and filled by Optuna; the API never reads them.
 

@@ -184,7 +184,7 @@ stateDiagram-v2
 
 Any transition not drawn is rejected, and every transition is written to `job_transitions` with its reason and who caused it (RUN-1.1.AC1). A separate `desired_state` field holds a pause or cancel request until the job reaches a safe point, so the UI can show "cancelling" honestly.
 
-Stages have their own simpler status: pending, queued, running, paused (M8), completed, failed, skipped, cancelled. A `stalled` job's stage stays `running`: the stage has not stopped, it has gone quiet.
+Stages have their own simpler status: pending, queued, running, paused (M8), waiting (M10: a network study's stage between its steps, while the job stays running; ADR-0018 rule 5), completed, failed, skipped, cancelled. A `stalled` job's stage stays `running`: the stage has not stopped, it has gone quiet.
 
 ### 4.3 Stopping and recovering
 

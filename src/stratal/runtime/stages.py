@@ -646,6 +646,24 @@ def _run_study(run: StageRun) -> StageResult:
 register(StageDef("study", "cpu", StudyStageConfig, _run_study))
 
 
+class StudyTestConfig(BaseModel):
+    """A deep-learning study's last stage: its best version on the test split, once
+    (HPO-1.4, ADR-0018 rule 8)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    study_id: str | None = None
+
+
+def _run_test_eval(run: StageRun) -> StageResult:
+    from stratal.train import stage as train_stage
+
+    return train_stage.run_test_eval(run)
+
+
+register(StageDef("test_eval", "gpu", StudyTestConfig, _run_test_eval))
+
+
 class RetentionConfig(BaseModel):
     """A retention run (REG-2.9, ADR-0015 rule 4)."""
 

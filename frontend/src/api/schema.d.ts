@@ -1821,7 +1821,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "queued" | "running" | "paused" | "completed" | "failed" | "skipped" | "cancelled";
+            status: "pending" | "queued" | "running" | "paused" | "waiting" | "completed" | "failed" | "skipped" | "cancelled";
             /** Config */
             config: {
                 [key: string]: unknown;

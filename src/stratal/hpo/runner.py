@@ -27,23 +27,25 @@ A retry of a study that had finished picks up where it stopped.
 import math
 import time
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import optuna
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
+from stratal.build.io import vram_problem
 from stratal.core.errors import StratalError
 from stratal.core.settings import get_settings
 from stratal.data import registry
-from stratal.db.models import ModelVersion, Study
+from stratal.db.models import Dataset, ModelVersion, Study, StudyTrial
 from stratal.hpo import store as hpo_store
 from stratal.hpo.space import Marker, apply
 from stratal.ml.data import SplitTable, TabularData, load_tabular
 from stratal.ml.params import ClassicalConfig, check_data, check_task
 from stratal.ml.pipeline import build_pipeline, fit, score
 from stratal.mon.events import MetricValue, utc_now
-from stratal.runtime.context import JobCancelled, JobPaused
+from stratal.runtime.context import JobCancelled, JobPaused, StageWaiting
 from stratal.runtime.stages import StageResult, StageRun
 
 STAGE = "study"
@@ -323,24 +325,7 @@ class ClassicalStudy:
         )
 
     def importance(self, study: optuna.Study) -> dict[str, Any]:
-        """fANOVA, set explicitly (S-09), over the complete trials (HPO-1.5, rule 9)."""
-        complete = [
-            t
-            for t in study.get_trials(deepcopy=False)
-            if t.state == optuna.trial.TrialState.COMPLETE
-        ]
-        if len(self.markers) < 2:
-            return {"reason": "one field is tuned, so there is nothing to rank"}
-        if len(complete) < 2:
-            return {"reason": f"{len(complete)} complete trial; importance needs two"}
-        if len({t.value for t in complete}) == 1:
-            return {"reason": "every complete trial scored the same, so nothing can be ranked"}
-        evaluator = optuna.importance.FanovaImportanceEvaluator(seed=self.seed)
-        try:
-            found = optuna.importance.get_param_importances(study, evaluator=evaluator)
-        except (RuntimeError, ValueError) as exc:  # importance is a report: never fail the study
-            return {"reason": f"fANOVA could not rank the fields: {exc}"}
-        return {"method": "fanova", "values": {k: round(float(v), 6) for k, v in found.items()}}
+        return importance(study, self.markers, self.seed)
 
     def finish(self) -> dict[str, MetricValue]:
         """Refit the best configuration, register it, test it once (rules 7 and 8)."""
@@ -411,13 +396,421 @@ class ClassicalStudy:
         return StageResult(metrics=metrics)
 
 
+class DeepStudy:
+    """One step of a deep-learning study (rule 5): settle the trial that ended, check the
+    limits, ask for the next configuration, check it, and queue its ``hpo_trial`` job; or,
+    with a limit reached, close the study and register its best trial (rule 7). The
+    stage then waits for the trial, or completes and ``test_eval`` follows (rule 8)."""
+
+    def __init__(self, run: StageRun, study: Study) -> None:
+        self.run = run
+        self.ctx = run.ctx
+        self.engine = run.engine
+        self.study_id = study.id
+        self.base: dict[str, Any] = dict(study.base)
+        self.markers = [Marker.model_validate(m) for m in study.space]
+        self.objective = study.objective
+        self.direction = study.direction
+        self.limits = dict(study.limits)
+        self.pruning = study.pruning
+        self.seed = study.seed
+        self.state = study.state
+        self.version_id = study.dataset_version_id
+        self.mark = time.monotonic()
+
+    def emit(self, message: str, **fields: Any) -> None:
+        self.ctx.emit(stage=STAGE, message=message, **fields)
+
+    def optuna_study(self) -> optuna.Study:
+        from stratal.hpo.trial import WARMUP_EPOCHS, pruner
+
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
+        return optuna.create_study(
+            study_name=self.study_id,
+            storage=optuna.storages.RDBStorage(storage_url()),
+            direction=self.direction,
+            sampler=optuna.samplers.TPESampler(seed=self.seed),
+            pruner=pruner(self.pruning, warmup=WARMUP_EPOCHS),
+            load_if_exists=True,
+        )
+
+    def spend(self) -> float:
+        """Add this step's running time to the budget clock; returns the total."""
+        now = time.monotonic()
+        total = hpo_store.add_elapsed(self.engine, self.study_id, now - self.mark)
+        self.mark = now
+        return total
+
+    # ------------------------------------------------------------------ the trial that ended
+    def settle(self, study: optuna.Study) -> bool:
+        """Tell Optuna how the current trial ended. True while it is still going."""
+        from stratal.hpo.control import current_trial
+        from stratal.runtime.jobs import request_resume
+
+        with Session(self.engine) as session:
+            found = current_trial(session, self.study_id)
+            if found is None:
+                return False
+            row, job = found
+            number, row_state, value, code = row.number, row.state, row.value, row.code
+            job_id, job_state, error = job.id, job.state, dict(job.error or {})
+        frozen = next(t for t in study.get_trials(deepcopy=False) if t.number == number)
+        if frozen.state != optuna.trial.TrialState.RUNNING:
+            return False  # told by an earlier step
+        if job_state in ("queued", "running", "stalled"):
+            return True
+        if job_state == "paused":  # the study was resumed: so is its trial
+            with Session(self.engine) as session, session.begin():
+                request_resume(session, job_id, actor="supervisor", reason="its study was resumed")
+            self.emit(f"Trial {number} resumed with its study", substage="trials")
+            return True
+        before = self.best_number()
+        if job_state == "completed" and row_state == "complete" and value is not None:
+            study.tell(number, value)
+        elif job_state == "completed" and row_state == "pruned":
+            study.tell(number, state=optuna.trial.TrialState.PRUNED)
+        else:
+            study.tell(number, state=optuna.trial.TrialState.FAIL)
+            code = code if row_state == "failed" and code else error.get("code") or job_state
+            hpo_store.trial_finished(
+                self.engine, self.study_id, number, state="failed", code=str(code)
+            )
+        self.after_trial(study, number, job_id, before)
+        return False
+
+    def best_number(self) -> int | None:
+        with Session(self.engine) as session:
+            return hpo_store.get_study(session, self.study_id).best_trial
+
+    def trial_job(self, number: int) -> str | None:
+        with Session(self.engine) as session:
+            row = session.get(StudyTrial, (self.study_id, number))
+            return row.job_id if row is not None else None
+
+    def after_trial(
+        self, study: optuna.Study, number: int, job_id: str | None, before: int | None
+    ) -> None:
+        """Copy the best to ``studies`` and keep only the best trial's weights (rule 7)."""
+        from stratal.hpo.control import remove_tree, trial_folder
+
+        values: dict[str, Any] = {}
+        complete = [
+            t
+            for t in study.get_trials(deepcopy=False)
+            if t.state == optuna.trial.TrialState.COMPLETE
+        ]
+        best = study.best_trial if complete else None
+        if best is not None:
+            values.update(best_trial=best.number, best_value=best.value, best_params=best.params)
+            hpo_store.update_study(self.engine, self.study_id, **values)
+        if best is not None and best.number == number:  # the new best: drop the old one
+            whose = before if before is not None and before != number else None
+            old = self.trial_job(whose) if whose is not None else None
+        else:  # not the best: drop its own
+            whose, old = number, job_id
+        freed = remove_tree(trial_folder(self.run.data_dir, old)) if old else 0
+        if freed:
+            self.emit(
+                f"Deleted trial {whose}'s weights ({freed / 2**20:.1f} MB): not the best",
+                substage="weights",
+                metrics={"trial": int(whose or 0), "bytes_freed": freed},
+            )
+        with Session(self.engine) as session:
+            counts = hpo_store.counts(session, self.study_id)
+        state = next(t.state for t in study.get_trials(deepcopy=False) if t.number == number)
+        self.emit(
+            f"Trial {number} {state.name.lower()} · {counts['started']}/"
+            f"{self.limits['n_trials']} trials · best {values.get('best_value', '–')}",
+            substage="trials",
+            step=counts["started"],
+            total=int(self.limits["n_trials"]),
+            metrics={"trials_started": counts["started"], "trials_complete": counts["complete"]},
+        )
+
+    def reopen(self, study: optuna.Study) -> None:
+        """Optuna trials left running with no trial job behind them (a crash between ask
+        and the job, or a trial withdrawn by a pause): failed, ``interrupted``, uncounted."""
+        storage = study._storage
+        for trial in study.get_trials(deepcopy=False, states=(optuna.trial.TrialState.RUNNING,)):
+            storage.set_trial_state_values(trial._trial_id, optuna.trial.TrialState.FAIL)
+            hpo_store.trial_finished(
+                self.engine, self.study_id, trial.number, state="failed", code="interrupted"
+            )
+
+    # ------------------------------------------------------------------ the next trial
+    def check(self, document: dict[str, Any]) -> tuple[Any, tuple[str, str] | None]:
+        """A sampled run checked as ``POST /jobs`` would (rule 2): its config, or why not."""
+        from pydantic import ValidationError
+
+        from stratal.core.errors import ValidationFailed
+        from stratal.db.models import DatasetVersion
+        from stratal.runtime.jobs import check_network
+        from stratal.train.config import TrainConfig
+
+        try:
+            config = TrainConfig.model_validate(document["config"])
+        except ValidationError as exc:
+            return None, ("invalid_combination", str(exc.errors()[0]["msg"]))
+        with Session(self.engine) as session:
+            version = session.get(DatasetVersion, self.version_id)
+            assert version is not None
+            try:
+                resolved = check_network(session, version, config)
+            except ValidationFailed as exc:
+                message = str(exc.errors[0]["msg"]) if exc.errors else exc.detail
+                return None, ("invalid_combination", message)
+        over = vram_problem(self.engine, self.run.data_dir, resolved, self.version_id)
+        return resolved, (("over_vram", over) if over is not None else None)
+
+    def next_trial(self, study: optuna.Study) -> str:
+        """Queue the next trial and wait for it; or return what ended the study."""
+        from stratal.db.models import DatasetVersion
+        from stratal.runtime.jobs import create_trial_job
+
+        while True:
+            with Session(self.engine) as session:
+                counts = hpo_store.counts(session, self.study_id)
+            if counts["started"] >= int(self.limits["n_trials"]):
+                return "n_trials"
+            if self.spend() >= float(self.limits["timeout_s"]):
+                return "timeout"
+            trial = study.ask()
+            values = {m.path: suggest(trial, m) for m in self.markers}
+            hpo_store.trial_started(self.engine, self.study_id, trial.number, values)
+            config, problem = self.check(apply(self.base, values))
+            if problem is not None or config is None:
+                code, message = problem or ("invalid_combination", "")
+                study.tell(trial, state=optuna.trial.TrialState.FAIL)
+                hpo_store.trial_finished(
+                    self.engine, self.study_id, trial.number, state="failed", code=code
+                )
+                self.emit(
+                    f"Trial {trial.number} failed: {code} · {message}",
+                    substage="trial",
+                    level="WARN",
+                    reason=message,
+                    suggested_action="None needed: the study goes on. Narrow the space if "
+                    "many trials fail this way.",
+                    metrics={"trial": trial.number, "code": code},
+                )
+                continue
+            with Session(self.engine) as session, session.begin():
+                version = session.get(DatasetVersion, self.version_id)
+                assert version is not None
+                job, _ = create_trial_job(
+                    session,
+                    study_job_id=self.ctx.job_id,
+                    study_id=self.study_id,
+                    number=trial.number,
+                    version=version,
+                    config=config,
+                )
+                row = session.get(StudyTrial, (self.study_id, trial.number))
+                assert row is not None
+                row.job_id = job.id
+                trial_job = job.id
+            shown = ", ".join(f"{p.rsplit('/', 1)[-1]}={v}" for p, v in values.items())
+            self.emit(
+                f"Trial {trial.number} queued as {trial_job} · {shown}",
+                substage="trial",
+                metrics={"trial": trial.number, "trial_job_id": trial_job},
+            )
+            self.spend()
+            raise StageWaiting(f"trial {trial.number} runs as {trial_job}")
+
+    # ------------------------------------------------------------------ the end
+    def close(self, study: optuna.Study, ended_by: str) -> None:
+        with Session(self.engine) as session:
+            counts = hpo_store.counts(session, self.study_id)
+        hpo_store.update_study(
+            self.engine,
+            self.study_id,
+            state="closed",
+            ended_by=ended_by,
+            importance=importance(study, self.markers, self.seed),
+        )
+        self.state = "closed"
+        self.spend()
+        self.emit(
+            f"Study closed by {ended_by}: {counts['complete']} complete, {counts['pruned']} "
+            f"pruned, {counts['failed']} failed",
+            substage="close",
+            metrics={k: v for k, v in counts.items()},
+        )
+
+    def register(self, number: int, trial_job: str) -> str:
+        """The best trial as an ordinary version of its lineage (rule 7): a new lineage's
+        base is the trial's initial weights; the version, its trained weights."""
+        import json
+        import os
+        import shutil
+
+        from stratal.db.models import DatasetVersion
+        from stratal.hpo.control import trial_folder
+        from stratal.registry import store
+        from stratal.registry.store import META_FILE
+        from stratal.train.config import TrainConfig
+        from stratal.train.stage import TRIAL_RESULT
+
+        folder = trial_folder(self.run.data_dir, trial_job)
+        meta = json.loads((folder / "trained" / META_FILE).read_text(encoding="utf-8"))
+        result = json.loads((folder / TRIAL_RESULT).read_text(encoding="utf-8"))
+        config = TrainConfig.model_validate(meta["config"])
+
+        def copy(source: Path, lineage_id: str, version_id: str, **fields: Any) -> int:
+            target = self.run.data_dir / store.version_folder(lineage_id, version_id)
+            partial = target.with_name(target.name + ".part")
+            shutil.rmtree(partial, ignore_errors=True)
+            shutil.copytree(source, partial)
+            info = json.loads((partial / META_FILE).read_text(encoding="utf-8"))
+            info.update(lineage_id=lineage_id, version_id=version_id, **fields)
+            (partial / META_FILE).write_text(json.dumps(info, indent=2), encoding="utf-8")
+            if target.exists():
+                shutil.rmtree(target)
+            os.replace(partial, target)
+            return sum(p.stat().st_size for p in target.iterdir() if p.is_file())
+
+        with Session(self.engine) as session, session.begin():
+            version = session.get(DatasetVersion, self.version_id)
+            assert version is not None
+            dataset = session.get(Dataset, version.dataset_id)
+            assert dataset is not None
+            lineage = store.ensure_lineage(
+                session,
+                model_spec=config.model.identity(),
+                name=config.model.display,
+                dataset_id=dataset.id,
+                dataset_slug=dataset.slug,
+                input_shape=meta["input_shape"],
+                classes=meta["classes"],
+                parameters=int(meta["parameters"]),
+                task=str(meta["task"]),
+            )
+            base = store.base_of(session, lineage.id)
+            if base is None:
+                base_id = store.new_version_id()
+                size = copy(
+                    folder / "initial", lineage.id, base_id, state="base", parent_version_id=None
+                )
+                store.add_base(
+                    session,
+                    lineage=lineage,
+                    version_id=base_id,
+                    job_id=trial_job,
+                    dataset_version_id=self.version_id,
+                    config=meta["config"],
+                    config_hash=str(meta["config_hash"]),
+                    weights_bytes=size,
+                    note=f"Initial weights of trial {number} of {self.study_id}, from seed "
+                    f"{config.seed}",
+                )
+            else:
+                base_id = base.id
+            existing = store.run_version(session, trial_job)
+            version_id = existing.id if existing is not None else store.new_version_id()
+            size = copy(
+                folder / "trained",
+                lineage.id,
+                version_id,
+                state="trained",
+                parent_version_id=base_id,
+            )
+            row = store.record_run(
+                session,
+                lineage_id=lineage.id,
+                job_id=trial_job,
+                state="trained",
+                parent_version_id=base_id,
+                dataset_version_id=self.version_id,
+                config=meta["config"],
+                config_hash=str(meta["config_hash"]),
+                history=list(result["history"]),
+                metrics={**result["metrics"], "detail": result["detail"]},
+                version_id=version_id,
+                weights_bytes=size,
+                note=f"The best trial ({number}) of {self.study_id}",
+                trained_at=utc_now(),
+            )
+            row.study_id = self.study_id
+        return version_id
+
+    def finish(self) -> dict[str, MetricValue]:
+        from stratal.hpo.control import discard_trial_weights
+
+        with Session(self.engine) as session:
+            study = hpo_store.get_study(session, self.study_id)
+            best, registered = study.best_trial, study.best_version_id
+        if registered is None and best is None:
+            self.emit(
+                "No trial completed: nothing to register or evaluate",
+                level="WARN",
+                reason="Every trial failed or was pruned before it finished.",
+                suggested_action="Widen the space or the budget, and start a new study.",
+            )
+        elif registered is None and best is not None:
+            trial_job = self.trial_job(best)
+            assert trial_job is not None
+            registered = self.register(best, trial_job)
+            hpo_store.update_study(self.engine, self.study_id, best_version_id=registered)
+        with Session(self.engine) as session:
+            freed = discard_trial_weights(self.run.data_dir, session, self.study_id)
+        if registered is not None:
+            self.emit(
+                f"Best trial {best} registered as {registered}; the trials' weights are "
+                f"deleted ({freed / 2**20:.1f} MB); the test split is next, once",
+                substage="register",
+                metrics={"model_version_id": registered, "bytes_freed": freed},
+            )
+        metrics: dict[str, MetricValue] = {"study_id": self.study_id}
+        if registered is not None and best is not None:
+            metrics.update(best_trial=best, model_version_id=registered)
+        return metrics
+
+    def step(self) -> StageResult:
+        request = self.ctx.stop_request()
+        if request == "cancel":
+            raise JobCancelled(self.ctx.job_id)
+        if request == "pause":
+            raise JobPaused(self.ctx.job_id)
+        if self.state == "running":
+            study = self.optuna_study()
+            if self.settle(study):
+                self.spend()
+                raise StageWaiting("its trial is still running")
+            self.reopen(study)
+            self.close(study, self.next_trial(study))
+        return StageResult(metrics=self.finish())
+
+
+def importance(study: optuna.Study, markers: list[Marker], seed: int) -> dict[str, Any]:
+    """fANOVA, set explicitly (S-09), over the complete trials (HPO-1.5, rule 9)."""
+    complete = [
+        t for t in study.get_trials(deepcopy=False) if t.state == optuna.trial.TrialState.COMPLETE
+    ]
+    if len(markers) < 2:
+        return {"reason": "one field is tuned, so there is nothing to rank"}
+    if len(complete) < 2:
+        return {"reason": f"{len(complete)} complete trial; importance needs two"}
+    if len({t.value for t in complete}) == 1:
+        return {"reason": "every complete trial scored the same, so nothing can be ranked"}
+    evaluator = optuna.importance.FanovaImportanceEvaluator(seed=seed)
+    try:
+        found = optuna.importance.get_param_importances(study, evaluator=evaluator)
+    except (RuntimeError, ValueError) as exc:  # importance is a report: never fail the study
+        return {"reason": f"fANOVA could not rank the fields: {exc}"}
+    return {"method": "fanova", "values": {k: round(float(v), 6) for k, v in found.items()}}
+
+
 def run_study(run: StageRun) -> StageResult:
     study_id = str(run.config["study_id"])
-    with Session(run.engine) as session:
+    with Session(run.engine) as session, session.begin():
         study = hpo_store.get_study(session, study_id)
+        if study.state == "failed":  # a retry: carry on from where it stopped
+            study.state = "closed" if study.ended_by is not None else "running"
+        session.flush()
         session.expunge(study)
     if study.state in ("completed", "cancelled"):
         return StageResult(metrics={"study_id": study_id})
-    if study.kind != "classical":
-        raise StratalError("Studies of networks arrive with the next part of M10.")
-    return ClassicalStudy(run, study).execute()
+    if study.kind == "classical":
+        return ClassicalStudy(run, study).execute()
+    return DeepStudy(run, study).step()

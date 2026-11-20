@@ -6,9 +6,11 @@ processes, so they must not share the development stack's database or its
 event stream, where a running monitor would consume their events.
 """
 
+import importlib.util
 import os
 import tempfile
 from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import pytest
 from alembic import command
@@ -18,6 +20,27 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from stratal.core.settings import get_settings
+
+_HAS_TEST_CLIENT = importlib.util.find_spec("httpx2") is not None
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
+    """Skip modules that use the API's test client in an image without it.
+
+    The worker-cpu image has no httpx2, so a module importing FastAPI's TestClient
+    (directly or through ``stratal.testing.pipeline``) cannot even be imported there.
+    None of those modules has ``ml``-marked tests, the only ones run in that image
+    (check.ps1, step "integration (ml)"); everywhere else they are collected as usual.
+    """
+    if _HAS_TEST_CLIENT or collection_path.suffix != ".py":
+        return None
+    if not collection_path.name.startswith("test_"):
+        return None
+    source = collection_path.read_text(encoding="utf-8")
+    if "TestClient" in source or "stratal.testing.pipeline" in source:
+        return True
+    return None
+
 
 _main_url = make_url(get_settings().database_url)
 _redis_base = get_settings().redis_url.rsplit("/", 1)[0]

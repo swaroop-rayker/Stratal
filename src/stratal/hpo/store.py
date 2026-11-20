@@ -64,11 +64,25 @@ def trial_started(engine: Engine, study_id: str, number: int, params: dict[str, 
 
 
 def trial_step(engine: Engine, study_id: str, number: int, step: int, value: float) -> None:
+    """A trial's value at ``step``; a step reported again (after a resume) replaces it."""
     with Session(engine) as session, session.begin():
         row = session.get(StudyTrial, (study_id, number))
         if row is not None:
             row.step = step
-            row.intermediate = [*row.intermediate, [step, value]]
+            kept = [pair for pair in row.intermediate if pair[0] != step]
+            row.intermediate = [*kept, [step, value]]
+
+
+def add_elapsed(engine: Engine, study_id: str, seconds: float) -> float:
+    """Add running time to the study's budget clock (pauses excluded); returns the total."""
+    with Session(engine) as session, session.begin():
+        total = session.execute(
+            update(Study)
+            .where(Study.id == study_id)
+            .values(elapsed_s=Study.elapsed_s + round(seconds, 3))
+            .returning(Study.elapsed_s)
+        ).scalar_one()
+    return float(total)
 
 
 def trial_finished(

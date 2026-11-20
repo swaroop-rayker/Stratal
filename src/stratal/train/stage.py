@@ -26,7 +26,7 @@ import os
 import random
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, cast
 
 import torch
@@ -34,7 +34,7 @@ from sqlalchemy.orm import Session
 from torch import nn
 from torch.utils.data import DataLoader
 
-from stratal.build.io import image_shape
+from stratal.build.io import TRAIN_VRAM_FRACTION, image_shape
 from stratal.build.shapes import Shape
 from stratal.core.errors import CudaUnavailable, GpuOom, StratalError
 from stratal.data import registry
@@ -59,7 +59,9 @@ from stratal.train.reference import build_model, parameter_count
 
 STAGE = "train"
 PROGRESS_EVERY_S = 1.0
-VRAM_FRACTION = 0.85
+VRAM_FRACTION = TRAIN_VRAM_FRACTION
+TRIAL_RESULT = "result.json"
+"""A finished trial's metrics and history, beside its weights (ADR-0018 rule 7)."""
 """The per-process cap (ADR-0006 rule 8)."""
 MB = 2**20
 
@@ -135,6 +137,12 @@ class _Run:
         self.units = units
         self.hash = config_hash(config.model_dump(mode="json"))
         self.folder = ckpt.checkpoint_dir(run.data_dir, run.ctx.job_id)
+        self.trial: Any = None
+        """For an ``hpo_trial`` job: its link to the study (ADR-0018 rules 5 to 7)."""
+        if run.spec.get("kind") == "hpo_trial":
+            from stratal.hpo.trial import TrialLink
+
+            self.trial = TrialLink(run.engine, run.data_dir, run.ctx.job_id, run.spec)
 
     # ------------------------------------------------------------------ setup
     def prepare(self) -> None:
@@ -459,6 +467,10 @@ class _Run:
             )
             checkpoint_bytes = self._save(model, optimizer, scheduler, state)
             last_checkpoint = time.monotonic()
+            if self.trial is not None:
+                stop = self.trial.after_epoch(epoch + 1, record, last=epoch + 1 == config.epochs)
+                if stop is not None:
+                    return self._pruned(stop, record, epoch + 1, started)
 
         last = state.history[-1] if state.history else {}
         metrics: dict[str, MetricValue] = {
@@ -473,13 +485,25 @@ class _Run:
         }
         if not regression:
             metrics["val_accuracy"] = last.get("val_accuracy", 0.0)
-        scores, detail = self._final_scores(model)
+        # A trial never sees the test split (ADR-0018 rule 8): its study tests the best once.
+        scores, detail = self._final_scores(model, ("val",) if self.trial else ("val", "test"))
         metrics.update(scores)
         if cuda:
             metrics["peak_vram_allocated_mb"] = round(torch.cuda.max_memory_allocated() / MB, 1)
             metrics["peak_vram_reserved_mb"] = round(torch.cuda.max_memory_reserved() / MB, 1)
         version_id = self._register(model, state.history, metrics, detail)
         freed = self._remove_checkpoints()
+        if self.trial is not None:
+            value = self.trial.complete(last)
+            ctx.emit(
+                stage=STAGE,
+                substage="finish",
+                message=f"Trial {self.trial.number} complete: {self.trial.objective} "
+                f"{value:.4g}; its weights wait for the study's next step; checkpoints "
+                f"removed ({freed / MB:.1f} MB)",
+                metrics={"trial": self.trial.number, "value": value},
+            )
+            return StageResult(metrics=metrics)
         ctx.emit(
             stage=STAGE,
             substage="finish",
@@ -488,6 +512,29 @@ class _Run:
             metrics={"model_version_id": version_id},
         )
         return StageResult(metrics=metrics)
+
+    def _pruned(
+        self, reason: str, record: dict[str, Any], epoch: int, started: float
+    ) -> StageResult:
+        """A trial stopped by the median pruner or the study's time budget (HPO-1.3)."""
+        assert self.trial is not None
+        freed = self._remove_checkpoints()
+        self.trial.pruned(reason, record)
+        self.ctx.emit(
+            stage=STAGE,
+            substage="pruned",
+            message=f"Trial {self.trial.number} pruned after epoch {epoch} · {reason}; "
+            f"checkpoints removed ({freed / MB:.1f} MB)",
+            metrics={"trial": self.trial.number, "pruned_at_step": epoch, "prune_reason": reason},
+        )
+        return StageResult(
+            metrics={
+                "trial": self.trial.number,
+                "pruned_at_step": epoch,
+                "prune_reason": reason,
+                "seconds": round(time.monotonic() - started, 1),
+            }
+        )
 
     # ------------------------------------------------------------------ RUN-1.9
     def _choose_device(self) -> None:
@@ -617,7 +664,8 @@ class _Run:
             store.record_checkpoint(
                 session,
                 job_id=self.ctx.job_id,
-                lineage_id=self.lineage_id,
+                # A trial's checkpoint belongs to its study, not to a lineage's retention.
+                lineage_id=None if self.trial is not None else self.lineage_id,
                 path=meta.relative_to(self.run.data_dir).as_posix(),
                 size=size,
                 global_step=p.global_step,
@@ -691,12 +739,14 @@ class _Run:
         model.train()
         return truth, guess
 
-    def _final_scores(self, model: nn.Module) -> tuple[dict[str, MetricValue], dict[str, Any]]:
+    def _final_scores(
+        self, model: nn.Module, splits: tuple[str, ...] = ("val", "test")
+    ) -> tuple[dict[str, MetricValue], dict[str, Any]]:
         """EVAL-1.2's metric set on validation and test, once the run has finished."""
         scalars: dict[str, MetricValue] = {"task": self.task}
         detail: dict[str, Any] = {"task": self.task}
         for split, dataset in (("val", self.val), ("test", self.test)):
-            if len(dataset) == 0:
+            if split not in splits or len(dataset) == 0:
                 continue
             truth, guess = self._predict(model, dataset)
             if self.task == "regression":
@@ -725,7 +775,7 @@ class _Run:
         self.ctx.emit(
             stage=STAGE,
             substage="score",
-            message="Scored on validation and test: "
+            message=f"Scored on {' and '.join({'val': 'validation'}.get(s, s) for s in splits)}: "
             + ", ".join(f"{k} {v}" for k, v in scalars.items() if k != "task"),
             metrics=dict(scalars),
         )
@@ -754,6 +804,11 @@ class _Run:
             "config": self.config.model_dump(mode="json"),
             "config_hash": self.hash,
             "history": history,
+            **(
+                {"trial": {"study_id": self.trial.study_id, "number": self.trial.number}}
+                if self.trial is not None
+                else {}
+            ),
         }
 
     def _attach_lineage(self, model: nn.Module) -> None:
@@ -764,6 +819,9 @@ class _Run:
         The model is built from the seed either way, so the random state the run
         continues with does not depend on whether the lineage already existed."""
         config = self.config
+        if self.trial is not None:
+            self._attach_trial(model)
+            return
         with Session(self.run.engine) as session, session.begin():
             lineage = store.ensure_lineage(
                 session,
@@ -817,8 +875,51 @@ class _Run:
             metrics={"lineage_id": self.lineage_id, "base_version_id": self.base_id},
         )
 
+    def _attach_trial(self, model: nn.Module) -> None:
+        """A trial touches no lineage (ADR-0018 rule 7): it starts from its lineage's base if
+        one exists, as any run would; otherwise its own initial weights go to its folder, so
+        the study can make them the base of a new lineage if this trial turns out best."""
+        assert self.trial is not None
+        config = self.config
+        lineage_id, _ = store.lineage_key(
+            model_spec=config.model.identity(),
+            dataset_slug=self.dataset_slug,
+            input_shape=self.input.dims,
+            classes=self.classes,
+        )
+        with Session(self.run.engine) as session:
+            base = store.base_of(session, lineage_id)
+            path = (
+                base.weights_path if base is not None and base.weights_status == "present" else None
+            )
+            base_id = base.id if base is not None and path is not None else None
+        if path is not None:
+            weights.load_into(model, self.run.data_dir / path)
+            self.lineage_id, self.base_id = lineage_id, base_id
+            message = f"Trial {self.trial.number}: starting from base {base_id}"
+        else:
+            self.lineage_id, self.base_id = lineage_id, None  # the lineage it would found
+            weights.write(
+                self.trial.folder / "initial",
+                model,
+                self._meta("initial", "base", []),
+                self._extra_files(),
+            )
+            message = (
+                f"Trial {self.trial.number}: initial weights from seed {config.seed} kept with "
+                "the trial; the lineage is created only if it is the study's best"
+            )
+        self.ctx.emit(
+            stage=STAGE,
+            substage="setup",
+            message=message,
+            metrics={"trial": self.trial.number, "study_id": self.trial.study_id},
+        )
+
     def _record_partial(self, history: list[dict[str, Any]]) -> None:
         """At a pause: the run's version is ``partial``; its weights are the checkpoint."""
+        if self.trial is not None:
+            return  # a trial's progress is its checkpoint and its study's trial row
         with Session(self.run.engine) as session, session.begin():
             version_id = store.record_run(
                 session,
@@ -853,6 +954,19 @@ class _Run:
     ) -> str:
         """Write the trained weights, then mark the version ``trained`` (REG-1.1). The
         row is committed only once the files are in place; checkpoints go after."""
+        if self.trial is not None:  # to the trial's folder; the study registers the best
+            size = weights.write(
+                self.trial.folder / "trained",
+                model,
+                self._meta("trained", "trained", history),
+                self._extra_files(),
+            )
+            metrics["weights_bytes"] = size
+            result = {"metrics": dict(metrics), "detail": detail, "history": history}
+            partial = self.trial.folder / (TRIAL_RESULT + ".part")
+            partial.write_text(json.dumps(result), encoding="utf-8")
+            os.replace(partial, self.trial.folder / TRIAL_RESULT)
+            return f"trial {self.trial.number}"
         with Session(self.run.engine) as session, session.begin():
             store.lock_lineage(session, self.lineage_id)
             existing = store.run_version(session, self.ctx.job_id)
@@ -890,6 +1004,17 @@ class _Run:
     def already_registered(self) -> StageResult | None:
         """On a retry of a run that registered its weights before the process died:
         finish the cleanup and return the recorded result, training nothing."""
+        if self.trial is not None:
+            found = self.trial.folder / TRIAL_RESULT
+            if not found.is_file():
+                return None
+            result = json.loads(found.read_text(encoding="utf-8"))
+            self._remove_checkpoints()
+            self.trial.complete(result["history"][-1])
+            scalars = {
+                k: v for k, v in result["metrics"].items() if isinstance(v, int | float | str)
+            }
+            return StageResult(metrics=scalars)
         with Session(self.run.engine) as session:
             version = store.run_version(session, self.ctx.job_id)
             if version is None or version.state != "trained" or version.weights_status != "present":
@@ -927,6 +1052,65 @@ class _Run:
         return self.units.oom_error(
             failed_batch=batch, suggested=suggested, peak_mb=peak, cap_mb=cap
         )
+
+
+def run_test_eval(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult:
+    """A deep-learning study's ``test_eval`` stage: the registered best version scored on
+    the test split, once (HPO-1.4, ADR-0018 rule 8). A retry after the write returns
+    what was written; the database refuses a second write either way."""
+    from stratal.db.models import ModelVersion
+    from stratal.hpo import store as hpo_store
+
+    study_id = str(run.config["study_id"])
+    with Session(run.engine) as session:
+        study = hpo_store.get_study(session, study_id)
+        kept, best = study.test_metrics, study.best_version_id
+        version = session.get(ModelVersion, best) if best is not None else None
+        found = (
+            (dict(version.config), version.weights_path, version.dataset_version_id)
+            if version is not None and version.weights_path is not None
+            else None
+        )
+    if kept is not None:
+        return StageResult(metrics={k: v for k, v in kept.items() if isinstance(v, int | float)})
+    if found is None:
+        hpo_store.update_study(run.engine, study_id, state="completed", finished_at=utc_now())
+        run.ctx.emit(stage="test_eval", message="No best version to test: no trial completed")
+        return StageResult(metrics={"tested": 0})
+    config_json, weights_path, dataset_version = found
+    config = TrainConfig.model_validate(config_json)
+    training = _Run(replace(run, input_version_id=dataset_version), config, units)
+    training.prepare()
+    model = build_model(config.model, training.input, training.outputs)
+    weights.load_into(model, run.data_dir / weights_path)
+    if training.device == "cuda":
+        with gpu_lease(run.engine, holder=f"{run.ctx.job_id}/test_eval", wait_s=60):
+            torch.cuda.set_per_process_memory_fraction(VRAM_FRACTION)
+            scalars, detail = training._final_scores(model.to("cuda"), ("test",))
+            del model
+            torch.cuda.empty_cache()
+    else:
+        scalars, detail = training._final_scores(model, ("test",))
+    test = {k: v for k, v in scalars.items() if k.startswith("test_")}
+    wrote = hpo_store.record_test_once(run.engine, study_id, {**test, "detail": detail.get("test")})
+    if wrote:
+        with Session(run.engine) as session, session.begin():
+            row = session.get(ModelVersion, best)
+            assert row is not None
+            metrics = dict(row.metrics or {})
+            row.metrics = {
+                **metrics,
+                **test,
+                "detail": {**dict(metrics.get("detail") or {}), "test": detail.get("test")},
+            }
+    hpo_store.update_study(run.engine, study_id, state="completed", finished_at=utc_now())
+    run.ctx.emit(
+        stage="test_eval",
+        message=f"Best version {best} tested once: "
+        + ", ".join(f"{k} {v}" for k, v in test.items()),
+        metrics={"model_version_id": str(best), **test},
+    )
+    return StageResult(metrics={**test, "model_version_id": str(best)})
 
 
 def run_train(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult:

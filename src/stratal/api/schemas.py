@@ -14,7 +14,15 @@ from pydantic import BaseModel, ConfigDict, Field
 Json = dict[str, Any]
 JobState = Literal["queued", "running", "paused", "completed", "failed", "cancelled", "stalled"]
 StageStatus = Literal[
-    "pending", "queued", "running", "paused", "completed", "failed", "skipped", "cancelled"
+    "pending",
+    "queued",
+    "running",
+    "paused",
+    "waiting",
+    "completed",
+    "failed",
+    "skipped",
+    "cancelled",
 ]
 
 

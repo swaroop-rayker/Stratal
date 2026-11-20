@@ -229,7 +229,11 @@ def stale_checkpoints(session: Session, lineage_ids: Sequence[str]) -> list[Stal
         )
         .order_by(Checkpoint.job_id)
     ).all()
-    return [StaleCheckpoint(c.job_id, c.lineage_id, c.path, c.bytes, state) for c, state in rows]
+    return [
+        StaleCheckpoint(c.job_id, c.lineage_id, c.path, c.bytes, state)
+        for c, state in rows
+        if c.lineage_id is not None  # the query matched lineages; this tells pyright
+    ]
 
 
 def _lineages(session: Session, lineage_ids: Iterable[str] | None) -> list[ModelLineage]:
