@@ -627,6 +627,25 @@ def _run_train_classical(run: StageRun) -> StageResult:
 register(StageDef("train_classical", "cpu", ClassicalConfig, _run_train_classical))
 
 
+class StudyStageConfig(BaseModel):
+    """The ``study`` stage's config: the study request as resolved, and its ``study_id``
+    (HPO-1.2, ADR-0018 rule 1). The study's own row holds what the stage reads."""
+
+    model_config = ConfigDict(extra="allow", frozen=True)
+
+    study_id: str | None = None
+
+
+def _run_study(run: StageRun) -> StageResult:
+    """An HPO study (ADR-0018). Optuna and scikit-learn load only here, in the worker."""
+    from stratal.hpo import runner
+
+    return runner.run_study(run)
+
+
+register(StageDef("study", "cpu", StudyStageConfig, _run_study))
+
+
 class RetentionConfig(BaseModel):
     """A retention run (REG-2.9, ADR-0015 rule 4)."""
 

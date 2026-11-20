@@ -78,7 +78,8 @@ export interface paths {
         put?: never;
         /**
          * Create Job
-         * @description Start a job: ``kind: pipeline``, or ``kind: train`` (M8, RUN-1.1).
+         * @description Start a job: ``kind: pipeline``, ``kind: train`` (M8, RUN-1.1) or ``kind: hpo_study``
+         *     (M10, HPO-1.1 to HPO-1.4).
          */
         post: operations["create_job_api_v1_jobs_post"];
         delete?: never;
@@ -1034,6 +1035,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/studies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Studies
+         * @description Studies, newest first.
+         */
+        get: operations["list_studies_api_v1_studies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/studies/{study_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Study
+         * @description A study (HPO-1.5).
+         */
+        get: operations["get_study_api_v1_studies__study_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/studies/{study_id}/trials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Trials
+         * @description Its trials with their states, values, steps and why they were pruned (HPO-1.3).
+         */
+        get: operations["get_trials_api_v1_studies__study_id__trials_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/studies/{study_id}/best-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Best Config
+         * @description The base run with the best trial's values (HPO-1.5); 404 before a trial completes.
+         */
+        get: operations["get_best_config_api_v1_studies__study_id__best_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1926,6 +2007,33 @@ export interface components {
              * @description Input features. Leave empty to take them from the input; a value that disagrees with the input is an error (BUILD-1.4).
              */
             in_features?: number | null;
+        };
+        /**
+         * Marker
+         * @description One tuned field: a range with a scale, or choices (HPO-1.1).
+         */
+        Marker: {
+            /**
+             * Path
+             * @description A JSON pointer into the base.
+             */
+            path: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "int" | "float" | "log_float" | "categorical";
+            /** Low */
+            low?: number | null;
+            /** High */
+            high?: number | null;
+            /**
+             * Step
+             * @description int and float only.
+             */
+            step?: number | null;
+            /** Choices */
+            choices?: unknown[] | null;
         };
         /** MaxPool2d */
         MaxPool2d: {
@@ -3161,6 +3269,66 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * StudyRequest
+         * @description ``POST /jobs`` with ``kind: hpo_study``: a base run, what to tune, the limits.
+         */
+        StudyRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hpo_study";
+            /**
+             * Dataset Version
+             * @description The version the base run would train on.
+             */
+            dataset_version: string;
+            /** @description A classical base run (ML-1.1). Give this or 'config'. */
+            classical?: components["schemas"]["ClassicalConfig"] | null;
+            /** @description A network base run (RUN-1.1). Give this or 'classical'. */
+            config?: components["schemas"]["TrainConfig"] | null;
+            /**
+             * Space
+             * @description The tuned fields (HPO-1.1).
+             */
+            space: components["schemas"]["Marker"][];
+            /**
+             * Objective
+             * @description What to optimise: cv_accuracy, cv_macro_f1, cv_r2 or cv_rmse for a classical model; val_accuracy, val_loss or val_rmse for a network. Empty: the task's first.
+             */
+            objective?: string | null;
+            /**
+             * N Trials
+             * @description Trials started at most.
+             * @default 20
+             */
+            n_trials: number;
+            /**
+             * Timeout S
+             * @description Running time at most, pauses excluded.
+             * @default 3600
+             */
+            timeout_s: number;
+            /**
+             * Pruning
+             * @description Median pruning (HPO-1.3).
+             * @default true
+             */
+            pruning: boolean;
+            /**
+             * Cv Folds
+             * @description Classical models only.
+             * @default 5
+             */
+            cv_folds: number;
+            /**
+             * Seed
+             * @description TPE's suggestions.
+             * @default 0
+             */
+            seed: number;
+        };
         /** System */
         System: {
             /** Gpu Name */
@@ -3613,7 +3781,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PipelineRequest"] | components["schemas"]["TrainRequest"];
+                "application/json": components["schemas"]["PipelineRequest"] | components["schemas"]["TrainRequest"] | components["schemas"]["StudyRequest"];
             };
         };
         responses: {
@@ -5297,6 +5465,138 @@ export interface operations {
                             [key: string]: unknown;
                         };
                     };
+                };
+            };
+        };
+    };
+    list_studies_api_v1_studies_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_study_api_v1_studies__study_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                study_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trials_api_v1_studies__study_id__trials_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                study_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_best_config_api_v1_studies__study_id__best_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                study_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

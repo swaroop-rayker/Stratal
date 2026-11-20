@@ -102,6 +102,15 @@ The report goes in `docs/spikes/S-09-hpo.md`. If a number contradicts this ADR, 
 - **Rule 9, the word "default", was wrong.** Optuna 5.0's default importance evaluator is PED-ANOVA, not fANOVA. On a test study with a known answer, PED-ANOVA ranked the wrong parameter first at 20 trials; fANOVA ranked the right one first at 20 and 200 trials, in 0.14 s and 1.7 s. Importance therefore uses `FanovaImportanceEvaluator`, **set explicitly** with the study's seed, as the rule intended.
 - **A deep-learning trial costs about 19 s beyond its training**: about 16 s from its job's creation to its first training step, and about 3 s for the step that advances the study. That is 23 % of a 10-epoch Small CNN trial and 9 % of a 30-epoch one. A classical trial in its own job would cost about five times as much as one inside the study's job, which confirms decision 7. Optuna's calls add about 0.2 s per deep-learning trial and 0.13 s per 5-fold classical trial. Its tables and its own `alembic_version` stay in schema `optuna`, and `alembic check` sees no change.
 
+## As built (part A, classical studies, 2026-11-20)
+
+- **The request** is `POST /jobs` with `kind: hpo_study`, the base run as `classical` (or `config`), and the limits as top-level fields (`n_trials`, `timeout_s`, `pruning`, `cv_folds`, `seed`, `objective`). Studies tune supervised models only: clustering and PCA have no score to optimise.
+- **The space** is checked with each field's own validator (its type and limits), and a marker none of whose values makes a valid request with the fixed fields is refused (rule 2).
+- **One stage, `study`,** on the CPU queue runs Optuna in the stage's child; the trials' data are copied into `study_trials` as they start and end (rule 3). The refit of the best configuration is the classical run of ADR-0019 part D inside the same job, so it registers under the study's job, with `model_versions.study_id` set; its test scores are the study's single test evaluation, written by a conditional update that only the first evaluation can make (rule 8).
+- **Interrupted trials**: a pause stops between folds and records the trial in progress as `failed`, `interrupted`; a resume marks any trial Optuna still has as running the same way, and neither counts against `n_trials`.
+- **Importance** never fails a study: with one tuned field, fewer than two complete trials, or every trial scoring the same, it records why instead (fANOVA cannot rank a zero-variance study).
+- **Tests:** `test_HPO_1_1_space.py` (dev), `test_M10_studies.py` (API, dev), `test_M10_studies_run.py` (whole studies, worker-cpu).
+
 ## Alternatives
 
 | Option | Why not |

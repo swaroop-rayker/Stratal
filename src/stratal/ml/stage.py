@@ -221,6 +221,10 @@ class _Classical:
         return version_id
 
 
+ClassicalRun = _Classical
+"""One classical run inside another stage: a study's refit of its best trial (ADR-0018 rule 7)."""
+
+
 def run_train_classical(run: StageRun) -> StageResult:
     config = ClassicalConfig.model_validate(run.config)
     training = _Classical(run, config)

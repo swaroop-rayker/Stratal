@@ -29,6 +29,7 @@ from stratal.core.errors import (
 )
 from stratal.data import registry
 from stratal.db.models import Checkpoint, Dataset, DatasetVersion, Job, JobStage
+from stratal.hpo.config import StudyRequest
 from stratal.ml.params import ClassicalConfig
 from stratal.mon.events import utc_now
 from stratal.registry import store as model_registry
@@ -432,13 +433,10 @@ def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqu
     )
 
 
-def _create_classical_job(
-    session: Session, config: ClassicalConfig, version: DatasetVersion
-) -> tuple[Job, Enqueue]:
-    """A classical model's run on a tabular split, on the CPU queue (ML-1.1, ML-1.4)."""
+def _tabular_data(session: Session, version: DatasetVersion) -> Any:
+    """A tabular split's data, or ``validation_error`` at ``dataset_version``."""
     from stratal.core.settings import get_settings
     from stratal.ml.data import load_tabular
-    from stratal.ml.params import check_data, check_task
 
     version_id = version.version_id
     if version.dtype != stage_registry.TABULAR or version.stage != "split":
@@ -452,7 +450,13 @@ def _create_classical_job(
             ],
         )
     _, manifest = registry.manifest_for(session, get_settings().data_dir, version_id)
-    data = load_tabular(manifest)
+    return load_tabular(manifest)
+
+
+def _classical_problems(config: ClassicalConfig, data: Any) -> list[FieldProblem]:
+    """What makes a classical model unfit for a table (ML-1.4), each at its field."""
+    from stratal.ml.params import check_data, check_task
+
     spec = config.model.resolved()
     problems: list[FieldProblem] = []
     wrong_task = check_task(spec.estimator, data.task)
@@ -466,12 +470,22 @@ def _create_classical_job(
                 loc=["classical", "model", "params", field_name], msg=reason, code="invalid"
             )
         )
+    return problems
+
+
+def _create_classical_job(
+    session: Session, config: ClassicalConfig, version: DatasetVersion
+) -> tuple[Job, Enqueue]:
+    """A classical model's run on a tabular split, on the CPU queue (ML-1.1, ML-1.4)."""
+    version_id = version.version_id
+    problems = _classical_problems(config, _tabular_data(session, version))
     if problems:
         raise ValidationFailed(
             "The classical model does not fit this dataset (ML-1.4).",
             suggested_action="Fix the fields listed in 'errors'.",
             errors=problems,
         )
+    spec = config.model.resolved()
     resolved = config.model_copy(update={"model": spec}).model_dump(mode="json")
     dataset = session.get(Dataset, version.dataset_id)
     spec_json: dict[str, Any] = {
@@ -489,6 +503,108 @@ def _create_classical_job(
         input_version_id=version_id,
         queues={"train_classical": "cpu"},
     )
+
+
+def create_study_job(session: Session, request: StudyRequest) -> tuple[Job, Enqueue]:
+    """An HPO study: a one-stage ``hpo_study`` job and its ``studies`` row (HPO-1.1 to
+    HPO-1.4, ADR-0018 rule 1). The base run is checked as a single run would be; the space
+    against each field's own range and the fixed fields (ADR-0018 rule 2)."""
+    from stratal.hpo import space as hpo_space
+    from stratal.hpo.config import objectives
+    from stratal.hpo.store import create_study
+
+    version_id = request.dataset_version
+    try:
+        version = registry.get_version(session, version_id)
+    except NotFound as exc:
+        raise ValidationFailed(
+            f"dataset_version {version_id!r} is not a known dataset version.",
+            errors=[FieldProblem(loc=["dataset_version"], msg="unknown version", code="not_found")],
+        ) from exc
+    if request.classical is None:
+        raise ValidationFailed(
+            "Studies of networks arrive with the next part of M10 (ADR-0018 rule 5).",
+            suggested_action="Tune a classical model for now.",
+            errors=[FieldProblem(loc=["config"], msg="not yet", code="invalid")],
+        )
+    data = _tabular_data(session, version)
+    problems = _classical_problems(request.classical, data)
+    if problems:
+        raise ValidationFailed(
+            "The base run does not fit this dataset (ML-1.4).",
+            suggested_action="Fix the fields listed in 'errors'.",
+            errors=problems,
+        )
+    if data.task not in ("classification", "regression"):
+        raise ValidationFailed("Studies tune supervised models.")
+    from stratal.ml.params import check_task, task_for
+
+    estimator = request.classical.model.estimator
+    if task_for(estimator, data.task) not in ("classification", "regression"):
+        raise ValidationFailed(
+            f"{estimator} has no validation score to tune; studies tune classifiers and "
+            "regressors (HPO-1.4).",
+            errors=[
+                FieldProblem(
+                    loc=["classical", "model", "estimator"], msg="unsupervised", code="invalid"
+                )
+            ],
+        )
+    choices = objectives("classical", data.task)
+    objective = request.objective or next(iter(choices))
+    if objective not in choices:
+        raise ValidationFailed(
+            f"objective {objective!r} does not suit a classical {data.task}; choose one of "
+            f"{', '.join(choices)}.",
+            errors=[FieldProblem(loc=["objective"], msg="unknown objective", code="invalid")],
+        )
+    base = {
+        "classical": request.classical.model_copy(
+            update={"model": request.classical.model.resolved()}
+        ).model_dump(mode="json")
+    }
+
+    def invalid(document: dict[str, Any]) -> str | None:
+        try:
+            config = ClassicalConfig.model_validate(document["classical"])
+        except ValidationError as exc:
+            return str(exc.errors()[0]["msg"])
+        found = _classical_problems(config, data)
+        wrong = check_task(config.model.estimator, data.task)
+        return found[0]["msg"] if found else wrong
+
+    space_problems = hpo_space.check_space(request.space, base, invalid)
+    if space_problems:
+        raise ValidationFailed(
+            "The search space has problems (HPO-1.1).",
+            suggested_action="Fix the markers listed in 'errors'.",
+            errors=space_problems,
+        )
+    dataset = session.get(Dataset, version.dataset_id)
+    spec: dict[str, Any] = {
+        **request.model_dump(mode="json", exclude={"classical", "config"}),
+        "base": base,
+        "objective": objective,
+        "direction": choices[objective],
+        "study_kind": request.study_kind,
+        "task": data.task,
+        "dataset": dataset.slug if dataset is not None else None,
+    }
+    job, enqueue = create_job_from_plan(
+        session,
+        kind="hpo_study",
+        spec=spec,
+        plan=[("study", spec)],
+        dataset_id=version.dataset_id,
+        input_version_id=version_id,
+        queues={"study": "cpu"},
+    )
+    study_id = create_study(session, job_id=job.id, spec=spec)
+    job.spec = {**job.spec, "study_id": study_id}
+    stage = session.get(JobStage, (job.id, 0))
+    assert stage is not None
+    stage.config = {**stage.config, "study_id": study_id}
+    return job, enqueue
 
 
 def get_job(session: Session, job_id: str, *, lock: bool = False) -> Job:

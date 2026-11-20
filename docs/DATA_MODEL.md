@@ -323,6 +323,14 @@ Constraints: state and weights status check constraints; `present` needs a path 
 
 A graph spec is also stored, as part of its run's config, in `job_stages.config`, `model_versions.config` and `model_lineages.model_spec`; the lineage's copy has no `label` (ADR-0017 rule 1).
 
+### 4.15 HPO studies (M10, HPO-1.1 to HPO-1.5, [ADR-0018](decisions/ADR-0018-hpo-execution.md))
+
+`studies`: `id` (`st_` + 12 hex), `job_id` (unique, FK), `kind` (`classical`, `deep`), `dataset_version_id`, `base` (jsonb: the base run, defaults filled in), `space` (jsonb: the markers), `objective`, `direction` (`maximize`, `minimize`), `limits` (jsonb `{n_trials, timeout_s}`), `pruning`, `cv_folds`, `seed`, `state` (`running`, `closed`, `completed`, `cancelled`, `failed`), `ended_by` (`n_trials`, `timeout`), `elapsed_s` (running time, pauses excluded), `best_trial`, `best_value`, `best_params` (jsonb, by path), `importance` (jsonb), `best_version_id` (FK `model_versions`), `test_metrics` (jsonb), `test_evaluated_at` (set once, HPO-1.4), `created_at`, `finished_at`.
+
+`study_trials`: `study_id`, `number` (the PK together), `job_id` (a deep-learning trial's job, else null), `state` (`running`, `complete`, `pruned`, `failed`), `params` (jsonb), `value`, `step`, `prune_reason` (`median`, `budget`), `code` (`invalid_combination`, `interrupted`, …), `intermediate` (jsonb `[[step, value]]`), `duration_s`, `started_at`, `finished_at`.
+
+`model_versions.study_id` (FK, null) names the study whose best trial a version is. Optuna's own tables live in schema `optuna`, created empty by the migration and filled by Optuna; the API never reads them.
+
 ## 5. Manifest schema
 
 One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accumulate as stages run; a column is null until its stage has run.
@@ -425,7 +433,7 @@ Outlined only. Each is specified at its phase kickoff, with an ADR where it is a
 | Phase | Tables | Notes |
 |---|---|---|
 | 2 | ~~`model_lineages`, `model_versions`, `checkpoints`, `pins`, `retention_settings`~~ | Built in M8: [§4.12](#412-model-registry-m8-reg-11-reg-12-adr-0015) |
-| 2 | Optuna's own tables, in a separate schema | Studies and trials (HPO) |
+| 2 | ~~Optuna's own tables, in a separate schema~~ | Built in M10: schema `optuna`, with `studies` and `study_trials` beside them ([§4.15](#415-hpo-studies-m10-hpo-11-to-hpo-15-adr-0018)) |
 | 3 | `corpora`, `rag_indexes`, `chat_sessions`, `inference_requests` | Index versions for hit@k (LLM-2.2); request latency for NFR-6 |
 | 4 | adapter columns on `model_versions` | LoRA deltas with a parent base (REG-1.3, REG-2.8) |
 

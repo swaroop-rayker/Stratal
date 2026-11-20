@@ -743,6 +743,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The inference holder reads the version's `model.json` to see what it takes; classical pipelines load from skops on the CPU without the lease; table and text networks load their fitted encoding or vocabulary and encode with the training code; `stratal.inference.inputs` checks a record against the table schema.
 - **Why:** One service and one model at a time keeps the memory budget (ADR-0016); reusing the training code for encoding means a served prediction sees exactly the input the model was trained on.
 
+**Classical studies** (M10, HPO-1.1 to HPO-1.5, ADR-0018 rules 1 to 4 and 6 to 9) — [ADR-0018](decisions/ADR-0018-hpo-execution.md)
+- **What:** An `hpo_study` job tunes a classical model with Optuna's TPE, cross-validating each trial on the train split, and registers and tests its best configuration once.
+- **How:** `stratal.hpo.space` checks markers with each field's own validator; `stratal.hpo.runner` runs the study in one stage, folds grouped by split group, the median pruner by fold, the time budget kept across pauses; `studies` and `study_trials` mirror the trials for the API; the refit is the ordinary classical run, and a conditional update keeps the test evaluation single.
+- **Why:** Decision 7 groups sub-second classical trials in one job (S-09: five times cheaper). Grouped folds keep near-duplicates on one side, as the split does. Reusing the classical run for the refit means a study's model is registered and served exactly like any other.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

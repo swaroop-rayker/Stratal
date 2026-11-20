@@ -23,6 +23,7 @@ from stratal.db.models import (
     ResourceSample,
     ResourceSample1m,
 )
+from stratal.hpo.config import StudyRequest
 from stratal.mon.events import Event, Level
 from stratal.mon.store import insert_events
 from stratal.runtime import jobs as job_service
@@ -138,15 +139,18 @@ def _page(rows: list[EventRow], limit: int, *, tail: bool = False) -> Json:
 # -- jobs ----------------------------------------------------------------------
 
 
-JobRequest = Annotated[PipelineRequest | TrainRequest, Field(discriminator="kind")]
+JobRequest = Annotated[PipelineRequest | TrainRequest | StudyRequest, Field(discriminator="kind")]
 
 
 @router.post("/jobs", status_code=202, tags=["jobs"], response_model=schemas.Job)
 def create_job(request: JobRequest, session: Db, enqueue: Queue, bus: Redis) -> Json:
-    """Start a job: ``kind: pipeline``, or ``kind: train`` (M8, RUN-1.1)."""
+    """Start a job: ``kind: pipeline``, ``kind: train`` (M8, RUN-1.1) or ``kind: hpo_study``
+    (M10, HPO-1.1 to HPO-1.4)."""
     with session.begin():
         if isinstance(request, TrainRequest):
             job, first = job_service.create_train_job(session, request)
+        elif isinstance(request, StudyRequest):
+            job, first = job_service.create_study_job(session, request)
         else:
             job, first = job_service.create_pipeline_job(session, request)
         view = job_service.job_view(session, job)

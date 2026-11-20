@@ -29,6 +29,8 @@ class SplitTable:
 
     columns: dict[str, list[Any]] = field(default_factory=lambda: dict[str, list[Any]]())
     target: list[Any] = field(default_factory=lambda: list[Any]())
+    groups: list[str] = field(default_factory=lambda: list[str]())
+    """Each row's split group (DATA-4.2), so cross-validation folds keep groups whole."""
 
     def __len__(self) -> int:
         return len(self.target)
@@ -103,7 +105,7 @@ def load_tabular(manifest: Path) -> TabularData:
     splits: dict[str, SplitTable] = {
         s: SplitTable({n: [] for n in features}) for s in ("train", "val", "test")
     }
-    columns = ["status", "split", "record", "label", "target_value"]
+    columns = ["row_key", "status", "split", "record", "label", "target_value", "split_group"]
     for row in iter_rows(manifest, columns=columns):
         if row["status"] != STATUS_ACCEPTED or row["split"] not in splits:
             continue
@@ -112,6 +114,7 @@ def load_tabular(manifest: Path) -> TabularData:
         for name in features:
             part.columns[name].append(values.get(name))
         part.target.append(row["label"] if task == "classification" else row["target_value"])
+        part.groups.append(str(row["split_group"] or row["row_key"]))
     if not splits["train"]:
         raise StratalError(
             f"{manifest.name} has no accepted train rows.",

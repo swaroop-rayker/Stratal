@@ -330,6 +330,37 @@ Built in M5 (2026-11-16). Details:
 - A save that would delete weights is refused with `409 confirmation_required` and the `plan`; the same body with `confirm: plan.token` saves it and queues a retention job that deletes only that plan's versions (`job_id`). If anything changed in between, the token no longer matches and a new plan is returned the same way (ADR-0015 rule 7).
 - An unknown lineage in `overrides` is `422 validation_error`.
 
+### 3.12 Studies (M10, HPO-1.1 to HPO-1.5; [ADR-0018](decisions/ADR-0018-hpo-execution.md))
+
+`POST /jobs` with `kind: hpo_study` starts one:
+
+```json
+{
+  "kind": "hpo_study",
+  "dataset_version": "ds_98c3fdfd7edc",
+  "classical": {"model": {"kind": "sklearn", "estimator": "random_forest"}},
+  "space": [
+    {"path": "/classical/model/params/n_estimators", "type": "int", "low": 50, "high": 500, "step": 10},
+    {"path": "/classical/model/params/max_features", "type": "categorical", "choices": ["sqrt", "log2", "1.0"]}
+  ],
+  "objective": "cv_accuracy", "n_trials": 50, "timeout_s": 600, "pruning": true, "cv_folds": 5, "seed": 0
+}
+```
+
+- **The base** is `classical` (or, from part B, `config` for a network), checked as a single run would be. **`space`** holds 1 to 20 markers `{path, type: int | float | log_float | categorical, low, high, step?, choices?}`; a path is a JSON pointer into the base (`/classical/model/params/<field>`, `/config/<training field>`, `/config/model/graph/nodes/<node id>/layer/<field>`). A marker outside its field's own range, on a field that cannot be tuned, tuned twice, or none of whose values could be valid with the fixed fields is a `validation_error` at `["space", i, "path"]` (HPO-1.1).
+- **`objective`**: `cv_accuracy` (default) or `cv_macro_f1` for a classical classifier, `cv_r2` (default) or `cv_rmse` for a regressor; the direction follows. Clustering and PCA are refused: they have no score to tune. `n_trials` 1–200 (20), `timeout_s` 60–86,400 (3,600, running time, pauses excluded), whichever comes first ends the study (HPO-1.2); `pruning` (true: the median pruner, HPO-1.3); `cv_folds` 2–10 (5); `seed`.
+- The job has kind `hpo_study` and one stage, `study`, on the `cpu` queue; its config and spec carry the `study_id`. Pause, resume and cancel are the job's.
+
+| Method and path | Purpose | Success |
+|---|---|---|
+| `GET /studies?limit=` | Studies, newest first | `200 {items}` |
+| `GET /studies/{id}` | `{id, job_id, kind, dataset_version, objective, direction, limits, pruning, cv_folds, seed, space, base, state, ended_by, elapsed_s, trials: {started, complete, pruned, failed, running, interrupted}, best: {trial, value, params} \| null, importance, best_version_id, test_metrics, test_evaluated_at, created_at, finished_at}` | `200` |
+| `GET /studies/{id}/trials` | `{items: [{number, state, params, value, step, prune_reason, code, intermediate: [[step, value]], duration_s, job_id, started_at, finished_at}]}`, oldest first | `200` |
+| `GET /studies/{id}/best-config` | The base with the best trial's values set, for SCR-09 to prefill (HPO-1.5); `404` before a trial completes | `200` |
+
+- **States:** a study is `running`, then `closed` (no further trial; `ended_by` `n_trials` or `timeout`), then `completed` once its best configuration is registered (`best_version_id`) and tested once (`test_metrics`, HPO-1.4); or `cancelled`. A trial is `complete`, `pruned` (`prune_reason` `median` or `budget`, `step` the fold it stopped at), `failed` (`code` `invalid_combination`, or `interrupted` by a pause or crash, which does not count against `n_trials`) or `running`.
+- **`importance`** is `{method: "fanova", values: {path: share}}`, or `{reason}` when it cannot be computed (one field tuned, fewer than two complete trials, or every trial scoring the same).
+
 ### 3.11 Model builder (M9, BUILD-1, UI-2.3, DATA-5.5; [ADR-0017](decisions/ADR-0017-model-spec.md))
 
 | Method and path | Purpose | Success |
