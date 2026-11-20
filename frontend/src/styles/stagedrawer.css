@@ -6,14 +6,14 @@
 .stage-drawer .chartbox svg { display: block; width: 100%; height: 100px; }
 .stage-drawer .legend-s { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); margin-bottom: var(--sp-1); } .stage-drawer .legend-s i { display: inline-block; width: 10px; height: 2px; margin-right: var(--sp-1); vertical-align: middle; background: var(--c); } .stage-drawer .legend-s i.dash { background: repeating-linear-gradient(to right, var(--c) 0 4px, transparent 4px 7px); }
 .stage-drawer .log { background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); font: var(--fs-12)/1.7 var(--font-mono); overflow: hidden; }
-.stage-drawer .log > div { display: grid; grid-template-columns: 72px 52px 84px 1fr; gap: var(--sp-3); padding: 0 var(--sp-3); white-space: nowrap; }
+.stage-drawer .log > div { display: grid; grid-template-columns: 72px 52px 15ch 1fr; gap: var(--sp-3); padding: 0 var(--sp-3); white-space: nowrap; }
 .stage-drawer .log > div:hover { background: var(--accent-soft); }
 .stage-drawer .log .ts, .stage-drawer .log .st { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .stage-drawer .log .lv-INFO { color: var(--info); } .stage-drawer .log .lv-WARN { color: var(--warning); } .stage-drawer .log .lv-ERROR { color: var(--danger); } .stage-drawer .log .lv-DEBUG { color: var(--text-muted); }
 .stage-drawer .log .why { grid-column: 4; color: var(--text-secondary); white-space: normal; font-family: var(--font-ui); padding-bottom: var(--sp-1); }
 .stage-drawer .log .why b { color: var(--text-primary); }
 .stage-drawer .log .warn { background: var(--warning-soft); } .stage-drawer .log .error { background: var(--danger-soft); }
-.stage-drawer .log.jobs > div { grid-template-columns: 72px 72px 52px 84px 1fr; } .stage-drawer .log.jobs .why { grid-column: 5; }
+.stage-drawer .log.jobs > div { grid-template-columns: 72px 72px 52px 15ch 1fr; } .stage-drawer .log.jobs .why { grid-column: 5; }
 .stage-drawer .log.narrow > div { grid-template-columns: 64px 48px 1fr; white-space: normal; } .stage-drawer .log.narrow .why { grid-column: 3; }
 .stage-drawer.drawer { width: 480px; }
 .stage-drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); overflow: auto; }

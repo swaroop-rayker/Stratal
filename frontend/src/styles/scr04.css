@@ -28,14 +28,14 @@
 .scr04 .seg.pending { --c: var(--border-strong); border-style: dashed; background: transparent; } .scr04 .seg[aria-current=true] { box-shadow: 0 0 0 2px var(--focus); }
 .scr04 .seg.completed { --c: var(--state-completed); } .scr04 .seg.running { --c: var(--state-running); } .scr04 .seg.failed { --c: var(--state-failed); }
 .scr04 .log { background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); font: var(--fs-12)/1.7 var(--font-mono); overflow: hidden; }
-.scr04 .log > div { display: grid; grid-template-columns: 72px 52px 84px 1fr; gap: var(--sp-3); padding: 0 var(--sp-3); white-space: nowrap; }
+.scr04 .log > div { display: grid; grid-template-columns: 72px 52px 15ch 1fr; gap: var(--sp-3); padding: 0 var(--sp-3); white-space: nowrap; }
 .scr04 .log > div:hover { background: var(--accent-soft); }
 .scr04 .log .ts, .scr04 .log .st { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .scr04 .log .lv-INFO { color: var(--info); } .scr04 .log .lv-WARN { color: var(--warning); } .scr04 .log .lv-ERROR { color: var(--danger); } .scr04 .log .lv-DEBUG { color: var(--text-muted); }
 .scr04 .log .why { grid-column: 4; color: var(--text-secondary); white-space: normal; font-family: var(--font-ui); padding-bottom: var(--sp-1); }
 .scr04 .log .why b { color: var(--text-primary); }
 .scr04 .log .warn { background: var(--warning-soft); } .scr04 .log .error { background: var(--danger-soft); }
-.scr04 .log.jobs > div { grid-template-columns: 72px 72px 52px 84px 1fr; } .scr04 .log.jobs .why { grid-column: 5; }
+.scr04 .log.jobs > div { grid-template-columns: 72px 72px 52px 15ch 1fr; } .scr04 .log.jobs .why { grid-column: 5; }
 .scr04 .log.narrow > div { grid-template-columns: 64px 48px 1fr; white-space: normal; } .scr04 .log.narrow .why { grid-column: 3; }
 .scr04 .jhead { display: flex; align-items: center; gap: var(--sp-3); }
 .scr04 .jhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); }

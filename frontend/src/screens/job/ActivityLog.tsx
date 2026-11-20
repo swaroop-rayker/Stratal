@@ -43,7 +43,7 @@ function Line({ e, jobs }: { e: StreamEvent; jobs: boolean }) {
         </span>
       ) : null}
       <span className={`lv-${e.level}`}>{e.level}</span>
-      <span className="st">{e.stage ?? "–"}</span>
+      <span className="st" title={e.stage ?? undefined}>{e.stage ?? "–"}</span>
       <span>{e.message}</span>
       {loud && (e.reason || e.suggested_action) ? (
         <span className="why">
