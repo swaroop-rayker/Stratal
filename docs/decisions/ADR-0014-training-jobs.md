@@ -1,6 +1,6 @@
 # ADR-0014 — Training jobs: checkpoints, pause and resume, device choice
 
-**Status:** Accepted by the owner on 2026-11-17, as proposed (M8). Addendum A (fine-tuning, RUN-1.10) proposed 2026-11-20.
+**Status:** Accepted by the owner on 2026-11-17, as proposed (M8). Addendum A (fine-tuning, RUN-1.10) accepted by the owner on 2026-11-20 ("Approve both").
 
 ## Context
 
@@ -54,7 +54,7 @@
 
 ## Addendum A — Fine-tuning a trained version (RUN-1.10), proposed 2026-11-20
 
-**Status:** Proposed (M11, kickoff K3 and K9). Its retention half is ADR-0015's Addendum A. Nothing here is built before the owner approves both.
+**Status:** Accepted by the owner on 2026-11-20 ("Approve both"), as proposed, with ADR-0015's Addendum A, its retention half (M11, kickoff K3 and K9).
 
 ### Context
 

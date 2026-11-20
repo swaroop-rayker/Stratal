@@ -638,7 +638,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] ADR-0020 (alerts and diagnostics) approved; the RUN-1.10 addendum to ADR-0014 and ADR-0015 approved (K3)
+- [ ] ADR-0020 (alerts and diagnostics) approved (K3)
+- [x] The RUN-1.10 addendum to ADR-0014 and ADR-0015 approved (K3) (both Addendum A, 2026-11-20, "Approve both")
 - [x] G1 revision for choosing the model kind after the split approved (SCREENS.md, Flow 4); its G2 approved with SCR-09 v2 (G1 v3 and G2 approved 2026-11-20)
 - [ ] G2 for SCR-09 v2, SCR-11 v2, SCR-03 v2 and SCR-13 approved, in that order (K11)
 - [ ] Semantic-duplicate threshold chosen by the owner from the coco10k measurement (K1)

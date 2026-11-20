@@ -1,6 +1,6 @@
 # ADR-0015 — Model registry and weight retention
 
-**Status:** Accepted by the owner on 2026-11-17, as proposed (M8). Addendum A (parents of fine-tuned versions) proposed 2026-11-20.
+**Status:** Accepted by the owner on 2026-11-17, as proposed (M8). Addendum A (parents of fine-tuned versions) accepted by the owner on 2026-11-20 ("Approve both").
 
 ## Context
 
@@ -44,7 +44,7 @@
 
 ## Addendum A — Parents of fine-tuned versions (RUN-1.10, REG-2.8), proposed 2026-11-20
 
-**Status:** Proposed (M11, kickoff K3 and K9), with ADR-0014's Addendum A.
+**Status:** Accepted by the owner on 2026-11-20 ("Approve both"), as proposed, with ADR-0014's Addendum A (M11, kickoff K3 and K9).
 
 ### Context
 
