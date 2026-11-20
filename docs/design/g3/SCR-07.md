@@ -91,7 +91,7 @@ The two differences accepted at SCR-07 v2's Gate 3 (2026-11-18) are now built. *
 
 # Study addendum (M10) — Gate 3, no mockup
 
-SCR-10's approval (2026-11-19) chose no list of studies, with this addendum and SCR-04's designed at Gate 3. Built in `frontend/src/screens/jobs/JobsScreen.tsx`; **waiting for the owner's review**.
+SCR-10's approval (2026-11-19) chose no list of studies, with this addendum and SCR-04's designed at Gate 3. Built in `frontend/src/screens/jobs/JobsScreen.tsx`; **Approved by the owner on 2026-11-20** ("Approve all four"), with the listed differences.
 
 - **A study's job** (`hpo_study`), running: its study ID as a link to SCR-10, "trial n/N" with a progress bar from the study stage's progress, and "waiting for its trial" while a trial runs. Completed: a chevron and the study's link.
 - **A trial's job** (`hpo_trial`) reads as a training run with its trial first: running "trial 3 · epoch 4/20"; finished "trial 6 of st_… · val acc 100.0%", or "trial 9 of st_… · pruned at epoch 2 · median".

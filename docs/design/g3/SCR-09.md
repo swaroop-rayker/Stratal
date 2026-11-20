@@ -42,7 +42,7 @@
 | Mockup | [`screens/SCR-09hpo_v1.html`](../screens/SCR-09hpo_v1.html), G2 approved 2026-11-19 |
 | Built | `frontend/src/screens/build/RunScreen.tsx`, `StudyParts.tsx`, `study.ts`; `SchemaForm`'s new `decor` (a control after a field's label and a replacement input, generic); styles appended to `scr09.css`. `/runs/new?study=st_…` prefills a study's best configuration (SCR-10's *Start a run from this configuration*) |
 | Checked | 2026-11-20, live: Classical mode on `breast-cancer` (a random forest, `n_estimators` and `max_features` tuned); a network study prefilled from `st_5869c7673960` with `learning_rate`, `batch_size` and the layer field `d1.out_features` tuned and a refused range; both themes. The pane was 583 px wide: content, behaviour and contrast were checked through the page |
-| Status | **Waiting for the owner's review** |
+| Status | **Approved by the owner on 2026-11-20** ("Approve all four"), with the listed differences |
 
 ## Differences from the mockup
 

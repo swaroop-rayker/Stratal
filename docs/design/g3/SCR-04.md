@@ -86,7 +86,7 @@ The job view gained `model_lineage_id` for this link (API.md §3.3).
 
 # Study addendum (M10) — Gate 3, no mockup
 
-Designed at Gate 3 (SCR-10's approval, 2026-11-19). Built in `frontend/src/screens/job/JobScreen.tsx` and `Timeline.tsx`; **waiting for the owner's review**.
+Designed at Gate 3 (SCR-10's approval, 2026-11-19). Built in `frontend/src/screens/job/JobScreen.tsx` and `Timeline.tsx`; **Approved by the owner on 2026-11-20** ("Approve all four"), with the listed differences.
 
 - **Open the study:** a button in the header of a study's job (primary) and of a trial's job (secondary), to SCR-10.
 - **A trial's job** says "trial n of st_…" before its model in the header line, and shows the training charts and run views a `train` job does.

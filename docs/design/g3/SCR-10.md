@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-10_v1.html`](../screens/SCR-10_v1.html), G2 approved 2026-11-19 |
 | Built | `frontend/src/screens/studies/StudyScreen.tsx`, `History.tsx`, `frontend/src/api/studies.ts`, `frontend/src/styles/scr10.css`; route `/studies/:studyId`; reached from SCR-07 and SCR-04 (the addenda below and in their notes), and from SCR-09's *Start study* |
 | Checked | 2026-11-20, live on two real studies: `st_e06085ead155`, a random forest on `breast-cancer` (classical, 40 trials, 13 pruned, completed), and `st_5869c7673960`, a two-layer MLP on `wine` on the CPU (10 trials, 4 pruned at epoch 2, completed), dark and light. The Browser pane was 583 px wide, so content, behaviour and contrast were checked through the page; no full-width screenshot was taken |
-| Status | **Waiting for the owner's review** |
+| Status | **Approved by the owner on 2026-11-20** ("Approve all four"), with the listed differences |
 
 ## What was checked against the mockup
 
