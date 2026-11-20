@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). M9 merged 2026-11-19 (the model builder: graph specs checked in plain Python, compiled to PyTorch, templates; SCR-08 and SCR-09 through G3; BUILD-1.8 written by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). M9 merged 2026-11-19 (the model builder: graph specs checked in plain Python, compiled to PyTorch, templates; SCR-08 and SCR-09 through G3; BUILD-1.8 written by the agent at the owner's request). M10 merged 2026-11-20 (tables and texts, classical ML, EVAL-1.2's task metrics, HPO with Optuna; SCR-09's study part, SCR-10 and SCR-11's task metrics through G3; EVAL-1.2 written by the agent at the owner's request, K1). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
 | Planning style | Phases 1 and 2 (M0–M11) are planned in detail; phase 2's detail was approved on 2026-11-17. Phases 3–5 (M12–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -27,7 +27,7 @@
 | M7 | Phase-1 acceptance | 1 | M | Done 2026-11-17 |
 | M8 | Training runtime and registry | 2 | L | Done 2026-11-19 |
 | M9 | Model builder | 2 | L | Done 2026-11-19 |
-| M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
 | M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
 | M11b | Tabular transforms | 2 | M | Not started (added at the owner's request 2026-11-19; outline) |
 | M12 | LLM serving and RAG | 3 | L | Outline |
@@ -592,7 +592,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] G3 for SCR-09 (HPO part) and SCR-10 (approved 2026-11-20, "Approve all four", with the SCR-07 and SCR-04 study addenda; `docs/design/g3/SCR-10.md`)
 - [x] Demo: tune a random forest on the tabular dataset and the CNN's learning rate; read both studies; one test evaluation each (2026-11-20, on the live stack, read on SCR-10: a random forest on breast cancer, `st_e06085ead155` (`job_0077`), 40 trials, 13 pruned by fold, best cv_accuracy 0.963, tested once: accuracy 0.965, macro F1 0.961; the Small CNN's learning rate on CIFAR-10 on the GPU, `st_8293da6ebe0e` (`job_0095`), 8 trials of 4 epochs, one pruned at epoch 2, best lr 0.0012 at val accuracy 0.804, registered as `mv_a4a0fb846812` and tested once: accuracy 0.810, macro F1 0.809. Also a two-layer MLP on wine, `st_5869c7673960`)
 - [x] Docs updated (learning notes) (2026-11-20: API.md §3.9, §3.3 and §3.12; ADR-0018 "As built" parts A and B; DATA_MODEL §4.15; ARCHITECTURE; DECISIONS; the Gate 3 notes; `docs/learning/Decisions.md` §27 and `sys-design.md` §5l, not committed)
-- [ ] Owner's OK to merge
+- [x] Owner's OK to merge ("Yes, merge and push", 2026-11-20)
 
 ## M11 — Dashboards, monitoring completion, phase-2 acceptance
 
