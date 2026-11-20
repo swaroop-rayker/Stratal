@@ -174,7 +174,8 @@ export function RunScreen() {
     nextParams.set("kind", next);
     setSearchParams(nextParams, { replace: true });
   }
-  useCrumbs([{ label: "Models", to: "/models" }, { label: "Build", to: "/models/build" }, { label: "New run" }]);
+  // A classical run never passes through the builder (mockup SCR-09v2_v1, frame D).
+  useCrumbs(mode === "classical" ? [{ label: "Models", to: "/models" }, { label: "New run" }] : [{ label: "Models", to: "/models" }, { label: "Build", to: "/models/build" }, { label: "New run" }]);
 
   // Initial training values: the schema's defaults, SCR-14's checkpoint interval, then the
   // job's or study's settings and ?batch_size=. State holds only the edits.

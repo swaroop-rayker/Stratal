@@ -65,3 +65,38 @@
 ## Tests
 
 `frontend/src/screens/build/Builder.test.tsx` (SCR-09 study part): `test_HPO_1_1_a_marker_is_refused_on_its_row_by_the_fields_own_rules`, `test_HPO_1_1_the_vram_check_takes_the_widest_layer_in_the_space`, `test_HPO_1_1_tuning_a_field_starts_a_study_with_its_marker`, `test_HPO_1_1_a_refused_marker_from_the_server_lands_on_its_row`.
+
+# SCR-09 v2 training entry (M11) — Gate 3 comparison
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-09v2_v1.html`](../screens/SCR-09v2_v1.html), G2 approved 2026-11-20, frames A–D, G and H (the training entry). Fine-tuning (frames E, F and the study row in G, RUN-1.10) is not built yet and has its own Gate 3 |
+| Built | `frontend/src/screens/build/TrainDrawer.tsx` (new), `RunScreen.tsx`, `BuilderScreen.tsx`, `models/ModelsScreen.tsx`, `version/VersionScreen.tsx`; styles appended to `drawer.css`. Routes: `/runs/new?version=…&kind=network\|classical`; without a kind SCR-09 opens the drawer |
+| Checked | 2026-11-20, live on the running stack. The pane was about 600 px wide, so the drawer filled most of it: content, behaviour and contrast were checked through the page. SCR-11 → wine `ds_6448d354c9c6` → Classical → SCR-09 classical (keyboard only: arrow, Enter); SCR-03 on cifar10 `ds_f8e67211dd94` (Classical disabled with its reason) → *Open the builder* with both selects filled; coco20k `ds_005e3e700ee8` (nothing trainable); coco10k-captions `ds_53f72c42aa5a` (tokenize); SCR-03 on `ds_499bfa2ee3d3` (clean_table, button disabled); `/runs/new?version=ds_98c3fdfd7edc` with no kind; *Train again…* from `job_0066` (diabetes) → *Change…* → Classical with the warning |
+| Status | Awaiting the owner's sign-off |
+
+## Fixed during the check
+
+1. The breadcrumb read *Models › Build › New run* on a classical run; it is now *Models › New run* (frame D).
+2. An untrainable type's reason read "Image–caption pairs is not trained…"; now "are" (frame C).
+3. Opened with no kind, the drawer's primary button read *Use Classical* and choosing Network stayed on SCR-09; it now reads *Set up the run* / *Open the builder* and Network goes to the builder, as on SCR-11.
+
+## Differences from the mockup
+
+1. **The drawer has the built drawer's header**, with the <kbd>Esc</kbd> hint beside the close button, as every built drawer has.
+2. **Network's line of text names the type's families** ("Layers you stack in the builder (MLP), or a template. GPU or CPU, with a VRAM check.") for every type; the mockup had a shorter tabular wording mentioning the Tabular MLP template.
+3. **The current kind in *Change…* keeps the usual description with a *current* badge**; frame G's card said "tabular_mlp, 5 layers, from job_0066" instead. The warning under the kinds names the job.
+4. **Step 1's summary line in step 2** includes the stage (`split`, `tokenize`) and the input → output, also on wine (frame C's wine card showed only the class count).
+5. **The facts box shows *Classes* only up to six classes** (wine's three are listed; cifar10's ten are not).
+6. **"No version to train on yet" uses the shared empty state** with the info icon; *Continue the pipeline* opens the *Start pipeline* drawer in place of this one.
+7. **SCR-03's *Train a model…* is also in the narrow layout's *More* menu**, disabled there off a trainable stage.
+8. **Fine-tuning is not built** (frames E and F, the fixed study row): it waits for RUN-1.10's backend (`init_from`), so SCR-11 has no *Fine-tune…* yet and SCR-09's Start from card is unchanged.
+
+## Accessibility
+
+- **Contrast:** every text element passes AA in both themes, measured after a 3 s wait on switching: drawer step 1 22 elements, step 2 19–22 (wine, cifar10, coco20k, with the warning), SCR-09 classical 55, SCR-09 from `job_0066` 100.
+- **Keyboard:** focus moves into the drawer and is trapped; the kinds are native radios in one fieldset, so the arrow keys move between allowed kinds and skip a disabled one; Enter outside a button or select presses the primary button; Esc closes and returns focus to the opener (*Choose…* when SCR-09 opened the drawer itself). A disabled kind's reason is text inside its label, so it is read with the radio. SCR-03's disabled button stays focusable with its reason in `aria-describedby`.
+
+## Tests
+
+`frontend/src/screens/build/TrainEntry.test.tsx`: `test_UI_2_1_a_tabular_split_reaches_classical_mode_without_the_builder`, `test_UI_2_1_a_non_tabular_split_shows_classical_disabled_with_its_reason`, `test_UI_2_1_runs_new_without_a_kind_opens_the_drawer_at_step_2`, `test_UI_2_1_change_to_classical_warns_that_the_draft_network_is_left_behind`. Frontend checks pass in `frontend-tools`: typecheck, lint (one existing warning elsewhere), Vitest 100/100, build.

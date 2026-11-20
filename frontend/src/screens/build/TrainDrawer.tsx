@@ -116,7 +116,7 @@ function Steps({ version: fixed, change, onClose, onPipeline }: {
   const typeTitle = (type?.title ?? ends?.dataset_type ?? "").toLowerCase();
   const holds = info.data?.stage === "split" ? "split" : "version";
   const reasons: Record<Kind, string | null> = {
-    network: problem ? (ends?.trainable === false ? `${type?.title ?? "This type"} is not trained by the builder.` : problem) : null,
+    network: problem ? (ends?.trainable === false ? (type ? `${type.title} are not trained by the builder.` : "This type is not trained by the builder.") : problem) : null,
     classical: ends?.dataset_type === "tabular" && !problem ? null : problem ? "Classical models train on tables." : `Classical models train on tables. This ${holds} holds ${typeTitle}.`,
   };
   const allowed = (["network", "classical"] as const).filter((k) => reasons[k] === null);
@@ -129,7 +129,9 @@ function Steps({ version: fixed, change, onClose, onPipeline }: {
 
   function go() {
     if (!picked || !kind) return;
-    if (change && sameVersion) {
+    // On SCR-09 for this version, a change of kind stays on the page; with no kind yet, a network
+    // still goes to the builder first.
+    if (change && sameVersion && (change.current !== null || kind === "classical")) {
       change.onPick(kind);
       onClose();
       return;
@@ -257,7 +259,7 @@ function Steps({ version: fixed, change, onClose, onPipeline }: {
 
   const primary = step === 1
     ? <Button variant="primary" disabled={!picked || !ends} onClick={() => { setStep(2); }}>Next<Icon name="chevron" /></Button>
-    : change && sameVersion
+    : change?.current && sameVersion
       ? <Button variant="primary" disabled={!kind} onClick={go}>{kind === "classical" ? "Use Classical" : "Use Network"}</Button>
       : <Button variant="primary" disabled={!kind} onClick={go}>{kind === "classical" ? "Set up the run" : kind === "network" ? "Open the builder" : "Next"}{kind ? <Icon name="chevron" /> : null}</Button>;
 
