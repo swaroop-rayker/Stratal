@@ -244,7 +244,7 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 
 **Actions.** *Start run* (`POST /jobs` with kind `train`) → SCR-04; *Start study* (*planned*, M10) → SCR-10.
 
-**Entry (v3).** `/runs/new?version=…&kind=network|classical` opens the page with that kind. `?from=job_…` and `?study=…` take the kind of that run or study. `/runs/new?version=…` without a kind opens the drawer at step 2 for that version; `/runs/new` with nothing opens it at step 1.
+**Entry (v3).** `/runs/new?version=…&kind=network|classical` opens the page with that kind. `?from=job_…` and `?study=…` take the kind of that run or study, and `?init_from=mv_…` (fine-tuning, RUN-1.10) is always *Network*. With a trained version to start from, the Data card's split select offers only splits of the parent's dataset type, so the kind stays valid; another type goes through *Change…* (approved with the fine-tuning low-fi, 2026-11-20). `/runs/new?version=…` without a kind opens the drawer at step 2 for that version; `/runs/new` with nothing opens it at step 1.
 
 **Empty.** The drawer closed without a choice, or *Network* with no spec yet: "Choose what to train first." with *Choose…* (the drawer) and, for a network, *Open the builder*. It replaces v2's "Build or pick a model first."
 
