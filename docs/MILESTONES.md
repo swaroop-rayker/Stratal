@@ -627,12 +627,19 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - Semantic duplicates (DATA-2.3) and each cluster kept in one split group (DATA-4.8), as [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) sets out. Written by the agent at the owner's request (2026-11-17); the similarity threshold is proposed from a measurement on coco10k and chosen by the owner (as OC-5). Clusters shown on SCR-03.
 - Three or more models on one test split, side by side (EVAL-1.3), on SCR-11.
 - Fine-tuning a built model (RUN-1.10, added at the owner's request on 2026-11-19): `init_from` a registered version, optional frozen layers, `reset_head` for a different class count; the parent recorded and protected by retention. Its form joins SCR-09 (a G2 revision of SCR-09 before M11's screens) and the parent shows on SCR-11.
+- **Choosing the model kind after the split** (UI change for ML-1.1, BUILD-1.3, UI-2.1; requested by the owner on 2026-11-20, "it should be decided after selection of the split or dataset"; draft, the details below await the owner's approval at G1). No requirement changes.
+  - *Today.* The only way into SCR-09 is SCR-11's *Build a model…*, then SCR-08 (networks only: a table gets just the Tabular MLP template), then *Continue to training*; SCR-09's *Network | Classical* switch appears only there. A classical model therefore needs a network built first and thrown away, and a direct `/runs/new` without a version shows no switch at all. This happened because classical models joined SCR-09 in M10 (approved with its study part's low-fi, 2026-11-19) while M9's entry path, written for networks, stayed as it was.
+  - *Proposed.* One entry, *Train a model…*, on SCR-11 (replacing *Build a model…*) and on SCR-03 for a split version. Step 1: the dataset and its split version, with its type and task. Step 2: the kinds that split allows, each in a line: *Network* (build or start from a template → SCR-08) for every trainable type; *Classical* (estimator → SCR-09 in classical mode, no builder) for tables only, shown greyed with "Classical models train on tables" otherwise, so the reason is visible.
+  - SCR-09 receives the kind already chosen: the switch becomes the chosen kind with *Change…*, which goes back to step 2 and says when a network spec would be left behind. `/runs/new?version=` without a kind opens step 2. SCR-08's dataset selects are filled from step 1.
+  - Steps 1 and 2 as a drawer shared by SCR-11 and SCR-03, like the *Start pipeline* drawer, not a new screen (the owner may choose a screen at G1). *Train again…* on a lineage and *Start a run from this configuration* on SCR-10 keep going straight to SCR-09.
+  - Gates: a G1 revision (SCREENS.md: SCR-03, SCR-08, SCR-09 and SCR-11's actions; Flow 4's steps 1–3), then its G2 folded into SCR-09 v2, the first in K11's order, and its G3 with SCR-09 v2.
 - UI-2.1 completed: models and training runs join datasets and pipeline jobs in the dashboard.
 - The phase-2 acceptance run, measured, with a README section; phase 3 (M12, M13) detailed for approval.
 
 **Done when**
 
 - [ ] ADR-0020 (alerts and diagnostics) approved; the RUN-1.10 addendum to ADR-0014 and ADR-0015 approved (K3)
+- [ ] G1 revision for choosing the model kind after the split approved (SCREENS.md, Flow 4); its G2 approved with SCR-09 v2
 - [ ] G2 for SCR-09 v2, SCR-11 v2, SCR-03 v2 and SCR-13 approved, in that order (K11)
 - [ ] Semantic-duplicate threshold chosen by the owner from the coco10k measurement (K1)
 - [ ] `test_MON_2_6_*`: each alert fires in a simulated test
@@ -642,6 +649,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] `test_MON_4_4_*`: two runs' curves overlay
 - [ ] `test_MON_4_5_*` (P2, if time): trends shown for the last N jobs
 - [ ] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included
+- [ ] `test_UI_2_1_*` (training entry, Vitest): a tabular split reaches SCR-09's classical mode without SCR-08; a non-tabular split shows *Classical* greyed with its reason; SCR-09 opened without a kind goes to step 2; G3 passed with SCR-09 v2
 - [ ] `test_UI_2_2_*`: charts for any dataset version
 - [ ] `test_EVAL_1_3_*`: three or more models compared in one view
 - [ ] `test_RUN_1_10_*`: a run from a version starts at its weights and records it as parent; frozen layers are unchanged; a shape mismatch is refused unless the head is reset
