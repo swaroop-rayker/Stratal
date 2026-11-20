@@ -226,7 +226,7 @@ describe("SCR-09", () => {
       "/api/v1/system": { vram_total_mb: 6141 },
       "/api/v1/jobs": { id: "job_0099" },
     }));
-    const router = renderAt("/runs/new?version=ds_a");
+    const router = renderAt("/runs/new?version=ds_a&kind=network");
 
     expect(await screen.findByText("Fits under the cap.")).toBeInTheDocument();
     expect(screen.queryByText("momentum")).not.toBeInTheDocument(); // Adam: no momentum field
@@ -298,7 +298,7 @@ describe("SCR-09 study part", () => {
       "/api/v1/ml/estimators/schema": {},
       "/api/v1/jobs": { id: "job_0100", kind: "hpo_study", stages: [{ config: { study_id: "st_abc" } }] },
     }));
-    const router = renderAt("/runs/new?version=ds_a");
+    const router = renderAt("/runs/new?version=ds_a&kind=network");
 
     fireEvent.click(await screen.findByRole("button", { name: "Tune learning_rate" }));
 
@@ -331,7 +331,7 @@ describe("SCR-09 study part", () => {
         { status: 422 },
       ),
     }));
-    renderAt("/runs/new?version=ds_a");
+    renderAt("/runs/new?version=ds_a&kind=network");
 
     fireEvent.click(await screen.findByRole("button", { name: "Tune learning_rate" }));
     fireEvent.click(screen.getByRole("button", { name: /Start study/ }));

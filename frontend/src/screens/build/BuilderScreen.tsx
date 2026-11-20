@@ -172,7 +172,7 @@ function Builder({ version }: { version: string | null }) {
           disabled={!canContinue}
           title={canContinue ? undefined : problems.length ? "Fix the problems first" : "Choose a trainable dataset and add layers first"}
           onClick={() => {
-            if (version) void navigate(`/runs/new?version=${version}`);
+            if (version) void navigate(`/runs/new?version=${version}&kind=network`);
           }}
         >
           Continue to training

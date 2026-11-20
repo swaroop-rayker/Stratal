@@ -14,6 +14,7 @@ import { copy, ErrorState } from "../../components/states";
 import { Badge, Button, Icon, type IconName, Skeleton } from "../../components/ui";
 import { bytes, count } from "../../lib/format";
 import { useCrumbs } from "../../shell/hooks";
+import { TrainDrawer, trainable } from "../build/TrainDrawer";
 import { StartPipelineDrawer } from "../datasets/StartPipelineDrawer";
 import { LineageStrip } from "./LineageStrip";
 import { RowDrawer } from "./RowDrawer";
@@ -262,11 +263,12 @@ function ReviewModal({ version, open, onOpenChange }: { version: Version; open: 
   );
 }
 
-function Actions({ version, stats, onContinue, onReview, compact }: {
+function Actions({ version, stats, onContinue, onReview, onTrain, compact }: {
   version: Version;
   stats: Stats | undefined;
   onContinue: () => void;
   onReview: () => void;
+  onTrain: () => void;
   compact?: boolean;
 }) {
   const navigate = useNavigate();
@@ -315,6 +317,21 @@ function Actions({ version, stats, onContinue, onReview, compact }: {
       </Button>
     )
   ) : null;
+  // Train a model… (SCREENS.md v3): on a version a model trains on, else disabled with why.
+  const trainOk = trainable(version);
+  const whyTrain = "Training needs a split version (a tokenize version for text).";
+  const trainButton = (
+    <Button
+      aria-disabled={!trainOk || undefined}
+      className={trainOk ? undefined : "is-disabled"}
+      title={trainOk ? undefined : whyTrain}
+      aria-describedby={trainOk ? undefined : "why-train"}
+      onClick={() => { if (trainOk) onTrain(); }}
+    >
+      <Icon name="plus" />
+      Train a model…
+    </Button>
+  );
   const continueButton = (
     <Button
       variant={captioned ? "secondary" : "primary"}
@@ -337,7 +354,9 @@ function Actions({ version, stats, onContinue, onReview, compact }: {
       </span>
       {review}
       <span id="why-review" className="sr-only">{captioned ? "" : why}</span>
+      <span id="why-train" className="sr-only">{trainOk ? "" : whyTrain}</span>
       <span className="wide-action">
+        {trainButton}
         {reportButton}
         {version.created_by_job_id ? (
           <Button onClick={() => void navigate(`/jobs/${version.created_by_job_id ?? ""}`)}>
@@ -361,6 +380,7 @@ function Actions({ version, stats, onContinue, onReview, compact }: {
                 {version.created_by_job_id ? (
                   <Menu.Item onSelect={() => void navigate(`/jobs/${version.created_by_job_id ?? ""}`)}><Icon name="list" />Open job</Menu.Item>
                 ) : null}
+                <Menu.Item disabled={!trainOk} onSelect={onTrain}><Icon name="plus" />Train a model…</Menu.Item>
                 {reportable ? (
                   <Menu.Item onSelect={() => { if (report.data) void navigate(`/versions/${version.version_id}/report`); else build.mutate(); }}>
                     <Icon name="report" />
@@ -387,6 +407,7 @@ export function VersionScreen() {
   const stats = useStats(versionId);
   const [drawer, setDrawer] = useState(false);
   const [review, setReview] = useState(false);
+  const [training, setTraining] = useState(false);
   const [selected, setSelected] = useState(0);
   const [loaded, setLoaded] = useState<Row[]>([]);
 
@@ -527,7 +548,7 @@ export function VersionScreen() {
           </div>
         </div>
         <span className="spacer" />
-        <Actions version={v} stats={stats.data} onContinue={() => { setDrawer(true); }} onReview={() => { setReview(true); }} />
+        <Actions version={v} stats={stats.data} onContinue={() => { setDrawer(true); }} onReview={() => { setReview(true); }} onTrain={() => { setTraining(true); }} />
       </div>
 
       {lineage.data ? (
@@ -629,6 +650,7 @@ export function VersionScreen() {
         <StartPipelineDrawer open from={{ mode: "version", versionId: v.version_id, dataset: v.dataset }} onOpenChange={(o) => { if (!o) setDrawer(false); }} />
       ) : null}
       {review ? <ReviewModal version={v} open onOpenChange={setReview} /> : null}
+      {training ? <TrainDrawer open version={v.version_id} onOpenChange={setTraining} /> : null}
     </div>
   );
 }

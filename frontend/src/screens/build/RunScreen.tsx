@@ -1,12 +1,13 @@
 // SCR-09 (M9, mockup SCR-09_v1; study part M10, SCR-09hpo_v1): set up one training run, or a
 // study of many, and start it (BUILD-1.2, BUILD-1.3, RUN-1.9, UI-2.3, ML-1.1, ML-1.4,
 // HPO-1.1). The model is a network (the builder's draft for ?version=, or with ?from=job_…
-// that run's model and settings, ?batch_size= overriding) or a classical estimator. ?study=
+// that run's model and settings, ?batch_size= overriding) or a classical estimator, chosen
+// before this page (?kind=, SCREENS.md v3; the Train a model drawer when absent). ?study=
 // prefills the best configuration of a study (HPO-1.5). The VRAM check warns and never
 // blocks (decision 6); for a study it takes the worst case in the space.
 import type { RJSFSchema } from "@rjsf/utils";
 import { useQuery } from "@tanstack/react-query";
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { type Optimizer, useSpecSchema, useTemplates, useValidate } from "../../api/builder";
@@ -23,6 +24,7 @@ import { useCrumbs } from "../../shell/hooks";
 import { inputVersion } from "../job/jobs";
 import { layerTypes } from "./layers";
 import { AddParameter, type LayerField, StudyCard, type StudyLimits, type SpaceRow, TuneButton, TuneEditor, tuneHelper } from "./StudyParts";
+import { TrainDrawer } from "./TrainDrawer";
 import { isTunable, largest, NETWORK_TUNABLE, paths, spaceErrors, specProblem, startSpec, toMarker, TRIAL_START_S, type TuneSpec } from "./study";
 import { vramCheck } from "./vram";
 
@@ -112,7 +114,7 @@ type Estimators = Record<string, { title: string; tasks: string[]; schema: RJSFS
 
 export function RunScreen() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setSearchParams] = useSearchParams();
   const fromJob = params.get("from");
   const fromStudy = params.get("study");
   const job = useQuery({
@@ -155,9 +157,23 @@ export function RunScreen() {
     }
     return version ? loadDraft(version) : null;
   }, [jobConfig, reference, templates.data, version]);
-  const tabular = versionInfo.data?.dtype === "tabular";
-  const [modeChoice, setMode] = useState<Mode | null>(null);
-  const mode: Mode = modeChoice ?? (classicalSeed ? "classical" : graph || reference || !tabular ? "network" : "classical");
+  // The model kind arrives chosen (SCREENS.md v3): ?kind=, or the kind of the job or study it
+  // starts from. Without one, the Train a model drawer opens (step 2 with a version).
+  const kindParam = params.get("kind");
+  const implicitKind: Mode | null = fromJob
+    ? (job.data ? (classicalSeed ? "classical" : "network") : null)
+    : fromStudy
+      ? (bestConfig.data ? (bestConfig.data.classical ? "classical" : "network") : null)
+      : null;
+  const kind: Mode | null = kindParam === "network" || kindParam === "classical" ? kindParam : implicitKind;
+  const mode: Mode = kind ?? "network";
+  const [choosing, setChoosing] = useState(kind === null && fromJob === null && fromStudy === null);
+  const chooseButton = useRef<HTMLButtonElement>(null);
+  function setMode(next: Mode) {
+    const nextParams = new URLSearchParams(params);
+    nextParams.set("kind", next);
+    setSearchParams(nextParams, { replace: true });
+  }
   useCrumbs([{ label: "Models", to: "/models" }, { label: "Build", to: "/models/build" }, { label: "New run" }]);
 
   // Initial training values: the schema's defaults, SCR-14's checkpoint interval, then the
@@ -335,13 +351,35 @@ export function RunScreen() {
     return () => { window.removeEventListener("keydown", onKey); };
   });
 
-  if (mode === "network" && !graph && !reference && !(fromJob && job.isLoading) && !(fromStudy && bestConfig.isLoading)) {
+  // Opened by Change… (or with no kind): what choosing Classical would leave behind.
+  const leftBehind = mode === "network" && (graph || reference)
+    ? (fromJob ? { what: fromJob, draft: false } : fromStudy ? { what: fromStudy, draft: false } : { what: "the builder", draft: true })
+    : null;
+  const drawer = (
+    <TrainDrawer
+      open={choosing}
+      onOpenChange={setChoosing}
+      version={version}
+      change={{ current: kind, leftBehind, onPick: setMode }}
+      returnFocus={() => chooseButton.current}
+    />
+  );
+
+  const loadingFrom = (fromJob !== null && job.isLoading) || (fromStudy !== null && bestConfig.isLoading);
+  if (!loadingFrom && (kind === null || (mode === "network" && !graph && !reference))) {
     return (
       <div className="scr09">
-        <EmptyState icon="branch" title="Build or pick a model first."
-          action={<span style={{ display: "flex", gap: "var(--sp-2)" }}><Button variant="primary" size="sm" onClick={() => { void navigate(`/models/build${version ? `?version=${version}` : ""}`); }}>Open the builder</Button>{tabular ? <Button size="sm" onClick={() => { setMode("classical"); }}>Use a classical model</Button> : null}</span>}>
-          A run needs a model and a split to train it on.
+        <div className="phead"><h1>New training run</h1></div>
+        <EmptyState icon="branch" title="Choose what to train first."
+          action={
+            <span style={{ display: "flex", gap: "var(--sp-2)" }}>
+              <Button ref={chooseButton} variant="primary" size="sm" onClick={() => { setChoosing(true); }}>Choose…</Button>
+              {kind === "network" ? <Button size="sm" onClick={() => { void navigate(`/models/build${version ? `?version=${version}` : ""}`); }}>Open the builder</Button> : null}
+            </span>
+          }>
+          Pick a split and the kind of model it allows.
         </EmptyState>
+        {drawer}
       </div>
     );
   }
@@ -356,11 +394,12 @@ export function RunScreen() {
   const epochs = typeof values?.epochs === "number" ? values.epochs : null;
   const startWord = isStudy ? "Start study" : "Start run";
 
+  // The chosen kind as a tag, with Change… back to the drawer's step 2 (v1's switch is gone).
   const modeSwitch = (
-    <span className="group-btns" role="group" aria-label="Model kind">
-      <Button size="sm" aria-pressed={mode === "network"} onClick={() => { setMode("network"); }}>Network</Button>
-      <Button size="sm" aria-pressed={mode === "classical"} disabled={!tabular} title={tabular ? undefined : "Classical models train on tables"} onClick={() => { setMode("classical"); }}>Classical</Button>
-    </span>
+    <>
+      <span className="kindtag" aria-label={`Model kind: ${mode === "classical" ? "Classical" : "Network"}`}><Icon name={mode === "classical" ? "sliders" : "branch"} />{mode === "classical" ? "Classical" : "Network"}</span>
+      <Button ref={chooseButton} size="sm" variant="ghost" onClick={() => { setChoosing(true); }}>Change…</Button>
+    </>
   );
 
   return (
@@ -596,6 +635,7 @@ export function RunScreen() {
           )}
         </aside>
       </div>
+      {drawer}
     </div>
   );
 }

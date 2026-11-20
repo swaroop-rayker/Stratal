@@ -789,6 +789,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Separate dependency groups for api, CPU worker and GPU worker.
 - **Why:** It keeps the API small in memory and makes it impossible for the API to load a model by accident.
 
+**Model kind chosen after the split** (ML-1.1, BUILD-1.3, UI-2.1; SCREENS.md v3)
+- **What:** One *Train a model* drawer, shared by SCR-11, SCR-03 and SCR-09, picks the version first and then the kinds it allows; SCR-09 receives the kind instead of switching it.
+- **How:** The kind travels in the URL (`/runs/new?version=…&kind=network|classical`; `?from=` and `?study=` imply theirs); without one SCR-09 opens the drawer. Allowed kinds come from the existing `GET /dataset-types` and the version's ends from `POST /model-specs/validate`; no API change.
+- **Why:** A classical model needed a network built and thrown away first, because the switch lived only on the builder's path.
+
 ## Process
 
 **Requirement IDs** — [ADR-0010](decisions/ADR-0010-requirement-ids-and-traceability.md)
