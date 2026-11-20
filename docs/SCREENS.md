@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **v2, approved by the owner on 2026-11-17** (Gate 1 revision at phase 2's kickoff: phase-2 screens detailed in §3a, Flow 4 in steps, Flow 3's phase-2 part). v1 approved 2026-11-15. Changes from here on are new versions and need approval |
+| Status | **v3, approved by the owner on 2026-11-20** (Gate 1 revision: choosing the model kind after the split — the *Train a model* drawer, SCR-03, SCR-08, SCR-09, SCR-11, Flow 4 steps 1–3; open point 5). v2 approved by the owner on 2026-11-17 (phase-2 screens detailed in §3a, Flow 4 in steps, Flow 3's phase-2 part). v1 approved 2026-11-15. Changes from here on are new versions and need approval |
 | Builds on | [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) v1 (Gate 0, approved 2026-11-15) |
 | Data sources | Endpoints are from [API.md](API.md). Phase-2 screens name the endpoints their milestone adds (*planned*). Phase-3 to phase-5 interfaces are not specified yet, so those screens are outlines and are detailed at their phase kickoff |
 | Approvals | Logged in [design/APPROVALS.md](design/APPROVALS.md) |
@@ -57,6 +57,8 @@ Gate 2 order follows SPEC §9.5: SCR-01, 02, 03, 04, 05, 06 first, then the SCR-
 ```
 
 Phase-1 navigation shows Data and Jobs only. Jobs opens the SCR-07 slice.
+
+**Into training (v3).** SCR-11 and SCR-03 open the *Train a model* drawer; it leads to SCR-08 (a network) or straight to SCR-09 (a classical model). *Train again…* (SCR-11), *Start a run from the best configuration* (SCR-10) and *Start again with N* (SCR-04) keep going straight to SCR-09.
 
 ## 3. Phase-1 screens in detail
 
@@ -115,6 +117,7 @@ Each table says which endpoint feeds each piece of data. "Live" marks what updat
 - **Continue the pipeline from this version** → *Start pipeline* drawer with `from_version` set.
 - **Start a review** (sample size, optional seed) → `POST /versions/{id}/reviews` → SCR-05. Offered once the version has captions.
 - **Build the eval report** → `POST /versions/{id}/reports` → SCR-06, which shows the build in progress (link to SCR-04) and then the report. Open the latest report if one exists. (Changed at SCR-06's G3, 2026-11-17: the mockup sent builds through SCR-04.)
+- **Train a model…** (v3, M11) → the *Train a model* drawer with this version as step 1, opened at step 2. Offered on a `split` version only; on any other stage it is disabled and says "Training needs a split version".
 - Open the creating job; copy IDs.
 
 **Empty.** A version whose rows were all rejected shows the counts and reasons, and the row table opens filtered to `rejected`. **Phase 2 adds** the UI-2.2 distributions (raw vs cleaned, per stage) and the diff with another version (DATA-3.5).
@@ -195,20 +198,33 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 
 **Changes from the phase-1 slice.** *Pause* on running jobs and *Resume* on paused ones, as row actions beside *Cancel* (RUN-1.2, OC-8: pipelines too). Paused and stalled jobs count as Active, with the pause reason in "Now / outcome". The kind filter gains `train` and `retention`; a training row's Dataset column reads "model on dataset version". Everything else is the approved slice.
 
+### *Train a model* drawer (v3, M11; shared by SCR-11 and SCR-03)
+
+**Purpose.** Choose what to train on first, then the kind of model that data allows, so a classical model never needs a network built and thrown away (ML-1.1, BUILD-1.3, UI-2.1). A drawer, not a separate screen, like the *Start pipeline* drawer.
+
+| Step | Shows | Source |
+|---|---|---|
+| 1. Data | Dataset select, then its split versions (`stage = split`) with row counts. Once chosen: the version's type (e.g. *labelled images*, *tabular*), its task (classification with N classes, or regression) and its input → output (e.g. `image 3×32×32 → 10 classes`, `13 features → 3 classes`) | `GET /datasets`, `GET /datasets/{slug}/versions`, `GET /versions/{id}` (`dtype`); the version's ends from `POST /model-specs/validate`, as SCR-08 and SCR-09 read them today. No API change |
+| 2. Kind | One line per kind, each a radio with what it leads to. **Network**: build one or start from a template → SCR-08; offered for every trainable type. **Classical**: an estimator from scikit-learn → SCR-09 in classical mode, no builder; offered for tables only. A kind the split does not allow stays in the list, greyed and not selectable, with its reason in words beside it ("Classical models train on tables"). The primary button names where it goes: *Open the builder* or *Set up the run* | `GET /dataset-types` (`trainable`, `families`) |
+
+**Behaviour.** Opened from SCR-11 it starts at step 1, empty. Opened from SCR-03 (or from SCR-09, below) step 1 is filled with that version and the drawer opens at step 2, with step 1 shown as one line and *Change* to go back. Network goes to `/models/build?version=…`; Classical to `/runs/new?version=…&kind=classical`. Nothing is created until a run is started on SCR-09.
+
+**States.** *Loading*: skeleton lines for the version's type and the kinds. *Empty*: no dataset yet → "No datasets yet." with a link to SCR-02; a dataset with no split version → "No split version of wine yet. Run the pipeline to its split stage." with *Continue the pipeline* (the *Start pipeline* drawer). *Error*: the version or the types cannot be loaded → the error state with *Retry* inside the drawer, step 1 kept. *Not trainable*: a split whose type nothing can train (`trainable = false`) shows both kinds greyed with the type's own note as the reason, and the primary button stays disabled.
+
 ### SCR-08 — Model builder canvas (M9)
 
 **Purpose.** Build a model by stacking layers, with mistakes caught before training starts.
 
 | Region | Shows | Source | Live |
 |---|---|---|---|
-| Dataset and type | The dataset version and its type; input shape and output size, locked (BUILD-1.3); only compatible model families offered (DATA-5.5) | `GET /versions/{id}`; type registry *planned*, M9 | |
+| Dataset and type | The dataset version and its type; input shape and output size, locked (BUILD-1.3); only compatible model families offered (DATA-5.5). v3: the two selects are filled from the drawer's step 1 (`?version=`) and can still be changed | `GET /versions/{id}`; type registry *planned*, M9 | |
 | Layer palette | Linear, Conv2d, MaxPool, BatchNorm, Dropout, Flatten, Embedding, RNN, LSTM, GRU, attention block, activations (BUILD-1.1) | spec schema *planned*, M9 | |
 | Canvas | Layer nodes in order; edges for skip connections (BUILD-1.9); each node shows its output shape and parameter count (BUILD-1.4) | `POST /model-specs/validate` *planned*, M9 | on every edit |
 | Layer inspector | The selected layer's fields, generated from its schema with ranges and defaults (BUILD-1.2, UI-2.3) | spec schema | |
 | Summary bar | Total parameters; memory estimate split into weights, gradients and optimizer state for the chosen optimizer (BUILD-1.5) | validate response | on every edit |
 | Problems | Cross-field errors in words, each linked to its node (BUILD-1.6) | validate response | on every edit |
 
-**Actions.** Add, configure, reorder and remove layers; save and load templates (BUILD-1.7); *Continue to training* (SCR-09), disabled while there are problems. The canvas has an equivalent list view, so every action works from the keyboard (accessibility rule).
+**Actions.** Add, configure, reorder and remove layers; save and load templates (BUILD-1.7); *Continue to training* (SCR-09 with the kind *Network*), disabled while there are problems. The canvas has an equivalent list view, so every action works from the keyboard (accessibility rule).
 
 **Empty.** "Start from a template, or add a first layer." with the template list.
 
@@ -218,7 +234,7 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 
 | Region | Shows | Source | Live |
 |---|---|---|---|
-| Model | *Network*: the spec from SCR-08 (or a template), its parameters and memory estimate. *Classical* (M10): an estimator picked here, filtered by the dataset's task, with its parameter form and cross-field rules (ML-1.1, ML-1.4; ADR-0019 rule 15; added with the owner's approval of the study part's low-fi wireframe, 2026-11-19) | spec; `GET /ml/estimators/schema` *planned*, M10 | |
+| Model | v3: the kind arrives chosen (from the drawer, from SCR-08, or from the job or study it starts from) and shows as a label, not a switch, with *Change…*, which opens the drawer at step 2 over this page; when a network spec would be left behind, step 2 says so before going on ("The network from job_0067 will not be used. A builder draft stays in the builder."). *Network*: the spec from SCR-08 (or a template), its parameters and memory estimate. *Classical* (M10): an estimator picked here, filtered by the dataset's task, with its parameter form and cross-field rules (ML-1.1, ML-1.4; ADR-0019 rule 15; added with the owner's approval of the study part's low-fi wireframe, 2026-11-19) | spec; `GET /ml/estimators/schema` *planned*, M10 | |
 | Data | The split dataset version; per-split row counts | `GET /versions/{id}` | |
 | Training config | Epochs, batch size, optimizer, learning rate and schedule, seed: a form from the config schema (UI-2.3) | `GET /config/schemas/train` *planned*, M8 | |
 | Start from | The lineage's base, or a chosen version (ADR-0015) | `GET /models/{lineage}` *planned*, M8 | |
@@ -228,7 +244,9 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 
 **Actions.** *Start run* (`POST /jobs` with kind `train`) → SCR-04; *Start study* (*planned*, M10) → SCR-10.
 
-**Empty.** Reached without a model: "Build or pick a model first." with links to SCR-08 and the templates.
+**Entry (v3).** `/runs/new?version=…&kind=network|classical` opens the page with that kind. `?from=job_…` and `?study=…` take the kind of that run or study. `/runs/new?version=…` without a kind opens the drawer at step 2 for that version; `/runs/new` with nothing opens it at step 1.
+
+**Empty.** The drawer closed without a choice, or *Network* with no spec yet: "Choose what to train first." with *Choose…* (the drawer) and, for a network, *Open the builder*. It replaces v2's "Build or pick a model first."
 
 ### SCR-10 — HPO results (M10)
 
@@ -243,7 +261,7 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 | Optimisation history | Value per trial, best so far | study | yes |
 | Test evaluation | The single test result of the best configuration, labelled "computed once" (HPO-1.4) | study | at the end |
 
-**Actions.** Open the best model (SCR-11); *Start a run from the best configuration* (prefills SCR-09); pause, resume and cancel a running study (they act on its current trial). A trial's row opens a drawer with its values per step against the median the pruner used.
+**Actions.** Open the best model (SCR-11); *Start a run from the best configuration* (prefills SCR-09, straight there with the study's kind, v3); pause, resume and cancel a running study (they act on its current trial). A trial's row opens a drawer with its values per step against the median the pruner used.
 
 **Reached from** a study job on SCR-07, a trial's header on SCR-04 and a registered version on SCR-11; there is no list of studies (approved with the low-fi wireframe, 2026-11-19). SCR-07 gains a *study* kind with its trials grouped under it, and SCR-04 "Trial n of st_…" for a trial: drawn as addenda at their Gate 3.
 
@@ -263,9 +281,9 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 | Try it | A sample input, the prediction, and the device that served it (REG-1.4, ADR-0016) | `POST /models/{version}/predict` *planned*, M8 | |
 | Comparison (M11) | Three or more versions on one test split, side by side, with per-class detail (EVAL-1.3) | *planned*, M11 | |
 
-**Actions.** Pin and unpin (REG-2.5); run retention after its preview, with a confirmation that lists the exact versions and sizes when N is lowered (REG-2.10); *Re-train* a version whose weights were deleted (REG-2.7); open the job, the dataset version or the parent.
+**Actions.** Pin and unpin (REG-2.5); run retention after its preview, with a confirmation that lists the exact versions and sizes when N is lowered (REG-2.10); *Re-train* a version whose weights were deleted (REG-2.7); open the job, the dataset version or the parent. v3: *Train a model…* opens the *Train a model* drawer at step 1 (it replaces *Build a model…*); *Train again…* on a lineage still opens SCR-09 straight away with that lineage's last run.
 
-**Empty.** "No models yet." with *Build a model* (SCR-08).
+**Empty.** "No models yet." with *Train a model…* (the drawer).
 
 ### SCR-13 — System monitor (M11)
 
@@ -356,19 +374,21 @@ In phase 1 a retry reuses the stage's own config; changing a value means startin
 
 ### Flow 4 — Dataset → build model → train → evaluate (phase 2)
 
-SCR-03 (pick a version) → SCR-08 (stack layers; input and output locked from the dataset type; invalid stacks blocked) → SCR-09 (training config, device, optionally an HPO study) → SCR-04 (live run: loss, metrics, VRAM, checkpoints) → SCR-10 (if HPO: best trial, one test evaluation) → SCR-11 (the registered version with test metrics; compare with others).
+SCR-03 (pick a split version) → *Train a model* drawer (the kinds that split allows) → SCR-08 for a network (stack layers; input and output locked from the dataset type; invalid stacks blocked; a classical model skips it) → SCR-09 (training config, device, optionally an HPO study) → SCR-04 (live run: loss, metrics, VRAM, checkpoints) → SCR-10 (if HPO: best trial, one test evaluation) → SCR-11 (the registered version with test metrics; compare with others).
 
-Step by step (v2), as the phase-2 acceptance runs it on CIFAR-10:
+Step by step (v2; steps 1–3 rewritten in v3), as the phase-2 acceptance runs it on CIFAR-10:
 
 | # | Screen | The person… | Behind it |
 |---|---|---|---|
-| 1 | SCR-02, SCR-03 | opens the split version of the CIFAR-10 dataset (labelled images) and clicks *Build a model* | `GET /versions/{id}` |
-| 2 | SCR-08 | stacks convolution, pooling and linear layers; input is locked at 3×32×32 and output at 10; a mismatched layer is flagged before going on | `POST /model-specs/validate` |
-| 3 | SCR-09 | sets epochs, batch size and learning rate, leaves device on auto, clicks *Start run* | `POST /jobs` (kind `train`) → `202` |
+| 1 | SCR-02, SCR-03 → drawer | opens the split version of the CIFAR-10 dataset (`ds_f8e67211dd94`, labelled images) and clicks *Train a model…*; the drawer opens at step 2 with the version filled: *Network* is offered and *Classical* is greyed with "Classical models train on tables"; picks *Network*, then *Open the builder* | `GET /versions/{id}`, `GET /dataset-types` |
+| 2 | SCR-08 | finds the dataset selects already set; stacks convolution, pooling and linear layers; input is locked at 3×32×32 and output at 10; a mismatched layer is flagged before going on | `POST /model-specs/validate` |
+| 3 | SCR-09 | sees *Network* as the chosen kind; sets epochs, batch size and learning rate, leaves device on auto, clicks *Start run* | `POST /jobs` (kind `train`) → `202` |
 | 4 | SCR-04 | watches loss and accuracy; pauses and resumes once | job stream; `POST /jobs/{id}/pause`, `/resume` |
 | 5 | SCR-11 | finds the trained version, with its test metrics and the dataset version it came from | `GET /models/{lineage}` |
 | 6 | SCR-09 → SCR-10 (M10) | tunes the learning rate in a study and reads the single test evaluation of the best trial | studies |
 | 7 | SCR-11 (M11) | compares three versions on the same test split | comparison |
+
+**A table (v3).** On SCR-11 the person clicks *Train a model…*, picks the wine dataset's split (`ds_6448d354c9c6`, tabular, classification with 3 classes), then *Classical* and *Set up the run*; SCR-09 opens in classical mode with an estimator to choose. SCR-08 is never opened.
 
 ### Flow 5 — Chat request → router → model → answer (phases 3–5)
 
@@ -384,6 +404,16 @@ SCR-12: the person types a request in Auto mode → the router classifies it and
 2. **Where the cross-job activity log lives.** MON-4.3 needs a job filter. I put it in SCR-04 as a *This job / All jobs* switch, so it is covered by a phase-1 screen. If you choose 1(a), it could move to SCR-07 instead.
 3. **`GET /system` becomes needed.** The shell's "VRAM 3.9 / 6 GB" needs the totals. It is an M2 loose end; I propose building it in M3 as plumbing so M6 is not blocked.
 4. **The *Start pipeline* drawer** is the only way to start work in phase 1 and is not in SPEC's inventory. I placed it as a shared drawer of SCR-02 and SCR-03, mocked up with SCR-02 in Gate 2. Say if you want it as its own screen.
+5. **Choosing the model kind after the split (v3, open for Gate 1).**
+   - **(a) Drawer or screen.** A drawer shared by SCR-11 and SCR-03, like *Start pipeline*. *Recommended*: two short steps, nothing to save, and it can open over SCR-09 for *Change…*. A screen (`/train/new`) would add an address, which `/runs/new?version=` already gives.
+   - **(b) The button label.** *Train a model…* (*recommended*: it names the goal, not the builder). Alternatives: *New model…*, *Start training…*.
+   - **(c) From SCR-03,** open at step 2 with the version filled and *Change* back to step 1 (*recommended*), or always at step 1, prefilled.
+   - **(d) Templates.** *Network* always goes through SCR-08, where templates are loaded (*recommended*: one way in). The alternative is a third line, *Network from a template*, straight to SCR-09.
+   - **(e) SCR-08's dataset selects** stay changeable after being prefilled (*recommended*, as with `?version=` today), or are locked to step 1's choice.
+   - **(f) *Change…* on SCR-09** reopens the drawer at step 2 and warns only when a network spec would be left behind (*recommended*). A builder draft stays in session storage either way, so the warning says whether it stays.
+   - **(g) Gate order with fine-tuning (RUN-1.10, K11).** A low-fi of SCR-09 v2's fine-tuning form already exists, not yet approved (`design/screens/SCR-09v2-lofi_v1.html`, commit `7700fa3`). I propose one SCR-09 v2 gate covering both: this entry as its own low-fi file (`SCR-09v2-entry-lofi_v1.html`), then one hi-fi mockup with both. The alternative is this entry first, fine-tuning after.
+
+   **Decided 2026-11-20 by the owner: the recommended option in each of (a) to (g)** ("Approved"). A drawer; *Train a model…*; from SCR-03 at step 2; *Network* always through SCR-08; SCR-08's selects stay changeable; *Change…* warns only when a spec would be left behind; one SCR-09 v2 gate, the entry's low-fi reviewed first.
 
 ## Revision history
 
@@ -391,3 +421,4 @@ SCR-12: the person types a request in Auto mode → the router classifies it and
 |---|---|---|
 | v1 | 2026-11-15 | First version, for Gate 1 review. Approved the same day; open point 1 then decided by the owner as option (a), recorded in place |
 | v2 | 2026-11-17 | Phase-2 kickoff: §3a details SCR-04 v2 (training runs), SCR-07 v2 (pause, resume), SCR-08 to SCR-11, SCR-13, SCR-14 and SCR-03's M11 additions, from the approved phase-2 plan and ADR-0014 to ADR-0016; Flow 4 in steps; Flow 3's phase-2 part. Approved by the owner the same day |
+| v3 | 2026-11-20 | Choosing the model kind after the split (ML-1.1, BUILD-1.3, UI-2.1; the owner's request of 2026-11-20): the *Train a model* drawer (step 1 the split version with its type and task, step 2 the kinds it allows, *Classical* greyed with its reason off tables); SCR-03 and SCR-11 open it, replacing *Build a model…*; SCR-08's dataset selects filled from step 1; SCR-09 receives the chosen kind with *Change…* and entry rules, its empty state reworded; *Train again…*, SCR-10's and SCR-04's starts unchanged; Flow 4's summary and steps 1–3 rewritten, with a table variant; open point 5. Approved by the owner the same day, with the recommended option in each of point 5's choices |
