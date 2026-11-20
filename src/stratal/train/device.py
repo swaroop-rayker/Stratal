@@ -58,11 +58,14 @@ class DeviceChoice:
         }
 
 
-def cache_key(spec: ModelSpec, shape: Sequence[int], batch: int, num_classes: int) -> str:
+def cache_key(spec: ModelSpec, shape: Any, batch: int, num_classes: int) -> str:
     payload = json.dumps(
         {
             "model": spec.model_dump(mode="json"),
-            "shape": list(shape),
+            # An image's key is its dims, as before M10; other inputs add their kind.
+            "shape": list(getattr(shape, "dims", shape))
+            if getattr(shape, "kind", "image") == "image"
+            else [shape.kind, *shape.dims, getattr(shape, "vocab", None)],
             "batch": batch,
             "classes": num_classes,
             "torch": torch.__version__,
@@ -95,7 +98,7 @@ def _store(data_dir: Path, key: str, choice: DeviceChoice) -> None:
 
 def _time_steps(
     spec: ModelSpec,
-    shape: tuple[int, int, int],
+    shape: Any,
     num_classes: int,
     batches: Sequence[tuple[torch.Tensor, torch.Tensor]],
     device: Device,
@@ -104,7 +107,9 @@ def _time_steps(
     torch.manual_seed(0)
     model = build_model(spec, shape, num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters())
-    loss_fn = nn.CrossEntropyLoss()
+    # A float target is regression (ADR-0019 rule 14): the step then uses MSE on one output.
+    regression = bool(batches) and batches[0][1].is_floating_point()
+    loss_fn = nn.MSELoss() if regression else nn.CrossEntropyLoss()
     times: list[float] = []
     for index, (x, y) in enumerate(batches):
         x, y = x.to(device), y.to(device)
@@ -112,7 +117,8 @@ def _time_steps(
             torch.cuda.synchronize()
         started = time.perf_counter()
         optimizer.zero_grad(set_to_none=True)
-        loss_fn(model(x), y).backward()
+        out = model(x)
+        loss_fn(out.squeeze(1) if regression else out, y).backward()
         optimizer.step()
         if device == "cuda":
             torch.cuda.synchronize()
@@ -136,7 +142,7 @@ def choose(
     *,
     data_dir: Path,
     spec: ModelSpec,
-    shape: tuple[int, int, int],
+    shape: Any,
     num_classes: int,
     batch: int,
     batches: Sequence[tuple[torch.Tensor, torch.Tensor]],

@@ -90,7 +90,8 @@ def test_DATA_5_5_each_type_declares_families_and_default_metrics() -> None:
     assert TYPE_INFO["labelled_images"].families == ("mlp", "cnn")
     assert TYPE_INFO["tabular"].families == ("mlp",)
     assert TYPE_INFO["labelled_text"].families == ("mlp", "rnn", "transformer")
-    assert [t.name for t in TYPE_INFO.values() if t.trainable] == ["labelled_images"]
+    trainable = [t.name for t in TYPE_INFO.values() if t.trainable]
+    assert trainable == ["labelled_images", "tabular", "labelled_text"], "tables and texts: M10"
 
 
 def test_DATA_5_5_an_incompatible_family_is_a_problem() -> None:

@@ -881,7 +881,9 @@ export interface paths {
          * Predict
          * @description A prediction from a registered version (REG-1.4). Runs on the GPU when it is free;
          *     while a job holds it, a small model runs on the CPU and the result says so; a large
-         *     one is refused with ``gpu_busy`` (decision 2).
+         *     one is refused with ``gpu_busy`` (decision 2). Send the input the version takes: an
+         *     image (``image_b64`` or ``blob``), a table ``record`` or a ``text``; another is
+         *     ``wrong_input``. Classical models run on the CPU (ADR-0019 rules 20 and 21).
          */
         post: operations["predict_api_v1_models__version_id__predict_post"];
         delete?: never;
@@ -2334,13 +2336,25 @@ export interface components {
              * @description An image already in the data folder, by its SHA-256 (a dataset row's sha256 or derived_sha256).
              */
             blob?: string | null;
+            /**
+             * Record
+             * @description A table model's input (M10): one value per feature column, by name, null to impute; the target left out (ADR-0019 rule 21).
+             */
+            record?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Text
+             * @description A text model's input (M10).
+             */
+            text?: string | null;
         };
         /** PredictedClass */
         PredictedClass: {
             /** Class */
             class: string;
             /** Probability */
-            probability: number;
+            probability: number | null;
         };
         /** Prediction */
         Prediction: {
@@ -2355,8 +2369,20 @@ export interface components {
             device: "cpu" | "gpu";
             /** Fallback Reason */
             fallback_reason: string | null;
+            /**
+             * Task
+             * @default classification
+             * @enum {string}
+             */
+            task: "classification" | "regression" | "clustering" | "projection";
             /** Top */
-            top: components["schemas"]["PredictedClass"][];
+            top?: components["schemas"]["PredictedClass"][] | null;
+            /** Value */
+            value?: number | null;
+            /** Cluster */
+            cluster?: number | null;
+            /** Components */
+            components?: number[] | null;
             /** Load Ms */
             load_ms: number | null;
             /** Total Ms */
@@ -4950,21 +4976,19 @@ export interface operations {
                     "application/json": components["schemas"]["Prediction"];
                 };
             };
-            /** @description gpu_busy, weights_deleted, weights_unreadable or a partial version */
+            /** @description gpu_busy, weights_deleted, weights_unreadable, not_servable or a partial version */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description wrong_input: an input the version does not take */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };

@@ -367,13 +367,26 @@ def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqu
     if request.classical is not None:
         return _create_classical_job(session, request.classical, version)
     assert request.config is not None
-    if version.dtype != stage_registry.LABELLED_IMAGES or version.stage != "split":
+    from stratal.build.io import TRAINS_ON
+
+    trains_on = TRAINS_ON.get(version.dtype or "")
+    if trains_on is None or version.stage != trains_on:
         made = f"a {version.stage} version of type {version.dtype or 'none'}"
         raise ValidationFailed(
-            f"Version {version_id} is {made}; training needs a split of a labelled-images dataset.",
-            suggested_action="Run a labelled_images pipeline through the split stage and "
-            "train on its output version.",
-            errors=[FieldProblem(loc=loc, msg="not a labelled split", code="invalid")],
+            f"Version {version_id} is {made}; a network trains on a split of labelled images "
+            "or of a table, or on a tokenize version of labelled text (ADR-0019 rule 12).",
+            suggested_action="Run the dataset's pipeline to the end and train on its output.",
+            errors=[FieldProblem(loc=loc, msg="not a trainable version", code="invalid")],
+        )
+    if request.config.model.graph is None and version.dtype != stage_registry.LABELLED_IMAGES:
+        raise ValidationFailed(
+            f"The reference model {request.config.model.name} takes images; {version_id} is "
+            f"{version.dtype}.",
+            suggested_action="Build a model for this dataset on SCR-08, or start from one of "
+            "its templates.",
+            errors=[
+                FieldProblem(loc=["config", "model", "name"], msg="images only", code="invalid")
+            ],
         )
     dataset = session.get(Dataset, version.dataset_id)
     resolved = request.config

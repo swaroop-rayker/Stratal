@@ -155,3 +155,21 @@ class DependencyUnavailable(StratalError):
     code = "dependency_unavailable"
     title = "Dependency unavailable"
     http_status = 503
+
+
+class WrongInput(StratalError):
+    """A prediction request whose input does not suit the model (ADR-0019 rule 21): an
+    image for a table model, a record with an unknown or missing column, and so on."""
+
+    code = "wrong_input"
+    title = "Wrong input for this model"
+    http_status = 422
+
+
+class NotServable(StratalError):
+    """A registered model that cannot score a new input, e.g. DBSCAN and HDBSCAN, which
+    assign clusters only to the rows they were fitted on (ADR-0019 rule 21)."""
+
+    code = "not_servable"
+    title = "This model cannot serve predictions"
+    http_status = 409

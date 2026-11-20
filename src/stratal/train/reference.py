@@ -8,6 +8,8 @@ small on purpose: CIFAR-10's 32-px images, a 6 GB card shared with everything
 else, and a CPU fallback that should still be usable (RUN-1.9).
 """
 
+from typing import Any
+
 from torch import nn
 
 from stratal.train.config import ModelSpec
@@ -54,16 +56,23 @@ def _small_cnn(input_shape: tuple[int, int, int], num_classes: int) -> nn.Module
 _BUILDERS = {"mlp": _mlp, "small_cnn": _small_cnn}
 
 
-def build_model(spec: ModelSpec, input_shape: tuple[int, int, int], num_classes: int) -> nn.Module:
-    """A new, randomly initialised model for images of ``input_shape`` (C, H, W).
+def build_model(spec: ModelSpec, input_shape: Any, num_classes: int) -> nn.Module:
+    """A new, randomly initialised model for ``input_shape``: a builder ``Shape``, or an
+    image's (C, H, W). ``num_classes`` is the locked head's width (1 for regression).
 
-    A builder graph compiles through :mod:`stratal.build.compile` (ADR-0017 rule 8)."""
+    A builder graph compiles through :mod:`stratal.build.compile` (ADR-0017 rule 8); the
+    reference models take images only."""
+    from stratal.build.shapes import Shape
+
+    shape = input_shape if isinstance(input_shape, Shape) else Shape("image", tuple(input_shape))
     if spec.graph is not None:
         from stratal.build.compile import compile_graph
-        from stratal.build.shapes import Shape
 
-        return compile_graph(spec.graph, Shape("image", tuple(input_shape)), num_classes)
-    return _BUILDERS[spec.name](input_shape, num_classes)
+        return compile_graph(spec.graph, shape, num_classes)
+    if shape.kind != "image":
+        raise ValueError(f"the reference model {spec.name} takes images, not {shape.describe()}")
+    dims = shape.dims
+    return _BUILDERS[spec.name]((dims[0], dims[1], dims[2]), num_classes)
 
 
 def parameter_count(model: nn.Module) -> int:

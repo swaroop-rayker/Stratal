@@ -733,6 +733,16 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `stratal.ml.params` (plain Python) holds each estimator's parameters, the cross-field rules and the data-dependent checks the API runs before queueing; `stratal.ml.pipeline` builds one Pipeline (median imputing and scaling, constant imputing and one-hot encoding, then the estimator) on PyArrow tables; `stratal.ml.persist` saves with skops and loads only if every type in the archive's schema is on our list.
 - **Why:** The API must refuse a bad combination without scikit-learn (ML-1.4). PyArrow tables avoid adding pandas. Reading the types ourselves makes the allow-list real: skops alone trusts every scikit-learn estimator.
 
+**Networks on tables and texts** (M10, RUN-1.1, BUILD-1.3, ML-1.3, ADR-0019 part C)
+- **What:** Builder graphs train on a table's split (classification, or regression with one output and MSE) and on a text's tokenize version, through the existing train stage, and every network run ends with EVAL-1.2's scores on validation and test.
+- **How:** The stage builds a dataset and an input `Shape` per type; `stratal.train.table_prep` fits the table's encoding on train (medians, means and spreads, categories, the target's scale) and is saved as `preprocess.json` beside the weights; the builder's locked ends use the same fit.
+- **Why:** One loop keeps checkpoints, pause and resume, and device choice identical for every input. One encoding function for the builder, training and serving means the locked width and the real input never differ.
+
+**Predictions for tables and texts** (M10, REG-1.4, ADR-0019 rules 20 and 21)
+- **What:** `/predict` takes a `record` or a `text` beside an image, and answers by task: classes, a value, a cluster or components.
+- **How:** The inference holder reads the version's `model.json` to see what it takes; classical pipelines load from skops on the CPU without the lease; table and text networks load their fitted encoding or vocabulary and encode with the training code; `stratal.inference.inputs` checks a record against the table schema.
+- **Why:** One service and one model at a time keeps the memory budget (ADR-0016); reusing the training code for encoding means a served prediction sees exactly the input the model was trained on.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

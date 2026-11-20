@@ -75,6 +75,23 @@ A tokenizer fitted inside training and stored with the weights was the alternati
 - **A records clean stage's WARN carries a suggested action** (MON-1.3); `ListSink`, the test sink, now refuses a WARN without one, as the runtime does.
 - **Measured on the live stack:** breast cancer 569 rows (455 / 57 / 57), diabetes 442, wine 178 (`job_0059` to `job_0061`); the COCO captions 49,585 of 9,912 images in 78 classes, 575 repeated captions marked, vocabulary 5,243, L = 16 with 3.9 % of train texts cut (`job_0062`).
 
+## As built (part C, 2026-11-19)
+
+- **One train stage for every input.** Images, tables and token sequences are each a dataset object with a builder `Shape` (`image`, `vector`, `tokens`); the loop, checkpoints, pause, resume and device choice are shared. Tables and token IDs are held in memory, with no loader workers. Texts train on the `tokenize` version, which carries the tokens and the vocabulary; tables on the `split` version.
+- **`stratal.train.table_prep`** (plain Python) is the fitted encoding of rule 13, used by the builder's locked width, by training and, in step 5, by `/predict`: one function, so they cannot disagree. Every categorical column is one-hot for now. ADR-0017 rule 6's `Embedding` option per column is not built yet: with DATA-7.3 (M11b) the table schema will carry each column's encoding and the input block may override it (the owner's choice, 2026-11-19), and the option will come with that.
+- **Every network run ends with EVAL-1.2's scores on validation and test** (images included), as `val_`/`test_` metrics and the version's `metrics.detail`. Until now the image runs reported only validation accuracy and loss.
+- **Regression** reports RMSE on the target's own scale per epoch (`train_rmse`, `val_rmse`) where classification reports accuracy.
+- **Measured live:** the Tabular MLP template on wine, test accuracy 1.00 (`job_0065`); on diabetes (regression), test R² 0.56, RMSE 54 (`job_0066`); the LSTM text template on the COCO captions on the GPU, 5 epochs in 25 s, test accuracy 0.68 and macro F1 0.31 over 78 imbalanced classes (`job_0067`).
+
+## As built (part E, 2026-11-20)
+
+- **One holder, three kinds of model.** The version's `model.json` says what it takes: a skops pipeline or a network with a `vector` input takes a `record`, a `tokens` input a `text`, anything else an image. A classical model loads with `stratal.ml.persist` under the lineage's lock, counts as the one loaded model and never touches the GPU lease. A table network loads its `preprocess.json` and a text network its dataset version's vocabulary, so `/predict` encodes with the very code training used (`stratal.train.table_prep`, `stratal.data.tokenize`); a text is normalised as `clean_text` does first.
+- **New error codes:** `wrong_input` (422) and `not_servable` (409) (ADR-0011: added, never renamed). A table network's `model.json` now carries its `table_schema`, so a record is checked the same way for both kinds of table model.
+- **`Prediction`** gains `task`, `value`, `cluster` and `components`; `top` is null except for classification, and a class's `probability` may be null.
+- **Memory (rule 20's measurement, 2026-11-20).** From a fresh start, the service with the breast-cancer random forest loaded peaks at 481 MiB (cgroup `memory.peak`), against 397 MiB serving `small_cnn` on the CPU in M8. After it had also loaded networks on the GPU, the peak was 870 MiB of the 1,000 MiB limit: the CUDA context and PyTorch's GPU libraries live in process memory, and GPU inference is on since 2026-11-19 (RUN-1.4). The limit is kept, as rule 20 says, but the headroom is 13 %. Raising it to 1.25 GB, taken from `worker-gpu`'s 3.5 GB (measured peak 1.6 GB, ADR-0016), is the owner's call.
+- **Older versions.** A table network trained before its `model.json` carried `table_schema` is checked against its dataset version's schema instead.
+- **Measured live:** the breast-cancer random forest (skops, CPU) predicted a held-out malignant record as malignant (0.96); the wine MLP (GPU) its record's class; the diabetes network a value on the target's scale; the captions LSTM "A man riding a wave on top of a surfboard." as person (0.92), then surfboard.
+
 ## As built (part D, 2026-11-19)
 
 - **The request.** A classical run is `POST /jobs` with `kind: train` and `classical: {model: {kind: "sklearn", estimator, params}, seed}` beside `config`, exactly one of them (rule 15's `model` is inside `classical`). A union on `config` would have changed every network request's error locations, which SCR-09 maps onto its fields. The job's one stage is `train_classical`, on the CPU queue.

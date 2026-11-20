@@ -737,7 +737,8 @@ class PredictedClass(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     class_: str = Field(alias="class")
-    probability: float
+    probability: float | None
+    """Null when the model gives no probabilities (a classical SVM, ADR-0019 rule 21)."""
 
 
 class Prediction(_Model):
@@ -747,8 +748,16 @@ class Prediction(_Model):
     """Which device served it (ADR-0016 rule 4)."""
     fallback_reason: str | None
     """Why the CPU served it, when it did: the GPU's holder, or why inference avoids it."""
-    top: list[PredictedClass]
-    """Up to five classes, most probable first."""
+    task: Literal["classification", "regression", "clustering", "projection"] = "classification"
+    """What the version predicts (M10, ADR-0019 rule 21)."""
+    top: list[PredictedClass] | None = None
+    """Classification: up to five classes, most probable first."""
+    value: float | None = None
+    """Regression: the prediction on the target's scale."""
+    cluster: int | None = None
+    """k-means: the record's cluster."""
+    components: list[float] | None = None
+    """PCA: the record's projection."""
     load_ms: float | None
     """Time to load the model, when this request loaded it."""
     total_ms: float
