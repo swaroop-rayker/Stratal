@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-09 v2 training entry — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.faint { opacity: .45; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.btn.primary.off { background: var(--soft); color: var(--ink-3); }
+.btn.focus { outline: 2px solid var(--ink); outline-offset: 2px; }
+.select { display: flex; align-items: center; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; gap: 6px; background: #fff; }
+.select.off { background: var(--fill); color: var(--ink-3); border-color: var(--soft); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 28px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.callout { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--fill); font-size: 12px; }
+.callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+/* drawer */
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.18); z-index: 3; }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 480px; background: #fff; border-left: 1px solid var(--line); box-shadow: -6px 0 18px rgba(0,0,0,.12); z-index: 4; display: flex; flex-direction: column; }
+.drawer.alone { position: relative; height: 100%; box-shadow: none; }
+.dh { padding: 14px 16px 10px; border-bottom: 1px solid var(--soft); display: flex; align-items: center; gap: 10px; } .dh b { font-size: 15px; }
+.steps { display: flex; gap: 6px; padding: 8px 16px; border-bottom: 1px solid var(--soft); font-size: 11px; color: var(--ink-3); }
+.steps span { display: inline-flex; align-items: center; gap: 4px; } .steps .on { color: var(--ink); font-weight: 600; } .steps i { font-style: normal; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--ink-3); display: inline-grid; place-items: center; font-size: 10px; } .steps .on i { background: var(--ink-2); color: #fff; border-color: var(--ink-2); } .steps .done i { background: var(--fill-2); }
+.db { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; overflow: hidden; }
+.df { padding: 10px 16px; border-top: 1px solid var(--soft); display: flex; gap: 8px; align-items: center; }
+.fl { display: flex; flex-direction: column; gap: 4px; font-size: 12px; } .fl > label { font-size: 11px; color: var(--ink-2); font-weight: 600; }
+.facts { display: grid; grid-template-columns: 90px 1fr; gap: 4px 10px; font-size: 12px; border: 1px solid var(--soft); border-radius: 6px; padding: 8px 10px; background: var(--fill); }
+.facts span:nth-child(odd) { color: var(--ink-3); }
+.summary { display: flex; align-items: center; gap: 8px; font-size: 12px; border: 1px solid var(--soft); border-radius: 6px; padding: 6px 10px; background: var(--fill); }
+.kind { display: grid; grid-template-columns: 18px 1fr; gap: 2px 10px; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 12px; }
+.kind .r { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--ink-2); margin-top: 2px; position: relative; }
+.kind.on { border-width: 2px; border-color: var(--ink); background: var(--fill-2); } .kind.on .r::after { content: ""; position: absolute; inset: 2.5px; border-radius: 50%; background: var(--ink); }
+.kind.off { border-style: dashed; color: var(--ink-3); background: var(--fill); } .kind.off .r { border-color: var(--soft); background: var(--fill-2); }
+.kind b { font-size: 13px; } .kind .why { grid-column: 2; font-size: 12px; color: var(--ink-2); } .kind.off .why { color: var(--ink-2); }
+.kind .to { grid-column: 2; font-size: 11px; color: var(--ink-3); }
+.kind.focus { outline: 2px solid var(--ink); outline-offset: 2px; }
+.label-kind { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; font-weight: 600; background: var(--fill-2); }
+.kvs { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px; } .kvs span:nth-child(even) { font-family: var(--mono); text-align: right; }
+.f { display: grid; grid-template-columns: 110px 1fr; gap: 2px 8px; align-items: center; font-size: 12px; }
+.f label { font-family: var(--mono); color: var(--ink-2); font-size: 11px; }
+.f .in { border: 1px solid var(--line); border-radius: 4px; height: 24px; display: flex; align-items: center; padding: 0 8px; background: #fff; }
+.row { display: flex; gap: 16px; align-items: flex-start; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-09 v2 — Training entry: choosing the model kind after the split · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2 (part of the SCR-09 v2 gate, K11)</span><span>Serves: ML-1.1, BUILD-1.3, UI-2.1</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> v3, the <i>Train a model</i> drawer, SCR-09 Model region and Entry</span><span>Routes: <span class="mono">/models</span>, <span class="mono">/versions/:id</span>, <span class="mono">/runs/new?version=…&amp;kind=…</span></span><span>2026-11-20</span></div>
+<p>Layout and hierarchy only. The screens behind the drawer are faint and not redrawn in detail. Blue numbers are annotations. The data is real, read from the running stack on 2026-11-20: wine <span class="mono">ds_6448d354c9c6</span> (178 rows, train 142 · val 18 · test 18, 13 features → 3 classes), breast-cancer <span class="mono">ds_98c3fdfd7edc</span> (569 rows, 455 · 57 · 57, 30 features → benign / malignant), diabetes <span class="mono">ds_de5f2ad338c9</span> (442 rows, regression), cifar10 <span class="mono">ds_f8e67211dd94</span> (60,000 rows, 47,704 · 5,963 · 5,963, image 3×32×32 → 10 classes), coco10k-captions <span class="mono">ds_53f72c42aa5a</span> (tokenize, 49,585 rows, tokens 16 with a 5,243-word vocabulary → 78 classes), coco20k <span class="mono">ds_005e3e700ee8</span> (image–caption pairs, not trainable). The lineage <span class="mono">my_model · wine</span> (<span class="mono">ml_d1d901ea2cde</span>) is the throwaway network this change removes the need for.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>One drawer, two steps, a step bar at the top</b> (<i>1 Data · 2 Kind</i>), 480 px wide like <i>Start pipeline</i>. The footer holds <i>Back</i>, <i>Cancel</i> and one primary button that names where it goes: <i>Next</i> in step 1, then <i>Open the builder →</i> or <i>Set up the run →</i>.</li>
+<li><b>Step 1 is two selects and a facts box.</b> Dataset, then version. The version select lists only the versions a model can train on, newest first, with row counts. Once chosen, the facts box shows type, task, input → output and the split sizes, so the person sees what step 2 will allow before going on.</li>
+<li><b>Correction to SCREENS.md v3, for your OK:</b> v3 says the drawer lists <span class="mono">split</span> versions. Labelled text trains on a <span class="mono">tokenize</span> version, not on its split (the API says so for <span class="mono">ds_29636e3f171b</span>: "labelled text models train on a tokenize version"). So the version select lists <i>split</i> versions for images and tables and <i>tokenize</i> versions for text, and SCR-03's <i>Train a model…</i> is offered on those same stages. I have drawn it that way (frame D) and will correct the two sentences in SCREENS.md with this wireframe's approval.</li>
+<li><b>Step 2 is a radio list of the two kinds,</b> each a card with its name, one line on what it is and one on where it leads. A kind the split does not allow is a dashed, greyed card that stays in the list, cannot be selected, and gives its reason in words (never colour alone). The arrow keys skip it.</li>
+<li><b>The default in step 2:</b> the first allowed kind is selected; for a table that is <i>Network</i>, so nothing is preselected in a way that hides <i>Classical</i>. Both are equal cards, Network first because it is offered for every type.</li>
+<li><b>From SCR-03, step 1 folds into one line</b> (<i>cifar10 · ds_f8e67211dd94 · labelled images</i>) with <i>Change</i>, and the drawer opens at step 2.</li>
+<li><b>SCR-09's Model card shows the chosen kind as a label,</b> not the v2 segmented control, with <i>Change…</i> beside it. <i>Change…</i> opens the same drawer at step 2 over SCR-09. When a network spec would be left behind, step 2 shows a warning callout under the kinds as soon as <i>Classical</i> is selected, before the button is pressed.</li>
+<li><b><span class="mono">/runs/new</span> without a kind</b> renders SCR-09's header and an empty Model card behind the drawer, opened at step 2 (with a version) or step 1 (without). Closing the drawer leaves SCR-09's empty state, "Choose what to train first.", with <i>Choose…</i>.</li>
+<li><b>States live inside the drawer</b>: skeleton lines while the version and the types load; an error state with <i>Retry</i> that keeps step 1's choice; empty states that link to where data comes from.</li>
+<li><b>Keyboard path:</b> the drawer traps focus; Tab goes dataset → version → <i>Next</i>; in step 2 the arrow keys move between allowed kinds, Enter presses the primary button, Esc closes and returns focus to the button that opened it.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · SCR-11 → <i>Train a model…</i> → step 1, wine chosen</h2>
+<div class="frame" style="height:640px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav on">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b></span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content faint">
+      <div class="phead"><b>Models</b><span class="spacer"></span><span class="btn">Train a model…</span></div>
+      <table class="t">
+        <tr><th>Lineage</th><th>Task</th><th class="r">Versions</th><th class="r">Latest metric</th><th class="r">Disk</th></tr>
+        <tr><td>small_cnn · cifar10</td><td>classification</td><td class="r">3</td><td class="r m">0.840</td><td class="r m">2.4 MB</td></tr>
+        <tr><td>random_forest · breast-cancer</td><td>classification</td><td class="r">3</td><td class="r m">0.982</td><td class="r m">13.3 MB</td></tr>
+        <tr><td>my_model · wine</td><td>classification</td><td class="r">4</td><td class="r m">1.000</td><td class="r m">0.2 MB</td></tr>
+        <tr><td>tabular_mlp · diabetes</td><td>regression</td><td class="r">2</td><td class="r m">–</td><td class="r m">0.05 MB</td></tr>
+        <tr><td>lstm_text · coco10k-captions</td><td>classification</td><td class="r">2</td><td class="r m">0.689</td><td class="r m">3.6 MB</td></tr>
+      </table>
+    </section>
+    <footer class="status">CPU 3% · RAM 3.1 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+  <div class="scrim"></div>
+  <div class="drawer">
+    <div class="dh"><b>Train a model</b><span class="spacer"></span><span class="btn sm ghost">✕</span></div>
+    <div class="steps"><span class="on"><i>1</i>Data</span><span>›</span><span><i>2</i>Kind</span></div>
+    <div class="db">
+      <div class="fl"><label><span class="n in">1</span>Dataset</label><span class="select">wine <span class="spacer"></span>▾</span></div>
+      <div class="fl"><label><span class="n in">2</span>Version to train on</label><span class="select"><span class="mono">ds_6448d354c9c6</span> · split · 178 rows · 2026-11-19 <span class="spacer"></span>▾</span>
+        <span class="muted" style="font-size:11px">Split versions; for text, tokenize versions. Newest first.</span></div>
+      <div class="facts"><span class="n in" style="grid-column:1/3">3</span>
+        <span>Type</span><span>Tabular</span>
+        <span>Task</span><span>classification · 3 classes <span class="muted">(class_0, class_1, class_2)</span></span>
+        <span>Input → output</span><span class="mono">13 features → 3 classes</span>
+        <span>Splits</span><span class="mono">train 142 · val 18 · test 18</span>
+      </div>
+    </div>
+    <div class="df"><span class="btn ghost">Cancel</span><span class="spacer"></span><span class="btn primary">Next →</span></div>
+  </div>
+</div>
+<p class="caption">Opened from SCR-11 the drawer starts empty: the version select is disabled ("—") until a dataset is chosen, and <i>Next</i> stays disabled until a version is. Changing the dataset clears the version.</p>
+
+<!-- ===================================================================== B -->
+<h2>B · Step 2 for a table (wine): both kinds allowed, <i>Classical</i> chosen</h2>
+<div class="frame w1024" style="height:560px">
+  <div style="display:flex;height:100%">
+    <div style="flex:1;padding:16px" class="muted">
+      <p style="font-size:12px">Drawer shown alone. <span class="n in">4</span> Both cards are radios in one group named "Model kind". The descriptions come from the dataset type (<span class="mono">GET /dataset-types</span>: tabular takes the <span class="mono">mlp</span> family, so <i>Network</i> mentions the Tabular MLP template).</p>
+      <p style="font-size:12px"><span class="n in">5</span> With <i>Classical</i> selected, the button reads <i>Set up the run →</i> and goes to <span class="mono">/runs/new?version=ds_6448d354c9c6&amp;kind=classical</span>. SCR-08 is not opened.</p>
+      <p style="font-size:12px">With <i>Network</i> selected it reads <i>Open the builder →</i> and goes to <span class="mono">/models/build?version=ds_6448d354c9c6</span>.</p>
+    </div>
+    <div class="drawer alone" style="width:480px;border-left:1px solid var(--line)">
+      <div class="dh"><b>Train a model</b><span class="spacer"></span><span class="btn sm ghost">✕</span></div>
+      <div class="steps"><span class="done"><i>✓</i>Data</span><span>›</span><span class="on"><i>2</i>Kind</span></div>
+      <div class="db">
+        <div class="summary"><span>wine · <span class="mono">ds_6448d354c9c6</span> · tabular · classification, 3 classes</span><span class="spacer"></span><span class="btn sm ghost">Change</span></div>
+        <div class="fl"><label><span class="n in">4</span>What kind of model?</label></div>
+        <div class="kind"><span class="r"></span><b>Network</b>
+          <span class="why">Layers you stack in the builder, or the Tabular MLP template. Trains on the GPU or CPU, with a VRAM check.</span>
+          <span class="to">Next: the builder (SCR-08), then the run setup</span></div>
+        <div class="kind on"><span class="r"></span><b>Classical</b>
+          <span class="why">A scikit-learn estimator, e.g. random forest or logistic regression, with its parameters. Trains on the CPU in seconds.</span>
+          <span class="to">Next: the run setup (SCR-09), no builder</span></div>
+      </div>
+      <div class="df"><span class="btn ghost">← Back</span><span class="btn ghost">Cancel</span><span class="spacer"></span><span class="btn primary"><span class="n in">5</span>Set up the run →</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption">Diabetes (<span class="mono">ds_de5f2ad338c9</span>) looks the same with "regression" as the task and "10 features → 1 value"; the classical estimators SCR-09 then lists are the regression ones, as today.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · From SCR-03 on cifar10: opened at step 2, <i>Classical</i> greyed with its reason</h2>
+<div class="frame" style="height:560px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / cifar10 / ds_f8e67211dd94</span></header>
+    <section class="content faint">
+      <div class="phead"><b class="mono">ds_f8e67211dd94</b><span class="k">split</span><span class="spacer"></span><span class="btn"><span class="n in">6</span>Train a model…</span><span class="btn">Continue the pipeline</span><span class="btn">Build the eval report</span></div>
+      <div class="card" style="height:90px"><h3>Lineage</h3></div>
+      <div class="card" style="height:160px"><h3>Rows</h3></div>
+    </section>
+    <footer class="status">CPU 3% · RAM 3.1 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB</footer>
+  </div>
+  <div class="scrim"></div>
+  <div class="drawer">
+    <div class="dh"><b>Train a model</b><span class="spacer"></span><span class="btn sm ghost">✕</span></div>
+    <div class="steps"><span class="done"><i>✓</i>Data</span><span>›</span><span class="on"><i>2</i>Kind</span></div>
+    <div class="db">
+      <div class="summary"><span>cifar10 · <span class="mono">ds_f8e67211dd94</span> · labelled images · <span class="mono">image 3×32×32 → 10 classes</span></span><span class="spacer"></span><span class="btn sm ghost">Change</span></div>
+      <div class="fl"><label>What kind of model?</label></div>
+      <div class="kind on"><span class="r"></span><b>Network</b>
+        <span class="why">Layers you stack in the builder (MLP or CNN for images), or a template.</span>
+        <span class="to">Next: the builder (SCR-08), then the run setup</span></div>
+      <div class="kind off"><span class="r"></span><b>Classical <span class="k">not for this split</span></b>
+        <span class="why"><span class="n in">7</span>Classical models train on tables. This split holds labelled images.</span></div>
+    </div>
+    <div class="df"><span class="btn ghost">Cancel</span><span class="spacer"></span><span class="btn primary">Open the builder →</span></div>
+  </div>
+</div>
+<p class="caption">From SCR-03 there is no <i>Back</i>: <i>Change</i> on the summary line reopens step 1 with the version filled. The greyed card is not a radio (<span class="mono">aria-disabled</span>, skipped by the arrow keys) but its text is read in the group, so a screen-reader user hears why. On a version that is not trainable on, SCR-03's button is disabled with "Training needs a split version" (a tokenize version for text), drawn in frame G.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Text, and a split nothing can train</h2>
+<div class="frame w1024" style="height:500px">
+  <div style="display:flex;gap:16px;padding:16px;height:100%">
+    <div class="drawer alone" style="width:480px;border:1px solid var(--line)">
+      <div class="steps"><span class="done"><i>✓</i>Data</span><span>›</span><span class="on"><i>2</i>Kind</span></div>
+      <div class="db">
+        <div class="summary"><span>coco10k-captions · <span class="mono">ds_53f72c42aa5a</span> · tokenize · labelled text · <span class="mono">tokens 16 (vocabulary 5,243) → 78 classes</span></span><span class="spacer"></span><span class="btn sm ghost">Change</span></div>
+        <div class="kind on"><span class="r"></span><b>Network</b>
+          <span class="why">Layers you stack in the builder (MLP, RNN or transformer for text), or a template.</span>
+          <span class="to">Next: the builder (SCR-08), then the run setup</span></div>
+        <div class="kind off"><span class="r"></span><b>Classical <span class="k">not for this split</span></b>
+          <span class="why">Classical models train on tables. This version holds labelled text.</span></div>
+      </div>
+      <div class="df"><span class="spacer"></span><span class="btn primary">Open the builder →</span></div>
+    </div>
+    <div class="drawer alone" style="width:480px;border:1px solid var(--line)">
+      <div class="steps"><span class="done"><i>✓</i>Data</span><span>›</span><span class="on"><i>2</i>Kind</span></div>
+      <div class="db">
+        <div class="summary"><span>coco20k · <span class="mono">ds_005e3e700ee8</span> · split · image–caption pairs</span><span class="spacer"></span><span class="btn sm ghost">Change</span></div>
+        <div class="callout"><span class="n in">8</span><b>Nothing here can be trained on this version.</b> Captioned by the label stage; evaluated, not trained by the builder. <span class="muted">(the type's own note)</span></div>
+        <div class="kind off"><span class="r"></span><b>Network <span class="k">not for this split</span></b>
+          <span class="why">Image–caption pairs are not trained by the builder.</span></div>
+        <div class="kind off"><span class="r"></span><b>Classical <span class="k">not for this split</span></b>
+          <span class="why">Classical models train on tables.</span></div>
+      </div>
+      <div class="df"><span class="spacer"></span><span class="btn primary off">Next →</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption">Left: the text split is the <i>tokenize</i> version (decision 3). Choosing its <i>split</i> version <span class="mono">ds_29636e3f171b</span> is not offered in step 1; reached by a link, step 2 shows the API's problem in the callout ("ds_29636e3f171b is a split version; labelled text models train on a tokenize version.") with <i>Use ds_53f72c42aa5a</i>. Right: <span class="mono">trainable = false</span> greys both kinds and the primary button stays disabled.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · SCR-09's Model card with the chosen kind, and <i>Change…</i></h2>
+<div class="frame" style="height:auto">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="phead"><b>New training run</b><span class="k">breast-cancer</span></div>
+      <div class="card"><h3><span class="n in">9</span>Model <span class="label-kind">Classical</span><span class="btn sm ghost">Change…</span><span class="spacer"></span><span class="k">ML-1.1 · ML-1.4</span></h3>
+        <div class="f"><label>estimator</label><span class="in">random_forest ▾</span></div>
+        <div class="f"><label>n_estimators</label><span class="in">100</span></div>
+        <div class="f"><label>max_depth</label><span class="in">none</span></div>
+        <div class="muted" style="font-size:11px">The parameter form as in SCR-09 v2's classical mode (SCR-09hpo_v1), not redrawn.</div></div>
+      <div class="card faint"><h3>Data</h3><div style="font-size:12px"><span class="mono">ds_98c3fdfd7edc</span> · train 455 · val 57 · test 57 · classification · benign / malignant</div></div>
+      <div class="card faint" style="height:70px"><h3>Where it runs</h3></div>
+      <p class="caption">Reached from the drawer with <span class="mono">kind=classical</span>. The v2 <i>Network | Classical</i> segmented control is gone; the kind is a label.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="phead"><b>New training run</b><span class="k">cifar10</span></div>
+      <div class="card"><h3>Model <span class="label-kind">Network</span><span class="btn sm ghost">Change…</span><span class="spacer"></span><span class="btn sm ghost">Edit in builder</span></h3>
+        <div style="font-size:12px;display:flex;gap:16px"><span class="mono">my_model</span><span class="mono">8 layers · 10,602 parameters</span><span class="muted">from the builder's draft for this split</span></div></div>
+      <div class="card faint" style="height:60px"><h3>Data</h3></div>
+      <div class="card faint" style="height:70px"><h3>VRAM check</h3></div>
+      <p class="caption">For cifar10, <i>Change…</i> opens step 2 with <i>Classical</i> greyed (frame C), so the only effect is to return to the builder.</p>
+    </div>
+  </div>
+  <div style="padding:0 16px 16px;display:flex;gap:16px;align-items:flex-start">
+    <div class="drawer alone" style="width:480px;height:310px;border:1px solid var(--line)">
+      <div class="steps"><span class="done"><i>✓</i>Data</span><span>›</span><span class="on"><i>2</i>Kind</span><span class="spacer"></span><span>opened by <i>Change…</i></span></div>
+      <div class="db" style="gap:8px">
+        <div class="summary"><span>diabetes · <span class="mono">ds_de5f2ad338c9</span> · tabular · regression</span></div>
+        <div class="kind" style="padding:6px 12px"><span class="r"></span><b>Network <span class="k">current</span></b></div>
+        <div class="kind on" style="padding:6px 12px"><span class="r"></span><b>Classical</b></div>
+        <div class="callout bad"><span class="n in">10</span><b>The network from job_0066 will not be used.</b> <span class="mono">tabular_mlp</span>, 5 layers, came with <i>Train again…</i>; that run and its versions are untouched.</div>
+      </div>
+      <div class="df" style="padding:6px 16px"><span class="btn ghost">Keep the network</span><span class="spacer"></span><span class="btn primary">Use Classical</span></div>
+    </div>
+    <p class="caption" style="max-width:520px">SCR-09 for <i>Train again…</i> on <span class="mono">tabular_mlp · diabetes</span> (job_0066), then <i>Change…</i>. The warning shows as soon as <i>Classical</i> is selected. When the network is the builder's draft instead, the second sentence reads "The builder's draft for this split stays in the builder." With no network spec in play there is no warning, and the button reads <i>Use Classical</i> as here. The fields SCR-09 keeps across the change: the data, the seed; the training form and the study part are those of the new kind.</p>
+  </div>
+</div>
+
+<!-- ===================================================================== F -->
+<h2>F · <span class="mono">/runs/new</span> without a kind, and SCR-09's empty state</h2>
+<div class="frame w1024" style="height:420px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px">
+    <div class="card" style="position:relative;height:380px;overflow:hidden">
+      <div class="faint"><div class="phead"><b>New training run</b></div><div class="card" style="height:80px;margin-top:10px"><h3>Model</h3></div></div>
+      <div class="scrim" style="border-radius:6px"></div>
+      <div class="drawer" style="width:320px">
+        <div class="steps"><span class="done"><i>✓</i>Data</span><span>›</span><span class="on"><i>2</i>Kind</span></div>
+        <div class="db" style="gap:8px"><div class="summary" style="font-size:11px">breast-cancer · <span class="mono">ds_98c3fdfd7edc</span></div><div class="kind"><span class="r"></span><b>Network</b></div><div class="kind"><span class="r"></span><b>Classical</b></div></div>
+      </div>
+      <p class="caption" style="position:absolute;bottom:8px;left:12px;right:330px">
+        <span class="mono">/runs/new?version=ds_98c3fdfd7edc</span>: the drawer opens at step 2. With no <span class="mono">version</span> it opens at step 1.</p>
+    </div>
+    <div class="card" style="height:380px">
+      <div class="phead"><b>New training run</b></div>
+      <div class="empty" style="flex:1"><div><b>Choose what to train first.</b><p style="margin:6px 0">Pick a split and the kind of model it allows.</p><span class="btn sm primary">Choose…</span></div></div>
+      <p class="caption"><span class="n in">11</span> The drawer closed without a choice. <i>Choose…</i> reopens it where it was. For <span class="mono">kind=network</span> with no draft and no template, the same state adds <i>Open the builder</i>; it replaces v2's "Build or pick a model first."</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================== G -->
+<h2>G · Loading, empty and error in the drawer; SCR-03's button off a trainable stage</h2>
+<div class="frame" style="height:520px">
+  <div style="display:flex;gap:14px;padding:16px">
+    <div class="drawer alone" style="width:300px;height:380px;border:1px solid var(--line)">
+      <div class="steps"><span class="on"><i>1</i>Data</span></div>
+      <div class="db"><span class="skel" style="width:60%"></span><span class="skel" style="height:30px"></span><span class="skel" style="height:30px"></span><span class="skel" style="height:70px"></span><span class="muted" style="font-size:11px">Loading ds_6448d354c9c6…</span></div>
+      <div class="df"><span class="spacer"></span><span class="btn primary off">Next →</span></div>
+    </div>
+    <div class="drawer alone" style="width:300px;height:380px;border:1px solid var(--line)">
+      <div class="steps"><span class="on"><i>1</i>Data</span></div>
+      <div class="db"><div class="empty" style="flex:1"><div><b>No datasets yet.</b><p style="margin:6px 0">Put a folder under <span class="mono">.\sources</span> and ingest it.</p><span class="btn sm">Open Datasets</span></div></div></div>
+    </div>
+    <div class="drawer alone" style="width:300px;height:380px;border:1px solid var(--line)">
+      <div class="steps"><span class="on"><i>1</i>Data</span></div>
+      <div class="db"><div class="fl"><label>Dataset</label><span class="select">coco10k ▾</span></div><div class="fl"><label>Version to train on</label><span class="select off">none yet</span></div>
+        <div class="empty" style="padding:12px"><div><b>No version of coco10k a model can train on yet.</b><p style="margin:6px 0">Its latest is <span class="mono">ds_bad290a73446</span> (preprocess). Run the pipeline to its split stage.</p><span class="btn sm">Continue the pipeline</span></div></div></div>
+    </div>
+    <div class="drawer alone" style="width:300px;height:380px;border:1px solid var(--line)">
+      <div class="steps"><span class="done"><i>✓</i>Data</span><span>›</span><span class="on"><i>2</i>Kind</span></div>
+      <div class="db"><div class="summary" style="font-size:11px">wine · <span class="mono">ds_6448d354c9c6</span></div>
+        <div class="empty err" style="flex:1"><div><b>The model kinds could not be loaded</b><p style="margin:6px 0"><span class="mono">internal_error</span> · <span class="mono">GET /dataset-types</span> failed (req_…). Your choice in step 1 is kept.</p><span class="btn sm">Retry</span></div></div></div>
+    </div>
+  </div>
+  <div style="position:absolute;left:16px;bottom:16px;display:flex;gap:12px;align-items:center;font-size:12px">
+    <span class="mono">ds_499bfa2ee3d3</span><span class="k">clean_table</span><span class="btn off">Train a model…</span><span class="muted">Tooltip and helper: "Training needs a split version (a tokenize version for text)." The button stays focusable so the reason can be read.</span>
+  </div>
+</div>
+
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Dataset select</td><td>Every dataset, by slug</td><td><span class="mono">GET /datasets</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Version select</td><td>Split versions (tokenize for text), newest first, with rows and date</td><td><span class="mono">GET /datasets/{slug}/versions</span></td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Facts</td><td>Type, task, classes, input → output, split sizes</td><td><span class="mono">GET /versions/{id}</span> (<span class="mono">dtype</span>, <span class="mono">counts.split</span>); the ends from <span class="mono">POST /model-specs/validate</span> with an empty spec, as SCR-08 and SCR-09 read them</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Kinds</td><td>Network for every trainable type; Classical for <span class="mono">tabular</span> only; reasons for the rest</td><td><span class="mono">GET /dataset-types</span> (<span class="mono">trainable</span>, <span class="mono">families</span>, <span class="mono">note</span>)</td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Primary button</td><td>Where the choice leads</td><td>navigation only: <span class="mono">/models/build?version=…</span> or <span class="mono">/runs/new?version=…&amp;kind=classical</span></td><td>–</td></tr>
+<tr><td><span class="num">6</span></td><td>SCR-03 entry</td><td><i>Train a model…</i> on a trainable stage</td><td>the version's <span class="mono">stage</span> and <span class="mono">dtype</span></td><td>–</td></tr>
+<tr><td><span class="num">7</span></td><td>Reason</td><td>Why a kind is not offered, in words</td><td>fixed text for Classical; the type's note for an untrainable type</td><td>–</td></tr>
+<tr><td><span class="num">8</span></td><td>Not trainable</td><td>The type's note or the API's problem</td><td>validate's <span class="mono">dataset.problem</span></td><td>–</td></tr>
+<tr><td><span class="num">9</span></td><td>SCR-09 Model card</td><td>The kind as a label, <i>Change…</i></td><td><span class="mono">?kind=</span>, or the kind of <span class="mono">?from=</span>'s job or <span class="mono">?study=</span>'s study</td><td>–</td></tr>
+<tr><td><span class="num">10</span></td><td>Spec warning</td><td>Which network would be left behind</td><td>the job or draft SCR-09 already holds</td><td>–</td></tr>
+<tr><td><span class="num">11</span></td><td>SCR-09 empty</td><td>"Choose what to train first."</td><td>–</td><td>–</td></tr>
+</table>
+<p class="caption">No new endpoint and no schema change. Every source above exists today.</p>
+</main>
+</body>
+</html>
