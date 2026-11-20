@@ -51,3 +51,28 @@ Frame F's empty state ("No models yet") cannot be shown live without deleting th
 ## Tests
 
 `frontend/src/screens/models/Models.test.tsx`: `test_REG_1_2_the_three_states_are_shown_and_filterable_on_a_lineage`, `test_REG_1_2_versions_filter_by_state_and_by_weights`, `test_REG_1_2_the_lineage_list_filters_by_state_through_the_api`, `test_REG_2_5_the_pin_is_a_toggle_named_with_its_version`, `test_REG_2_11_the_disk_bar_is_named_with_its_five_parts`, `test_REG_1_4_try_it_says_which_device_served_it`, `test_REG_2_10_the_confirmation_lists_versions_and_sizes_and_needs_the_name_typed`, `test_REG_2_10_only_the_exact_phrase_confirms`.
+
+# Task metrics (M10, EVAL-1.2) — Gate 3 comparison
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-11eval_v1.html`](../screens/SCR-11eval_v1.html), G2 approved 2026-11-20 (low-fi [`SCR-11eval-lofi_v1.html`](../screens/SCR-11eval-lofi_v1.html)) |
+| Built | `frontend/src/screens/models/TaskMetrics.tsx`, in `VersionDrawer.tsx`; styles appended to `scr11.css`. The version view gains `study_id` (API.md §3.9) |
+| Checked | 2026-11-20, live, the four frames on real versions: A the CNN study's best (`mv_a4a0fb846812`), B the diabetes regression (`mv_b46259218b0e`), D a run from before M10 (`mv_0cfa1ce88a16`), E the 78-class text model (`mv_2eb4cd656334`); dark and light. Frame C (clustering, PCA) is covered by its Vitest test: no such version is on the live stack. The pane was narrow, so content, behaviour and contrast were checked through the page |
+| Status | **Approved by the owner on 2026-11-20** ("Approved, continue"), with the listed differences |
+
+## Differences from the mockup
+
+1. **The drawer is 560 px wide for every version**, the mockup's width for frame A (it was 460 px).
+2. **"Most confused" uses the selected split** (Validation by default), as the matrix does; the mockup drew it on Test.
+3. **The per-class F1 list above 20 classes** scrolls within 180 px, lowest first.
+
+## Accessibility
+
+- **Contrast:** every text element passes AA in both themes once the theme transition settles: frame A 204 elements (lowest 5.0:1, the *computed once* badge, dark; 5.35:1 light), E 257, B 58, D 36.
+- **Keyboard:** the matrix is a grid with one cell in the tab order; arrow keys move between cells and the tooltip, a polite status, says the cell's sentence ("cat predicted as dog: 94 of 598 (15.7 %)"). *Table* swaps it for a table with row and column headers. The split toggles are pressed-button groups.
+- **Never colour alone:** every cell prints its count; bars carry their figure as text.
+
+## Tests
+
+`frontend/src/screens/models/TaskMetrics.test.tsx`: `test_EVAL_1_2_the_right_metric_set_appears_for_each_task`, `test_EVAL_1_2_the_matrix_follows_the_split_and_arrow_keys_move_between_cells`, `test_EVAL_1_2_a_study_test_is_marked_computed_once_and_many_classes_list_the_confusions`, `test_EVAL_1_2_a_version_without_metrics_says_why`.

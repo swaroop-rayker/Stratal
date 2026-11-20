@@ -496,6 +496,7 @@ def version_detail(session: Session, version_id: str) -> dict[str, Any]:
         "history": version.history or [],
         "weights_path": version.weights_path,
         "weights_deleted_at": iso(version.weights_deleted_at),
+        "study_id": version.study_id,
     }
 
 

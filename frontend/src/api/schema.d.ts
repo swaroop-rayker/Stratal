@@ -2304,6 +2304,8 @@ export interface components {
             weights_path: string | null;
             /** Weights Deleted At */
             weights_deleted_at: string | null;
+            /** Study Id */
+            study_id?: string | null;
         };
         /** Node */
         Node: {

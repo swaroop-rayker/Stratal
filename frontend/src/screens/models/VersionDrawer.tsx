@@ -8,7 +8,8 @@ import { Drawer } from "../../components/Drawer";
 import { ErrorState } from "../../components/states";
 import { Button, Icon, Skeleton } from "../../components/ui";
 import { clock, DASH } from "../../lib/format";
-import { metric, VersionLabel } from "./parts";
+import { VersionLabel } from "./parts";
+import { TaskMetrics } from "./TaskMetrics";
 
 function short(hash: string): string {
   return hash.length > 10 ? `${hash.slice(0, 4)}…${hash.slice(-4)}` : hash;
@@ -29,7 +30,6 @@ export function VersionDrawer({ versionId, onClose, onTry }: {
   const retrain = useRetrain();
   const navigate = useNavigate();
   const v = detail.data;
-  const loss = v?.metrics?.["val_loss"];
   return (
     <Drawer
       open={versionId !== null}
@@ -41,7 +41,7 @@ export function VersionDrawer({ versionId, onClose, onTry }: {
           {v ? <VersionLabel state={v.state} /> : null}
         </h2>
       }
-      width={460}
+      width={560}
       returnFocus={() => document.querySelector<HTMLElement>(`tr[data-version="${last.current ?? ""}"]`)}
     >
       <div className="scr11 in-dialog" style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
@@ -97,15 +97,21 @@ export function VersionDrawer({ versionId, onClose, onTry }: {
               </span>
               <span>Config hash</span>
               <span className="mono" title={v.config_hash}>{short(v.config_hash)}</span>
-              <span>val acc · loss</span>
-              <span className="mono">
-                {metric(v.main_metric)} · {typeof loss === "number" ? loss.toFixed(2) : DASH}
-              </span>
-              <span>test</span>
-              <span>not evaluated (EVAL-1.2)</span>
+              {v.study_id ? (
+                <>
+                  <span>Study</span>
+                  <span className="mono"><Link to={`/studies/${v.study_id}`}>{v.study_id}</Link> · its best trial</span>
+                </>
+              ) : null}
               <span>Retention</span>
               <span>{v.retention_reason}</span>
             </div>
+            <TaskMetrics
+              version={v}
+              onRetrain={v.weights_status === "weights_deleted" || v.state !== "trained" ? null : () => {
+                retrain.mutate(v.id, { onSuccess: (job) => void navigate(`/jobs/${job.id}`) });
+              }}
+            />
             <pre className="code">{JSON.stringify(v.config, null, 2)}</pre>
             <div style={{ display: "flex", gap: "var(--sp-2)" }}>
               {v.state === "trained" ? (

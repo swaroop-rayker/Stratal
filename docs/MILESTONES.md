@@ -583,15 +583,15 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_ML_1_3_*`: the scaler's statistics come from the train split (2026-11-19, `test_ML_1_classical.py`: the scaler's mean, the imputer's median and the encoder's categories match train with val and test shifted away)
 - [x] `test_ML_1_4_*`: invalid parameter combinations are rejected (2026-11-19, `test_ML_1_4_params.py`: one test per rule, the task and data checks; through the API as 422s naming the field, `test_M10_classical.py`)
 - [x] `test_ML_1_5_*`: a skops save and load round-trips; nothing is unpickled (2026-11-19, `test_ML_1_classical.py` and `test_M10_classical_run.py`, under the unpickling tripwire; a file holding a type outside the allow-list is refused as `weights_unreadable`)
-- [ ] `test_HPO_1_1_*`: the search space builds from the UI's selections
-- [ ] `test_HPO_1_2_*`: a study stops at whichever limit comes first
-- [ ] `test_HPO_1_3_*`: pruned trials are logged with the step they stopped at
-- [ ] `test_HPO_1_4_*`: test metrics are computed exactly once per study
-- [ ] `test_HPO_1_5_*`: the trial table, best config and parameter importance render
-- [ ] 👤 `test_EVAL_1_2_*`: the right metric set appears for each task
-- [ ] G3 for SCR-09 (HPO part) and SCR-10
-- [ ] Demo: tune a random forest on the tabular dataset and the CNN's learning rate; read both studies; one test evaluation each
-- [ ] Docs updated (learning notes)
+- [x] `test_HPO_1_1_*`: the search space builds from the UI's selections (2026-11-20: `test_HPO_1_1_space.py`, markers checked against each field's own range and the fixed fields; through the API, `test_M10_studies.py` and `test_M10_deep_studies.py`; SCR-09's Tune toggles to markers and refusals on their rows, `Builder.test.tsx`)
+- [x] `test_HPO_1_2_*`: a study stops at whichever limit comes first (2026-11-20: trial limit and time budget for classical studies, `test_M10_studies_run.py`, and for networks, one job per trial, `test_M10_deep_studies_run.py`; pause, cancel and the watchdog on a waiting study, `test_M10_deep_studies.py`; two studies starting at once)
+- [x] `test_HPO_1_3_*`: pruned trials are logged with the step they stopped at (2026-11-20: by fold for classical studies, by epoch for networks, never before 5 trials have finished; SCR-10 says the step and reason, `Study.test.tsx`)
+- [x] `test_HPO_1_4_*`: test metrics are computed exactly once per study (2026-11-20: a conditional update refuses a second write, classical and network studies; trials never see the test split; SCR-10's card has no button)
+- [x] `test_HPO_1_5_*`: the trial table, best config and parameter importance render (2026-11-20: the study endpoints, `test_M10_studies_run.py`; SCR-10, `Study.test.tsx`; *Start a run from this configuration* prefills SCR-09)
+- [x] 👤 `test_EVAL_1_2_*`: the right metric set appears for each task (written by the agent, K1. 2026-11-19, `test_EVAL_1_2_task_metrics.py`: every task's set from `sklearn.metrics`, sacrebleu and CIDEr-D, and every network run scored on validation and test; 2026-11-20, shown on SCR-11's version drawer, `TaskMetrics.test.tsx`, after its own G2 and G3 (approved 2026-11-20); checked live on classification, regression and a 78-class text model)
+- [x] G3 for SCR-09 (HPO part) and SCR-10 (approved 2026-11-20, "Approve all four", with the SCR-07 and SCR-04 study addenda; `docs/design/g3/SCR-10.md`)
+- [x] Demo: tune a random forest on the tabular dataset and the CNN's learning rate; read both studies; one test evaluation each (2026-11-20, on the live stack, read on SCR-10: a random forest on breast cancer, `st_e06085ead155` (`job_0077`), 40 trials, 13 pruned by fold, best cv_accuracy 0.963, tested once: accuracy 0.965, macro F1 0.961; the Small CNN's learning rate on CIFAR-10 on the GPU, `st_8293da6ebe0e` (`job_0095`), 8 trials of 4 epochs, one pruned at epoch 2, best lr 0.0012 at val accuracy 0.804, registered as `mv_a4a0fb846812` and tested once: accuracy 0.810, macro F1 0.809. Also a two-layer MLP on wine, `st_5869c7673960`)
+- [x] Docs updated (learning notes) (2026-11-20: API.md §3.9, §3.3 and §3.12; ADR-0018 "As built" parts A and B; DATA_MODEL §4.15; ARCHITECTURE; DECISIONS; the Gate 3 notes; `docs/learning/Decisions.md` §27 and `sys-design.md` §5l, not committed)
 - [ ] Owner's OK to merge
 
 ## M11 — Dashboards, monitoring completion, phase-2 acceptance

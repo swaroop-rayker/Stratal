@@ -629,6 +629,8 @@ class ModelVersionDetail(ModelVersion):
     """One entry per finished epoch: train and val loss and accuracy."""
     weights_path: str | None
     weights_deleted_at: str | None
+    study_id: str | None = None
+    """The HPO study whose best trial this version is (M10, HPO-1.4), else null."""
 
 
 # -- retention and settings (REG-2; API.md §3.9, §3.10) ---------------------------

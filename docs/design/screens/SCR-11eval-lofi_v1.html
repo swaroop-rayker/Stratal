@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-11 task metrics — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1100px; }
+.note { border-left: 3px solid var(--note); background: var(--note-soft); padding: 8px 12px; margin: 12px 0; color: #173a73; font-size: 12px; max-width: 1100px; }
+.row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+/* The drawer, at SCR-11's width, over a dimmed lineage page */
+.stage { position: relative; width: 1000px; height: auto; background: var(--fill); border: 1px solid var(--line); display: flex; }
+.behind { flex: 1; padding: 16px; color: var(--ink-3); font-size: 12px; }
+.behind .bar { height: 14px; background: var(--fill-2); margin: 8px 0; border-radius: 3px; }
+.drawer { width: 560px; background: var(--frame); border-left: 2px solid var(--ink-2); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--soft); }
+.drawer header b { font-family: var(--mono); font-size: 14px; }
+.drawer .body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.pill { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; }
+.badge { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border: 1px solid var(--line); border-radius: 3px; font-size: 10px; color: var(--ink-2); }
+.badge.strong { border-color: var(--ink); font-weight: 600; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 11px; background: #fff; }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); position: relative; }
+.kv { display: grid; grid-template-columns: 140px 1fr; gap: 3px 12px; font-size: 12px; color: var(--ink-2); }
+.kv span:nth-child(even) { font-family: var(--mono); color: var(--ink); }
+.dim { color: var(--ink-3); }
+.sect { border: 1px dashed var(--ink-2); border-radius: 4px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.sect > .h { display: flex; align-items: center; gap: 8px; } .sect > .h b { font-size: 12px; }
+.spacer { flex: 1; }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.t th, table.t td { border-bottom: 1px solid var(--soft); padding: 4px 6px; text-align: left; }
+table.t th { font-weight: 600; color: var(--ink-3); font-size: 11px; }
+table.t td.n, table.t th.n { text-align: right; font-family: var(--mono); }
+.bars { display: grid; grid-template-columns: 90px 1fr 44px; gap: 3px 8px; font: 11px var(--mono); color: var(--ink-2); align-items: center; }
+.bars i { display: block; height: 8px; background: var(--ink-3); }
+.bars .track { background: var(--fill-2); height: 8px; }
+.matrix { display: grid; grid-template-columns: 70px repeat(10, 1fr); gap: 1px; font: 9px var(--mono); color: var(--ink-3); }
+.matrix span { height: 18px; display: flex; align-items: center; justify-content: center; }
+.matrix .c { background: var(--fill-2); }
+.matrix .d { background: var(--ink-2); color: #fff; }
+.matrix .m { background: var(--soft); }
+.ann { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; border-radius: 9px; background: var(--note); color: #fff; font-size: 10px; font-weight: 700; padding: 0 5px; }
+pre.code { margin: 0; padding: 8px; background: var(--fill); font: 11px var(--mono); color: var(--ink-3); }
+table.legend { border-collapse: collapse; font-size: 12px; margin-top: 10px; max-width: 1100px; }
+table.legend th, table.legend td { border: 1px solid var(--soft); padding: 4px 8px; text-align: left; vertical-align: top; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-11 — task metrics in the version drawer (EVAL-1.2) · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Addendum to SCR-11 v1 (G2 approved 2026-11-17; G3 2026-11-19)</span><span>Serves EVAL-1.2, EVAL-1.2.AC1</span><span>2026-11-20</span></div>
+
+<p>EVAL-1.2's scores are computed for every run since M10 and stored on the version (<span class="mono">metrics</span> and <span class="mono">metrics.detail</span>), but SCR-11's drawer still says <i>test: not evaluated</i>. This wireframe draws where they go. Everything else on SCR-11 keeps its approved design. The figures in frames A and B are real (the k-means and PCA figures in C are illustrative; no such version is on the live stack): the Small CNN from the HPO demo (<span class="mono">mv_a4a0fb846812</span>), the Tabular MLP on diabetes (<span class="mono">mv_b46259218b0e</span>).</p>
+
+<div class="note"><b>Decisions in this step, for review</b>
+<ol>
+<li><b>One section, "Task metrics", in the drawer</b>, under the facts and above the config. It replaces the two rows <i>val acc · loss</i> and <i>test not evaluated</i>.</li>
+<li><b>The task's set comes from the server</b> (<span class="mono">metric_set(task)</span>): the same table for every task, one row per metric, columns <i>Validation</i> and <i>Test</i> (or <i>Train</i> for clustering and PCA, which have no held-out split). The task is named as a badge.</li>
+<li><b>Detail by task, under the table:</b> per-class F1 as bars and the confusion matrix for classification; nothing more for regression (the scores are on the target's own scale, said once); clusters and noise points for clustering; explained variance by component for PCA.</li>
+<li><b>The confusion matrix shows one split at a time</b> (Validation / Test toggle), as counts, the diagonal darkest. Above 20 classes it is replaced by the ten most frequent confusions as a list, since a 78×78 grid does not fit a drawer.</li>
+<li><b>A test score from a study is marked</b> <i>computed once</i> with a link to its study (SCR-10); a single run's test score is simply its test column.</li>
+<li><b>A version with no task metrics</b> says why: a base (never trained), a run from before M10, or a partial run. A run from before M10 offers <i>Re-train</i>, which scores it.</li>
+<li><b>The versions table is unchanged</b> (its <i>val acc</i> column stays). Putting a test column in the table is left for SCR-11 v2's comparison view.</li>
+</ol></div>
+
+<h2>A · Classification: the Small CNN on CIFAR-10, best trial of a study</h2>
+<div class="stage">
+  <div class="behind">small_cnn · cifar10 — lineage page, dimmed<div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+  <div class="drawer">
+    <header><b>mv_a4a0fb846812</b><span class="pill">Trained</span><span class="spacer"></span><span class="dim">Esc</span></header>
+    <div class="body">
+      <div class="kv"><span>Dataset version</span><span>ds_f8e67211dd94</span><span>Job</span><span>job_0096</span><span>Parent</span><span>mv_3462e579d7dd (base)</span><span>Config hash</span><span>e0ef…1904</span><span>Study</span><span>st_8293da6ebe0e · best trial 0</span><span>Retention</span><span>latest (REG-2.2)</span></div>
+      <div class="sect"><div class="h"><span class="ann">1</span><b>Task metrics</b><span class="badge">classification</span><span class="spacer"></span><span class="dim">EVAL-1.2</span></div>
+        <table class="t"><thead><tr><th>Metric</th><th class="n">Validation</th><th class="n">Test <span class="badge strong">computed once</span></th></tr></thead>
+          <tbody><tr><td>accuracy</td><td class="n">0.804</td><td class="n">0.810</td></tr><tr><td>macro F1</td><td class="n">0.804</td><td class="n">0.809</td></tr><tr><td class="dim">rows</td><td class="n dim">5,963</td><td class="n dim">5,963</td></tr><tr><td class="dim">val loss</td><td class="n dim">0.567</td><td class="n dim">–</td></tr></tbody></table>
+        <div class="h"><span class="ann">2</span><b>Per-class F1</b><span class="spacer"></span><span class="group"><span class="btn on">Validation</span><span class="btn">Test</span></span></div>
+        <div class="bars">
+          <span>airplane</span><span class="track"><i style="width:84%"></i></span><span>0.84</span>
+          <span>automobile</span><span class="track"><i style="width:92%"></i></span><span>0.92</span>
+          <span>bird</span><span class="track"><i style="width:73%"></i></span><span>0.73</span>
+          <span>cat</span><span class="track"><i style="width:64%"></i></span><span>0.64</span>
+          <span class="dim">… 6 more</span><span></span><span></span>
+        </div>
+        <div class="h"><span class="ann">3</span><b>Confusion matrix</b><span class="dim">· rows true, columns predicted · counts</span></div>
+        <div class="matrix">
+          <span></span><span>air</span><span>aut</span><span>bir</span><span>cat</span><span>dee</span><span>dog</span><span>fro</span><span>hor</span><span>shi</span><span>tru</span>
+          <span>airplane</span><span class="d">503</span><span class="c">4</span><span class="m">24</span><span class="c">6</span><span class="c">3</span><span class="c">5</span><span class="c">3</span><span class="c">7</span><span class="m">30</span><span class="c">10</span>
+          <span>automobile</span><span class="c">4</span><span class="d">546</span><span class="c">2</span><span class="c">6</span><span class="c">0</span><span class="c">1</span><span class="c">2</span><span class="c">2</span><span class="c">10</span><span class="m">19</span>
+          <span>cat</span><span class="c">8</span><span class="c">1</span><span class="m">21</span><span class="d">383</span><span class="m">24</span><span class="m">94</span><span class="m">42</span><span class="c">12</span><span class="c">10</span><span class="c">3</span>
+          <span class="dim">… 7 rows</span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <p class="caption" style="margin:0">Hover or focus a cell: "cat predicted as dog: 94 of 598 (15.7 %)". A Table view lists the same counts.</p>
+        <div class="h"><span class="ann">4</span><span class="dim">Test computed once by study</span> <span class="mono">st_8293da6ebe0e</span> <span class="btn">Open the study</span></div>
+      </div>
+      <pre class="code">{ "model": { "name": "small_cnn" }, "epochs": 4, "batch_size": 128, "learning_rate": 0.00123, … }</pre>
+      <div class="row" style="gap:8px"><span class="btn">Pin</span><span class="btn">Try it</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption">The facts gain <i>Study</i> when the version is a study's best trial. The old rows <i>val acc · loss</i> and <i>test not evaluated</i> are gone; their figures are in the table.</p>
+
+<h2>B · Regression, C · clustering and PCA, D · nothing to show</h2>
+<div class="row">
+  <div class="drawer" style="width:420px;border:1px solid var(--line)">
+    <header><b>mv_b46259218b0e</b><span class="pill">Trained</span></header>
+    <div class="body"><div class="sect"><div class="h"><b>Task metrics</b><span class="badge">regression</span></div>
+      <table class="t"><thead><tr><th>Metric</th><th class="n">Validation</th><th class="n">Test</th></tr></thead>
+      <tbody><tr><td>MSE</td><td class="n">4,730</td><td class="n">2,930</td></tr><tr><td>RMSE</td><td class="n">68.8</td><td class="n">54.1</td></tr><tr><td>MAE</td><td class="n">51.4</td><td class="n">41.3</td></tr><tr><td>R²</td><td class="n">0.291</td><td class="n">0.556</td></tr><tr><td class="dim">rows</td><td class="n dim">44</td><td class="n dim">44</td></tr></tbody></table>
+      <p class="caption" style="margin:0">On the target's own scale (<span class="mono">y</span>, diabetes progression). R² of 0 is as good as always predicting the mean.</p></div></div>
+  </div>
+  <div class="drawer" style="width:420px;border:1px solid var(--line)">
+    <header><b>mv_… k-means</b><span class="pill">Trained</span></header>
+    <div class="body"><div class="sect"><div class="h"><b>Task metrics</b><span class="badge">clustering</span></div>
+      <table class="t"><thead><tr><th>Metric</th><th class="n">Train</th></tr></thead>
+      <tbody><tr><td>silhouette</td><td class="n">0.41</td></tr><tr><td>Davies–Bouldin</td><td class="n">0.93</td></tr><tr><td class="dim">clusters</td><td class="n dim">3</td></tr><tr><td class="dim">noise points</td><td class="n dim">0</td></tr></tbody></table>
+      <p class="caption" style="margin:0">Clustering has no held-out split: the scores are on the train split it was fitted on. Silhouette is higher-better (−1 to 1), Davies–Bouldin lower-better.</p></div>
+      <div class="sect"><div class="h"><b>Task metrics</b><span class="badge">PCA</span></div>
+        <div class="bars"><span>component 1</span><span class="track"><i style="width:44%"></i></span><span>0.44</span><span>component 2</span><span class="track"><i style="width:19%"></i></span><span>0.19</span><span class="dim">total</span><span></span><span>0.63</span></div></div></div>
+  </div>
+  <div class="drawer" style="width:300px;border:1px solid var(--line)">
+    <header><b>mv_0cfa1ce88a16</b><span class="pill">Trained</span></header>
+    <div class="body"><div class="sect"><div class="h"><b>Task metrics</b></div>
+      <p style="margin:0">Not scored: this run finished before task metrics existed (M10). <i>Re-train</i> runs it again and scores it.</p>
+      <span class="btn" style="align-self:flex-start">Re-train</span></div>
+      <div class="sect"><div class="h"><b>Task metrics</b></div><p style="margin:0">A base version holds the initial weights; it is never trained or scored.</p></div></div>
+  </div>
+</div>
+<p class="caption">EVAL-1.2's other tasks (language model: perplexity; translation: BLEU, chrF; captioning: CLIP score, CIDEr-D) use the same table with their own rows; no model of those kinds exists until M12, so they are not drawn.</p>
+
+<h2>Annotations</h2>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="ann">1</span></td><td>Task metrics</td><td>The task's metric set, by split; rows counted</td><td><span class="mono">GET /model-versions/{id}</span>: <span class="mono">metrics</span> (<span class="mono">val_*</span>, <span class="mono">test_*</span>, <span class="mono">task</span>)</td><td>static; a version's scores never change</td></tr>
+<tr><td><span class="ann">2</span></td><td>Per-class F1</td><td>One bar per class, one split at a time</td><td><span class="mono">metrics.detail.{val,test}.per_class_f1</span></td><td>static</td></tr>
+<tr><td><span class="ann">3</span></td><td>Confusion matrix</td><td>Counts, rows true and columns predicted; above 20 classes the ten largest confusions</td><td><span class="mono">metrics.detail.{split}.confusion_matrix</span>, <span class="mono">labels</span></td><td>static</td></tr>
+<tr><td><span class="ann">4</span></td><td>Study link</td><td>For a study's best trial: the study, and the test marked computed once</td><td>the version's <span class="mono">study_id</span> (added to the version view)</td><td>static</td></tr>
+</table>
+
+<h2>Accessibility notes</h2>
+<ul>
+<li>The table is a real table with a caption; the per-class bars are hidden from screen readers when a table of the same numbers follows, or carry their figure as text.</li>
+<li>The matrix cells are a grid with row and column headers; each cell's accessible name is its sentence ("cat predicted as dog: 94"). Colour depth is never the only cue: every cell prints its count.</li>
+<li>The split toggle is a pressed-button group, as elsewhere.</li>
+</ul>
+</main>
+</body>
+</html>

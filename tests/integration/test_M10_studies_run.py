@@ -5,7 +5,7 @@ Optuna keeps its trials in schema ``optuna`` of the test database; ``studies`` a
 image, which has scikit-learn and Optuna but not the API's test client, so studies
 are created through the job service (check.ps1, step "integration (ml)").
 """
-# pyright: reportMissingImports=false
+# pyright: basic, reportMissingImports=false
 
 from pathlib import Path
 from typing import Any
