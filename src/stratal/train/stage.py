@@ -20,12 +20,13 @@ weights returns that result without training again.
 """
 
 import gc
+import json
 import math
 import os
 import random
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, cast
 
 import torch
@@ -33,11 +34,14 @@ from sqlalchemy.orm import Session
 from torch import nn
 from torch.utils.data import DataLoader
 
-from stratal.build.io import image_shape
+from stratal.build.io import TRAIN_VRAM_FRACTION, image_shape
+from stratal.build.shapes import Shape
 from stratal.core.errors import CudaUnavailable, GpuOom, StratalError
 from stratal.data import registry
 from stratal.data.dataset_types import validate_labelled_images
+from stratal.data.records import LABELLED_TEXT, TABULAR, schema_to_json
 from stratal.db.models import Dataset
+from stratal.eval import task_metrics
 from stratal.label.models import ModelInfo
 from stratal.mon.events import MetricValue, utc_now
 from stratal.registry import store
@@ -47,15 +51,17 @@ from stratal.runtime.jobs import config_hash
 from stratal.runtime.stages import StageResult, StageRun
 from stratal.storage.blobs import BlobStore
 from stratal.train import checkpoint as ckpt
-from stratal.train import device, weights
+from stratal.train import device, table_prep, weights
 from stratal.train.config import TrainConfig
-from stratal.train.data import EpochOrder, Item, LabelledImages, split_items
+from stratal.train.data import EpochOrder, LabelledImages, TensorRows, split_items
 from stratal.train.memory import TrainingState, suggest_batch_size, training_oom_error
 from stratal.train.reference import build_model, parameter_count
 
 STAGE = "train"
 PROGRESS_EVERY_S = 1.0
-VRAM_FRACTION = 0.85
+VRAM_FRACTION = TRAIN_VRAM_FRACTION
+TRIAL_RESULT = "result.json"
+"""A finished trial's metrics and history, beside its weights (ADR-0018 rule 7)."""
 """The per-process cap (ADR-0006 rule 8)."""
 MB = 2**20
 
@@ -108,11 +114,11 @@ def _optimizer(model: nn.Module, config: TrainConfig) -> torch.optim.Optimizer:
     )
 
 
-def _loader(items: list[Item], *, batch: int, sampler: Any, workers: int, cuda: bool) -> DataLoader:
+def _loader(dataset: Any, *, batch: int, sampler: Any, workers: int, cuda: bool) -> DataLoader:
     # Its own generator, so creating the loader never draws from the global random
     # state, which a checkpoint restores exactly (ADR-0014 rule 5).
     return DataLoader(
-        LabelledImages(items),
+        dataset,
         batch_size=batch,
         sampler=sampler,
         num_workers=workers,
@@ -131,17 +137,65 @@ class _Run:
         self.units = units
         self.hash = config_hash(config.model_dump(mode="json"))
         self.folder = ckpt.checkpoint_dir(run.data_dir, run.ctx.job_id)
+        self.trial: Any = None
+        """For an ``hpo_trial`` job: its link to the study (ADR-0018 rules 5 to 7)."""
+        if run.spec.get("kind") == "hpo_trial":
+            from stratal.hpo.trial import TrialLink
+
+            self.trial = TrialLink(run.engine, run.data_dir, run.ctx.job_id, run.spec)
 
     # ------------------------------------------------------------------ setup
     def prepare(self) -> None:
         version_id = self.run.input_version_id
         if version_id is None:
             raise StratalError("The train stage was given no dataset version.")
+        self.prep: table_prep.TablePrep | None = None
+        self.table_schema: Any = None
+        self.task = "classification"
+        self.noun = "images"
         with Session(self.run.engine) as session:
-            rows = list(registry.load_version(session, self.run.data_dir, version_id))
-            dataset = session.get(Dataset, registry.get_version(session, version_id).dataset_id)
+            version, manifest = registry.manifest_for(session, self.run.data_dir, version_id)
+            dataset = session.get(Dataset, version.dataset_id)
             assert dataset is not None
             self.dataset_id, self.dataset_slug = dataset.id, dataset.slug
+            self.dtype = version.dtype
+            if self.dtype == LABELLED_TEXT:
+                rows = list(
+                    registry.load_version(
+                        session,
+                        self.run.data_dir,
+                        version_id,
+                        columns=["row_key", "status", "split", "label", "tokens"],
+                    )
+                )
+            elif self.dtype != TABULAR:
+                rows = list(registry.load_version(session, self.run.data_dir, version_id))
+        if self.dtype == TABULAR:
+            self._prepare_table(manifest)
+        elif self.dtype == LABELLED_TEXT:
+            self._prepare_text(manifest, rows)
+        else:
+            self._prepare_images(rows)
+        if len(self.train) == 0 or len(self.val) == 0:
+            raise StratalError(
+                f"{version_id} has {len(self.train)} train and {len(self.val)} val rows; "
+                "training needs both.",
+                suggested_action="Train on a version with train and val rows.",
+            )
+        self.outputs = len(self.classes) if self.task == "classification" else 1
+        self.device = _device(self.config.device)
+        in_memory = self.dtype in (TABULAR, LABELLED_TEXT)
+        default_workers = 0 if in_memory else 4 if self.device == "cuda" else 1
+        self.workers = (
+            self.config.loader_workers
+            if self.config.loader_workers is not None
+            else default_workers
+        )
+        self.steps_per_epoch = math.ceil(len(self.train) / self.config.batch_size)
+        self.total_steps = self.steps_per_epoch * self.config.epochs
+
+    def _prepare_images(self, rows: list[dict[str, Any]]) -> None:
+        version_id = self.run.input_version_id
         blobs = BlobStore(self.run.data_dir)
         report = validate_labelled_images(rows, blobs.exists)
         if not report.is_valid:
@@ -153,24 +207,67 @@ class _Run:
             )
         items = split_items(rows, blobs)
         self.classes = items.classes
-        self.train = items.by_split.get("train", [])
-        self.val = items.by_split.get("val", [])
-        if not self.train or not self.val:
-            raise StratalError(
-                f"{version_id} has {len(self.train)} train and {len(self.val)} val rows; "
-                "training needs both.",
-                suggested_action="Train on a version with train and val rows.",
-            )
+        self.train = LabelledImages(items.by_split.get("train", []))
+        self.val = LabelledImages(items.by_split.get("val", []))
+        self.test = LabelledImages(items.by_split.get("test", []))
         self.shape = cast(tuple[int, int, int], image_shape(rows).dims)  # one rule with the builder
-        self.device = _device(self.config.device)
-        default_workers = 4 if self.device == "cuda" else 1
-        self.workers = (
-            self.config.loader_workers
-            if self.config.loader_workers is not None
-            else default_workers
+        self.input = Shape("image", self.shape)
+
+    def _prepare_table(self, manifest: Any) -> None:
+        """A table: the fitted encoding from train (ADR-0019 rules 12 to 14, ML-1.3)."""
+        from stratal.ml.data import load_tabular
+
+        data = load_tabular(manifest)
+        self.table_schema = data.schema
+        self.prep = table_prep.fit(data)
+        self.task = self.prep.task
+        self.classes = list(self.prep.classes)
+        self.noun = "rows"
+        target_type = torch.long if self.task == "classification" else torch.float32
+
+        def rows(split: str) -> TensorRows:
+            part = data.splits[split]
+            assert self.prep is not None
+            x = torch.tensor(self.prep.encode(part.columns), dtype=torch.float32)
+            x = x.reshape(len(part), self.prep.width)
+            y = torch.tensor(self.prep.target(part.target) if len(part) else [], dtype=target_type)
+            return TensorRows(x, y)
+
+        self.train, self.val, self.test = rows("train"), rows("val"), rows("test")
+        self.input = Shape("vector", (self.prep.width,))
+        self.shape = self.input.dims
+
+    def _prepare_text(self, manifest: Any, rows: list[dict[str, Any]]) -> None:
+        """Token IDs from the tokenize stage, L and the vocabulary from its metadata
+        (ADR-0019 rules 9 and 12)."""
+        from stratal.data.tokenize import decode_tokens, vocab_of
+
+        vocab = vocab_of(manifest)
+        if vocab is None:
+            raise StratalError(
+                f"{self.run.input_version_id} has no vocabulary; texts train on a tokenize "
+                "version.",
+                suggested_action="Run the labelled-text pipeline through its tokenize stage.",
+            )
+        length, size = int(vocab["max_length"]), int(vocab["size"])
+        accepted = sorted(
+            (r for r in rows if r["status"] == "accepted" and r["split"]),
+            key=lambda r: str(r["row_key"]),
         )
-        self.steps_per_epoch = math.ceil(len(self.train) / self.config.batch_size)
-        self.total_steps = self.steps_per_epoch * self.config.epochs
+        self.classes = sorted({str(r["label"]) for r in accepted})
+        index = {name: i for i, name in enumerate(self.classes)}
+        self.noun = "texts"
+
+        def rows_of(split: str) -> TensorRows:
+            part = [r for r in accepted if r["split"] == split]
+            x = torch.tensor([decode_tokens(str(r["tokens"])) for r in part], dtype=torch.long)
+            x = x.reshape(len(part), length)
+            y = torch.tensor([index[str(r["label"])] for r in part], dtype=torch.long)
+            return TensorRows(x, y)
+
+        self.train, self.val, self.test = rows_of("train"), rows_of("val"), rows_of("test")
+        self.input = Shape("tokens", (length,), vocab=size)
+        self.shape = self.input.dims
 
     # ------------------------------------------------------------------ the run
     def execute(self) -> StageResult:
@@ -185,13 +282,14 @@ class _Run:
             os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
             torch.use_deterministic_algorithms(True)
             torch.backends.cudnn.benchmark = False
-        model = build_model(config.model, self.shape, len(self.classes))
+        model = build_model(config.model, self.input, self.outputs)
         self.parameters = parameter_count(model)
         self.ctx.emit(
             stage=STAGE,
             substage="setup",
             message=f"Training {config.model.display} ({self.parameters / 1e6:.2f} M parameters) "
-            f"on the {'GPU' if self.device == 'cuda' else 'CPU'} · {len(self.train):,} images · "
+            f"on the {'GPU' if self.device == 'cuda' else 'CPU'} · {len(self.train):,} "
+            f"{self.noun} · {self.task} · "
             f"{config.epochs} epochs · batch {config.batch_size}",
             metrics={
                 "parameters": self.parameters,
@@ -262,7 +360,8 @@ class _Run:
                     level="WARN",
                     message=f"Ignoring checkpoint {found.stem}: it was made with another config",
                 )
-        loss_fn = nn.CrossEntropyLoss()
+        regression = self.task == "regression"
+        loss_fn: nn.Module = nn.MSELoss() if regression else nn.CrossEntropyLoss()
         model.train()
         last_checkpoint = time.monotonic()
         checkpoint_bytes = 0
@@ -294,7 +393,7 @@ class _Run:
                 out_of_memory = False
                 try:
                     logits = model(x)
-                    loss = loss_fn(logits, y)
+                    loss = loss_fn(logits.squeeze(1) if regression else logits, y)
                     loss.backward()
                     grad_norm = nn.utils.clip_grad_norm_(model.parameters(), float("inf"))
                     optimizer.step()  # Adam's state is allocated on the first step
@@ -308,7 +407,8 @@ class _Run:
                 scheduler.step()
                 global_step += 1
                 loss_sum += loss.detach() * len(y)
-                correct += (logits.detach().argmax(1) == y).sum()
+                if not regression:
+                    correct += (logits.detach().argmax(1) == y).sum()
                 seen += len(y)
                 window_steps += 1
                 window_samples += len(y)
@@ -328,7 +428,7 @@ class _Run:
                         metrics={
                             "epoch": epoch + 1,
                             "loss": round(float(loss_sum) / seen, 5),
-                            "accuracy": round(int(correct) / seen, 5),
+                            **self._train_score(float(loss_sum) / seen, int(correct) / seen),
                             "learning_rate": round(scheduler.get_last_lr()[0], 8),
                             "grad_norm": round(float(grad_norm), 5),
                             "step_ms": round(1000 * elapsed / window_steps, 2),
@@ -341,13 +441,16 @@ class _Run:
                     checkpoint_bytes = self._save(model, optimizer, scheduler, state)
                     last_checkpoint = time.monotonic()
 
-            val_loss, val_accuracy = self._evaluate(model, loss_fn)
+            val_loss, val_score = self._evaluate(model, loss_fn)
+            train_loss = float(loss_sum) / max(seen, 1)
+            score_name = "rmse" if regression else "accuracy"
+            train_score = self._rmse(train_loss) if regression else int(correct) / max(seen, 1)
             record = {
                 "epoch": epoch + 1,
-                "train_loss": round(float(loss_sum) / max(seen, 1), 5),
-                "train_accuracy": round(int(correct) / max(seen, 1), 5),
+                "train_loss": round(train_loss, 5),
+                f"train_{score_name}": round(train_score, 5),
                 "val_loss": round(val_loss, 5),
-                "val_accuracy": round(val_accuracy, 5),
+                f"val_{score_name}": round(val_score, 5),
             }
             position = ckpt.Position(epoch + 1, 0, global_step)
             state = ckpt.Checkpoint(position, self.hash, [*state.history, record])
@@ -355,11 +458,19 @@ class _Run:
                 stage=STAGE,
                 substage="validate",
                 message=f"Epoch {epoch + 1}/{config.epochs}: val loss {val_loss:.4f} · "
-                f"val accuracy {100 * val_accuracy:.1f}%",
+                + (
+                    f"val RMSE {val_score:.4g}"
+                    if regression
+                    else f"val accuracy {100 * val_score:.1f}%"
+                ),
                 metrics=dict(record),
             )
             checkpoint_bytes = self._save(model, optimizer, scheduler, state)
             last_checkpoint = time.monotonic()
+            if self.trial is not None:
+                stop = self.trial.after_epoch(epoch + 1, record, last=epoch + 1 == config.epochs)
+                if stop is not None:
+                    return self._pruned(stop, record, epoch + 1, started)
 
         last = state.history[-1] if state.history else {}
         metrics: dict[str, MetricValue] = {
@@ -367,17 +478,32 @@ class _Run:
             "steps": global_step,
             "parameters": self.parameters,
             "device": "gpu" if cuda else "cpu",
-            "val_accuracy": last.get("val_accuracy", 0.0),
             "val_loss": last.get("val_loss", 0.0),
             "train_loss": last.get("train_loss", 0.0),
             "checkpoint_bytes": checkpoint_bytes,
             "seconds": round(time.monotonic() - started, 1),
         }
+        if not regression:
+            metrics["val_accuracy"] = last.get("val_accuracy", 0.0)
+        # A trial never sees the test split (ADR-0018 rule 8): its study tests the best once.
+        scores, detail = self._final_scores(model, ("val",) if self.trial else ("val", "test"))
+        metrics.update(scores)
         if cuda:
             metrics["peak_vram_allocated_mb"] = round(torch.cuda.max_memory_allocated() / MB, 1)
             metrics["peak_vram_reserved_mb"] = round(torch.cuda.max_memory_reserved() / MB, 1)
-        version_id = self._register(model, state.history, metrics)
+        version_id = self._register(model, state.history, metrics, detail)
         freed = self._remove_checkpoints()
+        if self.trial is not None:
+            value = self.trial.complete(last)
+            ctx.emit(
+                stage=STAGE,
+                substage="finish",
+                message=f"Trial {self.trial.number} complete: {self.trial.objective} "
+                f"{value:.4g}; its weights wait for the study's next step; checkpoints "
+                f"removed ({freed / MB:.1f} MB)",
+                metrics={"trial": self.trial.number, "value": value},
+            )
+            return StageResult(metrics=metrics)
         ctx.emit(
             stage=STAGE,
             substage="finish",
@@ -387,17 +513,40 @@ class _Run:
         )
         return StageResult(metrics=metrics)
 
+    def _pruned(
+        self, reason: str, record: dict[str, Any], epoch: int, started: float
+    ) -> StageResult:
+        """A trial stopped by the median pruner or the study's time budget (HPO-1.3)."""
+        assert self.trial is not None
+        freed = self._remove_checkpoints()
+        self.trial.pruned(reason, record)
+        self.ctx.emit(
+            stage=STAGE,
+            substage="pruned",
+            message=f"Trial {self.trial.number} pruned after epoch {epoch} · {reason}; "
+            f"checkpoints removed ({freed / MB:.1f} MB)",
+            metrics={"trial": self.trial.number, "pruned_at_step": epoch, "prune_reason": reason},
+        )
+        return StageResult(
+            metrics={
+                "trial": self.trial.number,
+                "pruned_at_step": epoch,
+                "prune_reason": reason,
+                "seconds": round(time.monotonic() - started, 1),
+            }
+        )
+
     # ------------------------------------------------------------------ RUN-1.9
     def _choose_device(self) -> None:
         """For ``device: auto``: time both devices on a small model, and move to the CPU
         worker if it wins (ADR-0014 rule 8). Large models stay on the GPU untimed."""
         config = self.config
-        probe = build_model(config.model, self.shape, len(self.classes))
+        probe = build_model(config.model, self.input, self.outputs)
         small = parameter_count(probe) < device.MAX_PARAMETERS
         del probe
         if not small:
             return
-        key = device.cache_key(config.model, self.shape, config.batch_size, len(self.classes))
+        key = device.cache_key(config.model, self.input, config.batch_size, self.outputs)
         if self.run.queue == "cpu" or self.device != "cuda":
             # Moved here by an earlier benchmark (or no GPU): train on the CPU, and report
             # the timings that decided it.
@@ -410,8 +559,8 @@ class _Run:
             self.choice = device.choose(
                 data_dir=self.run.data_dir,
                 spec=config.model,
-                shape=self.shape,
-                num_classes=len(self.classes),
+                shape=self.input,
+                num_classes=self.outputs,
                 batch=config.batch_size,
                 batches=batches,
                 on_start=lambda: self.ctx.emit(
@@ -515,7 +664,8 @@ class _Run:
             store.record_checkpoint(
                 session,
                 job_id=self.ctx.job_id,
-                lineage_id=self.lineage_id,
+                # A trial's checkpoint belongs to its study, not to a lineage's retention.
+                lineage_id=None if self.trial is not None else self.lineage_id,
                 path=meta.relative_to(self.run.data_dir).as_posix(),
                 size=size,
                 global_step=p.global_step,
@@ -536,6 +686,8 @@ class _Run:
         return size
 
     def _evaluate(self, model: nn.Module, loss_fn: nn.Module) -> tuple[float, float]:
+        """Validation loss, and accuracy (classification) or RMSE on the target's scale."""
+        regression = self.task == "regression"
         model.eval()
         total_loss, correct, seen = 0.0, 0, 0
         loader = _loader(
@@ -547,11 +699,87 @@ class _Run:
                     raise JobCancelled(self.ctx.job_id)
                 x, y = x.to(self.device), y.to(self.device)
                 logits = model(x)
-                total_loss += float(loss_fn(logits, y)) * len(y)
-                correct += int((logits.argmax(1) == y).sum())
+                out = logits.squeeze(1) if regression else logits
+                total_loss += float(loss_fn(out, y)) * len(y)
+                if not regression:
+                    correct += int((logits.argmax(1) == y).sum())
                 seen += len(y)
         model.train()
-        return total_loss / seen, correct / seen
+        loss = total_loss / seen
+        return loss, self._rmse(loss) if regression else correct / seen
+
+    def _rmse(self, standardised_mse: float) -> float:
+        """An MSE on the standardised target, as an RMSE on the target's own scale."""
+        std = self.prep.target_std if self.prep is not None else 1.0
+        return math.sqrt(max(standardised_mse, 0.0)) * std
+
+    def _train_score(self, loss: float, accuracy: float) -> dict[str, float]:
+        if self.task == "regression":
+            return {"rmse": round(self._rmse(loss), 5)}
+        return {"accuracy": round(accuracy, 5)}
+
+    def _predict(self, model: nn.Module, dataset: Any) -> tuple[list[Any], list[Any]]:
+        """Predictions and truths over a split, as classes or on the target's scale."""
+        model.eval()
+        truth: list[Any] = []
+        guess: list[Any] = []
+        loader = _loader(
+            dataset, batch=512, sampler=None, workers=self.workers, cuda=self.device == "cuda"
+        )
+        with torch.no_grad():
+            for x, y in loader:
+                logits = model(x.to(self.device)).float().cpu()
+                if self.task == "regression":
+                    assert self.prep is not None
+                    guess += [self.prep.unscale(float(v)) for v in logits.squeeze(1)]
+                    truth += [self.prep.unscale(float(v)) for v in y]
+                else:
+                    guess += [self.classes[int(i)] for i in logits.argmax(1)]
+                    truth += [self.classes[int(i)] for i in y]
+        model.train()
+        return truth, guess
+
+    def _final_scores(
+        self, model: nn.Module, splits: tuple[str, ...] = ("val", "test")
+    ) -> tuple[dict[str, MetricValue], dict[str, Any]]:
+        """EVAL-1.2's metric set on validation and test, once the run has finished."""
+        scalars: dict[str, MetricValue] = {"task": self.task}
+        detail: dict[str, Any] = {"task": self.task}
+        for split, dataset in (("val", self.val), ("test", self.test)):
+            if split not in splits or len(dataset) == 0:
+                continue
+            truth, guess = self._predict(model, dataset)
+            if self.task == "regression":
+                r = task_metrics.regression(truth, guess)
+                scalars.update(
+                    {
+                        f"{split}_mse": round(r.mse, 6),
+                        f"{split}_rmse": round(math.sqrt(r.mse), 6),
+                        f"{split}_mae": round(r.mae, 6),
+                        f"{split}_r2": round(r.r2, 6),
+                    }
+                )
+                detail[split] = {"mse": r.mse, "mae": r.mae, "r2": r.r2, "rows": len(truth)}
+            else:
+                m = task_metrics.classification(truth, guess, labels=self.classes)
+                scalars[f"{split}_accuracy"] = round(m.accuracy, 6)
+                scalars[f"{split}_macro_f1"] = round(m.macro_f1, 6)
+                detail[split] = {
+                    "accuracy": m.accuracy,
+                    "macro_f1": m.macro_f1,
+                    "per_class_f1": {str(k): v for k, v in m.per_class_f1.items()},
+                    "confusion_matrix": m.confusion_matrix,
+                    "labels": [str(label) for label in m.labels],
+                    "rows": len(truth),
+                }
+        self.ctx.emit(
+            stage=STAGE,
+            substage="score",
+            message=f"Scored on {' and '.join({'val': 'validation'}.get(s, s) for s in splits)}: "
+            + ", ".join(f"{k} {v}" for k, v in scalars.items() if k != "task"),
+            metrics=dict(scalars),
+        )
+        return scalars, detail
 
     # ------------------------------------------------------------------ registry
     def _meta(self, version_id: str, state: str, history: list[dict[str, Any]]) -> dict[str, Any]:
@@ -562,13 +790,25 @@ class _Run:
             "state": state,
             "parent_version_id": None if state == "base" else self.base_id,
             "model": self.config.model.model_dump(mode="json"),
-            "input_shape": list(self.shape),
+            "input_shape": list(self.input.dims),
+            "input": self.input.as_json(),
+            # A table's columns, so /predict can check a record (ADR-0019 rule 21).
+            "table_schema": json.loads(schema_to_json(self.table_schema))
+            if self.table_schema is not None
+            else None,
+            "task": self.task,
+            "dataset_type": self.dtype,
             "classes": self.classes,
             "parameters": self.parameters,
             "dataset_version": self.run.input_version_id,
             "config": self.config.model_dump(mode="json"),
             "config_hash": self.hash,
             "history": history,
+            **(
+                {"trial": {"study_id": self.trial.study_id, "number": self.trial.number}}
+                if self.trial is not None
+                else {}
+            ),
         }
 
     def _attach_lineage(self, model: nn.Module) -> None:
@@ -579,6 +819,9 @@ class _Run:
         The model is built from the seed either way, so the random state the run
         continues with does not depend on whether the lineage already existed."""
         config = self.config
+        if self.trial is not None:
+            self._attach_trial(model)
+            return
         with Session(self.run.engine) as session, session.begin():
             lineage = store.ensure_lineage(
                 session,
@@ -586,10 +829,10 @@ class _Run:
                 name=config.model.display,
                 dataset_id=self.dataset_id,
                 dataset_slug=self.dataset_slug,
-                input_shape=self.shape,
+                input_shape=self.input.dims,
                 classes=self.classes,
                 parameters=self.parameters,
-                task="classification",
+                task=self.task,
             )
             self.lineage_id = lineage.id
             base = store.base_of(session, lineage.id)
@@ -599,6 +842,7 @@ class _Run:
                     self.run.data_dir / store.version_folder(lineage.id, self.base_id),
                     model,
                     self._meta(self.base_id, "base", []),
+                    self._extra_files(),
                 )
                 store.add_base(
                     session,
@@ -631,8 +875,51 @@ class _Run:
             metrics={"lineage_id": self.lineage_id, "base_version_id": self.base_id},
         )
 
+    def _attach_trial(self, model: nn.Module) -> None:
+        """A trial touches no lineage (ADR-0018 rule 7): it starts from its lineage's base if
+        one exists, as any run would; otherwise its own initial weights go to its folder, so
+        the study can make them the base of a new lineage if this trial turns out best."""
+        assert self.trial is not None
+        config = self.config
+        lineage_id, _ = store.lineage_key(
+            model_spec=config.model.identity(),
+            dataset_slug=self.dataset_slug,
+            input_shape=self.input.dims,
+            classes=self.classes,
+        )
+        with Session(self.run.engine) as session:
+            base = store.base_of(session, lineage_id)
+            path = (
+                base.weights_path if base is not None and base.weights_status == "present" else None
+            )
+            base_id = base.id if base is not None and path is not None else None
+        if path is not None:
+            weights.load_into(model, self.run.data_dir / path)
+            self.lineage_id, self.base_id = lineage_id, base_id
+            message = f"Trial {self.trial.number}: starting from base {base_id}"
+        else:
+            self.lineage_id, self.base_id = lineage_id, None  # the lineage it would found
+            weights.write(
+                self.trial.folder / "initial",
+                model,
+                self._meta("initial", "base", []),
+                self._extra_files(),
+            )
+            message = (
+                f"Trial {self.trial.number}: initial weights from seed {config.seed} kept with "
+                "the trial; the lineage is created only if it is the study's best"
+            )
+        self.ctx.emit(
+            stage=STAGE,
+            substage="setup",
+            message=message,
+            metrics={"trial": self.trial.number, "study_id": self.trial.study_id},
+        )
+
     def _record_partial(self, history: list[dict[str, Any]]) -> None:
         """At a pause: the run's version is ``partial``; its weights are the checkpoint."""
+        if self.trial is not None:
+            return  # a trial's progress is its checkpoint and its study's trial row
         with Session(self.run.engine) as session, session.begin():
             version_id = store.record_run(
                 session,
@@ -652,11 +939,34 @@ class _Run:
             metrics={"model_version_id": version_id},
         )
 
+    def _extra_files(self) -> dict[str, str]:
+        """A table network's fitted preprocessing, beside its weights (ADR-0019 rule 13)."""
+        if self.prep is None:
+            return {}
+        return {table_prep.PREPROCESS_FILE: self.prep.to_json()}
+
     def _register(
-        self, model: nn.Module, history: list[dict[str, Any]], metrics: dict[str, MetricValue]
+        self,
+        model: nn.Module,
+        history: list[dict[str, Any]],
+        metrics: dict[str, MetricValue],
+        detail: dict[str, Any] | None = None,
     ) -> str:
         """Write the trained weights, then mark the version ``trained`` (REG-1.1). The
         row is committed only once the files are in place; checkpoints go after."""
+        if self.trial is not None:  # to the trial's folder; the study registers the best
+            size = weights.write(
+                self.trial.folder / "trained",
+                model,
+                self._meta("trained", "trained", history),
+                self._extra_files(),
+            )
+            metrics["weights_bytes"] = size
+            result = {"metrics": dict(metrics), "detail": detail, "history": history}
+            partial = self.trial.folder / (TRIAL_RESULT + ".part")
+            partial.write_text(json.dumps(result), encoding="utf-8")
+            os.replace(partial, self.trial.folder / TRIAL_RESULT)
+            return f"trial {self.trial.number}"
         with Session(self.run.engine) as session, session.begin():
             store.lock_lineage(session, self.lineage_id)
             existing = store.run_version(session, self.ctx.job_id)
@@ -665,6 +975,7 @@ class _Run:
                 self.run.data_dir / store.version_folder(self.lineage_id, version_id),
                 model,
                 self._meta(version_id, "trained", history),
+                self._extra_files(),
             )
             metrics["weights_bytes"] = size
             store.record_run(
@@ -677,7 +988,7 @@ class _Run:
                 config=self.config.model_dump(mode="json"),
                 config_hash=self.hash,
                 history=history,
-                metrics=dict(metrics),
+                metrics={**metrics, "detail": detail} if detail is not None else dict(metrics),
                 version_id=version_id,
                 weights_bytes=size,
                 trained_at=utc_now(),
@@ -693,12 +1004,26 @@ class _Run:
     def already_registered(self) -> StageResult | None:
         """On a retry of a run that registered its weights before the process died:
         finish the cleanup and return the recorded result, training nothing."""
+        if self.trial is not None:
+            found = self.trial.folder / TRIAL_RESULT
+            if not found.is_file():
+                return None
+            result = json.loads(found.read_text(encoding="utf-8"))
+            self._remove_checkpoints()
+            self.trial.complete(result["history"][-1])
+            scalars = {
+                k: v for k, v in result["metrics"].items() if isinstance(v, int | float | str)
+            }
+            return StageResult(metrics=scalars)
         with Session(self.run.engine) as session:
             version = store.run_version(session, self.ctx.job_id)
             if version is None or version.state != "trained" or version.weights_status != "present":
                 return None
             version_id = version.id
-            metrics: dict[str, MetricValue] = dict(version.metrics or {})
+            # Scalars only: the version's metrics also hold EVAL-1.2's detail (a dict).
+            metrics: dict[str, MetricValue] = {
+                k: v for k, v in (version.metrics or {}).items() if isinstance(v, int | float | str)
+            }
         freed = self._remove_checkpoints()
         self.ctx.emit(
             stage=STAGE,
@@ -727,6 +1052,65 @@ class _Run:
         return self.units.oom_error(
             failed_batch=batch, suggested=suggested, peak_mb=peak, cap_mb=cap
         )
+
+
+def run_test_eval(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult:
+    """A deep-learning study's ``test_eval`` stage: the registered best version scored on
+    the test split, once (HPO-1.4, ADR-0018 rule 8). A retry after the write returns
+    what was written; the database refuses a second write either way."""
+    from stratal.db.models import ModelVersion
+    from stratal.hpo import store as hpo_store
+
+    study_id = str(run.config["study_id"])
+    with Session(run.engine) as session:
+        study = hpo_store.get_study(session, study_id)
+        kept, best = study.test_metrics, study.best_version_id
+        version = session.get(ModelVersion, best) if best is not None else None
+        found = (
+            (dict(version.config), version.weights_path, version.dataset_version_id)
+            if version is not None and version.weights_path is not None
+            else None
+        )
+    if kept is not None:
+        return StageResult(metrics={k: v for k, v in kept.items() if isinstance(v, int | float)})
+    if found is None:
+        hpo_store.update_study(run.engine, study_id, state="completed", finished_at=utc_now())
+        run.ctx.emit(stage="test_eval", message="No best version to test: no trial completed")
+        return StageResult(metrics={"tested": 0})
+    config_json, weights_path, dataset_version = found
+    config = TrainConfig.model_validate(config_json)
+    training = _Run(replace(run, input_version_id=dataset_version), config, units)
+    training.prepare()
+    model = build_model(config.model, training.input, training.outputs)
+    weights.load_into(model, run.data_dir / weights_path)
+    if training.device == "cuda":
+        with gpu_lease(run.engine, holder=f"{run.ctx.job_id}/test_eval", wait_s=60):
+            torch.cuda.set_per_process_memory_fraction(VRAM_FRACTION)
+            scalars, detail = training._final_scores(model.to("cuda"), ("test",))
+            del model
+            torch.cuda.empty_cache()
+    else:
+        scalars, detail = training._final_scores(model, ("test",))
+    test = {k: v for k, v in scalars.items() if k.startswith("test_")}
+    wrote = hpo_store.record_test_once(run.engine, study_id, {**test, "detail": detail.get("test")})
+    if wrote:
+        with Session(run.engine) as session, session.begin():
+            row = session.get(ModelVersion, best)
+            assert row is not None
+            metrics = dict(row.metrics or {})
+            row.metrics = {
+                **metrics,
+                **test,
+                "detail": {**dict(metrics.get("detail") or {}), "test": detail.get("test")},
+            }
+    hpo_store.update_study(run.engine, study_id, state="completed", finished_at=utc_now())
+    run.ctx.emit(
+        stage="test_eval",
+        message=f"Best version {best} tested once: "
+        + ", ".join(f"{k} {v}" for k, v in test.items()),
+        metrics={"model_version_id": str(best), **test},
+    )
+    return StageResult(metrics={**test, "model_version_id": str(best)})
 
 
 def run_train(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult:

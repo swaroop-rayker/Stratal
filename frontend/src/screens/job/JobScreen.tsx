@@ -15,7 +15,7 @@ import { useNow } from "../../lib/useNow";
 import { useCrumbs } from "../../shell/hooks";
 import { useActiveJobs } from "../../shell/JobIndicator";
 import { ActivityLog, type Level, type LogFilters } from "./ActivityLog";
-import { ACTIVE, failedStage, inputVersion, jobSeconds, liveProgress, runningStage, stageSeconds, suggestedBatch, trainingModel, trainingPosition, waitingFor } from "./jobs";
+import { ACTIVE, failedStage, inputVersion, isTraining, jobSeconds, liveProgress, runningStage, stageSeconds, suggestedBatch, trainingModel, trainingPosition, waitingFor } from "./jobs";
 import { type Point, ResourceTiles } from "./ResourceTiles";
 import { StageDrawer } from "./StageDrawer";
 import { Timeline } from "./Timeline";
@@ -84,6 +84,7 @@ function Header({ job, now, onCancel, device }: { job: Job; now: number; onCance
       )}
       {model ? (
         <span className="sub">
+          {job.study?.trial != null ? <>trial {String(job.study.trial)} of <Link className="mono" to={`/studies/${job.study.id}`}>{job.study.id}</Link> · </> : null}
           train · <span className="mono">{model}</span>
           {input ? (
             <>
@@ -112,6 +113,12 @@ function Header({ job, now, onCancel, device }: { job: Job; now: number; onCance
         </span>
       )}
       <span className="spacer" />
+      {job.study ? (
+        <Button variant={job.kind === "hpo_study" ? "primary" : "secondary"} onClick={() => void navigate(`/studies/${job.study?.id ?? ""}`)}>
+          <Icon name="sliders" />
+          Open the study
+        </Button>
+      ) : null}
       <span className="wide-action">
         <Button size="sm" variant="ghost" onClick={() => void copy(job.id)}>
           <Icon name="copy" />
@@ -440,8 +447,8 @@ export function JobScreen() {
   // A paused job keeps its feed, so a resume (by the person or the watchdog) shows at once.
   const watching = live || job.data?.state === "paused";
   const { feed, connection } = useJobFeed(jobId, undefined, job.isSuccess && watching);
-  const isTraining = job.data?.kind === "train";
-  const trainingEvents = useTrainingEvents(jobId, feed, job.isSuccess && isTraining);
+  const isTrainingJob = job.data ? isTraining(job.data) : false;
+  const trainingEvents = useTrainingEvents(jobId, feed, job.isSuccess && isTrainingJob);
   const training = useMemo(() => deriveTraining(trainingEvents), [trainingEvents]);
   const gpuTemp = useGpuTemperature();
   useEffect(() => {
@@ -508,7 +515,7 @@ export function JobScreen() {
   const pct = progress.total ? Math.min(100, ((progress.step ?? 0) / progress.total) * 100) : null;
   const drawerStage = selected ? j.stages.find((s) => s.name === selected) ?? null : null;
   const reconnecting = live && connection === "reconnecting";
-  const trains = j.kind === "train";
+  const trains = isTraining(j);
   const banner = trains && (j.state === "paused" || j.state === "stalled");
   const benchmarking = trains && j.state === "running" && training.bench !== null && training.bench.choice === null;
 

@@ -29,7 +29,13 @@ from stratal.db.models import Job, JobStage
 from stratal.mon import probes
 from stratal.mon.emitter import KIND_PROCESS_SAMPLE, Emitter, NullEmitter, StreamEmitter
 from stratal.mon.events import MetricValue, utc_now
-from stratal.runtime.context import JobCancelled, JobContext, JobPaused, StageHandoff
+from stratal.runtime.context import (
+    JobCancelled,
+    JobContext,
+    JobPaused,
+    StageHandoff,
+    StageWaiting,
+)
 from stratal.runtime.stages import StageResult, StageRun, get_stage
 
 EXIT_OK = 0
@@ -39,6 +45,8 @@ EXIT_PAUSED = 4
 """The stage stopped at a safe point because the job was paused (RUN-1.2)."""
 EXIT_HANDOFF = 5
 """The stage asks to run again on another queue; it recorded which (RUN-1.9)."""
+EXIT_WAITING = 6
+"""The stage waits for another job, which queues it again when it ends (ADR-0018 rule 5)."""
 
 FORBID_UNPICKLING_ENV = "STRATAL_TEST_FORBID_UNPICKLING"
 """Test-only (NFR-8): a file path. When set, the stage runs with every unpickling refused
@@ -245,6 +253,9 @@ def run(job_id: str, idx: int, attempt: int, settings: Settings) -> int:
             metrics={"code": "device_handoff", "queue": handoff.queue},
         )
         return EXIT_HANDOFF
+    except StageWaiting as waiting:
+        ctx.event("activity", f"Stage {name} waits: {waiting.reason}")
+        return EXIT_WAITING
     except StratalError as exc:
         return _fail(
             ctx,

@@ -14,7 +14,15 @@ from pydantic import BaseModel, ConfigDict, Field
 Json = dict[str, Any]
 JobState = Literal["queued", "running", "paused", "completed", "failed", "cancelled", "stalled"]
 StageStatus = Literal[
-    "pending", "queued", "running", "paused", "completed", "failed", "skipped", "cancelled"
+    "pending",
+    "queued",
+    "running",
+    "paused",
+    "waiting",
+    "completed",
+    "failed",
+    "skipped",
+    "cancelled",
 ]
 
 
@@ -57,6 +65,12 @@ class JobStage(_Model):
     error: JobError | None
 
 
+class JobStudy(_Model):
+    id: str
+    trial: int | None = None
+    study_job: str | None = None
+
+
 class Job(_Model):
     id: str
     kind: str
@@ -74,6 +88,8 @@ class Job(_Model):
     model_version_id: str | None = None
     """A training job's registry version, partial or trained (REG-1.1); null otherwise."""
     model_lineage_id: str | None = None
+    study: JobStudy | None = None
+    """For an HPO study's job or one of its trials (M10): the study, and the trial's number."""
     """That version's lineage, for a link to SCR-11."""
     error: JobError | None
     summary: Json | None
@@ -613,6 +629,8 @@ class ModelVersionDetail(ModelVersion):
     """One entry per finished epoch: train and val loss and accuracy."""
     weights_path: str | None
     weights_deleted_at: str | None
+    study_id: str | None = None
+    """The HPO study whose best trial this version is (M10, HPO-1.4), else null."""
 
 
 # -- retention and settings (REG-2; API.md §3.9, §3.10) ---------------------------
@@ -737,7 +755,8 @@ class PredictedClass(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     class_: str = Field(alias="class")
-    probability: float
+    probability: float | None
+    """Null when the model gives no probabilities (a classical SVM, ADR-0019 rule 21)."""
 
 
 class Prediction(_Model):
@@ -747,8 +766,89 @@ class Prediction(_Model):
     """Which device served it (ADR-0016 rule 4)."""
     fallback_reason: str | None
     """Why the CPU served it, when it did: the GPU's holder, or why inference avoids it."""
-    top: list[PredictedClass]
-    """Up to five classes, most probable first."""
+    task: Literal["classification", "regression", "clustering", "projection"] = "classification"
+    """What the version predicts (M10, ADR-0019 rule 21)."""
+    top: list[PredictedClass] | None = None
+    """Classification: up to five classes, most probable first."""
+    value: float | None = None
+    """Regression: the prediction on the target's scale."""
+    cluster: int | None = None
+    """k-means: the record's cluster."""
+    components: list[float] | None = None
+    """PCA: the record's projection."""
     load_ms: float | None
     """Time to load the model, when this request loaded it."""
     total_ms: float
+
+
+# ------------------------------------------------------------------ studies (M10, HPO-1.5)
+
+
+class StudyCounts(_Model):
+    started: int
+    complete: int
+    pruned: int
+    failed: int
+    running: int
+    interrupted: int
+
+
+class StudyBest(_Model):
+    trial: int
+    value: float | None
+    params: dict[str, Any]
+
+
+class Study(_Model):
+    """An HPO study (API.md §3.12): what SCR-10's header, best card, importance and test
+    evaluation read."""
+
+    id: str
+    job_id: str
+    kind: Literal["classical", "deep"]
+    dataset_version: str
+    objective: str
+    direction: Literal["maximize", "minimize"]
+    limits: dict[str, int]
+    pruning: bool
+    cv_folds: int | None
+    seed: int
+    space: list[dict[str, Any]]
+    base: dict[str, Any]
+    state: Literal["running", "closed", "completed", "cancelled", "failed"]
+    ended_by: Literal["n_trials", "timeout"] | None
+    elapsed_s: float
+    trials: StudyCounts
+    best: StudyBest | None
+    importance: dict[str, Any] | None
+    best_version_id: str | None
+    test_metrics: dict[str, Any] | None
+    test_evaluated_at: str | None
+    created_at: str | None
+    finished_at: str | None
+
+
+class StudyList(_Model):
+    items: list[Study]
+
+
+class StudyTrial(_Model):
+    """One trial (HPO-1.3): its state in words, value, the step it reached and why it was
+    pruned or failed, each epoch's or fold's value."""
+
+    number: int
+    state: Literal["running", "complete", "pruned", "failed"]
+    params: dict[str, Any]
+    value: float | None
+    step: int | None
+    prune_reason: Literal["median", "budget"] | None
+    code: str | None
+    intermediate: list[list[float]]
+    duration_s: float | None
+    job_id: str | None
+    started_at: str | None
+    finished_at: str | None
+
+
+class StudyTrialList(_Model):
+    items: list[StudyTrial]

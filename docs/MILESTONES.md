@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). M9 merged 2026-11-19 (the model builder: graph specs checked in plain Python, compiled to PyTorch, templates; SCR-08 and SCR-09 through G3; BUILD-1.8 written by the agent at the owner's request). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). M9 merged 2026-11-19 (the model builder: graph specs checked in plain Python, compiled to PyTorch, templates; SCR-08 and SCR-09 through G3; BUILD-1.8 written by the agent at the owner's request). M10 merged 2026-11-20 (tables and texts, classical ML, EVAL-1.2's task metrics, HPO with Optuna; SCR-09's study part, SCR-10 and SCR-11's task metrics through G3; EVAL-1.2 written by the agent at the owner's request, K1). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
 | Planning style | Phases 1 and 2 (M0–M11) are planned in detail; phase 2's detail was approved on 2026-11-17. Phases 3–5 (M12–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -27,8 +27,9 @@
 | M7 | Phase-1 acceptance | 1 | M | Done 2026-11-17 |
 | M8 | Training runtime and registry | 2 | L | Done 2026-11-19 |
 | M9 | Model builder | 2 | L | Done 2026-11-19 |
-| M10 | Classical ML, HPO, task metrics | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
 | M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M11b | Tabular transforms | 2 | M | Not started (added at the owner's request 2026-11-19; outline) |
 | M12 | LLM serving and RAG | 3 | L | Outline |
 | M13 | Router, tools, caption refinement | 3 | L | Outline |
 | M14 | Text→image and LoRA | 4 | L | Outline |
@@ -417,6 +418,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] G2: SCR-14 (low-fi v1 approved 2026-11-17, hi-fi v1 approved 2026-11-18; `docs/design/screens/SCR-14_v1.html`)
 - [x] G2: SCR-08 (low-fi v1 and hi-fi v1 approved 2026-11-19; `docs/design/screens/SCR-08_v1.html`)
 - [x] G2: SCR-09 (low-fi v1 and hi-fi v1 approved 2026-11-19; `docs/design/screens/SCR-09_v1.html`; the HPO part with SCR-10, M10)
+- [x] G2: SCR-10 and SCR-09's study part (low-fi v1 and hi-fi v1 approved 2026-11-19; `docs/design/screens/SCR-10_v1.html`, `docs/design/screens/SCR-09hpo_v1.html`)
 
 ## M8 — Training runtime and registry
 
@@ -521,9 +523,19 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 ## M10 — Classical ML, HPO, task metrics
 
-**Size** L · **Branch** `m10-ml-hpo-metrics` · **Serves** ML-1.1–1.5, HPO-1.1–1.5, EVAL-1.2, DATA-1.4, DATA-2.4
+**Size** L · **Branch** `m10-ml-hpo-metrics` · **Serves** ML-1.1–1.5, HPO-1.1–1.5, EVAL-1.2, DATA-1.4, DATA-1.5, DATA-2.4
 
-**Before starting:** ADR-0018 approved; G2 for SCR-10 and SCR-09's HPO part approved; the tabular and labelled-text datasets settled (decision 1); and these open points decided, in an ADR of their own or an addendum to ADR-0016 (raised by the owner on 2026-11-18):
+**Decided by the owner at M10's kickoff (2026-11-19):**
+
+| # | Decision |
+|---|---|
+| K1 | EVAL-1.2 is written by the agent, all of it ("You write em"; ADR-0012's log) |
+| K2 | EVAL-1.2 uses libraries in production: sklearn.metrics, sacrebleu for BLEU and chrF; CIDEr-D stays in house (CL-13). Which of torchmetrics' metrics are still needed is settled in ADR-0019 |
+| K3 | Text is tokenized into words with a vocabulary from the train split; no BPE owner unit and no tokenizer library (open point 14) |
+| K4 | Downloads approved as listed: scikit-learn 1.9.1, scipy 1.18.1, joblib, narwhals, threadpoolctl, skops 0.16.0, prettytable, Optuna 5.1.0 and colorlog in `worker-cpu` (`ml-cpu`); Optuna and colorlog in `worker-gpu` (`gpu`); about 47 MB from PyPI. `api` and `monitor` stay without them; their tests get a marker and run in `worker-cpu`. sacrebleu 2.6.0 (with lxml, about 6 MB) follows from K2 |
+| K5 | One new ADR-0019 settles open points 1–7, 9 and 14–17; the CSV labels (11–13) become a proposed requirement, DATA-1.5, in SPEC |
+
+**Before starting:** ADR-0018 approved; G2 for SCR-10 and SCR-09's HPO part approved; the tabular and labelled-text datasets settled (decision 1); and these open points decided, in an ADR of their own or an addendum to ADR-0016 (raised by the owner on 2026-11-18; the owner chose ADR-0019 at the kickoff, K5):
 
 - **Serving tabular models** (REG-1.4, ML-1.5):
   1. Which process serves skops models. `inference` is built from the `worker-gpu` image, which has neither scikit-learn nor skops (ADR-0014 rule 11 puts them in `ml-cpu`). They run on the CPU, so they never need the GPU lease.
@@ -540,6 +552,16 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
   Points 8 and 10 shape the model spec, so they belong in ADR-0017, before M9.
 
+- **Labels for images from a CSV** (approved as DATA-1.5 on 2026-11-19; proposed requirement, added to this plan at the owner's request on 2026-11-19; written into SPEC with an ID and acceptance criteria at M10's kickoff, for the owner's approval). Today ingest takes an image's class only from its first folder (`label_from: folder`). Many ready-made and hand-made datasets instead ship one folder of images and a CSV mapping each file to its label (`path, label`). Proposed: a second source of labels for labelled images, e.g. `label_from: {csv: labels.csv, path_column, label_column}`, alongside DATA-1.4's CSV ingestion. To settle:
+  11. Paths in the CSV are relative to the source folder; an image with no row is rejected with a reason code (as `no_label` is now); a row whose file is missing is reported, not silently dropped.
+  12. The CSV's content is part of the version's identity (DATA-3.2), so editing a label makes a new version.
+  13. Scope: single-label classification only. Several labels per image (multi-label) and a number per image (image regression) need training-runtime changes and are not part of this.
+- **Tokenizing text** (open point, added to this plan at the owner's request on 2026-11-19). The builder takes text as integer tokens with a vocabulary size, both locked from the dataset (ADR-0017 rule 5), but nothing on the roadmap turns text into tokens or stores the vocabulary. Training a labelled-text model needs it, and M12's corpora will too. To settle, in an ADR or an addendum to ADR-0017:
+  14. The kind of tokenizer: characters, words with a vocabulary from the train split, or subwords (BPE). A library such as `tokenizers` is a new dependency (ask first); writing BPE from scratch could be an owner unit.
+  15. Fitted on the train split only (as ML-1.3 requires of preprocessing), with a fixed vocabulary size, reserved IDs (0 for padding, as the built-in text templates assume with `padding_idx: 0`, and one for unknown tokens), and deterministic IDs, so the same data and settings always give the same tokens.
+  16. Where it lives and what it is part of: a stage that writes a versioned derivation (so the tokens and vocabulary are part of a version's identity, DATA-3.2), or a step inside training stored with the weights; either way `/predict` must tokenize the same way.
+  17. The maximum length L (the builder's locked input), with truncation and padding, and the length distribution shown so L can be chosen (SPEC's "Tokenizing corpus, vocab 12,480" activity).
+
 **Scope**
 
 - Tabular (CSV, Parquet) and text (TXT, JSONL) ingestion into manifests (DATA-1.4). Text cleaning: whitespace and Unicode normalised, empty and over-length rows dropped and logged (DATA-2.4).
@@ -551,28 +573,30 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] ADR-0018 approved; S-09 report delivered
-- [ ] `test_DATA_1_4_*`: a sample CSV and a sample JSONL ingest without errors
-- [ ] `test_DATA_2_4_*`: planted bad rows are removed and logged
-- [ ] `test_ML_1_1_*`: each listed model trains on a tabular dataset
-- [ ] `test_ML_1_2_*`: k-means, DBSCAN/HDBSCAN and PCA each run and report their metrics
-- [ ] `test_ML_1_3_*`: the scaler's statistics come from the train split
-- [ ] `test_ML_1_4_*`: invalid parameter combinations are rejected
-- [ ] `test_ML_1_5_*`: a skops save and load round-trips; nothing is unpickled
-- [ ] `test_HPO_1_1_*`: the search space builds from the UI's selections
-- [ ] `test_HPO_1_2_*`: a study stops at whichever limit comes first
-- [ ] `test_HPO_1_3_*`: pruned trials are logged with the step they stopped at
-- [ ] `test_HPO_1_4_*`: test metrics are computed exactly once per study
-- [ ] `test_HPO_1_5_*`: the trial table, best config and parameter importance render
-- [ ] 👤 `test_EVAL_1_2_*`: the right metric set appears for each task
-- [ ] G3 for SCR-09 (HPO part) and SCR-10
-- [ ] Demo: tune a random forest on the tabular dataset and the CNN's learning rate; read both studies; one test evaluation each
-- [ ] Docs updated (learning notes)
-- [ ] Owner's OK to merge
+- [x] ADR-0018 approved; S-09 report delivered (ADR-0018 approved 2026-11-19, "Approve all three"; `docs/spikes/S-09-hpo.md` 2026-11-19: Optuna stays in its schema, decision 7 confirmed, importance uses fANOVA set explicitly)
+- [x] ADR-0019 approved (open points 1–7, 9, 14–17); DATA-1.5 approved or declined (points 11–13) (both approved 2026-11-19, "Approve all three")
+- [x] `test_DATA_1_5_*`: a flat image folder with a labels CSV ingests with each image's label; unlisted images, missing files and repeated paths are reported; one changed label gives a new version ID (2026-11-19: `test_DATA_1_4_records.py`, through the API in `test_M10_records_pipeline.py`; conflicting labels rejected, problems with their line numbers in `counts.labels_csv`)
+- [x] `test_DATA_1_4_*`: a sample CSV and a sample JSONL ingest without errors (2026-11-19: CSV, Parquet, JSONL and TXT in `test_DATA_1_4_records.py`; whole pipelines in `test_M10_records_pipeline.py`; live, breast cancer, diabetes and wine (`job_0059`–`job_0061`) and the COCO captions (`job_0062`))
+- [x] `test_DATA_2_4_*`: planted bad rows are removed and logged (2026-11-19, `test_DATA_2_4_text_clean.py`: empty and over-length texts dropped with their reasons and a WARN naming them; through the API in `test_M10_records_pipeline.py`)
+- [x] `test_ML_1_1_*`: each listed model trains on a tabular dataset (2026-11-19, `test_ML_1_classical.py`: every estimator on its tasks, 16 cases; through the API and the runtime, `test_M10_classical.py`, `test_M10_classical_run.py`; live, a random forest on breast cancer, `job_0063`: val accuracy 0.982, test 0.965)
+- [x] `test_ML_1_2_*`: k-means, DBSCAN/HDBSCAN and PCA each run and report their metrics (2026-11-19, `test_ML_1_classical.py`: clusters, noise, silhouette and Davies–Bouldin; PCA's explained variance)
+- [x] `test_ML_1_3_*`: the scaler's statistics come from the train split (2026-11-19, `test_ML_1_classical.py`: the scaler's mean, the imputer's median and the encoder's categories match train with val and test shifted away)
+- [x] `test_ML_1_4_*`: invalid parameter combinations are rejected (2026-11-19, `test_ML_1_4_params.py`: one test per rule, the task and data checks; through the API as 422s naming the field, `test_M10_classical.py`)
+- [x] `test_ML_1_5_*`: a skops save and load round-trips; nothing is unpickled (2026-11-19, `test_ML_1_classical.py` and `test_M10_classical_run.py`, under the unpickling tripwire; a file holding a type outside the allow-list is refused as `weights_unreadable`)
+- [x] `test_HPO_1_1_*`: the search space builds from the UI's selections (2026-11-20: `test_HPO_1_1_space.py`, markers checked against each field's own range and the fixed fields; through the API, `test_M10_studies.py` and `test_M10_deep_studies.py`; SCR-09's Tune toggles to markers and refusals on their rows, `Builder.test.tsx`)
+- [x] `test_HPO_1_2_*`: a study stops at whichever limit comes first (2026-11-20: trial limit and time budget for classical studies, `test_M10_studies_run.py`, and for networks, one job per trial, `test_M10_deep_studies_run.py`; pause, cancel and the watchdog on a waiting study, `test_M10_deep_studies.py`; two studies starting at once)
+- [x] `test_HPO_1_3_*`: pruned trials are logged with the step they stopped at (2026-11-20: by fold for classical studies, by epoch for networks, never before 5 trials have finished; SCR-10 says the step and reason, `Study.test.tsx`)
+- [x] `test_HPO_1_4_*`: test metrics are computed exactly once per study (2026-11-20: a conditional update refuses a second write, classical and network studies; trials never see the test split; SCR-10's card has no button)
+- [x] `test_HPO_1_5_*`: the trial table, best config and parameter importance render (2026-11-20: the study endpoints, `test_M10_studies_run.py`; SCR-10, `Study.test.tsx`; *Start a run from this configuration* prefills SCR-09)
+- [x] 👤 `test_EVAL_1_2_*`: the right metric set appears for each task (written by the agent, K1. 2026-11-19, `test_EVAL_1_2_task_metrics.py`: every task's set from `sklearn.metrics`, sacrebleu and CIDEr-D, and every network run scored on validation and test; 2026-11-20, shown on SCR-11's version drawer, `TaskMetrics.test.tsx`, after its own G2 and G3 (approved 2026-11-20); checked live on classification, regression and a 78-class text model)
+- [x] G3 for SCR-09 (HPO part) and SCR-10 (approved 2026-11-20, "Approve all four", with the SCR-07 and SCR-04 study addenda; `docs/design/g3/SCR-10.md`)
+- [x] Demo: tune a random forest on the tabular dataset and the CNN's learning rate; read both studies; one test evaluation each (2026-11-20, on the live stack, read on SCR-10: a random forest on breast cancer, `st_e06085ead155` (`job_0077`), 40 trials, 13 pruned by fold, best cv_accuracy 0.963, tested once: accuracy 0.965, macro F1 0.961; the Small CNN's learning rate on CIFAR-10 on the GPU, `st_8293da6ebe0e` (`job_0095`), 8 trials of 4 epochs, one pruned at epoch 2, best lr 0.0012 at val accuracy 0.804, registered as `mv_a4a0fb846812` and tested once: accuracy 0.810, macro F1 0.809. Also a two-layer MLP on wine, `st_5869c7673960`)
+- [x] Docs updated (learning notes) (2026-11-20: API.md §3.9, §3.3 and §3.12; ADR-0018 "As built" parts A and B; DATA_MODEL §4.15; ARCHITECTURE; DECISIONS; the Gate 3 notes; `docs/learning/Decisions.md` §27 and `sys-design.md` §5l, not committed)
+- [x] Owner's OK to merge ("Yes, merge and push", 2026-11-20)
 
 ## M11 — Dashboards, monitoring completion, phase-2 acceptance
 
-**Size** L · **Branch** `m11-phase2-acceptance` · **Serves** MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, UI-2.1, UI-2.2, EVAL-1.3, DATA-3.5; DATA-2.3 and DATA-4.8 (phase 1, P2, moved from M7); the phase-2 done-definition
+**Size** L · **Branch** `m11-phase2-acceptance` · **Serves** MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, UI-2.1, UI-2.2, EVAL-1.3, DATA-3.5, RUN-1.10; DATA-2.3 and DATA-4.8 (phase 1, P2, moved from M7); the phase-2 done-definition
 
 **Before starting:** G2 for SCR-13, SCR-03 v2 and SCR-11 v2 approved. The alerts and diagnostics add work to `monitor`, so NFR-11 is measured again here.
 
@@ -585,6 +609,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - Raw against cleaned distributions and rejection reasons per stage (UI-2.2), and the diff of two versions (DATA-3.5, P2, if time), on SCR-03.
 - Semantic duplicates (DATA-2.3) and each cluster kept in one split group (DATA-4.8), as [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) sets out. Written by the agent at the owner's request (2026-11-17); the similarity threshold is proposed from a measurement on coco10k and chosen by the owner (as OC-5). Clusters shown on SCR-03.
 - Three or more models on one test split, side by side (EVAL-1.3), on SCR-11.
+- Fine-tuning a built model (RUN-1.10, added at the owner's request on 2026-11-19): `init_from` a registered version, optional frozen layers, `reset_head` for a different class count; the parent recorded and protected by retention. Its form joins SCR-09 (a G2 revision of SCR-09 before M11's screens) and the parent shows on SCR-11.
 - UI-2.1 completed: models and training runs join datasets and pipeline jobs in the dashboard.
 - The phase-2 acceptance run, measured, with a README section; phase 3 (M12, M13) detailed for approval.
 
@@ -599,6 +624,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included
 - [ ] `test_UI_2_2_*`: charts for any dataset version
 - [ ] `test_EVAL_1_3_*`: three or more models compared in one view
+- [ ] `test_RUN_1_10_*`: a run from a version starts at its weights and records it as parent; frozen layers are unchanged; a shape mismatch is refused unless the head is reset
 - [ ] `test_DATA_3_5_*` (P2, if time): the diff lists the changes correctly
 - [ ] `test_DATA_2_3_*` (P2): cropped variants are grouped together and a report is generated
 - [ ] 👤 `test_DATA_4_8_*` (P2): two photos of one scene from different angles land in the same split (written by the agent at the owner's request)
@@ -608,6 +634,30 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] Meta-test green: every phase-2 P0 (32) has a passing ID-named test
 - [ ] M12–M13 detailed and approved by the owner
 - [ ] Owner's OK to merge; tag `phase-2`
+
+## M11b — Tabular transforms
+
+**Size** M · **Branch** `m11b-tabular-transforms` · **Serves** DATA-7.1–7.5 · Added at the owner's request on 2026-11-19. The letter keeps M12–M15's numbers (as proposed for M8a/M8b). It comes after M11 because it needs M10's tabular ingestion and training. The `phase-2` tag goes on M11's merge, as planned; M11b follows it (the owner's choice, 2026-11-19: M11b carries no phase-2 acceptance criterion).
+
+**Before starting:** an ADR (or an ADR-0019 addendum) for the `transform` stage: the operation list's schema, the expression language for DATA-7.4 (parsed, never `eval`), how encodings reach the table schema (decided 2026-11-19: the schema gives each column's default, a network's input block may still switch a categorical column between `one_hot` and `embedding`, classical pipelines follow the schema with `embedding` as `one_hot`; pointers in ADR-0017 rule 6 and ADR-0019 rule 17). Two points from M10's data layout to settle in that ADR: (1) ingest rejects a record whose target is empty (`missing_target`) before a transform could choose another target, so choosing the target in `transform` (DATA-7.2) needs ingest to keep those rows, or the transform to reconsider them; (2) `record` holds values already coerced to their inferred kind (a code `007` read as numeric is `7.0`), so changing a column's kind in `transform` cannot recover the original text unless ingest keeps it, or the kind is set at ingest (`stages.ingest.table.kinds`). A transform must also recompute each row's `sha256` from its new `record`, which the clean stage's exact duplicates rely on; a G1 revision adding the transform editor as a new screen (SCR-15 proposed) and SCR-03's column view; G2 for both.
+
+**Scope**
+
+- The `transform` stage between `ingest` and `clean` for tabular versions; row-local operations only (DATA-7.1, DATA-7.2, DATA-7.4).
+- Per-column encodings in the table schema, used by the input block and the classical pipelines (DATA-7.3).
+- SCR-03's column view for any tabular version, and the editor with a preview on sample rows (DATA-7.5).
+
+**Done when**
+
+- [ ] ADR approved; G1 revision and G2 for SCR-15 and SCR-03's column view approved
+- [ ] `test_DATA_7_1_*`: raw unchanged, same operations give the same ID, fitted operations refused
+- [ ] `test_DATA_7_2_*`: one test per operation; invalid ones refused naming the column; `cast_failed` rows kept and counted
+- [ ] `test_DATA_7_3_*`: `ignore`, `embedding` and `ordinal` reach the model's input as chosen
+- [ ] `test_DATA_7_4_*` (P2): derived columns and filters correct; anything outside the expression language refused
+- [ ] `test_DATA_7_5_*`: the column summary matches the manifest; the preview equals the stage's output
+- [ ] G3 for SCR-15 and SCR-03's column view
+- [ ] Demo: drop a column of the wine table, change one column's kind, set an encoding, train on the result, and trace it back to raw on SCR-03
+- [ ] Owner's OK to merge
 
 ---
 

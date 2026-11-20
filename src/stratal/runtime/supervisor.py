@@ -25,11 +25,18 @@ from stratal.core.logging import get_logger
 from stratal.core.settings import Settings, get_settings
 from stratal.db.engine import get_engine
 from stratal.db.models import Job, JobStage, ProcessSample
+from stratal.hpo import control as hpo_control
 from stratal.mon import probes
 from stratal.mon.backfill import backfill_job
 from stratal.mon.events import Event, utc_now
 from stratal.mon.store import insert_events, refresh_summary
-from stratal.runtime.child import EXIT_CANCELLED, EXIT_HANDOFF, EXIT_OK, EXIT_PAUSED
+from stratal.runtime.child import (
+    EXIT_CANCELLED,
+    EXIT_HANDOFF,
+    EXIT_OK,
+    EXIT_PAUSED,
+    EXIT_WAITING,
+)
 from stratal.runtime.jobs import (
     Enqueue,
     after_commit,
@@ -39,7 +46,14 @@ from stratal.runtime.jobs import (
 from stratal.runtime.states import transition
 
 Outcome = Literal[
-    "completed", "failed", "cancelled", "paused", "handed_off", "not_claimed", "superseded"
+    "completed",
+    "failed",
+    "cancelled",
+    "paused",
+    "handed_off",
+    "waiting",
+    "not_claimed",
+    "superseded",
 ]
 EnqueueFn = Callable[[Enqueue], None]
 
@@ -198,7 +212,22 @@ def finalize(
         outcome: Outcome
         enqueue: Enqueue | None = None
 
-        if code == EXIT_OK:
+        if code == EXIT_WAITING and not cancel_requested and not pause_requested:
+            # A study's step created its next trial: the stage waits for it (ADR-0018 rule 5).
+            stage.status = "waiting"
+            stage.finished_at = None
+            enqueue = hpo_control.trial_to_enqueue(session, job_id)
+            outcome = "waiting"
+        elif code == EXIT_WAITING and not cancel_requested:
+            # Paused just as the step queued a trial: the trial never starts.
+            hpo_control.interrupt_queued_trial(
+                session, job_id, reason="its study was paused before it began"
+            )
+            stage.status = "paused"
+            job.desired_state = None
+            transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")
+            outcome = "paused"
+        elif code == EXIT_OK:
             stage.status = "completed"
             if following is not None and pause_requested:
                 # Paused between stages: the next one waits for the resume (RUN-1.2).
@@ -245,7 +274,7 @@ def finalize(
             job.desired_state = None
             transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")
             outcome = "paused"
-        elif cancel_requested or code == EXIT_CANCELLED:
+        elif cancel_requested or code in (EXIT_CANCELLED, EXIT_WAITING):
             stage.status = "cancelled"
             transition(
                 session, job, "cancelled", reason="cancelled by the user", actor="supervisor"
@@ -288,6 +317,10 @@ def finalize(
                 actor="supervisor",
             )
             outcome = "failed"
+        if job.kind == "hpo_trial" and outcome in ("completed", "failed", "cancelled"):
+            enqueue = hpo_control.trial_ended(session, job)  # the study's next step
+        elif job.kind == "hpo_trial" and outcome == "paused":
+            hpo_control.trial_paused(session, job)
         session.flush()
         refresh_summary(session, job_id, now=now)
         return outcome, enqueue
@@ -378,10 +411,12 @@ def run_stage(
     cleanup = _retention_after(job_id) if outcome in ("completed", "cancelled") else None
     if outcome != "superseded":
         with contextlib.suppress(Exception):
-            if following is None or outcome == "paused":
+            if following is None or outcome == "paused" or following.job_id != job_id:
                 bus.clear_control(job_id)
         after_commit(bus, job_id)
         if following is not None:
+            if following.job_id != job_id:  # a study's step, or a study's trial
+                after_commit(bus, following.job_id)
             enqueue(following)
         if cleanup is not None:
             after_commit(bus, cleanup.job_id)

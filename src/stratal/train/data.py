@@ -95,3 +95,20 @@ class EpochOrder(Sampler[int]):
 
     def __len__(self) -> int:
         return self.size - self.start
+
+
+class TensorRows(Dataset):
+    """Rows already in memory: encoded table rows or token IDs, with their targets (ADR-0019
+    rule 12). Tables and token sequences are small next to images, so no loader workers."""
+
+    def __init__(self, inputs: torch.Tensor, targets: torch.Tensor) -> None:
+        if len(inputs) != len(targets):
+            raise ValueError(f"{len(inputs)} inputs against {len(targets)} targets")
+        self.inputs = inputs
+        self.targets = targets
+
+    def __len__(self) -> int:
+        return len(self.inputs)
+
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.inputs[index], self.targets[index]

@@ -12,12 +12,14 @@ from stratal.api.builder import router as builder_router
 from stratal.api.datasets import router as datasets_router
 from stratal.api.health import router as health_router
 from stratal.api.jobs import router as jobs_router
+from stratal.api.ml import router as ml_router
 from stratal.api.models import router as models_router
 from stratal.api.problem import install_error_handlers
 from stratal.api.reports import router as reports_router
 from stratal.api.reviews import router as reviews_router
 from stratal.api.settings import router as settings_router
 from stratal.api.streams import router as streams_router
+from stratal.api.studies import router as studies_router
 from stratal.api.system import router as system_router
 
 API_PREFIX = "/api/v1"
@@ -60,4 +62,6 @@ def create_app() -> FastAPI:
     app.include_router(models_router, prefix=API_PREFIX)
     app.include_router(settings_router, prefix=API_PREFIX)
     app.include_router(builder_router, prefix=API_PREFIX)
+    app.include_router(ml_router, prefix=API_PREFIX)
+    app.include_router(studies_router, prefix=API_PREFIX)
     return app

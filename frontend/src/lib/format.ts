@@ -75,3 +75,11 @@ export function errorDetail(detail: string | { [key: string]: unknown } | null |
     .map(([key, value]) => `${key.replace(/_/g, " ")} ${String(value)}`);
   return parts.length ? parts.join(" · ") : null;
 }
+
+/** Local date and time, "2026-11-19 10:14:07". */
+export function stamp(iso: string | null | undefined): string {
+  if (!iso) return DASH;
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${String(d.getFullYear())}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${d.toLocaleTimeString("en-GB", { hour12: false })}`;
+}

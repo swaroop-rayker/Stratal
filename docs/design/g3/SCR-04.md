@@ -83,3 +83,12 @@ The accepted difference "no model version link on finished training runs" is now
 | `live-v2-open-version.jpg` | job_0047, completed: "Open mv_e56a61b2e5af" in the header, opening SCR-11 with that version's drawer |
 
 The job view gained `model_lineage_id` for this link (API.md §3.3).
+
+# Study addendum (M10) — Gate 3, no mockup
+
+Designed at Gate 3 (SCR-10's approval, 2026-11-19). Built in `frontend/src/screens/job/JobScreen.tsx` and `Timeline.tsx`; **Approved by the owner on 2026-11-20** ("Approve all four"), with the listed differences.
+
+- **Open the study:** a button in the header of a study's job (primary) and of a trial's job (secondary), to SCR-10.
+- **A trial's job** says "trial n of st_…" before its model in the header line, and shows the training charts and run views a `train` job does.
+- **A study's `waiting` stage** shows the clock icon and "waiting for its trial" on the timeline. (The study stage's duration is its last step's; the study's own time is on SCR-10.)
+- **Contrast:** the study's job page 320 text elements and a trial's 386 pass AA in both themes (lowest 5.63:1 dark, 4.75:1 light).

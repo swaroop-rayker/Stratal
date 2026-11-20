@@ -9,7 +9,7 @@ import { api, call, type Job, type Schemas, type StreamEvent } from "../../api/c
 import type { Feed } from "../../api/stream";
 import { Icon } from "../../components/ui";
 import { clock, duration } from "../../lib/format";
-import { runningStage, trainingPosition } from "./jobs";
+import { isTraining, runningStage, trainingPosition } from "./jobs";
 
 type Metrics = Record<string, unknown>;
 
@@ -457,7 +457,7 @@ export function StateBanner({ job, data, now, gpuTemp, limits }: {
   limits: { pause: number | null; resume: number | null };
 }) {
   const pause = data.pauses[data.pauses.length - 1] ?? null;
-  const training = job.kind === "train";
+  const training = isTraining(job);
   if (job.state === "paused" && job.pause_reason === "thermal") {
     return (
       <div className="state-banner paused" role="status">

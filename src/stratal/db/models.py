@@ -73,6 +73,7 @@ STAGE_STATUSES = (
     "queued",
     "running",
     "paused",
+    "waiting",
     "completed",
     "failed",
     "skipped",
@@ -471,6 +472,90 @@ class ModelVersion(Base):
         Text, ForeignKey("jobs.id", name="fk_model_versions_deleted_by_job")
     )
     """The retention job that deleted the weights (REG-2.9)."""
+    study_id: Mapped[str | None] = mapped_column(
+        Text, ForeignKey("studies.id", name="fk_model_versions_study")
+    )
+    """The study whose best trial this is (HPO, ADR-0018 rule 7); null for an ordinary run."""
+
+
+STUDY_KINDS = ("classical", "deep")
+STUDY_STATES = ("running", "closed", "completed", "cancelled", "failed")
+TRIAL_STATES = ("running", "complete", "pruned", "failed")
+
+
+class Study(Base):
+    """An HPO study: what is tuned, its limits, and what it found (HPO-1.1 to HPO-1.5,
+    ADR-0018). Optuna's own tables, in schema ``optuna``, are the sampler's memory; this
+    row and its trials are what the API reads."""
+
+    __tablename__ = "studies"
+    __table_args__ = (
+        CheckConstraint(_one_of("kind", STUDY_KINDS), name="ck_studies_kind"),
+        CheckConstraint(_one_of("state", STUDY_STATES), name="ck_studies_state"),
+        CheckConstraint(
+            _one_of("direction", ("maximize", "minimize")), name="ck_studies_direction"
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    job_id: Mapped[str] = mapped_column(Text, ForeignKey("jobs.id"), unique=True)
+    kind: Mapped[str] = mapped_column(Text)
+    dataset_version_id: Mapped[str] = mapped_column(Text, ForeignKey("dataset_versions.version_id"))
+    base: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    """The run request every trial starts from, defaults filled in."""
+    space: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    objective: Mapped[str] = mapped_column(Text)
+    direction: Mapped[str] = mapped_column(Text)
+    limits: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    """``{n_trials, timeout_s}``: whichever comes first ends the study (HPO-1.2)."""
+    pruning: Mapped[bool] = mapped_column(Boolean)
+    cv_folds: Mapped[int | None] = mapped_column(Integer)
+    seed: Mapped[int] = mapped_column(Integer)
+    state: Mapped[str] = mapped_column(Text, server_default="running")
+    ended_by: Mapped[str | None] = mapped_column(Text)
+    """``n_trials`` or ``timeout``: which limit ended it."""
+    elapsed_s: Mapped[float] = mapped_column(Float, server_default="0")
+    """Running time used, pauses excluded."""
+    best_trial: Mapped[int | None] = mapped_column(Integer)
+    best_value: Mapped[float | None] = mapped_column(Float)
+    best_params: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    importance: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    best_version_id: Mapped[str | None] = mapped_column(
+        Text, ForeignKey("model_versions.id", name="fk_studies_best_version", use_alter=True)
+    )
+    test_metrics: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    test_evaluated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    """Set once, by the one test evaluation (HPO-1.4)."""
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class StudyTrial(Base):
+    """One trial of a study, as SCR-10 shows it (HPO-1.3, HPO-1.5)."""
+
+    __tablename__ = "study_trials"
+    __table_args__ = (
+        CheckConstraint(_one_of("state", TRIAL_STATES), name="ck_study_trials_state"),
+    )
+
+    study_id: Mapped[str] = mapped_column(Text, ForeignKey("studies.id"), primary_key=True)
+    number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    job_id: Mapped[str | None] = mapped_column(Text, ForeignKey("jobs.id"))
+    """A deep-learning trial's own job; null for a classical trial."""
+    state: Mapped[str] = mapped_column(Text)
+    params: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    value: Mapped[float | None] = mapped_column(Float)
+    step: Mapped[int | None] = mapped_column(Integer)
+    """The last step reported: the fold (classical) or epoch (deep learning)."""
+    prune_reason: Mapped[str | None] = mapped_column(Text)
+    """``median`` or ``budget`` for a pruned trial."""
+    code: Mapped[str | None] = mapped_column(Text)
+    """A failed trial's code: ``invalid_combination``, ``over_vram``, ``interrupted``, …"""
+    intermediate: Mapped[list[list[float]]] = mapped_column(JSONB, server_default="[]")
+    """``[[step, value], …]``: what the pruner compared."""
+    duration_s: Mapped[float | None] = mapped_column(Float)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Checkpoint(Base):
@@ -481,7 +566,8 @@ class Checkpoint(Base):
     job_id: Mapped[str] = mapped_column(
         Text, ForeignKey("jobs.id", name="fk_checkpoints_job"), primary_key=True
     )
-    lineage_id: Mapped[str] = mapped_column(Text, ForeignKey("model_lineages.id"))
+    lineage_id: Mapped[str | None] = mapped_column(Text, ForeignKey("model_lineages.id"))
+    """Null for an HPO trial whose lineage does not exist yet (ADR-0018 rule 7)."""
     path: Mapped[str] = mapped_column(Text)
     """Relative to the data folder: the checkpoint's JSON file."""
     bytes: Mapped[int] = mapped_column(BigInteger)

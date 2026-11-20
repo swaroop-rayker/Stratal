@@ -79,9 +79,14 @@ export function liveProgress(stage: JobStage | null, latest: StreamEvent | null)
   };
 }
 
+/** A run that trains a network: a `train` job, or an HPO study's trial (M10). */
+export function isTraining(job: Pick<Job, "kind">): boolean {
+  return job.kind === "train" || job.kind === "hpo_trial";
+}
+
 /** The model a training job trains (`kind: train`), or null for other jobs. */
 export function trainingModel(job: Job): string | null {
-  if (job.kind !== "train") return null;
+  if (!isTraining(job)) return null;
   const model = (job.stages[0]?.config as { model?: { name?: unknown } } | undefined)?.model;
   return typeof model?.name === "string" ? model.name : null;
 }
@@ -111,7 +116,7 @@ export function valAccuracy(job: Job): number | null {
 /** The batch a training run that ran out of GPU memory suggests (RUN-1.5), read from its
  * error ("reduce batch size from 128 → 64"); ``null`` for anything else. */
 export function suggestedBatch(job: Job): number | null {
-  if (job.kind !== "train") return null;
+  if (!isTraining(job)) return null;
   const error = job.error ?? failedStage(job)?.error ?? null;
   if (error?.code !== "gpu_oom") return null;
   const found = /reduce batch size from \d+ → (\d+)/.exec(error.reason ?? "");

@@ -77,6 +77,16 @@ class StageHandoff(Exception):
         self.reason = reason
 
 
+class StageWaiting(Exception):
+    """Raised by a stage that has handed its work to another job and should run again when
+    that job ends: a deep-learning study's step, after it created the next trial's job
+    (ADR-0018 rule 5). The stage becomes ``waiting``; the job stays ``running``."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 StopRequest = Literal["cancel", "pause"]
 
 

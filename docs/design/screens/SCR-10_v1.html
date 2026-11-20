@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-10 HPO results — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.select { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--fs-12); color: var(--text-primary); }
+.select svg.i { width: 12px; height: 12px; color: var(--text-secondary); } .select.is-disabled { opacity: .45; }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 40px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); }
+.pill.cancelled { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 400px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; } .toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.modal { width: 460px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; } .modal > header svg.i { color: var(--danger); }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); } .modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); max-width: 40ch; }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.grp { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-07 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.phead { display: flex; align-items: center; gap: var(--sp-3); } .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.t tr.sec td .count { margin-left: var(--sp-1); }
+.now { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.now .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.now .stg { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.now .progress { width: 72px; }
+.now.err .code { color: var(--danger); font-family: var(--font-mono); }
+.now.muted { color: var(--text-muted); }
+.now svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.t td.acts-cell { width: 120px; text-align: right; }
+.toasts { position: absolute; right: var(--sp-4); bottom: calc(28px + var(--sp-4)); z-index: var(--z-toast); }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+
+
+/* ============================================================================ SCR-01 sidebar foot (approved v1, unchanged) */
+.side .foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.health { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.health svg.i { color: var(--success); }
+
+/* ============================================================================ form field (design-system preview, unchanged) */
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); display: flex; align-items: center; gap: var(--sp-2); }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.field.error > small { color: var(--danger); display: flex; gap: var(--sp-1); align-items: center; }
+.input { height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-13) var(--font-ui); width: 100%; display: flex; align-items: center; }
+.input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.field.error .input { border-color: var(--danger); }
+.badge.info { color: var(--info); background: var(--info-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; } .badge.ok { color: var(--success); background: var(--success-soft); border-color: transparent; }
+
+/* ============================================================================ SCR-14 (tokens only) */
+.pill.paused { --c: var(--state-paused); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.note2 { font-size: var(--fs-12); color: var(--text-muted); margin: 0; } .note2 .mono { color: var(--text-secondary); }
+.typeconfirm { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-3); font-size: var(--fs-12); }
+.typeconfirm .input { font: var(--fs-13) var(--font-mono); }
+.cols { display: grid; grid-template-columns: 168px 1fr; gap: var(--sp-5); min-height: 0; }
+.index { display: flex; flex-direction: column; gap: 2px; }
+.index a { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); text-decoration: none; }
+.index a[aria-current=true] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); }
+.index a[aria-disabled=true] { color: var(--text-muted); }
+.index a .count, .index a .badge { margin-left: auto; }
+.secs { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.sec { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); display: flex; flex-direction: column; }
+.sec > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.sec > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.sec > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.sec > header .aside { font-size: var(--fs-12); color: var(--text-secondary); }
+.frow { display: grid; grid-template-columns: 380px 1fr; gap: var(--sp-6); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); align-items: start; }
+.frow .input.num { width: 132px; }
+.frow .mod { display: flex; align-items: center; gap: var(--sp-2); }
+.applies { display: flex; flex-direction: column; gap: var(--sp-2); padding-top: 22px; font-size: var(--fs-12); color: var(--text-secondary); }
+.applies .badge svg.i { width: 11px; height: 11px; }
+.ctx { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ctx b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ctx .sq { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res-temp); margin-right: var(--sp-1); }
+.fixed { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-4); font-size: var(--fs-12); color: var(--text-secondary); }
+.fixed svg.i { color: var(--text-muted); margin-top: 2px; }
+.savebar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-top: var(--bw) solid var(--border); background: var(--surface-raised); border-radius: 0 0 var(--r-md) var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.savebar b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ovr { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); border-bottom: var(--bw) solid var(--border); }
+.ovr h3 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.t td .input { height: var(--h-sm); width: 72px; font-size: var(--fs-12); }
+.t td.dim { color: var(--text-secondary); }
+.t.dense td { height: 36px; }
+/* Contrast rules approved at G3 since the v1 mockups (in the built app). */
+[data-theme="light"] .pill { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.err { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.info { color: color-mix(in srgb, var(--info) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.warn { color: color-mix(in srgb, var(--warning) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.ok { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
+[data-theme="dark"] .t tr[aria-selected=true] .pill, [data-theme="dark"] .t tr.is-hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }
+
+/* ============================================================================ SCR-08 / SCR-09 (tokens only) */
+.pill.paused { --c: var(--state-paused); }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.dsbar { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.dsbar .ends { font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.bgrid { display: grid; grid-template-columns: 184px 1fr 312px; gap: var(--sp-3); min-height: 0; flex: 1; }
+.panel { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.panel > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); font-size: var(--fs-13); }
+.panel > header .spacer + * { font-weight: var(--fw-regular); }
+.palette { padding: var(--sp-2); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.pal-grp { margin: var(--sp-2) var(--sp-1) 2px; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.pal-grp:first-child { margin-top: 0; }
+.tile { display: flex; align-items: center; gap: var(--sp-2); height: 26px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border); border-radius: var(--r-sm); background: var(--surface-raised); font-size: var(--fs-12); color: var(--text-primary); }
+.tile svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.tile[aria-disabled=true] { background: transparent; border-style: dashed; color: var(--text-muted); }
+.pal-note { margin: var(--sp-1) var(--sp-1) 0; font-size: var(--fs-11); color: var(--text-muted); display: flex; gap: var(--sp-1); }
+.pal-note svg.i { width: 12px; height: 12px; margin-top: 2px; }
+.canvas { position: relative; flex: 1; background-color: var(--surface-sunken); background-image: radial-gradient(var(--border) 1px, transparent 1px); background-size: 16px 16px; overflow: hidden; }
+.canvas-tools { position: absolute; left: var(--sp-2); bottom: var(--sp-2); display: flex; gap: var(--sp-1); }
+.canvas-tools .btn { width: var(--h-sm); padding: 0; }
+.gn { position: absolute; width: 280px; height: 44px; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-1); font-size: var(--fs-12); }
+.gn > .h { display: flex; align-items: center; gap: var(--sp-2); height: 23px; padding: 0 var(--sp-2); line-height: 1; }
+.gn > .h .id { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.gn > .h .ty { color: var(--text-secondary); }
+.gn > .h .kv { color: var(--text-muted); font: var(--fs-11) var(--font-mono); }
+.gn > .f { display: flex; align-items: center; gap: var(--sp-2); height: 19px; padding: 0 var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.gn > .f .p { margin-left: auto; color: var(--text-muted); }
+.gn[aria-selected=true] { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-width) var(--accent-soft), var(--shadow-1); }
+.gn.lock { background: var(--surface); border-style: dashed; }
+.gn.lock:not(:has(.f)) > .h { height: 42px; }
+.gn.lock .h svg.i { color: var(--text-muted); }
+.gn.bad { border-color: var(--danger); }
+.gn.bad > .f { color: var(--danger); }
+.gn.muted { opacity: .6; }
+.gn .hd { position: absolute; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: var(--r-pill); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); }
+.gn .hd.in { top: -5px; } .gn .hd.out { bottom: -5px; }
+.gn .flag { margin-left: auto; color: var(--danger); display: inline-flex; }
+.edges { position: absolute; inset: 0; pointer-events: none; }
+.edges path { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+.edges path.on { stroke: var(--accent); stroke-width: 2; }
+.edges path.skip { stroke-dasharray: 0; }
+.edges text { font: var(--fs-11) var(--font-mono); fill: var(--text-muted); }
+.dropzone { position: absolute; width: 280px; height: 30px; border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; gap: var(--sp-2); color: var(--text-muted); font-size: var(--fs-12); }
+.insp { padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-3); overflow: hidden; }
+.insp .field > label .badge { margin-left: auto; }
+.insp .field .input { height: 28px; }
+.insp .io { display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.insp .io b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.inferred { color: var(--text-muted); font-style: italic; }
+.chk { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-13); }
+.chk i { width: 14px; height: 14px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-xs); background: var(--accent); display: inline-grid; place-items: center; }
+.chk i svg.i { width: 10px; height: 10px; color: var(--on-accent); stroke-width: 2.4; }
+.chk i.off { background: var(--surface-sunken); }
+.sumbar { white-space: nowrap; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.sumbar .big { font: var(--fw-semibold) var(--fs-14) var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.sumbar .sep { width: 1px; align-self: stretch; background: var(--border); }
+.mem { display: flex; height: 8px; width: 120px; flex: none; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-sunken); border: var(--bw) solid var(--border); }
+.mem i { display: block; height: 100%; }
+.mem i.w, .key.w::before { background: var(--accent); }
+.mem i.g, .key.g::before { background: var(--info); }
+.mem i.o, .key.o::before { background: var(--text-muted); }
+.key { white-space: nowrap; display: inline-flex; align-items: center; gap: var(--sp-1); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.key::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-xs); }
+.problems { background: var(--surface); border: var(--bw) solid color-mix(in srgb, var(--danger) 45%, transparent); border-radius: var(--r-md); }
+.problems > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+.problems > header svg.i { color: var(--danger); }
+.prob { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-12); border-bottom: var(--bw) solid var(--border); }
+.prob:last-child { border-bottom: 0; }
+.prob a { font-family: var(--font-mono); color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.prob .code { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted); white-space: nowrap; }
+.prob svg.i { color: var(--danger); margin-top: 2px; }
+.tpl { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+.tplc { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.tplc b { font-size: var(--fs-14); }
+.tplc p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); }
+.tplc .meta { display: flex; gap: var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 320px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+/* SCR-09 */
+.runcols { display: grid; grid-template-columns: 1fr 360px; gap: var(--sp-4); min-height: 0; align-items: start; }
+.cards { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); }
+.card > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.card > header h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.card > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.card > .b { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.card.collapsed > header { border-bottom: 0; color: var(--text-muted); }
+.facts { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.facts b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3) var(--sp-4); }
+.fset { display: flex; flex-direction: column; gap: var(--sp-2); }
+.fset > h3 { margin: 0; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.check { position: sticky; top: 0; }
+.vram { display: flex; flex-direction: column; gap: var(--sp-1); }
+.vbar { position: relative; height: 12px; border-radius: var(--r-sm); background: var(--surface-sunken); border: var(--bw) solid var(--border); display: flex; overflow: visible; }
+.vbar i { display: block; height: 100%; }
+.vbar i.fix { background: var(--res-vram); }
+.vbar i.act { background: color-mix(in srgb, var(--res-vram) 55%, var(--surface-sunken)); }
+.vbar i.ctx { background: var(--text-muted); }
+.vbar .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-primary); }
+.vscale { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.kv2 { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.kv2 span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.kv2 .tot { color: var(--text-primary); font-weight: var(--fw-semibold); border-top: var(--bw) solid var(--border); padding-top: 2px; }
+.callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid; font-size: var(--fs-12); color: var(--text-primary); }
+.callout svg.i { margin-top: 2px; flex: none; }
+.callout.ok { border-color: color-mix(in srgb, var(--success) 45%, transparent); background: var(--success-soft); } .callout.ok svg.i { color: var(--success); }
+.callout.warn { border-color: color-mix(in srgb, var(--warning) 50%, transparent); background: var(--warning-soft); } .callout.warn svg.i { color: var(--warning); }
+.callout.err { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .callout.err svg.i { color: var(--danger); }
+.callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .callout.info svg.i { color: var(--info); }
+.plan { font-size: var(--fs-12); color: var(--text-secondary); padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.plan b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.was { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+
+/* ============================================================================ data-viz (design system v1: categorical 1 and 2, as SCR-04 v2) */
+:root { --cat-1: #5aa9f5; --cat-2: #f29e4c; }
+[data-theme="light"] { --cat-1: #1f6fc4; --cat-2: #b0560a; }
+/* ============================================================================ SCR-10 / SCR-09 study (tokens only) */
+.pill.pruned { --c: var(--state-cancelled); }
+.badge.best { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+[data-theme="light"] .badge.best { color: color-mix(in srgb, var(--accent) 85%, var(--text-primary)); }
+.limits { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-6); font-size: var(--fs-12); color: var(--text-secondary); }
+.limits b { color: var(--text-primary); font: var(--fw-medium) var(--fs-13) var(--font-mono); font-variant-numeric: tabular-nums; }
+.limits .progress { width: 96px; margin-left: var(--sp-1); }
+.limits .muted { color: var(--text-muted); }
+.sgrid { display: grid; grid-template-columns: 1fr 380px; gap: var(--sp-3); min-height: 0; }
+.sgrid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); }
+.hist { display: block; width: 100%; height: 190px; }
+.hist .grid { stroke: var(--border); stroke-width: 1; }
+.hist .axis { font: var(--fs-11) var(--font-mono); fill: var(--text-muted); }
+.hist .best { fill: none; stroke: var(--cat-2); stroke-width: 2; }
+.hist .dot { fill: var(--cat-1); }
+.hist .hollow { fill: var(--surface); stroke: var(--cat-1); stroke-width: 1.5; }
+.hist .fail { stroke: var(--state-failed); stroke-width: 1.8; }
+.hist .med { fill: none; stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.hist .trial { fill: none; stroke: var(--cat-1); stroke-width: 2; }
+.legend2 { display: flex; flex-wrap: wrap; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); }
+.legend2 i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-pill); margin-right: var(--sp-1); vertical-align: middle; background: var(--cat-1); }
+.legend2 i.h { background: transparent; border: 1.5px solid var(--cat-1); }
+.legend2 i.l { width: 12px; height: 2px; border-radius: 0; background: var(--cat-2); }
+.legend2 i.m { width: 12px; height: 0; border-radius: 0; border-top: 1.5px dashed var(--text-muted); background: transparent; }
+.legend2 .x { color: var(--state-failed); font-weight: var(--fw-semibold); margin-right: var(--sp-1); }
+.imp { display: grid; grid-template-columns: 132px 1fr 44px; gap: var(--sp-2) var(--sp-3); align-items: center; font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.imp .bar { height: 10px; border-radius: var(--r-xs); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.imp .bar > i { display: block; height: 100%; width: var(--p); background: var(--cat-1); }
+.imp span:nth-child(3n) { text-align: right; color: var(--text-primary); }
+.once { display: flex; flex-direction: column; gap: var(--sp-2); }
+.once .big { font: var(--fw-semibold) var(--fs-24)/1.1 var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.placeholder { display: flex; gap: var(--sp-2); align-items: flex-start; font-size: var(--fs-12); color: var(--text-muted); }
+.placeholder svg.i { margin-top: 2px; }
+.t td .why { color: var(--text-muted); font-size: var(--fs-12); margin-left: var(--sp-1); }
+.t td .muted, .muted { color: var(--text-muted); }
+.t th .i { width: 12px; height: 12px; vertical-align: -2px; }
+.t td.p { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+.t td.p.best-col { color: var(--text-primary); }
+.drawer.wide { width: 520px; top: 0; bottom: 0; }
+.drawer .body { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.tune { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 6px; margin-left: auto; border: var(--bw) solid var(--border); border-radius: var(--r-sm); background: transparent; color: var(--text-muted); font: var(--fw-medium) var(--fs-11) var(--font-ui); cursor: pointer; }
+.tune svg.i { width: 12px; height: 12px; }
+.tune[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); }
+.field > label .badge + .tune { margin-left: auto; }
+.field.tuned .input { border-color: var(--accent); }
+.range { display: flex; gap: var(--sp-1); align-items: center; }
+.range .input { width: auto; flex: 1; min-width: 0; }
+.range .sep { color: var(--text-muted); font-size: var(--fs-12); }
+.range .select { height: var(--h-md); }
+.chips { display: flex; gap: var(--sp-1); align-items: center; flex-wrap: wrap; min-height: var(--h-md); padding: 0 var(--sp-1); border: var(--bw) solid var(--accent); border-radius: var(--r-sm); background: var(--surface-sunken); }
+.chip { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 6px; border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.chip svg.i { width: 10px; height: 10px; color: var(--text-muted); }
+.chip.add { border-style: dashed; color: var(--text-muted); font-family: var(--font-ui); }
+.sform { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--sp-3) var(--sp-4); }
+.field > label { flex-wrap: wrap; row-gap: 2px; }
+.t td .err-line { display: flex; gap: var(--sp-1); align-items: center; color: var(--danger); font-size: var(--fs-11); white-space: normal; }
+.t td .err-line svg.i { width: 11px; height: 11px; }
+.t tr.bad td { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--danger) 45%, transparent); }
+.t.space td { height: 36px; }
+.popover { width: 460px; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-3); }
+.popover > header { display: flex; gap: var(--sp-2); align-items: center; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+/* Highlighted rows: muted text uses text-secondary (approved at SCR-11's Gate 3); the grey pruned pill is lifted further. */
+.t tr.is-hover .why, .t tr[aria-selected=true] .why, .t tr.is-hover .muted, .t tr[aria-selected=true] .muted { color: var(--text-secondary); }
+[data-theme="dark"] .t tr[aria-selected=true] .pill.pruned, [data-theme="dark"] .t tr.is-hover .pill.pruned { color: color-mix(in srgb, var(--c) 45%, var(--text-primary)); }
+[data-theme="dark"] .pill.pruned { color: color-mix(in srgb, var(--c) 75%, var(--text-primary)); }
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+<symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9" stroke-width="2.2"/></symbol>
+<symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+<symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+<symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 16 16"><path d="M6 2.5h4M6.8 2.5v3.8L5 9h6L9.2 6.3V2.5M8 9v4.5"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M2 8h3l1.5-3 3 6L11 8h3"/></symbol>
+  <symbol id="i-keys" viewBox="0 0 16 16"><rect x="1.8" y="4" width="12.4" height="8" rx="1.5"/><path d="M4.5 6.7h.3M7 6.7h.3M9.5 6.7h.3M5 9.4h6"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 16 16"><path d="M2.5 4h2M7.5 4h6M2.5 8h7M12.5 8h1M2.5 12h4M9.5 12h4"/><circle cx="6" cy="4" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="8" cy="12" r="1.5"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-10 — HPO results · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-10-lofi_v1.html</span>, approved 2026-11-19) inside the SCR-01 shell, using only design system v1 tokens, components and patterns, with no new icon. The charts use the categorical colours 1 and 2, as SCR-04 v2's do. The data come from two studies. The first tunes the <i>Small CNN</i>'s learning rate, batch size (64, 128, 256 or 2048) and weight decay on CIFAR-10 (<span class="mono">ds_f8e67211dd94</span>), 10 epochs per trial. The second tunes a random forest on breast cancer with 5-fold cross-validation. Durations use S-09's figure of about 19 s of start per deep-learning trial. Open as <span class="mono">SCR-10_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>Trial states are pills with an icon and words</b>, as job states are: <i>complete</i> (completed colour, check), <i>pruned</i> (cancelled colour, ban icon) followed by "at epoch 3 · median" in muted text, <i>failed</i> (failed colour, alert) followed by its code, and <i>running</i> (running colour, pulse). The best trial gets an accent badge, <i>best</i>, rather than a state of its own.</li>
+<li><b>The history chart</b> draws trials as categorical-1 dots and the best so far as a categorical-2 step line, the same pair SCR-04 v2 uses for train and val. A pruned trial is a hollow dot. A failed trial is a cross in the failed colour on the axis. A legend says all of this in words, and <i>Table</i> swaps the chart for a table.</li>
+<li><b>Importance bars</b> are categorical 1 with the share printed beside each one. The method and its caveat sit under the bars.</li>
+<li><b>The test evaluation is a card of its own</b>, with the badge <i>computed once</i>, large figures, and when and on what it was computed. It has no button.</li>
+<li><b>The breadcrumb reads Models › Study <span class="mono">st_…</span></b>, with no "Studies" level, since there is no list of studies.</li>
+<li><b>Cancel</b> is the danger button, and it opens a confirmation that says what will be lost: the current trial, registration and the test.</li>
+<li><b>Data correction since the low-fi wireframe:</b> trial 8 fails as <i>over_vram</i> because it drew batch 2048, the case SCR-09 now warns about. The median pruner cannot prune before trial 6, since it waits for 5 finished trials. So trial 5 completes, and trial 7 is the first one pruned.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · A deep-learning study, running (dark)</h2>
+<div class="frame" style="height:1010px">
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      <div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div>
+      <div class="grp">Data</div><a class="nav"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></a>
+      <div class="grp">Jobs</div><a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></a>
+      <div class="grp">Models</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models<kbd>g m</kbd></a>
+      <div class="foot">
+        <div class="health" role="status"><svg class="i"><use href="#i-heart"/></svg>All systems ok</div>
+        <a class="nav"><svg class="i"><use href="#i-sliders"/></svg>Settings</a>
+        <a class="nav"><svg class="i"><use href="#i-theme"/></svg>Theme<kbd>t</kbd></a>
+        <a class="nav"><svg class="i"><use href="#i-keys"/></svg>Shortcuts<kbd>?</kbd></a>
+      </div>
+    </nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Study <span class="mono">st_4c1e9a07b2d3</span></b></div><span class="spacer"></span><span class="jobind"><span class="pill running"><span class="pulse"></span>running</span><span class="mono">job_0069</span><span class="stage">trial 9 · epoch 4/10</span></span></header>
+    <main class="content">
+      <div class="phead"><span class="n" style="position:static;display:inline-block">1</span><h1>small_cnn · cifar10</h1><span class="pill running"><span class="pulse"></span>running</span><span class="badge">deep learning · one job per trial</span><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-pause"/></svg>Pause</button><button class="btn sm danger"><svg class="i"><use href="#i-x"/></svg>Cancel study…</button></div>
+      <div class="limits">
+        <span>Objective <b>val_accuracy</b> ↑ maximise</span>
+        <span>Trials <b>9</b> of <b>20</b><span class="progress" role="progressbar" aria-label="Trials started" aria-valuenow="9" aria-valuemax="20" style="--p:45%"><i></i></span></span>
+        <span>Time <b>10:41</b> of <b>60:00</b><span class="progress" role="progressbar" aria-label="Time budget used" aria-valuenow="641" aria-valuemax="3600" style="--p:18%"><i></i></span> <span class="muted">not counting pauses</span></span>
+        <span class="muted">Whichever comes first ends the study · TPE, seed 0 · median pruning · study job <span class="mono">job_0061</span></span>
+      </div>
+      <div class="sgrid">
+        <section class="card"><header><span class="n" style="position:static;display:inline-block;margin-right:2px">2</span><h2>Optimisation history</h2><span class="req">HPO-1.5</span><span class="spacer"></span><span class="group-btns" role="group" aria-label="View"><button class="btn sm" aria-pressed="true">Chart</button><button class="btn sm">Table</button></span></header>
+          <div class="b" style="gap:var(--sp-2)">
+            <svg class="hist" viewBox="0 0 760 190" role="img" aria-label="val_accuracy per trial; best so far 0.617 at trial 6">
+              <line class="grid" x1="40" y1="20" x2="750" y2="20"/><line class="grid" x1="40" y1="95" x2="750" y2="95"/><line class="grid" x1="40" y1="170" x2="750" y2="170"/>
+              <text class="axis" x="4" y="24">0.65</text><text class="axis" x="4" y="99">0.50</text><text class="axis" x="4" y="174">0.35</text>
+              <text class="axis" x="54" y="186">1</text><text class="axis" x="194" y="186">5</text><text class="axis" x="364" y="186">10</text><text class="axis" x="539" y="186">15</text><text class="axis" x="714" y="186">20</text>
+              <polyline class="best" points="57.5,109.5 92.5,109.5 92.5,53.5 127.5,53.5 127.5,46 232.5,46 232.5,36.5 302.5,36.5"/>
+              <circle class="dot" cx="57.5" cy="109.5" r="4.5"/><circle class="dot" cx="92.5" cy="53.5" r="4.5"/><circle class="dot" cx="127.5" cy="46" r="4.5"/><circle class="dot" cx="162.5" cy="89" r="4.5"/><circle class="dot" cx="197.5" cy="67" r="4.5"/><circle class="dot" cx="232.5" cy="36.5" r="5.5"/>
+              <circle class="hollow" cx="267.5" cy="144" r="4.5"/>
+              <path class="fail" d="M298 165.5l9 9M307 165.5l-9 9"/>
+              <text class="axis" x="242" y="32" style="fill:var(--text-secondary)">0.617 · trial 6</text>
+            </svg>
+            <div class="legend2"><span><i></i>complete</span><span><i class="h"></i>pruned, at its last value</span><span><span class="x">✕</span>failed, not run</span><span><i class="l"></i>best so far</span><span class="muted">Trial 9 is running and appears when it ends.</span></div>
+          </div></section>
+        <section class="card"><header><span class="n" style="position:static;display:inline-block;margin-right:2px">3</span><h2>Best so far</h2><span class="badge best">best · trial 6</span></header>
+          <div class="b">
+            <div class="kv2"><span>val_accuracy</span><span>0.617</span><span>learning_rate</span><span>0.0021</span><span>batch_size</span><span>128</span><span>weight_decay</span><span>3.1e-5</span><span>epochs <span class="muted">(fixed)</span></span><span>10</span><span>job</span><span>job_0067 · 1:05</span></div>
+            <p class="note2">Its weights are kept until a better trial completes; the others are deleted as the study runs (ADR-0018 rule 7).</p>
+            <button class="btn sm"><svg class="i"><use href="#i-play"/></svg>Start a run from this configuration</button>
+          </div></section>
+      </div>
+      <section class="card"><header><span class="n" style="position:static;display:inline-block;margin-right:2px">4</span><h2>Trials</h2><span class="req">HPO-1.3</span><span style="font-size:var(--fs-12);color:var(--text-secondary)">9 started · 6 complete · 1 pruned · 1 failed · 1 running</span><span class="spacer"></span><span class="select">State: all<svg class="i"><use href="#i-down"/></svg></span></header>
+        <table class="t dense">
+          <thead><tr><th aria-sort="descending"># <svg class="i"><use href="#i-sort"/></svg></th><th>State</th><th class="r">val_accuracy</th><th class="r">learning_rate</th><th class="r">batch_size</th><th class="r">weight_decay</th><th class="r">Epochs</th><th class="r">Duration</th><th>Job</th></tr></thead>
+          <tbody>
+          <tr><td class="id">9</td><td><span class="pill running"><span class="pulse"></span>running</span></td><td class="r">0.548 <span class="muted">e4</span></td><td class="p">0.0034</td><td class="p">256</td><td class="p">1.2e-4</td><td class="p">4 / 10</td><td class="r">0:31</td><td class="id">job_0069</td></tr>
+          <tr><td class="id">8</td><td><span class="pill failed"><svg class="i"><use href="#i-alert"/></svg>failed</span><span class="why mono">over_vram · not run</span></td><td class="r muted">–</td><td class="p">0.0410</td><td class="p">2048</td><td class="p">8.8e-3</td><td class="p">–</td><td class="r">0:00</td><td class="muted">–</td></tr>
+          <tr class="is-hover"><td class="id">7</td><td><span class="pill pruned"><svg class="i"><use href="#i-ban"/></svg>pruned</span><span class="why">at epoch 3 · median</span></td><td class="r">0.402</td><td class="p">0.0712</td><td class="p">64</td><td class="p">2.0e-6</td><td class="p">3 / 10</td><td class="r">0:22</td><td class="id">job_0068</td></tr>
+          <tr><td class="id">6</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>complete</span> <span class="badge best">best</span></td><td class="r"><b>0.617</b></td><td class="p">0.0021</td><td class="p">128</td><td class="p">3.1e-5</td><td class="p">10 / 10</td><td class="r">1:05</td><td class="id">job_0067</td></tr>
+          <tr><td class="id">5</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>complete</span></td><td class="r">0.556</td><td class="p">0.0011</td><td class="p">64</td><td class="p">6.4e-4</td><td class="p">10 / 10</td><td class="r">1:19</td><td class="id">job_0066</td></tr>
+          <tr><td class="id">4</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>complete</span></td><td class="r">0.512</td><td class="p">0.0007</td><td class="p">256</td><td class="p">1.1e-3</td><td class="p">10 / 10</td><td class="r">0:58</td><td class="id">job_0065</td></tr>
+          <tr><td class="id">3</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>complete</span></td><td class="r">0.598</td><td class="p">0.0048</td><td class="p">128</td><td class="p">2.7e-6</td><td class="p">10 / 10</td><td class="r">1:04</td><td class="id">job_0064</td></tr>
+          </tbody>
+        </table></section>
+      <div class="sgrid3" style="grid-template-columns:1fr 1fr">
+        <section class="card"><header><span class="n" style="position:static;display:inline-block;margin-right:2px">5</span><h2>Parameter importance</h2><span class="req">HPO-1.5</span></header><div class="b"><div class="placeholder"><svg class="i"><use href="#i-clock"/></svg><span>Computed when the study closes, from its complete trials.</span></div></div></section>
+        <section class="card"><header><span class="n" style="position:static;display:inline-block;margin-right:2px">6</span><h2>Test evaluation</h2><span class="req">HPO-1.4</span></header><div class="b"><div class="placeholder"><svg class="i"><use href="#i-clock"/></svg><span>The test split is used once, on the best configuration, after the last trial.</span></div></div></section>
+      </div>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>21%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>4.6</b><small>/ 9.7 GB</small></span><span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>91%</b></span><span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>1.1</b><small>/ 6.0 GB</small></span><span class="m" style="--res:var(--res-temp)"><i class="sq"></i>GPU <b>66 °C</b><small>· 38 W</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Header</td><td>Model and data, state, kind; both limits as progress (time not counting pauses); objective, sampler, pruner, the study's job; Pause, Resume, Cancel</td><td><span class="mono">GET /studies/{id}</span>; <span class="mono">POST /jobs/{job}/pause</span>, <span class="mono">/resume</span>, <span class="mono">/cancel</span></td><td>on the study job's events</td></tr>
+<tr><td><span class="n">2</span></td><td>Optimisation history</td><td>Each trial's value; the best so far; pruned and failed trials marked; Chart or Table</td><td><span class="mono">GET /studies/{id}/trials</span></td><td>when a trial ends</td></tr>
+<tr><td><span class="n">3</span></td><td>Best so far</td><td>The best trial's value, parameters, fixed fields and job; <i>Start a run from this configuration</i></td><td><span class="mono">GET /studies/{id}</span>; <span class="mono">GET /studies/{id}/best-config</span> prefills SCR-09</td><td>when a trial ends</td></tr>
+<tr><td><span class="n">4</span></td><td>Trials</td><td>Number, state in words (pruned: the step and the reason; failed: the code), value, each tuned parameter, epochs or folds reached, duration, job; sortable, virtualised; a row opens the trial drawer (C)</td><td><span class="mono">GET /studies/{id}/trials</span></td><td>per trial; the running row per epoch</td></tr>
+<tr><td><span class="n">5</span></td><td>Parameter importance</td><td>A placeholder until the study closes (B shows it filled)</td><td><span class="mono">GET /studies/{id}</span>, <span class="mono">importance</span></td><td>at the end</td></tr>
+<tr><td><span class="n">6</span></td><td>Test evaluation</td><td>A placeholder until the single test evaluation (B)</td><td><span class="mono">GET /studies/{id}</span>, <span class="mono">test_metrics</span></td><td>at the end</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame compact" style="height:330px">
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:var(--sp-3);padding:var(--sp-4)">
+    <section class="card"><header><h2>Optimisation history</h2></header><div class="b" style="gap:var(--sp-2)">
+      <svg class="hist" viewBox="0 0 760 190" style="height:150px" aria-hidden="true">
+        <line class="grid" x1="40" y1="20" x2="750" y2="20"/><line class="grid" x1="40" y1="95" x2="750" y2="95"/><line class="grid" x1="40" y1="170" x2="750" y2="170"/>
+        <text class="axis" x="4" y="24">0.65</text><text class="axis" x="4" y="99">0.50</text><text class="axis" x="4" y="174">0.35</text>
+        <polyline class="best" points="57.5,109.5 92.5,109.5 92.5,53.5 127.5,53.5 127.5,46 232.5,46 232.5,36.5 302.5,36.5"/>
+        <circle class="dot" cx="57.5" cy="109.5" r="4.5"/><circle class="dot" cx="92.5" cy="53.5" r="4.5"/><circle class="dot" cx="127.5" cy="46" r="4.5"/><circle class="dot" cx="162.5" cy="89" r="4.5"/><circle class="dot" cx="197.5" cy="67" r="4.5"/><circle class="dot" cx="232.5" cy="36.5" r="5.5"/><circle class="hollow" cx="267.5" cy="144" r="4.5"/><path class="fail" d="M298 165.5l9 9M307 165.5l-9 9"/>
+      </svg>
+      <div class="legend2"><span><i></i>complete</span><span><i class="h"></i>pruned</span><span><span class="x">✕</span>failed</span><span><i class="l"></i>best so far</span></div></div></section>
+    <section class="card"><header><h2>Trials</h2></header><div class="b">
+      <span><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>complete</span> <span class="badge best">best</span></span>
+      <span><span class="pill pruned"><svg class="i"><use href="#i-ban"/></svg>pruned</span> <span class="muted">at epoch 3 · median</span></span>
+      <span><span class="pill failed"><svg class="i"><use href="#i-alert"/></svg>failed</span> <span class="muted mono">over_vram</span></span>
+      <span><span class="pill running"><span class="pulse"></span>running</span></span></div></section>
+  </div>
+</div>
+</div>
+
+<!-- ===================================================================== B -->
+<h2>B · A classical study, finished: importance and the single test evaluation</h2>
+<div class="frame" style="height:700px">
+  <div class="shell">
+    <nav class="side" aria-label="Main"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Data</div><a class="nav"><svg class="i"><use href="#i-db"/></svg>Datasets</a><div class="grp">Jobs</div><a class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs</a><div class="grp">Models</div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models</a></nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Study <span class="mono">st_9b02e5f1c7a8</span></b></div><span class="spacer"></span><span class="jobind idle"><svg class="i"><use href="#i-check"/></svg>Idle · last <span class="mono">job_0071</span> completed</span></header>
+    <main class="content">
+      <div class="phead"><h1>random_forest · breast-cancer</h1><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>completed</span><span class="badge">classical · trials in one job · 5-fold CV</span><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-play"/></svg>Start a run from the best configuration</button><button class="btn sm primary">Open the best model<svg class="i"><use href="#i-chevron"/></svg></button></div>
+      <div class="limits"><span>Objective <b>cv_accuracy</b> ↑</span><span>Trials <b>50</b> of <b>50</b> · <span style="color:var(--text-primary)">the trial limit was reached first</span></span><span>Time <b>2:41</b> of <b>10:00</b></span><span class="muted">44 complete · 6 pruned · study job <span class="mono">job_0071</span></span></div>
+      <div class="sgrid3">
+        <section class="card"><header><h2>Best configuration</h2><span class="badge best">best · trial 37</span></header><div class="b">
+          <div class="kv2"><span>cv_accuracy, 5 folds</span><span>0.967 ± 0.012</span><span>val_accuracy, refit on train</span><span>0.965</span><span>n_estimators</span><span>310</span><span>max_depth</span><span>9</span><span>min_samples_leaf</span><span>2</span><span>max_features</span><span>sqrt</span></div></div></section>
+        <section class="card"><header><span class="n" style="position:static;display:inline-block;margin-right:2px">5</span><h2>Parameter importance</h2><span class="spacer"></span><span class="group-btns" role="group" aria-label="View"><button class="btn sm" aria-pressed="true">Bars</button><button class="btn sm">Table</button></span></header><div class="b">
+          <div class="imp" role="img" aria-label="Importance: max_features 0.41, min_samples_leaf 0.27, max_depth 0.21, n_estimators 0.11">
+            <span>max_features</span><span class="bar"><i style="--p:41%"></i></span><span>0.41</span>
+            <span>min_samples_leaf</span><span class="bar"><i style="--p:27%"></i></span><span>0.27</span>
+            <span>max_depth</span><span class="bar"><i style="--p:21%"></i></span><span>0.21</span>
+            <span>n_estimators</span><span class="bar"><i style="--p:11%"></i></span><span>0.11</span></div>
+          <p class="note2">fANOVA over the 44 complete trials; the shares sum to 1. They say what mattered within this search space, not in general.</p></div></section>
+        <section class="card"><header><span class="n" style="position:static;display:inline-block;margin-right:2px">6</span><h2>Test evaluation</h2><span class="badge info">computed once</span></header><div class="b once">
+          <div style="display:flex;gap:var(--sp-6)"><div><div class="big">0.956</div><span>accuracy</span></div><div><div class="big">0.952</div><span>macro F1</span></div><div><div class="big">57</div><span>test rows</span></div></div>
+          <p class="note2">2026-11-19 10:14:07 · on <span class="mono">mv_51d08c3e9f20</span>, registered from trial 37 · stage <span class="mono">test_eval</span> of <span class="mono">job_0071</span>, attempt 1. The confusion matrix and per-class figures are on the version's page (SCR-11).</p></div></section>
+      </div>
+      <section class="card"><header><h2>Trials</h2><span style="font-size:var(--fs-12);color:var(--text-secondary)">sorted by value</span></header>
+        <table class="t dense">
+          <thead><tr><th>#</th><th>State</th><th class="r" aria-sort="descending">cv_accuracy <svg class="i"><use href="#i-sort"/></svg></th><th class="r">n_estimators</th><th class="r">max_depth</th><th class="r">min_samples_leaf</th><th class="r">max_features</th><th class="r">Folds</th><th class="r">Duration</th></tr></thead>
+          <tbody>
+          <tr><td class="id">37</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>complete</span> <span class="badge best">best</span></td><td class="r"><b>0.967</b></td><td class="p">310</td><td class="p">9</td><td class="p">2</td><td class="p">sqrt</td><td class="p">5 / 5</td><td class="r">3.1 s</td></tr>
+          <tr><td class="id">41</td><td><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>complete</span></td><td class="r">0.965</td><td class="p">280</td><td class="p">11</td><td class="p">2</td><td class="p">sqrt</td><td class="p">5 / 5</td><td class="r">2.8 s</td></tr>
+          <tr><td class="id">12</td><td><span class="pill pruned"><svg class="i"><use href="#i-ban"/></svg>pruned</span><span class="why">at fold 2 · median</span></td><td class="r">0.912</td><td class="p">60</td><td class="p">3</td><td class="p">17</td><td class="p">1.0</td><td class="p">2 / 5</td><td class="r">0.4 s</td></tr>
+          </tbody></table></section>
+    </main>
+    <footer class="status"><span class="m" style="--res:var(--res-cpu)"><i class="sq"></i>CPU <b>2%</b></span><span class="m" style="--res:var(--res-ram)"><i class="sq"></i>RAM <b>3.0</b><small>/ 9.7 GB</small></span><span class="m" style="--res:var(--res-gpu)"><i class="sq"></i>GPU <b>0%</b></span><span class="m" style="--res:var(--res-vram)"><i class="sq"></i>VRAM <b>0.3</b><small>/ 6.0 GB</small></span><span class="m conn"><span class="live"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>live</span>· 1 s</span></footer>
+  </div>
+</div>
+<p class="cap">A classical study has no job column, because its trials run inside one job, and it counts folds where a network counts epochs. Its history chart is the same as in A and is left out here. The State menu filters the table by state.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · A trial's drawer: why it was pruned</h2>
+<div class="frame compact" style="height:470px">
+  <div class="drawer wide" role="dialog" aria-label="Trial 7">
+    <header><span class="mono">Trial 7</span><span class="pill pruned"><svg class="i"><use href="#i-ban"/></svg>pruned</span><span style="font-weight:var(--fw-regular);font-size:var(--fs-12);color:var(--text-secondary)">at epoch 3 · median</span><span class="spacer"></span><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="body">
+      <svg class="hist" viewBox="0 0 480 150" style="height:160px" role="img" aria-label="Trial 7's val_accuracy per epoch against the median of trials 1 to 6">
+        <line class="grid" x1="40" y1="20" x2="470" y2="20"/><line class="grid" x1="40" y1="75" x2="470" y2="75"/><line class="grid" x1="40" y1="130" x2="470" y2="130"/>
+        <text class="axis" x="4" y="24">0.65</text><text class="axis" x="4" y="79">0.43</text><text class="axis" x="4" y="134">0.20</text>
+        <text class="axis" x="37" y="146">1</text><text class="axis" x="217" y="146">5</text><text class="axis" x="436" y="146">10</text>
+        <polyline class="med" points="40,103.1 85,76.2 130,61.6 175,51.8 220,44.4 265,39.6 310,37.1 355,34.7 400,33.5 445,32.2"/>
+        <polyline class="trial" points="40,108 85,88.4 130,80.6"/>
+        <circle class="hollow" cx="130" cy="80.6" r="4.5"/>
+        <text class="axis" x="140" y="96" style="fill:var(--text-secondary)">stopped: 0.402 &lt; median 0.480</text>
+      </svg>
+      <div class="legend2"><span><i class="l" style="background:var(--cat-1)"></i>trial 7</span><span><i class="m"></i>median of trials 1–6 at each epoch</span></div>
+      <div class="kv2"><span>learning_rate</span><span>0.0712</span><span>batch_size</span><span>64</span><span>weight_decay</span><span>2.0e-6</span><span>job</span><span>job_0068 · 0:22</span></div>
+      <p class="note2" style="color:var(--text-secondary)">The pruner compared epoch 3's val_accuracy with the median of earlier trials at epoch 3, and stopped the trial. Its weights were deleted (0.6 MB freed, in the study's activity log).</p>
+      <div><button class="btn sm"><svg class="i"><use href="#i-report"/></svg>Open the trial's job (SCR-04)</button></div>
+    </div>
+  </div>
+</div>
+<p class="cap">Opened from a row with a click or <kbd>Enter</kbd>; <kbd>Esc</kbd> closes it and returns focus to the row. A failed trial's drawer shows its code and reason in place of the chart.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Cancel asks first</h2>
+<div class="frame compact" style="height:300px">
+  <div class="scrim">
+    <div class="modal" role="alertdialog" aria-labelledby="cx-h">
+      <header id="cx-h"><svg class="i"><use href="#i-alert"/></svg>Cancel this study?</header>
+      <div>Trial 9 (<span class="mono">job_0069</span>) stops now. <b>Nothing is registered and the test split is not used.</b> The 8 finished trials stay readable here; their kept weights (1.2 MB) are deleted.</div>
+      <footer><button class="btn">Keep running</button><button class="btn danger"><svg class="i"><use href="#i-x"/></svg>Cancel study</button></footer>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================== E -->
+<h2>E · States: no finished trial, loading, error, cancelled, test evaluation running and retrying</h2>
+<div class="frame" style="height:460px">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-3);padding:var(--sp-4)">
+    <div class="state"><svg class="i"><use href="#i-clock"/></svg><b>No trial has finished yet.</b><p>Trial 1 is running as <span class="mono">job_0062</span>, epoch 2 of 10.</p><button class="btn sm"><svg class="i"><use href="#i-report"/></svg>Open trial 1's job</button></div>
+    <div class="state" style="border-style:solid"><span class="skeleton" style="width:240px;height:18px"></span><span class="skeleton" style="width:280px;height:64px"></span><span class="skeleton" style="width:280px;height:40px"></span></div>
+    <div class="state err" role="alert"><svg class="i"><use href="#i-alert"/></svg><b>The study could not be loaded</b><p><span class="mono">not_found</span> · No study <span class="mono">st_000000000000</span>. Check the link, or find the study's job on Jobs.</p><button class="btn sm">Go to Jobs</button></div>
+    <section class="card"><header><h2>small_cnn · cifar10</h2><span class="pill cancelled"><svg class="i"><use href="#i-x"/></svg>cancelled</span></header><div class="b"><span>Cancelled after trial 5 of 20, by you, 2026-11-19 09:02. Nothing was registered and the test split was not used. Trial weights were deleted (1.2 MB freed).</span><div><button class="btn sm"><svg class="i"><use href="#i-play"/></svg>Start a run from the best configuration</button></div></div></section>
+    <section class="card"><header><h2>Test evaluation</h2><span class="pill running"><span class="pulse"></span>running</span></header><div class="b"><span>The study closed at its time limit after 14 trials. The best trial is registered as <span class="mono">mv_8e2a10c4d6b7</span>, and its test evaluation is running on the GPU (<span class="mono">job_0061</span>, stage <span class="mono">test_eval</span>).</span></div></section>
+    <section class="card"><header><h2>Test evaluation</h2><span class="badge warn">retrying</span></header><div class="b"><span>Attempt 1 stopped before it wrote a result (the worker restarted). Attempt 2 uses the same model and the same data, so it gives the same figures. The number of attempts is kept with the result.</span></div></section>
+  </div>
+</div>
+<p class="cap">A paused study looks like A with a <i>paused</i> pill and <i>Resume</i>; a thermal pause says so, as on SCR-04. If every trial failed, the study closes with "No trial completed: nothing to register or evaluate", and the failures stay readable in the table.</p>
+
+<!-- ===================================================================== F -->
+<h2>F · 1024 px</h2>
+<div class="frame compact" style="height:440px">
+  <div class="shell rail">
+    <nav class="side" aria-label="Main"><div class="brand" style="padding:0 var(--sp-1)"><svg class="i"><use href="#i-layers"/></svg></div><a class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg></a></nav>
+    <header class="top"><div class="crumbs">Models <svg class="i" style="width:12px;height:12px"><use href="#i-chevron"/></svg> <b>Study <span class="mono">st_4c1e9a07b2d3</span></b></div></header>
+    <main class="content">
+      <div class="phead"><h1 style="font-size:var(--fs-16)">small_cnn · cifar10</h1><span class="pill running"><span class="pulse"></span>running</span><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-pause"/></svg>Pause</button><button class="btn sm danger">Cancel…</button></div>
+      <div class="limits"><span>Trials <b>9</b>/<b>20</b></span><span>Time <b>10:41</b>/<b>60:00</b></span><span>Best <b>0.617</b> <span class="badge best">trial 6</span></span></div>
+      <section class="card"><header><h2>Optimisation history</h2></header><div class="b"><span class="skeleton" style="width:100%;height:90px;animation:none"></span></div></section>
+      <section class="card"><header><h2>Trials</h2></header><div class="b"><span>Number and state stay pinned; the parameter columns scroll sideways inside the table, never the page.</span></div></section>
+    </main>
+    <footer class="status"></footer>
+  </div>
+</div>
+<p class="cap">At 1024 px the best configuration folds into the header line (its card opens from the badge), the history takes the full width, and the table scrolls sideways within itself.</p>
+
+<h2>Accessibility notes</h2>
+<div class="changes">
+<ul>
+<li>Trial states are never colour alone: each pill has an icon and a word, and pruned and failed rows say why in text.</li>
+<li>Each chart has a text alternative and a <i>Table</i> view with the same numbers. The legend names every mark: hollow, cross, step line.</li>
+<li>The trial count, the time used and the running row's value are announced politely (<span class="mono">aria-live</span>) when a trial ends, not at every epoch.</li>
+<li>The table is keyboard-navigable: arrows move between rows, <kbd>Enter</kbd> opens the drawer, and <kbd>Esc</kbd> closes it and returns focus to the row.</li>
+<li>Cancel is an alert dialog whose default focus is <i>Keep running</i>.</li>
+</ul>
+</div>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body></html>

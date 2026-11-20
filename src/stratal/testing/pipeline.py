@@ -9,9 +9,6 @@ too) and calls :func:`restore_real_units` afterwards.
 
 from typing import Any
 
-from fastapi.testclient import TestClient
-
-from stratal.api.app import create_app
 from stratal.api.jobs import get_enqueue
 from stratal.data.clean import OWNER_UNITS as DEDUPE_UNITS
 from stratal.data.clean import CleanConfig
@@ -63,6 +60,12 @@ class PipelineApi:
     def __init__(self, runner: Runner) -> None:
         self.runner = runner
         self.queued: list[job_service.Enqueue] = []
+        # Imported here: the worker images have no httpx2, and the fake_units fixture
+        # imports this module there too (check.ps1, "integration (ml)").
+        from fastapi.testclient import TestClient
+
+        from stratal.api.app import create_app
+
         app = create_app()
         app.dependency_overrides[get_enqueue] = lambda: self.queued.append
         self.client = TestClient(app)

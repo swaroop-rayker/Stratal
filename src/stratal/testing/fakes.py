@@ -115,6 +115,9 @@ class ListSink:
         reason: str | None = None,
         suggested_action: str | None = None,
     ) -> None:
+        if level == "WARN" and not (reason and suggested_action):
+            # The runtime's Event refuses this (MON-1.3); fail here too, not only on the stack.
+            raise ValueError(f"a WARN event needs a reason and a suggested_action: {message!r}")
         self.events.append(
             {
                 "stage": stage,

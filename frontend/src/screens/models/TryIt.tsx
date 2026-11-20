@@ -109,16 +109,16 @@ export function TryIt({ versionId, datasetVersion }: { versionId: string | null;
                 <div style={{ display: "flex", gap: "var(--sp-3)", alignItems: "center" }}>
                   {preview ? <img className="thumb" src={preview} alt="the image sent" /> : null}
                   <div className="pred" style={{ flex: 1 }}>
-                    {result.top.map((t, i) =>
+                    {(result.top ?? []).map((t, i) =>
                       i === 0 ? (
                         <span key={t.class} style={{ display: "contents" }}>
                           <b>{t.class}</b>
-                          <b>{t.probability.toFixed(2)}</b>
+                          <b>{t.probability === null ? "–" : t.probability.toFixed(2)}</b>
                         </span>
                       ) : (
                         <span key={t.class} style={{ display: "contents" }}>
                           <span>{t.class}</span>
-                          <span>{t.probability.toFixed(2)}</span>
+                          <span>{t.probability === null ? "–" : t.probability.toFixed(2)}</span>
                         </span>
                       ),
                     )}

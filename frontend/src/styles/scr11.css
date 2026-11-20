@@ -74,3 +74,38 @@
 /* live: in a selected row, muted text uses text-secondary, as SCR-02's selected row does
    (owner's decision at SCR-02's G3): "deleted" measured 4.45:1 there in dark. */
 .scr11 .t tr[aria-selected=true] .weights-gone, .scr11 .t tr[aria-selected=true] td[style*="text-muted"] { color: var(--text-secondary) !important; }
+/* Task metrics (M10, EVAL-1.2), copied from docs/design/screens/SCR-11eval_v1.html (G2 approved). */
+.scr11 .tm { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); border: var(--bw) solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+.scr11 .tm > .h { display: flex; align-items: center; gap: var(--sp-2); }
+.scr11 .tm > .h h3 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); color: var(--text-primary); }
+.scr11 .tm .spacer { flex: 1; }
+.scr11 .tm .sub { font-size: var(--fs-11); color: var(--text-secondary); }
+.scr11 .tm .t td.r, .scr11 .tm .t th.r { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.scr11 .tm .t td.dimrow { color: var(--text-secondary); }
+.scr11 .tm .note2 { margin: 0; font-size: var(--fs-11); color: var(--text-secondary); }
+.scr11 .tm .btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.scr11 .tm .group-btns { display: inline-flex; }
+.scr11 .tm .group-btns .btn { border-radius: 0; margin-left: -1px; }
+.scr11 .tm .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; }
+.scr11 .tm .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.scr11 .tm > .btn { align-self: flex-start; }
+.scr11 .f1 { display: grid; grid-template-columns: 92px 1fr 40px; gap: 3px var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.scr11 .f1.scroll { max-height: 180px; overflow: auto; }
+.scr11 .f1 > span:nth-child(3n+1) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scr11 .f1 .bar { height: 8px; border-radius: var(--r-xs); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.scr11 .f1 .bar > i { display: block; height: 100%; width: var(--p); background: var(--cat-1); }
+.scr11 .f1 > span:nth-child(3n) { text-align: right; color: var(--text-primary); }
+.scr11 .cm { display: grid; gap: 1px; font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; }
+.scr11 .cm .cm-row { display: contents; }
+.scr11 .cm span { height: 22px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+.scr11 .cm span.rh { justify-content: flex-start; overflow: hidden; white-space: nowrap; }
+.scr11 .cm span.ch { font-size: 10px; color: var(--text-muted); }
+.scr11 .cm span.v { background: color-mix(in srgb, var(--cat-1) var(--a), var(--surface)); color: var(--text-primary); cursor: default; }
+.scr11 .cm span.v.hi { font-weight: var(--fw-semibold); }
+.scr11 .cm span.v:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
+.scr11 .tip { align-self: flex-start; padding: 4px 8px; border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); font-size: var(--fs-11); color: var(--text-primary); box-shadow: var(--shadow-2); }
+.scr11 .conf { display: grid; grid-template-columns: 1fr 1fr 64px 64px; gap: 2px var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr11 .conf b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr11 .conf .r { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.badge.once { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+[data-theme="light"] .badge.once { color: color-mix(in srgb, var(--accent) 85%, var(--text-primary)); }

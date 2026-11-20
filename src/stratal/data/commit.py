@@ -52,8 +52,17 @@ def commit_version(
     config: Mapping[str, Any],
     derive: VersionDeriver,
     sink: EventSink,
+    metadata: Mapping[str, str] | None = None,
 ) -> VersionRecord:
-    """Persist ``rows`` as a new immutable version and return its record."""
+    """Persist ``rows`` as a new immutable version and return its record.
+
+    ``metadata`` adds ``stratal.*`` keys that describe the data, such as a
+    table's schema or a vocabulary (ADR-0019). They follow from the rows and the
+    config, so they are not part of the version's identity.
+    """
+    extra = dict(metadata or {})
+    if any(not key.startswith("stratal.") for key in extra):
+        raise ValueError(f"manifest metadata keys start with 'stratal.': {sorted(extra)}")
     staging = data_dir / "tmp" / f"manifest-{uuid.uuid4().hex}.parquet"
     try:
         sink.emit(stage=stage, substage="staging", message="Writing manifest")
@@ -61,6 +70,7 @@ def commit_version(
             staging,
             rows,
             metadata={
+                **extra,
                 "stratal.stage": stage,
                 "stratal.parent_version_id": parent_version_id or "",
             },

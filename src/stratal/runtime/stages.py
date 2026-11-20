@@ -19,12 +19,15 @@ from sqlalchemy.orm import Session
 
 from stratal.core.errors import StratalError, ValidationFailed
 from stratal.data import registry
-from stratal.data.clean import OWNER_UNITS, CleanConfig, DedupeUnits, run_clean
+from stratal.data.clean import OWNER_UNITS, CleanConfig, DedupeUnits, ExactGrouper, run_clean
 from stratal.data.commit import VersionRecord
-from stratal.data.ingest import LABELLED_IMAGES, IngestConfig, run_ingest
+from stratal.data.ingest import LABELLED_IMAGES, IngestConfig, config_dtype, run_ingest
 from stratal.data.preprocess import PreprocessConfig, run_preprocess
+from stratal.data.record_clean import CleanTableConfig, CleanTextConfig, run_clean_records
+from stratal.data.records import LABELLED_TEXT, TABULAR
 from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
 from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitUnits, run_split
+from stratal.data.tokenize import TokenizeConfig, run_tokenize
 from stratal.data.versioning import derive_version_identity
 from stratal.db.models import Dataset, EvalReport
 from stratal.eval.report import OWNER_STATS, EvaluateConfig, ReportStats, assemble_phase1_report
@@ -33,6 +36,7 @@ from stratal.label.filter_stage import FilterConfig, FilterRule, run_filter
 from stratal.label.filtering import filter_decisions
 from stratal.label.stage import OWNER_UNITS as LABEL_UNITS
 from stratal.label.stage import LabelConfig, LabelModels, LabelUnits, run_label
+from stratal.ml.params import ClassicalConfig
 from stratal.mon.events import MetricValue
 from stratal.runtime.context import JobContext
 from stratal.runtime.gpu_lease import gpu_lease
@@ -49,6 +53,10 @@ PIPELINE_ORDERS: dict[str, tuple[str, ...]] = {
     IMAGE_CAPTION: PIPELINE_ORDER,
     # No captions or CLIP scores: the labels come from class folders (ADR-0014 rule 3).
     LABELLED_IMAGES: ("ingest", "clean", "preprocess", "split"),
+    # Records, not files (ADR-0019): their own clean stages; text is tokenized after the split,
+    # so the vocabulary comes from train only.
+    TABULAR: ("ingest", "clean_table", "split"),
+    LABELLED_TEXT: ("ingest", "clean_text", "split", "tokenize"),
 }
 """Each dataset type's stages, in order (DATA-5.2)."""
 TYPE_DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
@@ -61,6 +69,13 @@ TYPE_DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
         "clean": {"phash_max_distance": 4},
         # The class is the source folder; there is no CLIP score to stratify on.
         "split": {"stratum_keys": ["source_folder"], "leakage_distance": 6},
+    },
+    # Tables and texts are stratified by class (or target quintile) and grouped by text group,
+    # not by image attributes or pHash (ADR-0019 rule 6).
+    TABULAR: {"split": {"stratum_keys": [], "leakage_distance": 0}},
+    LABELLED_TEXT: {
+        "ingest": {"text": {}},
+        "split": {"stratum_keys": [], "leakage_distance": 0},
     },
 }
 """Stage settings a dataset type changes from the stage's own defaults. A request overrides them."""
@@ -121,12 +136,21 @@ def registered() -> dict[str, StageDef]:
     return dict(_REGISTRY)
 
 
+MODALITIES: dict[str | None, str] = {TABULAR: "tabular", LABELLED_TEXT: "text"}
+"""A dataset's modality by type; anything else is images."""
+
+
+def modality_of(dtype: str | None) -> str:
+    return MODALITIES.get(dtype, "image")
+
+
 def _run_ingest(run: StageRun) -> StageResult:
     source: dict[str, Any] = run.spec.get("source") or {}
+    config = IngestConfig.model_validate(run.config)
     result = run_ingest(
         source=Path(str(source.get("path", ""))),
         data_dir=run.data_dir,
-        config=IngestConfig.model_validate(run.config),
+        config=config,
         derive=derive_version_identity,
         sink=run.ctx,
     )
@@ -136,7 +160,7 @@ def _run_ingest(run: StageRun) -> StageResult:
         dataset = registry.ensure_dataset(
             session,
             slug=str(run.spec["dataset"]),
-            modality="image",
+            modality=modality_of(config_dtype(config)),
             source_uri=str(source.get("path", "")),
         )
         registry.register_version(
@@ -290,6 +314,68 @@ def _run_preprocess(run: StageRun) -> StageResult:
 
 register(StageDef("clean", "cpu", CleanConfig, make_clean_runner(OWNER_UNITS)))
 register(StageDef("preprocess", "cpu", PreprocessConfig, _run_preprocess))
+
+
+def make_record_clean_runner(
+    stage: str, config_model: type[CleanTableConfig] | type[CleanTextConfig], exact: ExactGrouper
+) -> Callable[[StageRun], StageResult]:
+    """``clean_table`` or ``clean_text`` (DATA-2.4, ADR-0019). Tests pass a fake ``exact``."""
+
+    def _run(run: StageRun) -> StageResult:
+        def body(given: DerivedInput) -> DerivedOutput:
+            result = run_clean_records(
+                stage=stage,
+                parent_manifest=given.manifest,
+                parent_version_id=given.version_id,
+                data_dir=run.data_dir,
+                config=config_model.model_validate(given.config),
+                derive=derive_version_identity,
+                sink=run.ctx,
+                exact=exact,
+                checkpoint=run.ctx.raise_if_cancelled,
+            )
+            return DerivedOutput(result.record, 0, result.metrics)
+
+        return run_derived_stage(run, stage=stage, config_model=config_model, body=body)
+
+    return _run
+
+
+def _run_tokenize(run: StageRun) -> StageResult:
+    """Words to IDs for labelled text, the vocabulary from train only (ADR-0019 rules 8-11)."""
+
+    def body(given: DerivedInput) -> DerivedOutput:
+        result = run_tokenize(
+            parent_manifest=given.manifest,
+            parent_version_id=given.version_id,
+            data_dir=run.data_dir,
+            config=TokenizeConfig.model_validate(given.config),
+            derive=derive_version_identity,
+            sink=run.ctx,
+            checkpoint=run.ctx.raise_if_cancelled,
+        )
+        return DerivedOutput(result.record, 0, result.metrics)
+
+    return run_derived_stage(run, stage="tokenize", config_model=TokenizeConfig, body=body)
+
+
+register(
+    StageDef(
+        "clean_table",
+        "cpu",
+        CleanTableConfig,
+        make_record_clean_runner("clean_table", CleanTableConfig, OWNER_UNITS.exact),
+    )
+)
+register(
+    StageDef(
+        "clean_text",
+        "cpu",
+        CleanTextConfig,
+        make_record_clean_runner("clean_text", CleanTextConfig, OWNER_UNITS.exact),
+    )
+)
+register(StageDef("tokenize", "cpu", TokenizeConfig, _run_tokenize))
 
 
 def _owner_unit_missing(stage: str, exc: NotImplementedError) -> StratalError:
@@ -529,6 +615,53 @@ def _run_train(run: StageRun) -> StageResult:
 
 
 register(StageDef("train", "gpu", TrainConfig, _run_train))
+
+
+def _run_train_classical(run: StageRun) -> StageResult:
+    """A classical model's run (ML-1.1, ADR-0019 part D). scikit-learn loads only here."""
+    from stratal.ml import stage as classical_stage
+
+    return classical_stage.run_train_classical(run)
+
+
+register(StageDef("train_classical", "cpu", ClassicalConfig, _run_train_classical))
+
+
+class StudyStageConfig(BaseModel):
+    """The ``study`` stage's config: the study request as resolved, and its ``study_id``
+    (HPO-1.2, ADR-0018 rule 1). The study's own row holds what the stage reads."""
+
+    model_config = ConfigDict(extra="allow", frozen=True)
+
+    study_id: str | None = None
+
+
+def _run_study(run: StageRun) -> StageResult:
+    """An HPO study (ADR-0018). Optuna and scikit-learn load only here, in the worker."""
+    from stratal.hpo import runner
+
+    return runner.run_study(run)
+
+
+register(StageDef("study", "cpu", StudyStageConfig, _run_study))
+
+
+class StudyTestConfig(BaseModel):
+    """A deep-learning study's last stage: its best version on the test split, once
+    (HPO-1.4, ADR-0018 rule 8)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    study_id: str | None = None
+
+
+def _run_test_eval(run: StageRun) -> StageResult:
+    from stratal.train import stage as train_stage
+
+    return train_stage.run_test_eval(run)
+
+
+register(StageDef("test_eval", "gpu", StudyTestConfig, _run_test_eval))
 
 
 class RetentionConfig(BaseModel):

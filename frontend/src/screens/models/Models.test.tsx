@@ -127,7 +127,7 @@ describe("SCR-11", () => {
 
   test("test_REG_1_4_try_it_says_which_device_served_it", () => {
     expect(
-      servedText({ version_id: "mv_1", lineage_id: "ml_1", device: "cpu", fallback_reason: "job_0031/train holds the GPU", top: [], load_ms: null, total_ms: 38.4 }),
+      servedText({ version_id: "mv_1", lineage_id: "ml_1", device: "cpu", fallback_reason: "job_0031/train holds the GPU", task: "classification", top: [], load_ms: null, total_ms: 38.4 }),
     ).toBe("Served on the CPU: job_0031/train holds the GPU · 38 ms");
   });
 });

@@ -23,6 +23,7 @@ from stratal.db.models import (
     ResourceSample,
     ResourceSample1m,
 )
+from stratal.hpo.config import StudyRequest
 from stratal.mon.events import Event, Level
 from stratal.mon.store import insert_events
 from stratal.runtime import jobs as job_service
@@ -138,15 +139,18 @@ def _page(rows: list[EventRow], limit: int, *, tail: bool = False) -> Json:
 # -- jobs ----------------------------------------------------------------------
 
 
-JobRequest = Annotated[PipelineRequest | TrainRequest, Field(discriminator="kind")]
+JobRequest = Annotated[PipelineRequest | TrainRequest | StudyRequest, Field(discriminator="kind")]
 
 
 @router.post("/jobs", status_code=202, tags=["jobs"], response_model=schemas.Job)
 def create_job(request: JobRequest, session: Db, enqueue: Queue, bus: Redis) -> Json:
-    """Start a job: ``kind: pipeline``, or ``kind: train`` (M8, RUN-1.1)."""
+    """Start a job: ``kind: pipeline``, ``kind: train`` (M8, RUN-1.1) or ``kind: hpo_study``
+    (M10, HPO-1.1 to HPO-1.4)."""
     with session.begin():
         if isinstance(request, TrainRequest):
             job, first = job_service.create_train_job(session, request)
+        elif isinstance(request, StudyRequest):
+            job, first = job_service.create_study_job(session, request)
         else:
             job, first = job_service.create_pipeline_job(session, request)
         view = job_service.job_view(session, job)
@@ -212,9 +216,10 @@ def cancel_job(job_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
     with session.begin():
         job, running = job_service.request_cancel(session, job_id)
         cleanup = None if running else job_service.retention_after_run(session, job)
+        targets = job_service.signal_targets(session, job, running=running)
         view = job_service.job_view(session, job)
-    if running:
-        bus.set_control(job_id, "cancel")  # fast path; jobs.desired_state is the durable copy
+    for target in targets:  # fast path; jobs.desired_state is the durable copy
+        bus.set_control(target, "cancel")
     job_service.after_commit(bus, job_id)
     if cleanup is not None:
         enqueue(cleanup)
@@ -228,8 +233,10 @@ def pause_job(job_id: str, session: Db, bus: Redis) -> Json:
     running, or is being cancelled."""
     with session.begin():
         job = job_service.request_pause(session, job_id)
+        targets = job_service.signal_targets(session, job, running=job.state == "running")
         view = job_service.job_view(session, job)
-    bus.set_control(job_id, "pause")  # fast path; jobs.desired_state is the durable copy
+    for target in targets:  # fast path; jobs.desired_state is the durable copy
+        bus.set_control(target, "pause")
     job_service.after_commit(bus, job_id)
     return view
 

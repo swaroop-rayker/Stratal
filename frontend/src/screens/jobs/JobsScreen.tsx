@@ -16,7 +16,7 @@ import { bytes, clock, duration, errorDetail, stagePercent } from "../../lib/for
 import { useNow } from "../../lib/useNow";
 import { useCrumbs, useShortcuts } from "../../shell/hooks";
 import { StartPipelineDrawer } from "../datasets/StartPipelineDrawer";
-import { failedStage, jobSeconds, runningStage, suggestedBatch, trainingModel, trainingPosition, valAccuracy, waitingFor } from "../job/jobs";
+import { failedStage, isTraining, jobSeconds, runningStage, suggestedBatch, trainingModel, trainingPosition, valAccuracy, waitingFor } from "../job/jobs";
 
 type JobList = Schemas["JobList"];
 type View = "all" | "active" | "failed" | "completed" | "cancelled";
@@ -110,9 +110,33 @@ interface Context {
   resumeBelow: number | null;
 }
 
+/** An HPO study's job (M10): its study and how many trials have started, from its study
+ * stage's progress (the stage waits between steps while a trial runs). */
+function StudyNow({ job, id }: { job: Job; id: string }) {
+  const stage = job.stages[0];
+  const p = stagePercent(stage?.step, stage?.total);
+  const link = <Link className="mono" to={`/studies/${id}`} onClick={(event) => { event.stopPropagation(); }}>{id}</Link>;
+  if (job.state === "completed") return <span className="now"><Icon name="chevron" />{link}</span>;
+  return (
+    <span className="now">
+      {link}
+      {stage?.step != null && stage.total ? (
+        <>
+          <span className="stg"> · trial {String(stage.step)}/{String(stage.total)}</span>
+          {p !== null ? <Progress value={p} state={job.state} /> : null}
+        </>
+      ) : null}
+      {stage?.status === "waiting" ? <span className="why"> · waiting for its trial</span> : null}
+    </span>
+  );
+}
+
 function Now({ job, context }: { job: Job; context: Context }) {
+  if (job.kind === "hpo_study" && job.study && (job.state === "running" || job.state === "completed")) {
+    return <StudyNow job={job} id={job.study.id} />;
+  }
   const stage = runningStage(job);
-  const training = job.kind === "train";
+  const training = isTraining(job);
   const position = training ? trainingPosition(stage) : null;
   switch (job.state) {
     case "running": {
@@ -127,6 +151,7 @@ function Now({ job, context }: { job: Job; context: Context }) {
       return (
         <span className="now">
           <span className="stg">
+            {job.study?.trial != null ? `trial ${String(job.study.trial)} · ` : ""}
             {position?.epoch && position.epochs ? `epoch ${String(position.epoch)}/${String(position.epochs)}` : (stage?.name ?? "starting")}
           </span>
           {p !== null ? (
@@ -202,6 +227,18 @@ function Now({ job, context }: { job: Job; context: Context }) {
           <span className="now">
             <Icon name="report" />
             report for <span className="mono">{version ?? "–"}</span>
+          </span>
+        );
+      }
+      if (training && job.study?.trial != null) {
+        // An HPO trial (M10): which trial, and how it ended; its weights go to its study.
+        const metrics = (job.stages[0]?.metrics ?? {}) as { pruned_at_step?: number; prune_reason?: string };
+        const accuracy = valAccuracy(job);
+        return (
+          <span className="now why">
+            trial {String(job.study.trial)} of{" "}
+            <Link className="mono" to={`/studies/${job.study.id}`} onClick={(event) => { event.stopPropagation(); }}>{job.study.id}</Link> ·{" "}
+            {metrics.prune_reason ? <>pruned at epoch {String(metrics.pruned_at_step ?? "?")} · {metrics.prune_reason}</> : accuracy !== null ? <>val acc <b>{(100 * accuracy).toFixed(1)}%</b></> : "complete"}
           </span>
         );
       }
@@ -345,7 +382,7 @@ function PausedToast({ job, onResume, onClose }: { job: Job; onResume: () => voi
     return () => { window.clearTimeout(timer); };
   }, [onClose]);
   const stage = runningStage(job);
-  const position = job.kind === "train" ? trainingPosition(stage) : null;
+  const position = isTraining(job) ? trainingPosition(stage) : null;
   const where = position?.epoch
     ? `at epoch ${String(position.epoch)}${position.step ? `, step ${String(position.step)}` : ""}`
     : `in ${stage?.name ?? "its stage"}`;
@@ -359,7 +396,7 @@ function PausedToast({ job, onResume, onClose }: { job: Job; onResume: () => voi
             {job.pause_reason === "thermal" ? " · the GPU is too hot" : ""}
           </b>
           <span>
-            {job.kind === "train"
+            {isTraining(job)
               ? "The checkpoint is kept until you resume or cancel."
               : "Its finished work is kept; resuming continues from there."}
           </span>

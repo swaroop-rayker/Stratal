@@ -62,10 +62,10 @@ CMD ["python", "-c", "import torch; print(torch.cuda.is_available())"]
 FROM base AS worker-cpu
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --extra ml-cpu --no-install-project
+    uv sync --frozen --no-dev --group test --extra ml-cpu --no-install-project
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --extra ml-cpu
+    uv sync --frozen --no-dev --group test --extra ml-cpu
 CMD ["celery", "-A", "stratal.runtime.celery_app", "worker", "-Q", "cpu", "-n", "cpu@%h"]

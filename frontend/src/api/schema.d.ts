@@ -78,7 +78,8 @@ export interface paths {
         put?: never;
         /**
          * Create Job
-         * @description Start a job: ``kind: pipeline``, or ``kind: train`` (M8, RUN-1.1).
+         * @description Start a job: ``kind: pipeline``, ``kind: train`` (M8, RUN-1.1) or ``kind: hpo_study``
+         *     (M10, HPO-1.1 to HPO-1.4).
          */
         post: operations["create_job_api_v1_jobs_post"];
         delete?: never;
@@ -881,7 +882,9 @@ export interface paths {
          * Predict
          * @description A prediction from a registered version (REG-1.4). Runs on the GPU when it is free;
          *     while a job holds it, a small model runs on the CPU and the result says so; a large
-         *     one is refused with ``gpu_busy`` (decision 2).
+         *     one is refused with ``gpu_busy`` (decision 2). Send the input the version takes: an
+         *     image (``image_b64`` or ``blob``), a table ``record`` or a ``text``; another is
+         *     ``wrong_input``. Classical models run on the CPU (ADR-0019 rules 20 and 21).
          */
         post: operations["predict_api_v1_models__version_id__predict_post"];
         delete?: never;
@@ -1012,6 +1015,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ml/estimators/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estimators Schema
+         * @description Each estimator's title, tasks and parameter schema (ML-1.1, ML-1.2, UI-2.3).
+         */
+        get: operations["estimators_schema_api_v1_ml_estimators_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/studies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Studies
+         * @description Studies, newest first.
+         */
+        get: operations["list_studies_api_v1_studies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/studies/{study_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Study
+         * @description A study (HPO-1.5).
+         */
+        get: operations["get_study_api_v1_studies__study_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/studies/{study_id}/trials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Trials
+         * @description Its trials with their states, values, steps and why they were pruned (HPO-1.3).
+         */
+        get: operations["get_trials_api_v1_studies__study_id__trials_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/studies/{study_id}/best-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Best Config
+         * @description The base run with the best trial's values (HPO-1.5); 404 before a trial completes.
+         */
+        get: operations["get_best_config_api_v1_studies__study_id__best_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1123,6 +1226,19 @@ export interface components {
              * @default 0.00001
              */
             eps: number;
+        };
+        /**
+         * ClassicalConfig
+         * @description A classical model's run (ML-1.1, ML-1.2). It runs on the CPU queue (ADR-0019 rule 15).
+         */
+        ClassicalConfig: {
+            model: components["schemas"]["SklearnSpec"];
+            /**
+             * Seed
+             * @description random_state where it applies.
+             * @default 0
+             */
+            seed: number;
         };
         /** ClipScores */
         ClipScores: {
@@ -1649,6 +1765,7 @@ export interface components {
             model_version_id?: string | null;
             /** Model Lineage Id */
             model_lineage_id?: string | null;
+            study?: components["schemas"]["JobStudy"] | null;
             error: components["schemas"]["JobError"] | null;
             /** Summary */
             summary: {
@@ -1705,7 +1822,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "queued" | "running" | "paused" | "completed" | "failed" | "skipped" | "cancelled";
+            status: "pending" | "queued" | "running" | "paused" | "waiting" | "completed" | "failed" | "skipped" | "cancelled";
             /** Config */
             config: {
                 [key: string]: unknown;
@@ -1741,6 +1858,15 @@ export interface components {
             /** Finished At */
             finished_at: string | null;
             error: components["schemas"]["JobError"] | null;
+        };
+        /** JobStudy */
+        JobStudy: {
+            /** Id */
+            id: string;
+            /** Trial */
+            trial?: number | null;
+            /** Study Job */
+            study_job?: string | null;
         };
         /** LSTM */
         LSTM: {
@@ -1891,6 +2017,33 @@ export interface components {
              * @description Input features. Leave empty to take them from the input; a value that disagrees with the input is an error (BUILD-1.4).
              */
             in_features?: number | null;
+        };
+        /**
+         * Marker
+         * @description One tuned field: a range with a scale, or choices (HPO-1.1).
+         */
+        Marker: {
+            /**
+             * Path
+             * @description A JSON pointer into the base.
+             */
+            path: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "int" | "float" | "log_float" | "categorical";
+            /** Low */
+            low?: number | null;
+            /** High */
+            high?: number | null;
+            /**
+             * Step
+             * @description int and float only.
+             */
+            step?: number | null;
+            /** Choices */
+            choices?: unknown[] | null;
         };
         /** MaxPool2d */
         MaxPool2d: {
@@ -2151,6 +2304,8 @@ export interface components {
             weights_path: string | null;
             /** Weights Deleted At */
             weights_deleted_at: string | null;
+            /** Study Id */
+            study_id?: string | null;
         };
         /** Node */
         Node: {
@@ -2217,9 +2372,9 @@ export interface components {
             until_stage?: string | null;
             /**
              * Dataset Type
-             * @description Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from class folders. Null: the type of 'from_version' if it has one, else image_caption.
+             * @description Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, stages.ingest.table.target required), clean_table, split. 'labelled_text': ingest (JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it has one, else image_caption.
              */
-            dataset_type?: ("image_caption" | "labelled_images") | null;
+            dataset_type?: ("image_caption" | "labelled_images" | "tabular" | "labelled_text") | null;
         };
         /** PlanCheckpoint */
         PlanCheckpoint: {
@@ -2301,13 +2456,25 @@ export interface components {
              * @description An image already in the data folder, by its SHA-256 (a dataset row's sha256 or derived_sha256).
              */
             blob?: string | null;
+            /**
+             * Record
+             * @description A table model's input (M10): one value per feature column, by name, null to impute; the target left out (ADR-0019 rule 21).
+             */
+            record?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Text
+             * @description A text model's input (M10).
+             */
+            text?: string | null;
         };
         /** PredictedClass */
         PredictedClass: {
             /** Class */
             class: string;
             /** Probability */
-            probability: number;
+            probability: number | null;
         };
         /** Prediction */
         Prediction: {
@@ -2322,8 +2489,20 @@ export interface components {
             device: "cpu" | "gpu";
             /** Fallback Reason */
             fallback_reason: string | null;
+            /**
+             * Task
+             * @default classification
+             * @enum {string}
+             */
+            task: "classification" | "regression" | "clustering" | "projection";
             /** Top */
-            top: components["schemas"]["PredictedClass"][];
+            top?: components["schemas"]["PredictedClass"][] | null;
+            /** Value */
+            value?: number | null;
+            /** Cluster */
+            cluster?: number | null;
+            /** Components */
+            components?: number[] | null;
             /** Load Ms */
             load_ms: number | null;
             /** Total Ms */
@@ -2910,6 +3089,30 @@ export interface components {
             type: "sigmoid";
         };
         /**
+         * SklearnSpec
+         * @description A classical model: ``{"kind": "sklearn", "estimator": ..., "params": {...}}``.
+         */
+        SklearnSpec: {
+            /**
+             * Kind
+             * @default sklearn
+             * @constant
+             */
+            kind: "sklearn";
+            /**
+             * Estimator
+             * @enum {string}
+             */
+            estimator: "linear" | "ridge" | "lasso" | "logistic_regression" | "svm" | "decision_tree" | "random_forest" | "gradient_boosting" | "knn" | "naive_bayes" | "kmeans" | "dbscan" | "hdbscan" | "pca";
+            /**
+             * Params
+             * @description The estimator's parameters; see GET /ml/estimators/schema.
+             */
+            params?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * Softmax
          * @description Softmax over the last axis.
          */
@@ -3077,6 +3280,208 @@ export interface components {
             torch_max_allocated_mb?: number | null;
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * Study
+         * @description An HPO study (API.md §3.12): what SCR-10's header, best card, importance and test
+         *     evaluation read.
+         */
+        Study: {
+            /** Id */
+            id: string;
+            /** Job Id */
+            job_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "classical" | "deep";
+            /** Dataset Version */
+            dataset_version: string;
+            /** Objective */
+            objective: string;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "maximize" | "minimize";
+            /** Limits */
+            limits: {
+                [key: string]: number;
+            };
+            /** Pruning */
+            pruning: boolean;
+            /** Cv Folds */
+            cv_folds: number | null;
+            /** Seed */
+            seed: number;
+            /** Space */
+            space: {
+                [key: string]: unknown;
+            }[];
+            /** Base */
+            base: {
+                [key: string]: unknown;
+            };
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "running" | "closed" | "completed" | "cancelled" | "failed";
+            /** Ended By */
+            ended_by: ("n_trials" | "timeout") | null;
+            /** Elapsed S */
+            elapsed_s: number;
+            trials: components["schemas"]["StudyCounts"];
+            best: components["schemas"]["StudyBest"] | null;
+            /** Importance */
+            importance: {
+                [key: string]: unknown;
+            } | null;
+            /** Best Version Id */
+            best_version_id: string | null;
+            /** Test Metrics */
+            test_metrics: {
+                [key: string]: unknown;
+            } | null;
+            /** Test Evaluated At */
+            test_evaluated_at: string | null;
+            /** Created At */
+            created_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+        };
+        /** StudyBest */
+        StudyBest: {
+            /** Trial */
+            trial: number;
+            /** Value */
+            value: number | null;
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+        };
+        /** StudyCounts */
+        StudyCounts: {
+            /** Started */
+            started: number;
+            /** Complete */
+            complete: number;
+            /** Pruned */
+            pruned: number;
+            /** Failed */
+            failed: number;
+            /** Running */
+            running: number;
+            /** Interrupted */
+            interrupted: number;
+        };
+        /** StudyList */
+        StudyList: {
+            /** Items */
+            items: components["schemas"]["Study"][];
+        };
+        /**
+         * StudyRequest
+         * @description ``POST /jobs`` with ``kind: hpo_study``: a base run, what to tune, the limits.
+         */
+        StudyRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hpo_study";
+            /**
+             * Dataset Version
+             * @description The version the base run would train on.
+             */
+            dataset_version: string;
+            /** @description A classical base run (ML-1.1). Give this or 'config'. */
+            classical?: components["schemas"]["ClassicalConfig"] | null;
+            /** @description A network base run (RUN-1.1). Give this or 'classical'. */
+            config?: components["schemas"]["TrainConfig"] | null;
+            /**
+             * Space
+             * @description The tuned fields (HPO-1.1).
+             */
+            space: components["schemas"]["Marker"][];
+            /**
+             * Objective
+             * @description What to optimise: cv_accuracy, cv_macro_f1, cv_r2 or cv_rmse for a classical model; val_accuracy, val_loss or val_rmse for a network. Empty: the task's first.
+             */
+            objective?: string | null;
+            /**
+             * N Trials
+             * @description Trials started at most.
+             * @default 20
+             */
+            n_trials: number;
+            /**
+             * Timeout S
+             * @description Running time at most, pauses excluded.
+             * @default 3600
+             */
+            timeout_s: number;
+            /**
+             * Pruning
+             * @description Median pruning (HPO-1.3).
+             * @default true
+             */
+            pruning: boolean;
+            /**
+             * Cv Folds
+             * @description Classical models only.
+             * @default 5
+             */
+            cv_folds: number;
+            /**
+             * Seed
+             * @description TPE's suggestions.
+             * @default 0
+             */
+            seed: number;
+        };
+        /**
+         * StudyTrial
+         * @description One trial (HPO-1.3): its state in words, value, the step it reached and why it was
+         *     pruned or failed, each epoch's or fold's value.
+         */
+        StudyTrial: {
+            /** Number */
+            number: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "running" | "complete" | "pruned" | "failed";
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /** Value */
+            value: number | null;
+            /** Step */
+            step: number | null;
+            /** Prune Reason */
+            prune_reason: ("median" | "budget") | null;
+            /** Code */
+            code: string | null;
+            /** Intermediate */
+            intermediate: number[][];
+            /** Duration S */
+            duration_s: number | null;
+            /** Job Id */
+            job_id: string | null;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+        };
+        /** StudyTrialList */
+        StudyTrialList: {
+            /** Items */
+            items: components["schemas"]["StudyTrial"][];
         };
         /** System */
         System: {
@@ -3272,10 +3677,13 @@ export interface components {
             kind: "train";
             /**
              * Dataset Version
-             * @description A split version of a labelled-images dataset, e.g. ds_f8e67211dd94.
+             * @description A split version: of a labelled-images dataset for a network, of a tabular dataset for a classical model, e.g. ds_f8e67211dd94.
              */
             dataset_version: string;
-            config: components["schemas"]["TrainConfig"];
+            /** @description A network's run (RUN-1.1). Give this or 'classical'. */
+            config?: components["schemas"]["TrainConfig"] | null;
+            /** @description A classical model's run on a tabular split (ML-1.1, ADR-0019 rule 15); it runs on the CPU queue. Give this or 'config'. */
+            classical?: components["schemas"]["ClassicalConfig"] | null;
         };
         /**
          * TrainingContext
@@ -3527,7 +3935,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PipelineRequest"] | components["schemas"]["TrainRequest"];
+                "application/json": components["schemas"]["PipelineRequest"] | components["schemas"]["TrainRequest"] | components["schemas"]["StudyRequest"];
             };
         };
         responses: {
@@ -4890,21 +5298,19 @@ export interface operations {
                     "application/json": components["schemas"]["Prediction"];
                 };
             };
-            /** @description gpu_busy, weights_deleted, weights_unreadable or a partial version */
+            /** @description gpu_busy, weights_deleted, weights_unreadable, not_servable or a partial version */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description wrong_input: an input the version does not take */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };
@@ -5181,6 +5587,156 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    estimators_schema_api_v1_ml_estimators_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    list_studies_api_v1_studies_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_study_api_v1_studies__study_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                study_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Study"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trials_api_v1_studies__study_id__trials_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                study_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyTrialList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_best_config_api_v1_studies__study_id__best_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                study_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
             };
             /** @description Validation Error */
             422: {

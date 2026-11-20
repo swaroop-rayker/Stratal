@@ -235,13 +235,23 @@ class PredictRequest(BaseModel):
         description="An image already in the data folder, by its SHA-256 (a dataset row's "
         "sha256 or derived_sha256).",
     )
+    record: dict[str, Any] | None = Field(
+        default=None,
+        description="A table model's input (M10): one value per feature column, by name, "
+        "null to impute; the target left out (ADR-0019 rule 21).",
+    )
+    text: str | None = Field(default=None, description="A text model's input (M10).")
 
 
 @router.post(
     "/models/{version_id}/predict",
     response_model=schemas.Prediction,
     responses={
-        409: {"description": "gpu_busy, weights_deleted, weights_unreadable or a partial version"}
+        409: {
+            "description": "gpu_busy, weights_deleted, weights_unreadable, not_servable or a "
+            "partial version"
+        },
+        422: {"description": "wrong_input: an input the version does not take"},
     },
 )
 def predict(
@@ -252,7 +262,9 @@ def predict(
 ) -> Any:
     """A prediction from a registered version (REG-1.4). Runs on the GPU when it is free;
     while a job holds it, a small model runs on the CPU and the result says so; a large
-    one is refused with ``gpu_busy`` (decision 2)."""
+    one is refused with ``gpu_busy`` (decision 2). Send the input the version takes: an
+    image (``image_b64`` or ``blob``), a table ``record`` or a ``text``; another is
+    ``wrong_input``. Classical models run on the CPU (ADR-0019 rules 20 and 21)."""
     store.get_version(session, version_id)  # 404 here, before reaching the service
     status, payload = forward({"version_id": version_id, **body.model_dump(exclude_none=True)})
     if status >= 400:

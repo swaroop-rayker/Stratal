@@ -62,6 +62,12 @@ This document is the source of truth for what Stratal must do. It restates every
 - **DATA-1.4** `[P1][2]` The system shall ingest tabular (CSV/Parquet) and text (TXT/JSONL) sources.
   - `DATA-1.4.AC1` sample CSV and JSONL ingest without errors.
 
+> **Approved by the owner on 2026-11-19** ("Approve all three"; M10's open points 11–13, added to the plan at the owner's request). Before it, a labelled image's class came only from its first folder (`label_from: folder`, DATA-5.2).
+
+- **DATA-1.5** `[P1][2]` The system shall take labelled images' classes from a CSV in the source folder that maps each image's path to its label (`label_from: {csv, path_column, label_column}`), as an alternative to class folders. Paths in the CSV are relative to the source folder. Single-label classification only: several labels per image, and a number per image, are not covered.
+  - `DATA-1.5.AC1` a flat folder of images with a labels CSV ingests with each image's label from its row; an image with no row is rejected as `no_label`; a row whose file is missing, and a path listed twice, are reported in the ingest summary with their row numbers, not silently dropped.
+  - `DATA-1.5.AC2` the CSV's content is part of the version's identity: the same images and CSV give the same version ID, and changing one label gives a new one.
+
 #### DATA-2 Cleaning & Deduplication
 
 - **DATA-2.1** `[P0][1]` 👤 The system shall remove byte-identical duplicates.
@@ -135,6 +141,22 @@ This document is the source of truth for what Stratal must do. It restates every
 - **DATA-6.1** `[P1][1]` The system shall write a preprocessed copy of every accepted image, resized so its longer side does not exceed a configurable maximum, keep the original, and record the transform in the version's config.
   - `DATA-6.1.AC1` every accepted row points at a preprocessed file that exists and respects the maximum; originals are still present; re-running with the same config adds no new files; changing the maximum produces a new version ID.
 
+#### DATA-7 Tabular transforms
+
+> **Added at the owner's request on 2026-11-19** ("yes add that as well in the requirements"), for M11b. Edits apply to a table's raw version only, through a `transform` stage between `ingest` and `clean`: the raw version itself never changes, and cleaned and split versions stay read-only, since they are stage outputs. Only row-local operations belong here; anything fitted on the data (scaling, imputation values, target encoding) stays in the model pipeline, fitted on the train split (ML-1.3).
+
+- **DATA-7.1** `[P1][2]` The system shall apply an ordered list of column and row operations to a tabular raw version in a `transform` stage that runs after `ingest` and before `clean`, producing a new version whose parent is the raw version.
+  - `DATA-7.1.AC1` the raw version's manifest is unchanged after a transform; the same raw version and operations give the same version ID (a cache hit); changing one operation gives a new ID.
+  - `DATA-7.1.AC2` an operation fitted on the data (e.g. scale, impute with the mean) is refused before the run, with a reason pointing to the model's preprocessing.
+- **DATA-7.2** `[P1][2]` The operations shall include dropping, renaming and reordering columns, changing a column's kind (numeric or categorical), and choosing the target column.
+  - `DATA-7.2.AC1` each operation has its own test; an invalid one (unknown column, a dropped or duplicated target, a rename onto an existing name) is refused before the run naming the column; a value that cannot be converted to its new kind is rejected with the reason `cast_failed`, kept in the manifest and counted.
+- **DATA-7.3** `[P1][2]` The user shall choose each feature column's encoding for training (`one_hot`, `embedding`, `ordinal` or `ignore`), stored in the version's table schema and used by the tabular input block (ADR-0017 rule 6) and the classical pipelines (ADR-0019 rule 17).
+  - `DATA-7.3.AC1` an `ignore` column is absent from the model's input; an `embedding` choice reaches the input block; `ordinal` keeps the category order given.
+- **DATA-7.4** `[P2][2]` The operations shall include derived columns from a formula over the same row's columns and row filters by a condition, written in a restricted expression language that is parsed, never evaluated as code.
+  - `DATA-7.4.AC1` a derived column's values match the formula on sample rows; a filter keeps exactly the matching rows and marks the others `filtered` with the reason `transform_filter`; an expression using anything outside the language is refused.
+- **DATA-7.5** `[P1][2]` The UI shall show any tabular version (raw, transformed or cleaned) as a table with each column's kind, encoding, missing count and distribution, and shall let the user build a raw version's operations with a preview on sample rows before running them.
+  - `DATA-7.5.AC1` the column summary matches the manifest for any version; the preview of a list of operations equals the first rows of the version the stage then produces.
+
 ### Module LABEL — Auto-labeling
 
 - **LABEL-1.1** `[P0][1]` 👤 The system shall caption images in batches using a configurable image→text model (default Florence-2-base).
@@ -172,6 +194,12 @@ This document is the source of truth for what Stratal must do. It restates every
   - `RUN-1.8.AC1` dashboard updates live during a run.
 - **RUN-1.9** `[P1][2]` The runtime shall choose CPU or GPU per job (auto or manual).
   - `RUN-1.9.AC1` tiny models default to the faster device, based on a benchmark.
+- **RUN-1.10** `[P1][2]` A training run shall be able to start from a registered trained version (`init_from`) instead of fresh weights, on the same or another dataset version of the same type, optionally with chosen layers frozen. The new version records that version as its parent (REG-1.1), and retention never deletes a parent in use (REG-2.8).
+  - `RUN-1.10.AC1` a run started from a version begins with that version's exact weights (its first validation loss equals the parent's on the same data) and registers with it as parent.
+  - `RUN-1.10.AC2` frozen layers' weights are unchanged after the run; the other layers' are changed.
+  - `RUN-1.10.AC3` a version whose output size or input shape differs from the new dataset's is refused before the run with the mismatch named, unless the head is reset (`reset_head: true`), which re-initialises only the locked head.
+
+> **Added at the owner's request on 2026-11-19** ("add it as a requirement"), for M11: fine-tuning models built in the builder, which the plan otherwise covers only for SD 1.5, the LLM and MarianMT (IMG-1.2, LLM-5.1, TRANS-1.2). Full-weight continuation, not adapters; REG-1.3's adapters stay with those three.
 
 ### Module BUILD — Model Builder
 

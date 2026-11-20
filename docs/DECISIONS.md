@@ -706,6 +706,54 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Put as four questions with a recommendation each; recorded in MILESTONES.md's M9 section and shaping ADR-0017 (proposed).
 - **Why:** Each changes the model spec's shape (ADR-0017 rules 1, 6 and 10) or adds a dependency, so each is the owner's to decide before the ADR. The owner took the recommendation on three, and full graphs over a residual wrapper layer.
 
+## M10: classical ML, HPO, task metrics
+
+**The owner's M10 kickoff decisions** (2026-11-19)
+- **What:** EVAL-1.2 written by the agent, on libraries (sklearn.metrics, sacrebleu; CIDEr-D in house); words as tokens; scikit-learn, skops and Optuna approved for the worker images; one ADR-0019 for the open points; DATA-1.5 for labels from a CSV.
+- **How:** Put as four questions; recorded as K1–K5 in MILESTONES.md's M10 section. ADR-0018, ADR-0019 and DATA-1.5 were then approved together ("Approve all three").
+- **Why:** Ownership, dependencies and the shape of the decisions are the owner's. ADR-0019 also put scikit-learn and skops into the GPU image for serving and left torchmetrics out, both stated before the approval.
+
+**M10's new packages held to releases at least two weeks old** (HPO-1.2, ML-1.1, ML-1.5, EVAL-1.2; the owner's choice, 2026-11-19)
+- **What:** scikit-learn 1.9.1, scipy 1.18.1, skops 0.16.0, Optuna 5.0.0 and sacrebleu 2.6.0 in both worker images (`ml-cpu` and `gpu` extras); five transitive or new releases held back: Optuna 5.0.0 rather than 5.1.0, cloudpickle 3.1.2, narwhals 2.28.0, prettytable 3.18.0, threadpoolctl 3.7.0.
+- **How:** `[tool.uv] constraint-dependencies` caps those five, with a comment; re-locking changed only them. A global `exclude-newer` was tried in a scratch copy and rejected: it re-resolves every package. `worker-cpu` now also installs the `test` group, so tests that need these libraries (marker `ml`) run there, as `torch` tests run in `worker-gpu`. Modules that import them use `# pyright: basic, reportMissingImports=false`, like the existing PyTorch modules, so `dev` stays without them.
+- **Why:** Re-locking brought in releases one to three days old and one package nobody had approved, cloudpickle (joblib's dependency, for its process pool). Waiting two weeks lets a bad release be yanked before we take it. cloudpickle is accepted as a dependency; nothing in Stratal calls it, and NFR-8's scan still forbids unpickling in our code.
+
+**Spike S-09** (HPO-1.2, HPO-1.5, ADR-0018) — [docs/spikes/S-09-hpo.md](spikes/S-09-hpo.md)
+- **What:** Optuna on PostgreSQL in its own schema, the cost per trial, and parameter importance, measured before building HPO.
+- **How:** A scratch database for the storage checks, which was created and then dropped; past `train` and `retention` jobs for the start latencies; and a test study with a known answer for importance.
+- **Why:** ADR-0018 assumed these. Two surprises: Optuna 5.0's default importance evaluator is PED-ANOVA, not fANOVA, and it ranked the wrong parameter first at 20 trials, so fANOVA is set explicitly. And a deep-learning trial costs about 19 s beyond its training, 23 % of a 10-epoch Small CNN trial.
+
+**Tables and texts as records** (M10, DATA-1.4, DATA-2.4, DATA-1.5, ADR-0019) — [ADR-0019](decisions/ADR-0019-tabular-and-text-models.md)
+- **What:** A tabular or text dataset has one manifest row per record. Tables run `ingest → clean_table → split`, texts `ingest → clean_text → split → tokenize`. Labelled images can take their classes from a CSV.
+- **How:** Six nullable manifest columns (`record`, `target_value`, `text`, `text_group`, `tokens`, `token_count`). `sha256` is the row's content hash, so the image stage's exact-duplicate unit marks repeated records. The table schema and the vocabulary travel as manifest metadata. The split keeps its stage but takes a path of its own for records: groups by text group, strata by class or target quintile, the owner's assignment unit, a linear leakage check. Tokens are words from the train split only (K3), stored as a string of IDs.
+- **Why:** Separate clean stages keep the image clean stage's config, and so future image version IDs, unchanged. A string of IDs keeps the version hash's code untouched. Keeping the split in one stage keeps continuing a split (DATA-4.5) and the report the same for every type. The COCO captions export streams the 450 MB instances file with a regex instead of loading it, which would need several GB.
+
+**Classical models** (M10, ML-1.1 to ML-1.5, ADR-0019 part D) — [ADR-0019](decisions/ADR-0019-tabular-and-text-models.md)
+- **What:** Fourteen scikit-learn estimators run as `train_classical` jobs on the CPU queue, fitted on the train split, scored with EVAL-1.2 and registered as skops files.
+- **How:** `stratal.ml.params` (plain Python) holds each estimator's parameters, the cross-field rules and the data-dependent checks the API runs before queueing; `stratal.ml.pipeline` builds one Pipeline (median imputing and scaling, constant imputing and one-hot encoding, then the estimator) on PyArrow tables; `stratal.ml.persist` saves with skops and loads only if every type in the archive's schema is on our list.
+- **Why:** The API must refuse a bad combination without scikit-learn (ML-1.4). PyArrow tables avoid adding pandas. Reading the types ourselves makes the allow-list real: skops alone trusts every scikit-learn estimator.
+
+**Networks on tables and texts** (M10, RUN-1.1, BUILD-1.3, ML-1.3, ADR-0019 part C)
+- **What:** Builder graphs train on a table's split (classification, or regression with one output and MSE) and on a text's tokenize version, through the existing train stage, and every network run ends with EVAL-1.2's scores on validation and test.
+- **How:** The stage builds a dataset and an input `Shape` per type; `stratal.train.table_prep` fits the table's encoding on train (medians, means and spreads, categories, the target's scale) and is saved as `preprocess.json` beside the weights; the builder's locked ends use the same fit.
+- **Why:** One loop keeps checkpoints, pause and resume, and device choice identical for every input. One encoding function for the builder, training and serving means the locked width and the real input never differ.
+
+**Predictions for tables and texts** (M10, REG-1.4, ADR-0019 rules 20 and 21)
+- **What:** `/predict` takes a `record` or a `text` beside an image, and answers by task: classes, a value, a cluster or components.
+- **How:** The inference holder reads the version's `model.json` to see what it takes; classical pipelines load from skops on the CPU without the lease; table and text networks load their fitted encoding or vocabulary and encode with the training code; `stratal.inference.inputs` checks a record against the table schema.
+- **Why:** One service and one model at a time keeps the memory budget (ADR-0016); reusing the training code for encoding means a served prediction sees exactly the input the model was trained on.
+
+**Classical studies** (M10, HPO-1.1 to HPO-1.5, ADR-0018 rules 1 to 4 and 6 to 9) — [ADR-0018](decisions/ADR-0018-hpo-execution.md)
+- **What:** An `hpo_study` job tunes a classical model with Optuna's TPE, cross-validating each trial on the train split, and registers and tests its best configuration once.
+- **How:** `stratal.hpo.space` checks markers with each field's own validator; `stratal.hpo.runner` runs the study in one stage, folds grouped by split group, the median pruner by fold, the time budget kept across pauses; `studies` and `study_trials` mirror the trials for the API; the refit is the ordinary classical run, and a conditional update keeps the test evaluation single.
+- **Why:** Decision 7 groups sub-second classical trials in one job (S-09: five times cheaper). Grouped folds keep near-duplicates on one side, as the split does. Reusing the classical run for the refit means a study's model is registered and served exactly like any other.
+
+**Studies of networks** (M10, HPO-1.2 to HPO-1.4, ADR-0018 rules 5 to 8) — [ADR-0018](decisions/ADR-0018-hpo-execution.md)
+- **What:** A network's study runs each trial as its own `hpo_trial` training job and advances itself in short CPU steps between them; only its best trial is registered, and tested once.
+- **How:** The `study` stage settles the trial that ended, asks Optuna for the next configuration, checks it like a normal request, creates the trial job and waits (stage `waiting`); the trial's supervisor queues the next step, and the watchdog covers a lost one. The trial reports each epoch to the median pruner and the budget clock, and keeps its weights in its job folder until the study decides.
+- **Also:** TPE is seeded per process from the study's seed and the trials already asked, so a new process continues the draws rather than repeating them; Optuna's storage opens under an advisory lock, so two studies can start at once.
+- **Why:** A process waiting hours for trials would hold one of two CPU slots (rule 5). A trial as an ordinary training job keeps checkpoints, pause, thermal pause and out-of-memory handling without a second copy. Keeping trial weights out of the registry keeps the registry to models someone chose.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

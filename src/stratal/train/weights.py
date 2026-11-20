@@ -22,14 +22,24 @@ from stratal.core.errors import StratalError, WeightsUnreadable
 from stratal.registry.store import META_FILE, WEIGHTS_FILE
 
 
-def write(folder: Path, model: torch.nn.Module, meta: dict[str, Any]) -> int:
-    """Write a version's files into ``folder``, replacing any; returns their bytes."""
+def write(
+    folder: Path,
+    model: torch.nn.Module,
+    meta: dict[str, Any],
+    extra: dict[str, str] | None = None,
+) -> int:
+    """Write a version's files into ``folder``, replacing any; returns their bytes.
+
+    ``extra`` maps more file names to their text, e.g. a table network's fitted
+    ``preprocess.json`` (ADR-0019 rule 13): plain JSON, never pickled (NFR-8)."""
     partial = folder.with_name(folder.name + ".part")
     shutil.rmtree(partial, ignore_errors=True)
     partial.mkdir(parents=True)
     tensors = {k: v.detach().cpu().contiguous() for k, v in model.state_dict().items()}
     save_file(tensors, str(partial / WEIGHTS_FILE))
     (partial / META_FILE).write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    for name, text in (extra or {}).items():
+        (partial / name).write_text(text, encoding="utf-8")
     for path in partial.iterdir():
         with path.open("rb") as handle:
             os.fsync(handle.fileno())

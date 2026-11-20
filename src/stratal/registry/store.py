@@ -249,7 +249,7 @@ def record_checkpoint(
     session: Session,
     *,
     job_id: str,
-    lineage_id: str,
+    lineage_id: str | None,
     path: str,
     size: int,
     global_step: int,
@@ -330,7 +330,7 @@ def _checkpoint_bytes(session: Session, lineage_ids: Sequence[str]) -> dict[str,
         .where(Checkpoint.lineage_id.in_(lineage_ids))
         .group_by(Checkpoint.lineage_id)
     )
-    return {lineage_id: int(total or 0) for lineage_id, total in rows}
+    return {str(lineage_id): int(total or 0) for lineage_id, total in rows}
 
 
 def _version_row(
@@ -496,6 +496,7 @@ def version_detail(session: Session, version_id: str) -> dict[str, Any]:
         "history": version.history or [],
         "weights_path": version.weights_path,
         "weights_deleted_at": iso(version.weights_deleted_at),
+        "study_id": version.study_id,
     }
 
 

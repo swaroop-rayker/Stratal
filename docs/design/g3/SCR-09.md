@@ -34,3 +34,34 @@
 ## Tests
 
 `frontend/src/screens/build/Builder.test.tsx`: `test_BUILD_1_5_the_vram_check_warns_and_offers_a_batch_that_fits`, `test_BUILD_1_2_a_run_starts_with_the_graph_and_the_form_values`, `test_RUN_1_5_start_again_with_the_suggested_batch_prefills_the_failed_run`.
+
+# Study part and Classical mode (M10) — Gate 3 comparison
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-09hpo_v1.html`](../screens/SCR-09hpo_v1.html), G2 approved 2026-11-19 |
+| Built | `frontend/src/screens/build/RunScreen.tsx`, `StudyParts.tsx`, `study.ts`; `SchemaForm`'s new `decor` (a control after a field's label and a replacement input, generic); styles appended to `scr09.css`. `/runs/new?study=st_…` prefills a study's best configuration (SCR-10's *Start a run from this configuration*) |
+| Checked | 2026-11-20, live: Classical mode on `breast-cancer` (a random forest, `n_estimators` and `max_features` tuned); a network study prefilled from `st_5869c7673960` with `learning_rate`, `batch_size` and the layer field `d1.out_features` tuned and a refused range; both themes. The pane was 583 px wide: content, behaviour and contrast were checked through the page |
+| Status | **Approved by the owner on 2026-11-20** ("Approve all four"), with the listed differences |
+
+## Differences from the mockup
+
+1. **`time_budget` is entered in minutes**, a number field, rather than as a duration ("1 h").
+2. **The plan has no total duration.** It gives the trial count, the epochs and steps, and S-09's ~19 s start per trial; the training time per trial is not known before a run.
+3. **The Tune toggle shows on every tunable field whether or not the study is on**; pressing one turns the study on (the low-fi decision "a tune toggle on every generated field"). The collapsed card has *Turn on*; the open card has an *on* pill and *Turn off*.
+4. **Integer fields offer a linear range (with an optional step) or choices, not a log scale:** the server has no log-integer marker.
+5. **The objectives are the server's:** `val_accuracy` or `val_loss` for a classifier, `val_rmse` or `val_loss` for a regressor; `cv_accuracy` or `cv_macro_f1`, `cv_r2` or `cv_rmse` for classical models. The mockup's helper also named `val_macro_f1`, which the server does not offer.
+6. **The data card names the task and the classes**, not the target column and the column count (frame B): the builder's dataset ends do not carry them.
+7. ***Drop N from batch_size* appears when batch_size is tuned as three or more choices**; with a range the warning stands alone.
+8. ***Add a model parameter* opens as a panel below the cards**, not a popover anchored to its button; a chosen layer field's range is edited in its row of the search space.
+9. **In Classical mode, `random_state`** (the run's seed) is a field under the estimator's parameters.
+10. **At 1024 px the right-hand column stacks below**, as SCR-09's approved build does, rather than folding into a bottom bar (frame E).
+
+## Accessibility
+
+- **Contrast:** every text element passes AA in both themes: Classical study 123 elements (lowest 5.44:1 dark, 5.2:1 light); the network study with a refused marker and a layer field 174 elements (same lowest).
+- **Keyboard and names:** each Tune button is a toggle (`aria-pressed`) named "Tune <field>"; a range's inputs are named "<field>, low", "<field>, high" and "<field>, scale"; a space row's remove button is "Stop tuning <field>" and returns focus to the field's Tune button. *Start study* stays enabled: with a refused marker it sends nothing and moves focus to the first problem; a 422 from `POST /jobs` lands on the marker's row and field. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> starts the study.
+
+## Tests
+
+`frontend/src/screens/build/Builder.test.tsx` (SCR-09 study part): `test_HPO_1_1_a_marker_is_refused_on_its_row_by_the_fields_own_rules`, `test_HPO_1_1_the_vram_check_takes_the_widest_layer_in_the_space`, `test_HPO_1_1_tuning_a_field_starts_a_study_with_its_marker`, `test_HPO_1_1_a_refused_marker_from_the_server_lands_on_its_row`.

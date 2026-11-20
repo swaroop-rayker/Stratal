@@ -1,0 +1,439 @@
+{
+  "versions": {
+    "optuna": "5.0.0",
+    "scikit-learn": "1.9.1"
+  },
+  "cpus_visible": 16,
+  "1_schema": {
+    "optuna_tables": [
+      "alembic_version",
+      "studies",
+      "study_directions",
+      "study_system_attributes",
+      "study_user_attributes",
+      "trial_heartbeats",
+      "trial_intermediate_values",
+      "trial_params",
+      "trial_system_attributes",
+      "trial_user_attributes",
+      "trial_values",
+      "trials",
+      "version_info"
+    ],
+    "optuna_tables_in_public": [],
+    "our_alembic_version": "1da4cd4162e3",
+    "optuna_alembic_version": "v3.2.0.a",
+    "alembic_check_rc": 0,
+    "alembic_check_out": "\"}\nNo new upgrade operations detected.\n/app/migrations/env.py:30: SAWarning: Cannot correctly sort tables; there are unresolvable cycles between tables \"dataset_versions, jobs\", which is usually caused by mutually dependent foreign key constraints.  Foreign key constraints involving these tables will not be considered; this warning may raise an error in a future release.\n  context.run_migrations()",
+    "alembic_upgrade_again_rc": 0,
+    "optuna_storage_upgrade_rc": 0,
+    "optuna_storage_upgrade_out": "[I 2026-11-19 14:10:47,775] This storage is up-to-date."
+  },
+  "2_ask_tell": {
+    "trials": 40,
+    "params_per_trial": 10,
+    "intermediate_values_per_trial": 50,
+    "ask_with_10_suggests": {
+      "median_ms": 63.96,
+      "p95_ms": 76.35,
+      "max_ms": 81.63
+    },
+    "ask_first_10_trials_median_ms": 60.57,
+    "ask_last_10_trials_median_ms": 63.67,
+    "report": {
+      "median_ms": 3.59,
+      "p95_ms": 4.83,
+      "max_ms": 7.45
+    },
+    "should_prune": {
+      "median_ms": 6.72,
+      "p95_ms": 9.15,
+      "max_ms": 76.73
+    },
+    "tell": {
+      "median_ms": 15.1,
+      "p95_ms": 20.51,
+      "max_ms": 24.31
+    },
+    "rows": {
+      "trials": 40,
+      "trial_params": 400,
+      "trial_intermediate_values": 2000,
+      "trial_values": 40
+    },
+    "rows_per_trial": {
+      "trials": 1.0,
+      "trial_params": 10.0,
+      "trial_intermediate_values": 50.0,
+      "trial_values": 1.0
+    },
+    "bytes_total_optuna_schema": "827392",
+    "table_sizes": [
+      {
+        "table": "alembic_version",
+        "live_rows": 1,
+        "bytes": 24576
+      },
+      {
+        "table": "studies",
+        "live_rows": 2,
+        "bytes": 49152
+      },
+      {
+        "table": "study_directions",
+        "live_rows": 2,
+        "bytes": 40960
+      },
+      {
+        "table": "study_system_attributes",
+        "live_rows": 0,
+        "bytes": 24576
+      },
+      {
+        "table": "study_user_attributes",
+        "live_rows": 0,
+        "bytes": 24576
+      },
+      {
+        "table": "trial_heartbeats",
+        "live_rows": 0,
+        "bytes": 16384
+      },
+      {
+        "table": "trial_intermediate_values",
+        "live_rows": 1980,
+        "bytes": 286720
+      },
+      {
+        "table": "trial_params",
+        "live_rows": 400,
+        "bytes": 139264
+      },
+      {
+        "table": "trial_system_attributes",
+        "live_rows": 30,
+        "bytes": 90112
+      },
+      {
+        "table": "trial_user_attributes",
+        "live_rows": 0,
+        "bytes": 24576
+      },
+      {
+        "table": "trial_values",
+        "live_rows": 39,
+        "bytes": 40960
+      },
+      {
+        "table": "trials",
+        "live_rows": 40,
+        "bytes": 40960
+      },
+      {
+        "table": "version_info",
+        "live_rows": 1,
+        "bytes": 24576
+      }
+    ]
+  },
+  "3_classical": {
+    "trial": "random forest, 100 trees, depth 6, 5-fold CV on breast cancer (569 rows)",
+    "in_process_trial_s": [
+      0.73,
+      0.773,
+      0.894,
+      0.885,
+      0.777
+    ],
+    "in_process_median_s": 0.777,
+    "fresh_interpreter": [
+      {
+        "wall_s": 3.303,
+        "imports_s": 2.292,
+        "load_s": 0.017,
+        "trial_s": 0.751
+      },
+      {
+        "wall_s": 2.807,
+        "imports_s": 1.627,
+        "load_s": 0.007,
+        "trial_s": 0.925
+      },
+      {
+        "wall_s": 2.681,
+        "imports_s": 1.604,
+        "load_s": 0.006,
+        "trial_s": 0.794
+      },
+      {
+        "wall_s": 2.561,
+        "imports_s": 1.673,
+        "load_s": 0.006,
+        "trial_s": 0.687
+      },
+      {
+        "wall_s": 2.433,
+        "imports_s": 1.472,
+        "load_s": 0.006,
+        "trial_s": 0.715
+      }
+    ],
+    "fresh_wall_median_s": 2.681,
+    "fresh_imports_median_s": 1.627,
+    "overhead_per_trial_s": 1.903,
+    "overhead_share": 0.71
+  },
+  "4_job_latency": {
+    "jobs": [
+      {
+        "job": "job_0030",
+        "kind": "train",
+        "created_to_started_s": 0.29,
+        "created_to_stage_started_s": 1.67,
+        "created_to_first_train_progress_s": 30.38,
+        "total_s": 81.98
+      },
+      {
+        "job": "job_0031",
+        "kind": "train",
+        "created_to_started_s": 0.41,
+        "created_to_stage_started_s": 1.72,
+        "created_to_first_train_progress_s": 14.24,
+        "total_s": 73.27
+      },
+      {
+        "job": "job_0032",
+        "kind": "train",
+        "created_to_started_s": 5.29,
+        "created_to_stage_started_s": 8.41,
+        "created_to_first_train_progress_s": 98.07,
+        "total_s": 317.78
+      },
+      {
+        "job": "job_0033",
+        "kind": "train",
+        "created_to_started_s": 0.99,
+        "created_to_stage_started_s": 2.4,
+        "created_to_first_train_progress_s": 16.66,
+        "total_s": 28.0
+      },
+      {
+        "job": "job_0034",
+        "kind": "retention",
+        "created_to_started_s": 1.14,
+        "created_to_stage_started_s": 3.11,
+        "created_to_first_train_progress_s": null,
+        "total_s": 3.54
+      },
+      {
+        "job": "job_0035",
+        "kind": "train",
+        "created_to_started_s": 1.23,
+        "created_to_stage_started_s": 2.79,
+        "created_to_first_train_progress_s": 16.07,
+        "total_s": 27.58
+      },
+      {
+        "job": "job_0036",
+        "kind": "train",
+        "created_to_started_s": 27.56,
+        "created_to_stage_started_s": 29.05,
+        "created_to_first_train_progress_s": 39.07,
+        "total_s": 50.93
+      },
+      {
+        "job": "job_0037",
+        "kind": "train",
+        "created_to_started_s": 50.78,
+        "created_to_stage_started_s": 52.36,
+        "created_to_first_train_progress_s": 62.31,
+        "total_s": 72.14
+      },
+      {
+        "job": "job_0038",
+        "kind": "retention",
+        "created_to_started_s": 1.0,
+        "created_to_stage_started_s": 3.01,
+        "created_to_first_train_progress_s": null,
+        "total_s": 3.43
+      },
+      {
+        "job": "job_0039",
+        "kind": "retention",
+        "created_to_started_s": 0.03,
+        "created_to_stage_started_s": 1.65,
+        "created_to_first_train_progress_s": null,
+        "total_s": 2.08
+      },
+      {
+        "job": "job_0040",
+        "kind": "retention",
+        "created_to_started_s": 0.03,
+        "created_to_stage_started_s": 1.42,
+        "created_to_first_train_progress_s": null,
+        "total_s": 1.85
+      },
+      {
+        "job": "job_0041",
+        "kind": "train",
+        "created_to_started_s": 0.08,
+        "created_to_stage_started_s": 1.62,
+        "created_to_first_train_progress_s": 12.6,
+        "total_s": 22.6
+      },
+      {
+        "job": "job_0042",
+        "kind": "train",
+        "created_to_started_s": 22.43,
+        "created_to_stage_started_s": 23.92,
+        "created_to_first_train_progress_s": 33.58,
+        "total_s": 43.54
+      },
+      {
+        "job": "job_0043",
+        "kind": "retention",
+        "created_to_started_s": 0.02,
+        "created_to_stage_started_s": 1.47,
+        "created_to_first_train_progress_s": null,
+        "total_s": 1.87
+      },
+      {
+        "job": "job_0044",
+        "kind": "retention",
+        "created_to_started_s": 0.02,
+        "created_to_stage_started_s": 1.39,
+        "created_to_first_train_progress_s": null,
+        "total_s": 1.86
+      },
+      {
+        "job": "job_0046",
+        "kind": "retention",
+        "created_to_started_s": 0.4,
+        "created_to_stage_started_s": 1.77,
+        "created_to_first_train_progress_s": null,
+        "total_s": 2.22
+      },
+      {
+        "job": "job_0047",
+        "kind": "train",
+        "created_to_started_s": 0.18,
+        "created_to_stage_started_s": 1.64,
+        "created_to_first_train_progress_s": 15.24,
+        "total_s": 28.73
+      },
+      {
+        "job": "job_0048",
+        "kind": "retention",
+        "created_to_started_s": 0.11,
+        "created_to_stage_started_s": 1.52,
+        "created_to_first_train_progress_s": null,
+        "total_s": 1.92
+      },
+      {
+        "job": "job_0049",
+        "kind": "retention",
+        "created_to_started_s": 0.04,
+        "created_to_stage_started_s": 1.38,
+        "created_to_first_train_progress_s": null,
+        "total_s": 1.82
+      },
+      {
+        "job": "job_0050",
+        "kind": "retention",
+        "created_to_started_s": 0.31,
+        "created_to_stage_started_s": 1.57,
+        "created_to_first_train_progress_s": null,
+        "total_s": 1.96
+      },
+      {
+        "job": "job_0051",
+        "kind": "train",
+        "created_to_started_s": 0.26,
+        "created_to_stage_started_s": 1.84,
+        "created_to_first_train_progress_s": 13.9,
+        "total_s": 195.26
+      },
+      {
+        "job": "job_0052",
+        "kind": "retention",
+        "created_to_started_s": 0.07,
+        "created_to_stage_started_s": 1.4,
+        "created_to_first_train_progress_s": null,
+        "total_s": 1.87
+      },
+      {
+        "job": "job_0053",
+        "kind": "train",
+        "created_to_started_s": 502.31,
+        "created_to_stage_started_s": 504.0,
+        "created_to_first_train_progress_s": 524.85,
+        "total_s": 570.89
+      },
+      {
+        "job": "job_0054",
+        "kind": "retention",
+        "created_to_started_s": 0.25,
+        "created_to_stage_started_s": 1.74,
+        "created_to_first_train_progress_s": null,
+        "total_s": 2.28
+      },
+      {
+        "job": "job_0055",
+        "kind": "train",
+        "created_to_started_s": 0.29,
+        "created_to_stage_started_s": 2.03,
+        "created_to_first_train_progress_s": 16.1,
+        "total_s": 64.83
+      },
+      {
+        "job": "job_0056",
+        "kind": "retention",
+        "created_to_started_s": 0.46,
+        "created_to_stage_started_s": 2.87,
+        "created_to_first_train_progress_s": null,
+        "total_s": 3.33
+      },
+      {
+        "job": "job_0057",
+        "kind": "train",
+        "created_to_started_s": 0.06,
+        "created_to_stage_started_s": 1.77,
+        "created_to_first_train_progress_s": 14.79,
+        "total_s": 181.06
+      },
+      {
+        "job": "job_0058",
+        "kind": "retention",
+        "created_to_started_s": 0.05,
+        "created_to_stage_started_s": 1.81,
+        "created_to_first_train_progress_s": null,
+        "total_s": 2.26
+      }
+    ],
+    "retention_created_to_finished_median_s": 2.02,
+    "train_created_to_first_progress_median_s": 16.38,
+    "train_created_to_started_median_s": 0.7
+  },
+  "5_fanova": {
+    "20": {
+      "seconds": 0.012,
+      "importance": {
+        "dropout": 0.539,
+        "lr": 0.231,
+        "depth": 0.148,
+        "weight_decay": 0.075,
+        "width": 0.007
+      }
+    },
+    "200": {
+      "seconds": 0.006,
+      "importance": {
+        "lr": 0.661,
+        "depth": 0.215,
+        "dropout": 0.078,
+        "width": 0.025,
+        "weight_decay": 0.021
+      }
+    }
+  }
+}

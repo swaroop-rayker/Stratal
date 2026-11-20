@@ -183,6 +183,12 @@ def validate_tabular(rows: Iterable[Mapping[str, Any]], schema: TableSchema) -> 
     return report
 
 
+def table_problem(row: Mapping[str, Any], schema: TableSchema) -> tuple[str, str] | None:
+    """The first way ``row`` (values by column name) breaks ``schema``: ``(code, detail)``,
+    or ``None``. Tabular ingest rejects the row with it (DATA-1.4)."""
+    return _table_problem(row, schema)
+
+
 def _table_problem(row: Mapping[str, Any], schema: TableSchema) -> tuple[str, str] | None:
     for column in schema.columns:
         if column.name not in row:
@@ -245,7 +251,7 @@ class TypeInfo:
     families: tuple[Family, ...]
     default_metrics: tuple[str, ...]
     trainable: bool
-    """Whether M9's training runtime accepts it; tabular and text arrive in M10."""
+    """Whether the training runtime accepts it (tabular and text since M10)."""
     note: str
 
 
@@ -274,8 +280,8 @@ TYPE_INFO: dict[str, TypeInfo] = {
         "vector",
         ("mlp",),
         ("accuracy", "macro_f1"),
-        False,
-        "Ingestion and training arrive in M10.",
+        True,
+        "Classification or regression, by the target's kind; trains on a split version.",
     ),
     "labelled_text": TypeInfo(
         "labelled_text",
@@ -283,7 +289,7 @@ TYPE_INFO: dict[str, TypeInfo] = {
         "tokens",
         ("mlp", "rnn", "transformer"),
         ("accuracy", "macro_f1"),
-        False,
-        "Ingestion and training arrive in M10.",
+        True,
+        "Trains on a tokenize version: its tokens and vocabulary fix the input.",
     ),
 }

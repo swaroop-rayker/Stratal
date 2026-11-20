@@ -15,7 +15,7 @@
 | **Blob store** | Image files (originals and preprocessed copies), named by content hash | Immutable, deduplicated by construction |
 | **Redis** | Task queue, event stream buffer, live fan-out, control flags | Transient. Nothing in Redis is the only copy of anything that matters |
 | **Per-job files** | Structured log, event spool, in-run checkpoints | Local durability that does not depend on any service being up |
-| **Registry files** | Model weights as safetensors with `model.json` beside them, one folder per version (`registry/<lineage>/<version>/`, M8). Nothing here or in a checkpoint is pickled; a file that is not safetensors is refused with `weights_unreadable` (NFR-8) | Deletable by retention, so not content-addressed (ADR-0015) |
+| **Registry files** | Model weights as safetensors with `model.json` beside them, one folder per version (`registry/<lineage>/<version>/`, M8); a classical model as `model.skops` with `model.json` (M10, ML-1.5); a table network adds `preprocess.json`, its fitted encoding (M10, ADR-0019 rule 13). Nothing here or in a checkpoint is pickled; a network file that is not safetensors, or a skops file holding a type outside Stratal's allow-list, is refused with `weights_unreadable` (NFR-8) | Deletable by retention, so not content-addressed (ADR-0015) |
 
 ## 2. Entity overview
 
@@ -117,7 +117,7 @@ Indexes: `(dataset_id, created_at desc)`; `(stage, parent_version_id, config_has
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | `id` | text | no | PK, `job_…` |
-| `kind` | text | no | `pipeline`; since M8 also `train` (RUN-1.1) and `retention` (REG-2.2); later `hpo_study`, `hpo_trial`, `eval`, `maintenance` |
+| `kind` | text | no | `pipeline`; since M8 also `train` (RUN-1.1) and `retention` (REG-2.2); since M10 `hpo_study` and `hpo_trial` (HPO-1.2); later `eval`, `maintenance` |
 | `state` | text | no | `queued`, `running`, `paused`, `completed`, `failed`, `cancelled`, `stalled` (check constraint) |
 | `desired_state` | text | yes | `paused` or `cancelled` while a request is pending |
 | `pause_reason` | text | yes | why a paused job is paused: `user` or `thermal` (M8, RUN-1.6); set with the pause request, kept while paused, cleared on resume. The watchdog resumes only `thermal` pauses |
@@ -143,7 +143,7 @@ Indexes: `(state)`; `(created_at desc)`; partial `(heartbeat_at) where state = '
 | `idx` | integer | no | PK part; order within the job |
 | `name` | text | no | stage name |
 | `queue` | text | no | `cpu` or `gpu` |
-| `status` | text | no | `pending`, `queued`, `running`, `paused` (M8, RUN-1.2: stopped by a pause, or next to run when the job paused between stages), `completed`, `failed`, `skipped`, `cancelled` |
+| `status` | text | no | `pending`, `queued`, `running`, `paused` (M8, RUN-1.2: stopped by a pause, or next to run when the job paused between stages), `waiting` (M10, ADR-0018 rule 5: a network study's `study` stage between steps, while its trial job runs), `completed`, `failed`, `skipped`, `cancelled` |
 | `config` | jsonb | no | |
 | `config_hash` | text | no | |
 | `input_version_id`, `output_version_id` | text | yes | FK |
@@ -307,7 +307,7 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 
 Constraints: state and weights status check constraints; `present` needs a path and size unless `partial`; one base per lineage (partial unique index on `lineage_id` where `state = 'base'`). Indexes `(lineage_id, created_at)`, `(parent_version_id)`.
 
-**`checkpoints`**: a run's in-run checkpoint, the latest only (REG-2.6). `job_id` (PK, FK), `lineage_id` (FK), `path` (the checkpoint's JSON file, relative to the data folder), `bytes` (both files), `global_step`, `epoch`, `updated_at`. Written at every save, removed when the run completes; retention removes those of cancelled runs. A failed run keeps its checkpoint, since a retry resumes from it.
+**`checkpoints`**: a run's in-run checkpoint, the latest only (REG-2.6). `job_id` (PK, FK), `lineage_id` (FK; null for an HPO trial's, which belongs to its study, M10), `path` (the checkpoint's JSON file, relative to the data folder), `bytes` (both files), `global_step`, `epoch`, `updated_at`. Written at every save, removed when the run completes; retention removes those of cancelled runs. A failed run keeps its checkpoint, since a retry resumes from it.
 
 **`pins`**: `version_id` (PK, FK), `pinned_at`. Only trained versions with weights on disk are pinned (REG-2.5).
 
@@ -322,6 +322,16 @@ Constraints: state and weights status check constraints; `present` needs a path 
 `id` (text PK, `mt_` + 12 hex), `name` (text, unique), `description` (text), `spec` (jsonb: a graph spec in canonical form), `structure_hash` (text: SHA-256 of the canonical structure without its label), `dataset_type` (text), `builtin` (bool), `created_at`, `updated_at`. Built-in templates are written by `stratal.build.store.ensure_builtins` on the first list and refreshed when the code's spec changes; they cannot be changed or deleted through the API.
 
 A graph spec is also stored, as part of its run's config, in `job_stages.config`, `model_versions.config` and `model_lineages.model_spec`; the lineage's copy has no `label` (ADR-0017 rule 1).
+
+### 4.15 HPO studies (M10, HPO-1.1 to HPO-1.5, [ADR-0018](decisions/ADR-0018-hpo-execution.md))
+
+`studies`: `id` (`st_` + 12 hex), `job_id` (unique, FK), `kind` (`classical`, `deep`), `dataset_version_id`, `base` (jsonb: the base run, defaults filled in), `space` (jsonb: the markers), `objective`, `direction` (`maximize`, `minimize`), `limits` (jsonb `{n_trials, timeout_s}`), `pruning`, `cv_folds`, `seed`, `state` (`running`, `closed`, `completed`, `cancelled`, `failed`), `ended_by` (`n_trials`, `timeout`), `elapsed_s` (running time, pauses excluded), `best_trial`, `best_value`, `best_params` (jsonb, by path), `importance` (jsonb), `best_version_id` (FK `model_versions`), `test_metrics` (jsonb), `test_evaluated_at` (set once, HPO-1.4), `created_at`, `finished_at`.
+
+`study_trials`: `study_id`, `number` (the PK together), `job_id` (a deep-learning trial's job, else null), `state` (`running`, `complete`, `pruned`, `failed`), `params` (jsonb), `value`, `step`, `prune_reason` (`median`, `budget`), `code` (`invalid_combination`, `interrupted`, …), `intermediate` (jsonb `[[step, value]]`), `duration_s`, `started_at`, `finished_at`.
+
+A network trial's weights live in its job's folder until its study's next step: `jobs/<job>/trial/initial` (when its lineage is new), `trial/trained` and `trial/result.json`. Only the best trial's are kept, and they are deleted once copied into the registry (ADR-0018 rule 7).
+
+`model_versions.study_id` (FK, null) names the study whose best trial a version is. Optuna's own tables live in schema `optuna`, created empty by the migration and filled by Optuna; the API never reads them.
 
 ## 5. Manifest schema
 
@@ -353,11 +363,27 @@ One Parquet file per version, at `manifests/<version_id>.parquet`. Columns accum
 | `split_group` | string | split | content hash (`sha256`) of the split group's anchor, its member with the smallest `sha256`; rows sharing a duplicate group or within the leakage distance share it (DATA-4.2). Built in M5 |
 | `split_stratum` | string | split | the row's stratum, its keys joined by `\|`, e.g. `q3\|landscape\|train2017`, or `q3\|landscape\|.` for a file at the source's root, as in the flat COCO sources (DATA-4.3; `.` chosen by the owner 2026-11-16). Built in M5 |
 
-Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`. M8 adds `no_label` (ingest with `label_from: folder`, for a file at the source's root) and `missing_label` (the labelled-images validator).
+Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `below_min_size`, `exact_duplicate`, `near_duplicate`, `semantic_duplicate`, `missing_caption`, `missing_file`, `clip_below_threshold`. M8 adds `no_label` (ingest with `label_from: folder`, for a file at the source's root) and `missing_label` (the labelled-images validator). M10 adds `conflicting_labels` (a labels CSV gives an image two classes, DATA-1.5); `missing_target`, `missing_column`, `not_a_number` and `not_a_category` (a table record that breaks its schema, DATA-1.4); `missing_label` also for a text without a class; `empty_text` and `text_too_long` (`clean_text`, DATA-2.4).
+
+**Tables and texts (M10, [ADR-0019](decisions/ADR-0019-tabular-and-text-models.md))** have one row per record, not per file:
+
+| Column | Type | Added by | Notes |
+|---|---|---|---|
+| `row_key` | | ingest | `<file>#<record or line number, 7 digits>`, e.g. `breast_cancer.csv#0000001`, `captions.jsonl#0000042` |
+| `sha256` | | ingest, `clean_text` | the hash of the row's content: the canonical `record`, or the text (after `clean_text`, the normalised text), so exact duplicates are found as for files |
+| `format` | | ingest | `CSV`, `PARQUET`, `JSONL` or `TXT` |
+| `record` | string | ingest | a table row's feature values as canonical JSON (keys sorted, numbers as floats, categories as strings, a missing value as null) |
+| `target_value` | float64 | ingest | a numeric target (regression); a categorical target is in `label` |
+| `text` | string | ingest, `clean_text` | the text; `clean_text` writes it back normalised |
+| `text_group` | string | ingest | rows that must share a split (the captions of one image); null: the row is its own group |
+| `tokens` | string | tokenize | L token IDs as space-separated numbers (0 padding, 1 unknown); a string, because the version hash takes scalar values only (DATA-3.2) |
+| `token_count` | int32 | tokenize | the text's length in tokens before it was cut to L |
+
+All six are nullable and appended, so no earlier version's ID changed.
 
 `corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. In clean and preprocess, a file missing from the blob store is not a reason code: it fails the stage (BUG1). The filter stage is the exception: its schema validation (DATA-5.1) marks a row whose original or preprocessed file is missing `rejected` with `missing_file`, warns, and lists it in `counts.validation` (the owner's choice, 2026-11-16).
 
-File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.parent_version_id`, `stratal.config_hash`. Rows are written sorted by `row_key`.
+File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.parent_version_id`, `stratal.config_hash`. Since M10 also `stratal.table_schema` (a table's columns with kind and role, and its task: `classification` or `regression`), passed on by every stage that keeps the rows, and `stratal.vocab` (`{sha256, size, max_length}` of a tokenized version's vocabulary, a JSON blob). They follow from the rows and the config, so they are not part of the identity. The vocabulary blob is referenced only from this metadata: the blob garbage collector (phase 2) must count it as in use. Rows are written sorted by `row_key`.
 
 ## 6. Blob store
 
@@ -409,7 +435,7 @@ Outlined only. Each is specified at its phase kickoff, with an ADR where it is a
 | Phase | Tables | Notes |
 |---|---|---|
 | 2 | ~~`model_lineages`, `model_versions`, `checkpoints`, `pins`, `retention_settings`~~ | Built in M8: [§4.12](#412-model-registry-m8-reg-11-reg-12-adr-0015) |
-| 2 | Optuna's own tables, in a separate schema | Studies and trials (HPO) |
+| 2 | ~~Optuna's own tables, in a separate schema~~ | Built in M10: schema `optuna`, with `studies` and `study_trials` beside them ([§4.15](#415-hpo-studies-m10-hpo-11-to-hpo-15-adr-0018)) |
 | 3 | `corpora`, `rag_indexes`, `chat_sessions`, `inference_requests` | Index versions for hit@k (LLM-2.2); request latency for NFR-6 |
 | 4 | adapter columns on `model_versions` | LoRA deltas with a parent base (REG-1.3, REG-2.8) |
 

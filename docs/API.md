@@ -152,11 +152,27 @@ Training request (M8, RUN-1.1, [ADR-0014](decisions/ADR-0014-training-jobs.md)):
 }
 ```
 
-- **`dataset_version`** must be a `split` version of a `labelled_images` dataset; anything else, or an unknown ID, is a `validation_error` at `["dataset_version"]`.
+- **`dataset_version`** must be a `split` version of a `labelled_images` or (M10) `tabular` dataset, or a `tokenize` version of a `labelled_text` one; anything else, or an unknown ID, is a `validation_error` at `["dataset_version"]`. Tables and texts train builder graphs only: a reference model (`mlp`, `small_cnn`) on them is a `validation_error` at `["config", "model", "name"]`. A table with a numeric target trains a regression: a one-wide head, MSE on the standardised target ([ADR-0019](decisions/ADR-0019-tabular-and-text-models.md) rule 14).
 - **`config`** is the `train` stage's config (`GET /config/schemas/train`): `model` (`mlp` or `small_cnn` until M9), `epochs`, `batch_size`, `optimizer` (`adam`, `sgd`), `learning_rate`, `momentum`, `weight_decay`, `schedule` (`cosine`, `constant`), `seed`, `deterministic`, `device` (`auto`, `cpu`, `gpu`; `auto` times a model under 1 M parameters on both devices and trains on the faster, RUN-1.9), `loader_workers` (null: 4 on the GPU worker, 1 on the CPU worker), `checkpoint_every_s` (300) and a read-only `algorithm_version`. Every field is recorded in the stage's config.
-- The job has kind `train` and one stage, `train`, on the `gpu` queue for `gpu` and `auto` and the `cpu` queue for `cpu` (CPU training needs the ml-cpu image, ADR-0014 rule 11). The stage makes no dataset version, so the job's `output_version_id` is null; its metrics are `epochs`, `steps`, `parameters`, `device`, `val_accuracy`, `val_loss`, `train_loss`, `checkpoint_bytes`, `weights_bytes`, `seconds` and, on the GPU, `peak_vram_allocated_mb` and `peak_vram_reserved_mb`. With `device: auto` and a small model they also carry `device_choice` (`gpu` or `cpu`), `device_gpu_step_ms`, `device_cpu_step_ms` and `device_benchmark_cached` (0 or 1). When the CPU wins, the job goes `running → queued` and the stage's `queue` becomes `cpu`; an `action` event with `metrics.code` `device_handoff` says why. The run registers a model version (§3.9): the job's `model_version_id` names it, `partial` while the job is paused and `trained` once it completes; the weights are in `registry/<lineage>/<version>/`, not in the job's folder. A retry of a run that had already registered its weights returns that result without training again.
+- The job has kind `train` and one stage, `train`, on the `gpu` queue for `gpu` and `auto` and the `cpu` queue for `cpu` (CPU training needs the ml-cpu image, ADR-0014 rule 11). The stage makes no dataset version, so the job's `output_version_id` is null; its metrics are `epochs`, `steps`, `parameters`, `device`, `val_accuracy` (classification only), `val_loss`, `train_loss`, `checkpoint_bytes`, `weights_bytes`, `seconds`, and since M10 `task` with EVAL-1.2's metrics on validation and test once the run ends (`val_`/`test_` `accuracy`, `macro_f1`; for regression `mse`, `rmse`, `mae`, `r2` on the target's scale; the version's `metrics.detail` adds per-class F1 and the confusion matrix) and, on the GPU, `peak_vram_allocated_mb` and `peak_vram_reserved_mb`. With `device: auto` and a small model they also carry `device_choice` (`gpu` or `cpu`), `device_gpu_step_ms`, `device_cpu_step_ms` and `device_benchmark_cached` (0 or 1). When the CPU wins, the job goes `running → queued` and the stage's `queue` becomes `cpu`; an `action` event with `metrics.code` `device_handoff` says why. The run registers a model version (§3.9): the job's `model_version_id` names it, `partial` while the job is paused and `trained` once it completes; the weights are in `registry/<lineage>/<version>/`, not in the job's folder. A retry of a run that had already registered its weights returns that result without training again.
 - **Events** (RUN-1.8): `substage` `setup` (model, device, rows), `train` progress reports at most once a second (`step`/`total` are global steps; metrics `epoch`, `loss`, `accuracy`, `learning_rate`, `grad_norm`, `step_ms`, `samples_per_s`), `validate` once per epoch (`train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`), `checkpoint` (`checkpoint_step`, `checkpoint_bytes`), `resume` when a retry continues from a checkpoint (`resumed_at_step`, `resumed_epoch`), `device` when `auto` chose a device (the timings), a second `setup` event naming the lineage and its base (`lineage_id`, `base_version_id`), `registry` when a pause records the version as partial, and `finish` (`model_version_id`).
 - `GET /config/schemas` and `/config/defaults` list pipeline stages only, so the Start pipeline drawer does not show `train`.
+
+**A classical model** (M10, ML-1.1 to ML-1.5, [ADR-0019](decisions/ADR-0019-tabular-and-text-models.md) part D) is the same `kind: train` with `classical` in place of `config` (exactly one of the two; both or neither is `422`):
+
+```json
+{
+  "kind": "train",
+  "dataset_version": "ds_98c3fdfd7edc",
+  "classical": {"model": {"kind": "sklearn", "estimator": "random_forest", "params": {"max_depth": 9}}, "seed": 0}
+}
+```
+
+- **`dataset_version`** must be a `split` version of a `tabular` dataset (`validation_error` at `["dataset_version"]` otherwise).
+- **`estimator`**: `linear`, `ridge`, `lasso` (regression); `logistic_regression`, `naive_bayes` (classification); `svm`, `decision_tree`, `random_forest`, `gradient_boosting` (scikit-learn's histogram boosting), `knn` (either, by the dataset's task); `kmeans`, `dbscan`, `hdbscan`, `pca` (any table; the target is ignored). `params` are checked against the estimator's schema (`GET /ml/estimators/schema`) and its cross-field rules (ML-1.4): a broken one is `422` at `["classical", "model"]` with the fields named in the message. Rules that depend on the data are checked against the split before queueing: an estimator for the other task (`["classical", "model", "estimator"]`), `n_neighbors` or `n_clusters` above the train rows, `n_components` above the encoded width (`["classical", "model", "params", <field>]`).
+- The job has kind `train` and one stage, `train_classical`, on the `cpu` queue; its config records every parameter, defaults filled in (NFR-4). Metrics: `task`; for classification `val_accuracy`, `val_macro_f1`, `test_accuracy`, `test_macro_f1`; for regression `val_`/`test_` `mse`, `rmse`, `mae`, `r2`; for clustering `clusters`, `noise_points`, `silhouette`, `davies_bouldin` on train; for PCA `explained_variance`; and `fit_s`, `weights_bytes`, `model_version_id`. The version's `metrics.detail` adds per-class F1 and the confusion matrix with its labels (EVAL-1.2).
+- **Registry:** the lineage is the estimator on the dataset (its parameters are not part of the key, so a study's runs and re-runs share it); its base is the unfitted pipeline. Each version's folder holds `model.skops` and `model.json`. Re-training a classical version (`POST /model-versions/{id}/retrain`) repeats its `classical` config.
+- **`GET /ml/estimators/schema`** returns, per estimator, `{title, tasks, schema}` (the parameters' JSON Schema), for SCR-09's classical form (UI-2.3).
 
 Pipeline request:
 
@@ -188,8 +204,20 @@ With either, a key under `stages` or an `until_stage` that names a stage the req
 |---|---|---|
 | `image_caption` | `ingest`, `clean`, `preprocess`, `label`, `filter`, `split`, `evaluate` | none |
 | `labelled_images` | `ingest`, `clean`, `preprocess`, `split` | `ingest.label_from: "folder"` (each image's class is its first folder); `clean.phash_max_distance: 4` and `split.leakage_distance: 6`, since pHash on small images is coarse (OC-5, the owner's choice 2026-11-18); `split.stratum_keys: ["source_folder"]`, so the split stratifies by class |
+| `tabular` (M10) | `ingest`, `clean_table`, `split` | `split.stratum_keys: []` and `split.leakage_distance: 0`: the stratum is the class, or the target's quintile for a numeric target, and there is no pHash. The request must give `stages.ingest.table.target` |
+| `labelled_text` (M10) | `ingest`, `clean_text`, `split`, `tokenize` | `ingest.text: {}` (JSONL keys `text`, `label`, `group`); the split as for `tabular`, grouped by `text_group` |
 
-Left out or null, it is the `from_version`'s type if that version has one, else `image_caption`. A request's own `stages` override the type's defaults. `label_from` set with `image_caption`, or unset with `labelled_images`, is a `validation_error` at `["stages", "ingest", "label_from"]`; continuing a version with another type is a `validation_error` at `["dataset_type"]`. The job's spec records the resolved type. CIFAR-10 at 32 px also needs `"ingest": {"min_size": 32}`.
+Left out or null, it is the `from_version`'s type if that version has one, else `image_caption`. A request's own `stages` override the type's defaults. Each type needs exactly one ingest setting and refuses the others: `label_from` for `labelled_images`, `table` for `tabular`, `text` for `labelled_text`, none for `image_caption`; a mismatch is a `validation_error` at `["stages", "ingest", <field>]`, and two of them at once at `["stages", "ingest"]`. Continuing a version with another type is a `validation_error` at `["dataset_type"]`. The job's spec records the resolved type. CIFAR-10 at 32 px also needs `"ingest": {"min_size": 32}`.
+
+**Ingest settings for M10** ([ADR-0019](decisions/ADR-0019-tabular-and-text-models.md)):
+
+| Field | Shape | Meaning |
+|---|---|---|
+| `label_from` | `"folder"` or `{csv, path_column: "path", label_column: "label"}` | Labelled images' classes from their first folder, or from a CSV in the source folder (DATA-1.5). With a CSV: an image without a row is `no_label`, one listed twice with different labels `conflicting_labels`; rows whose file is missing, paths listed twice and empty labels are counted and named, with their line numbers, under the ingest version's `counts.labels_csv`, and announced as WARN events |
+| `table` | `{target, kinds: {column: "numeric" \| "categorical"}}` | One CSV or Parquet table (DATA-1.4). `kinds` overrides the inferred kinds. A missing target or a value that breaks the schema rejects the record (`missing_target`, `not_a_number`, `not_a_category`); other files in the folder are `unsupported_format` rows |
+| `text` | `{text_field: "text", label_field: "label", group_field: "group"}` | JSONL files (one object per line) and TXT files in class folders (one text per line) (DATA-1.4). A line that is not JSON or has no text is `unreadable`; no class, `missing_label` (or `no_label` for a TXT file at the root) |
+
+Stage configs: `clean_table` has only `algorithm_version`; `clean_text` `{max_chars: 10000, unicode_form: "NFKC"}` (DATA-2.4); `tokenize` `{vocab_size: 20000, min_freq: 2, max_length: null}`, null meaning the train split's 95th-percentile length rounded up to a multiple of 8, at most 512. A tokenize version's `counts.tokenize` holds the vocabulary's size and hash, L, and the train lengths' distribution with the share cut.
 
 Job (abridged):
 
@@ -220,7 +248,7 @@ Job (abridged):
 }
 ```
 
-A job's and a stage's `error` is `{code, reason, suggested_action, detail}`; `detail` is text or an object of facts, such as `{"signal": "SIGKILL", "peak_rss_mb": 2410, "limit_mb": 2560}` for a killed process (E-013). A training job also has `model_version_id` and `model_lineage_id` (§3.9), null for other kinds.
+A job's and a stage's `error` is `{code, reason, suggested_action, detail}`; `detail` is text or an object of facts, such as `{"signal": "SIGKILL", "peak_rss_mb": 2410, "limit_mb": 2560}` for a killed process (E-013). A training job also has `model_version_id` and `model_lineage_id` (§3.9), null for other kinds. Since M10 a job also has `study`: for an `hpo_study` job `{id}` and for an `hpo_trial` job `{id, trial, study_job}` (§3.12), null for other kinds.
 
 ### 3.4 Activity log and telemetry
 
@@ -276,13 +304,13 @@ Built in M5 (2026-11-16). Details:
 | `POST /model-versions/{version_id}/pin` | Exempt from retention (REG-2.5); `409 conflict` unless trained with weights on disk | `200` version detail |
 | `DELETE /model-versions/{version_id}/pin` | Unpin; deletes nothing now | `200` version detail |
 | `POST /model-versions/{version_id}/retrain` | A run with the version's exact config and dataset version (REG-2.7); `409 conflict` for a base or partial version | `202` Job |
-| `POST /models/{version_id}/predict` | A prediction (REG-1.4). Body `{image_b64}` or `{blob}` (a data-folder SHA-256, e.g. a row's `derived_sha256`) | `200 {version_id, lineage_id, device, fallback_reason, top: [{class, probability}], load_ms, total_ms}` |
+| `POST /models/{version_id}/predict` | A prediction (REG-1.4). Body: exactly one input, the one the version takes: `{image_b64}` or `{blob}` (a data-folder SHA-256, e.g. a row's `derived_sha256`) for images; since M10 `{record}` for a table (one value per feature column by name, `null` to impute, no target) and `{text}` for text. Another input is `422 wrong_input`, as is a record with a missing, unknown or ill-typed field or the target (each in `errors` by name); DBSCAN and HDBSCAN versions are `409 not_servable` | `200 {version_id, lineage_id, device, fallback_reason, task, top: [{class, probability}] \| value \| cluster \| components, load_ms, total_ms}`: `top` for classification (a classical SVM's probability is null), `value` for regression on the target's scale, `cluster` for k-means, `components` for PCA. Classical models run on the CPU and never take the GPU lease ([ADR-0019](decisions/ADR-0019-tabular-and-text-models.md) rules 20 and 21) |
 | `POST /retention/plan` | The dry run, answered at once (REG-2.9). Body `{lineage_id?, values?}`; `values` plans with other settings than the saved ones | `200` plan |
 | `POST /retention/run` | Queue a retention job with the saved settings. Body `{lineage_id?, dry_run?}` | `202` Job |
 
 - **Lineage:** `{id, name, task, model, dataset, input_shape, classes, parameters, counts: {base, partial, trained}, latest_version_id, latest_state, main_metric, weights_bytes, checkpoint_bytes, created_at, updated_at}`. `latest` is the newest trained version, or the base before any run completes (REG-2.2). `main_metric` is its `val_accuracy` until EVAL-1.2. `weights_bytes` sums the registry's records of weights on disk; `checkpoint_bytes` the lineage's in-run checkpoints. The measured disk use (REG-2.11) comes with retention.
 - **Version (in a lineage's list):** `{id, lineage_id, state, is_latest, weights_status, weights_bytes, pinned, parent_version_id, job_id, job_state, dataset_version_id, config_hash, main_metric, note, created_at, trained_at}`. A partial version has no `weights_bytes`: its weights are its run's checkpoint.
-- **Version detail** adds `{lineage_name, config, metrics, history, weights_path, weights_deleted_at}`.
+- **Version detail** adds `{lineage_name, config, metrics, history, weights_path, weights_deleted_at, study_id}`; since M10 `metrics` holds EVAL-1.2's `val_*` and `test_*` scores and their `detail` by split (per-class F1, confusion matrix, labels, rows), and `study_id` names the study a version is the best trial of.
 - Each version also carries `weights_deleted_by_job_id`, `retention_action` (`keep`, `delete` at the next cleanup, `blocked`, or `none` once deleted) and `retention_reason`, under the saved settings. A lineage's detail adds `retention: {keep_intermediate, source: global | lineage, last_run: {job_id, finished_at, versions_deleted, bytes_freed} | null}`.
 - **Plan:** `{lineages: [{lineage_id, name, keep_intermediate, source, latest_version_id, delete, keep, blocked, checkpoints, bytes_to_free}], versions_to_delete, bytes_to_free, token, settings_version}`. Each decision is `{version_id, reason, weights_bytes, main_metric, created_at}`; `blocked` lists versions the policy would delete that are in use or a parent (REG-2.8); `checkpoints` those of completed and cancelled runs (`{job_id, bytes, reason}`). `token` names this exact plan.
 - **Retention jobs** have kind `retention` and one `retention` stage on the CPU queue. The supervisor queues one for a run's lineage after every training run that completes or is cancelled; cancelling a paused run through the API does too. Events: `plan` (per lineage, and each would-be deletion in a dry run), `blocked` (WARN, with `reason` and `suggested_action`), `deleting` and `delete` (`version_id`, `lineage_id`, `bytes_freed`), `checkpoint` (`checkpoint_job_id`, `bytes_freed`), `recover` and `orphan` (WARN). Metrics: `lineages`, `dry_run`, and `versions_deleted`, `bytes_freed`, `checkpoints_removed`, `blocked`, `orphans_removed`, `recovered`, or for a dry run `would_delete` and `bytes_to_free`.
@@ -301,6 +329,39 @@ Built in M5 (2026-11-16). Details:
 - `version` must be the one read; otherwise `409 conflict` with the current `version`.
 - A save that would delete weights is refused with `409 confirmation_required` and the `plan`; the same body with `confirm: plan.token` saves it and queues a retention job that deletes only that plan's versions (`job_id`). If anything changed in between, the token no longer matches and a new plan is returned the same way (ADR-0015 rule 7).
 - An unknown lineage in `overrides` is `422 validation_error`.
+
+### 3.12 Studies (M10, HPO-1.1 to HPO-1.5; [ADR-0018](decisions/ADR-0018-hpo-execution.md))
+
+`POST /jobs` with `kind: hpo_study` starts one:
+
+```json
+{
+  "kind": "hpo_study",
+  "dataset_version": "ds_98c3fdfd7edc",
+  "classical": {"model": {"kind": "sklearn", "estimator": "random_forest"}},
+  "space": [
+    {"path": "/classical/model/params/n_estimators", "type": "int", "low": 50, "high": 500, "step": 10},
+    {"path": "/classical/model/params/max_features", "type": "categorical", "choices": ["sqrt", "log2", "1.0"]}
+  ],
+  "objective": "cv_accuracy", "n_trials": 50, "timeout_s": 600, "pruning": true, "cv_folds": 5, "seed": 0
+}
+```
+
+- **The base** is `classical` for a classical model or `config` for a network, checked as a single run would be (`POST /jobs` with `kind: train`). **`space`** holds 1 to 20 markers `{path, type: int | float | log_float | categorical, low, high, step?, choices?}`; a path is a JSON pointer into the base (`/classical/model/params/<field>`, `/config/<training field>`, `/config/model/graph/nodes/<node id>/layer/<field>`). A marker outside its field's own range, on a field that cannot be tuned, tuned twice, or none of whose values could be valid with the fixed fields is a `validation_error` at `["space", i, "path"]` (HPO-1.1).
+- **`objective`**: `cv_accuracy` (default) or `cv_macro_f1` for a classical classifier, `cv_r2` (default) or `cv_rmse` for a regressor; for a network, `val_accuracy` (default) or `val_loss` for a classifier, `val_rmse` (default) or `val_loss` for a regressor. The direction follows. Clustering and PCA are refused: they have no score to tune. `n_trials` 1–200 (20), `timeout_s` 60–86,400 (3,600, running time, pauses excluded), whichever comes first ends the study (HPO-1.2); `pruning` (true: the median pruner, HPO-1.3); `cv_folds` 2–10 (5); `seed`.
+- **A classical study** is a job of kind `hpo_study` with one stage, `study`, on the `cpu` queue; its config and spec carry the `study_id`.
+- **A network's study** has two stages: `study` on the `cpu` queue, then `test_eval` on the run's queue (`gpu`, or `cpu` for `device: cpu`). The `study` stage runs in short steps; after each it is `waiting` (a stage status) while the job stays `running`, and the trial it waits for is a job of kind `hpo_trial`, a `train` run whose spec carries `study_id`, `study_job` and `trial` (its number). A trial's job is listed and controlled like any other.
+- **Pause, resume and cancel** are the study job's. On a network's study waiting for its trial, pause pauses the trial (a checkpoint first) and the study follows; a trial not yet started is withdrawn (`interrupted`). Resume resumes the trial. Cancel cancels the study at once and its trial at its next safe point, and keeps no trial's weights.
+
+| Method and path | Purpose | Success |
+|---|---|---|
+| `GET /studies?limit=` | Studies, newest first | `200 {items}` |
+| `GET /studies/{id}` | `{id, job_id, kind, dataset_version, objective, direction, limits, pruning, cv_folds, seed, space, base, state, ended_by, elapsed_s, trials: {started, complete, pruned, failed, running, interrupted}, best: {trial, value, params} \| null, importance, best_version_id, test_metrics, test_evaluated_at, created_at, finished_at}` | `200` |
+| `GET /studies/{id}/trials` | `{items: [{number, state, params, value, step, prune_reason, code, intermediate: [[step, value]], duration_s, job_id, started_at, finished_at}]}`, oldest first | `200` |
+| `GET /studies/{id}/best-config` | The base with the best trial's values set, for SCR-09 to prefill (`/runs/new?study=`, HPO-1.5); `404` before a trial completes | `200` |
+
+- **States:** a study is `running`, then `closed` (no further trial; `ended_by` `n_trials` or `timeout`), then `completed` once its best configuration is registered (`best_version_id`) and tested once (`test_metrics`, HPO-1.4); or `cancelled`. For a network the registration happens when the study closes and the test in `test_eval`. A trial is `complete`, `pruned` (`prune_reason` `median` or `budget`, `step` the fold or epoch it stopped at), `failed` (`code` `invalid_combination` or `over_vram`, never trained; a trial job's error code, such as `gpu_oom`; `cancelled`; or `interrupted` by a pause or crash, which does not count against `n_trials`) or `running`.
+- **`importance`** is `{method: "fanova", values: {path: share}}`, or `{reason}` when it cannot be computed (one field tuned, fewer than two complete trials, or every trial scoring the same).
 
 ### 3.11 Model builder (M9, BUILD-1, UI-2.3, DATA-5.5; [ADR-0017](decisions/ADR-0017-model-spec.md))
 
@@ -377,7 +438,7 @@ These are the seams between the agent's plumbing and the owner's core logic. Eac
 | Training state close | RUN-1.4 (v2) | `TrainingState(model, optimizer, *, info).close()` in `stratal.train.memory`: gradients set to `None`, optimizer state emptied, own references dropped, harmless twice; after it the v1 `VramManager.unload` finds allocated memory back at baseline | M8; stub, strict expected-failure tests and `FakeTrainingState` delivered 2026-11-17 |
 | Training out-of-memory | RUN-1.5 | `suggest_batch_size(*, failed_batch, fixed_mb, per_sample_mb, cap_mb) -> int \| None` (largest power of two below the failed batch that fits 90 % of the cap) and `training_oom_error(*, failed_batch, suggested, peak_mb, cap_mb) -> GpuOom` ("reduce batch size from 32 → 16") | M8; stubs, tests and fakes delivered 2026-11-17 |
 | From-scratch layers | BUILD-1.8 | `MultiHeadSelfAttention`, `PositionalEncoding`, `ScratchLSTMCell` in `stratal.build.scratch`, with PyTorch's parameter layout; each matches PyTorch's own layer within 1e-5 (attention) or 1e-6 | M9; written by the agent at the owner's request, 2026-11-19 (ADR-0012) |
-| Task metrics | EVAL-1.2 | In `stratal.eval.task_metrics`: `classification`, `regression`, `clustering`, `perplexity`, `translation` (BLEU, chrF), `cider_d`, `mean_clip_score`; pure functions; `metric_set(task)` names each task's metrics | M10; stubs and tests delivered 2026-11-17 (M8), so the CNN can be scored as soon as they exist |
+| Task metrics | EVAL-1.2 | In `stratal.eval.task_metrics`: `classification`, `regression`, `clustering`, `perplexity`, `translation` (BLEU, chrF), `cider_d`, `mean_clip_score`; pure functions; `metric_set(task)` names each task's metrics | M10; stubs and tests delivered 2026-11-17 (M8); written 2026-11-19 by the agent at the owner's request (ADR-0012), on scikit-learn's metrics and sacreBLEU (K2), CIDEr-D, perplexity and the mean CLIP score in house. The libraries load inside the functions, so `api` imports the module for `metric_set` without them |
 | Semantic-duplicate clustering | DATA-2.3, DATA-4.8 (P2) | CLIP image vectors → clusters in the label stage, joined by the split ([ADR-0013](decisions/ADR-0013-semantic-duplicates.md)) | M11 |
 
 What the plumbing gives each unit: a `JobContext` (emit an event, report progress, ask whether to stop), the derivation cache (`get_many`, `put_many`), `load_version` (stream manifest batches), the blob store (open a file by hash), and a model handle from the VRAM manager.
@@ -482,7 +543,7 @@ Still planned for phase 1: run a pipeline.
 | Lineage lock | `stratal.registry.store` | `lock_lineage(session, id)` (transaction), `holding_lineage(engine, id)` (a block): one Postgres advisory lock per lineage, taken by every writer of registry files and by retention |
 | Registry jobs | `stratal.runtime.jobs` | `create_retention_job(session, *, lineage_ids, dry_run, confirmed, reason)`, `retention_after_run(session, job)`, `create_retrain_job(session, version_id)` |
 | GPU lease for a long-lived holder | `stratal.runtime.gpu_lease` | `HeldLease(engine, *, holder)`: `try_acquire() -> bool` (never waits), `release()`, `held`; `gpu_lease(..., on_wait=)` calls `on_wait(holder)` while it waits, by default setting `stratal:gpu:wanted` |
-| Inference service | `stratal.inference` | `holder.ModelHolder(*, engine, settings, bus, gpu, state_cls, on_leak)`: `predict(version_id, image)`, `status()`, `tick()`, `run_checks(stop)`, `shutdown()`; `holder.decode_image`, `prepare_input`, `close_written`; `app.create_inference_app(holder, decode)` (`POST /predict`, `GET /status`); `python -m stratal.inference` |
+| Inference service | `stratal.inference` | `holder.ModelHolder(*, engine, settings, bus, gpu, state_cls, on_leak)`: `predict(version_id, image)`, `predict_values(version_id, *, record=None, text=None)` (M10), `status()`, `tick()`, `run_checks(stop)`, `shutdown()`; `holder.decode_image`, `prepare_input`, `close_written`; `app.create_inference_app(holder, decode)` (`POST /predict`, `GET /status`); `python -m stratal.inference` |
 | Inference holdings | `stratal.core.bus` | `set_inference_loaded({version_id, device, since} | None)`, `get_inference_loaded()`: Redis key `stratal:inference:loaded`, written by the inference service (ADR-0016 rule 6), read by retention |
 
 ### Internal interfaces added in M9

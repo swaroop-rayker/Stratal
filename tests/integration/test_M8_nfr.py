@@ -168,8 +168,10 @@ def test_NFR_8_a_run_and_its_resume_unpickle_nothing_and_write_only_safetensors_
     assert not report.exists(), report.read_text(encoding="utf-8")  # both attempts, whole
     folders = _version_folders(job_id)
     assert set(folders) == {"base", "trained"}
-    registry = get_settings().data_dir / "registry"
-    assert {p.suffix for p in _files(registry)} <= SAFE_SUFFIXES, _files(registry)
+    # This run's lineage only: other tests' classical models keep .skops files, NFR-8's
+    # safe format for scikit-learn (ADR-0019), in the same session's registry.
+    lineage = next(iter(folders.values())).parent
+    assert {p.suffix for p in _files(lineage)} <= SAFE_SUFFIXES, _files(lineage)
     for folder in folders.values():
         spec = json.loads((folder / store.META_FILE).read_text(encoding="utf-8"))
         model = build_model(

@@ -22,6 +22,11 @@
 
 Weights are read from the registry's safetensors with the model rebuilt from its
 spec; nothing is unpickled (NFR-8).
+
+Since M10 (ADR-0019 rules 20 and 21) it also serves tables and texts: a classical
+model's skops pipeline (on the CPU, never taking the lease; it counts as the one
+model held), and table and text networks, whose input is encoded with the
+version's own ``preprocess.json`` or its dataset version's vocabulary.
 """
 
 import base64
@@ -44,6 +49,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from torch import nn
 
+from stratal.build.shapes import Shape
 from stratal.core.bus import Bus
 from stratal.core.errors import (
     Conflict,
@@ -52,9 +58,14 @@ from stratal.core.errors import (
     NotFound,
     ValidationFailed,
     WeightsDeleted,
+    WrongInput,
 )
 from stratal.core.logging import get_logger
 from stratal.core.settings import Settings
+from stratal.data import registry
+from stratal.data.records import META_TABLE_SCHEMA
+from stratal.data.tokenize import Vocabulary, vocab_of
+from stratal.inference import inputs
 from stratal.label.models import GpuBackend, ModelInfo
 from stratal.label.vram import VramManager
 from stratal.mon.events import utc_now
@@ -62,10 +73,12 @@ from stratal.mon.sink import EventSink, LogSink
 from stratal.registry import store
 from stratal.runtime.gpu_lease import HeldLease, current_holder
 from stratal.storage.blobs import BlobStore
+from stratal.storage.manifest import read_metadata
 from stratal.train.config import ModelSpec
 from stratal.train.data import to_tensor
 from stratal.train.memory import TrainingState
 from stratal.train.reference import build_model
+from stratal.train.table_prep import PREPROCESS_FILE, TablePrep
 from stratal.train.weights import read_tensors
 
 log = get_logger(__name__)
@@ -145,6 +158,14 @@ class _Loaded:
     """The CPU model; a GPU model is held only by its TrainingState in the VRAM manager."""
     state: TrainingState | None = None
     since: str = field(default_factory=lambda: utc_now().isoformat())
+    task: str = "classification"
+    prep: TablePrep | None = None
+    """A table network's fitted encoding (ADR-0019 rule 13)."""
+    vocab: Vocabulary | None = None
+    length: int = 0
+    """A text network's vocabulary and L (ADR-0019 rule 11)."""
+    classical: inputs.ClassicalModel | None = None
+    """A classical model's pipeline, always on the CPU (ADR-0019 rule 20)."""
 
 
 def decode_image(*, image_b64: str | None, blob: str | None, data_dir: Path) -> Image.Image:
@@ -249,6 +270,8 @@ class ModelHolder:
     def predict(self, version_id: str, image: Image.Image) -> dict[str, Any]:
         with self._lock:
             started = time.monotonic()
+            version, _ = self._check(version_id)
+            self._refuse_input(version_id, self._meta(version), "image")
             loaded, fallback, load_ms = self._place(version_id)
             x = prepare_input(image, loaded.shape)
             model = loaded.model if loaded.device == "cpu" else self._gpu_model()
@@ -275,10 +298,131 @@ class ModelHolder:
                 "total_ms": round(1000 * (time.monotonic() - started), 1),
             }
 
+    def predict_values(
+        self, version_id: str, *, record: dict[str, Any] | None = None, text: str | None = None
+    ) -> dict[str, Any]:
+        """A prediction from a record (tables) or a text (ADR-0019 rules 20 and 21)."""
+        with self._lock:
+            started = time.monotonic()
+            version, lineage = self._check(version_id)
+            meta = self._meta(version)
+            self._refuse_input(version_id, meta, "record" if record is not None else "text")
+            values = (
+                inputs.check_record(record, self._table_schema(meta)) if record is not None else {}
+            )
+            if meta.get("kind") == "sklearn":
+                loaded, load_ms = self._place_classical(version, lineage)
+                assert loaded.classical is not None
+                result = loaded.classical.predict(values)
+                fallback: str | None = None
+            else:
+                loaded, fallback, load_ms = self._place(version_id)
+                if record is not None:
+                    assert loaded.prep is not None
+                    x = inputs.table_tensor(values, loaded.prep)
+                else:
+                    assert loaded.vocab is not None and text is not None
+                    x = inputs.text_tensor(text, loaded.vocab, loaded.length)
+                model = loaded.model if loaded.device == "cpu" else self._gpu_model()
+                assert model is not None
+                device = "cpu" if loaded.device == "cpu" else self._gpu.tensor_device
+                with torch.no_grad():
+                    output = model(x.to(device)).cpu()
+                del model
+                if loaded.device == "gpu":
+                    self._last_gpu_use = time.monotonic()
+                result = inputs.network_result(output, loaded.task, loaded.classes, loaded.prep)
+            return {
+                **result,
+                "version_id": loaded.version_id,
+                "lineage_id": loaded.lineage_id,
+                "device": loaded.device,
+                "fallback_reason": fallback,
+                "load_ms": load_ms,
+                "total_ms": round(1000 * (time.monotonic() - started), 1),
+            }
+
+    def _place_classical(self, version: Any, lineage: Any) -> tuple[_Loaded, float | None]:
+        """A classical model on the CPU: it never takes the lease (ADR-0019 rule 20)."""
+        loaded = self._loaded
+        if loaded is not None and loaded.version_id == version.id:
+            return loaded, None
+        from stratal.ml import persist  # scikit-learn and skops load only for this
+
+        started = time.monotonic()
+        self._unload()
+        since = utc_now().isoformat()
+        self._announce({"version_id": version.id, "device": "cpu", "since": since})
+        try:
+            with Session(self._engine) as session, session.begin():
+                store.lock_lineage(session, lineage.id)
+                current = store.get_version(session, version.id)
+                if current.weights_status != "present" or current.weights_path is None:
+                    raise WeightsDeleted(
+                        f"The model of {version.id} was deleted by retention as it was loaded.",
+                        suggested_action="Re-train it, then predict with the new version.",
+                    )
+                folder = self._settings.data_dir / current.weights_path
+                meta = json.loads((folder / store.META_FILE).read_text(encoding="utf-8"))
+                pipeline = persist.load(folder / persist.MODEL_FILE)
+        except BaseException:
+            self._announce(None)
+            raise
+        self._loaded = _Loaded(
+            version_id=version.id,
+            lineage_id=lineage.id,
+            name=f"{lineage.name} {version.id}",
+            device="cpu",
+            classes=list(meta.get("classes") or []),
+            shape=(0, 0, 0),
+            parameters=0,
+            since=since,
+            task=str(meta["task"]),
+            classical=inputs.ClassicalModel(pipeline, meta),
+        )
+        self._sink.emit(
+            stage="inference",
+            message=f"Loaded {self._loaded.name} (skops) on the CPU",
+            metrics={"version_id": version.id},
+        )
+        return self._loaded, round(1000 * (time.monotonic() - started), 1)
+
     def _gpu_model(self) -> nn.Module:
         assert self._manager is not None and self._loaded is not None
         assert self._loaded.state is not None
         return self._loaded.state.model
+
+    def _meta(self, version: Any) -> dict[str, Any]:
+        folder = self._settings.data_dir / str(version.weights_path)
+        return dict(json.loads((folder / store.META_FILE).read_text(encoding="utf-8")))
+
+    @staticmethod
+    def _takes(meta: dict[str, Any]) -> str:
+        """What a version predicts from: ``image``, ``record`` or ``text``."""
+        if meta.get("kind") == "sklearn":
+            return "record"
+        kind = (meta.get("input") or {}).get("kind", "image")
+        return {"vector": "record", "tokens": "text"}.get(kind, "image")
+
+    def _refuse_input(self, version_id: str, meta: dict[str, Any], given: str) -> None:
+        wanted = self._takes(meta)
+        if wanted != given:
+            field_name = {"image": "image_b64 or blob", "record": "record", "text": "text"}[wanted]
+            raise WrongInput(
+                f"{version_id} predicts from a {wanted}, not a {given}.",
+                suggested_action=f"Send {field_name} for this version (ADR-0019 rule 21).",
+                errors=[{"loc": ["body"], "msg": f"send {field_name}", "code": "wrong_input"}],
+            )
+
+    def check_input(self, version_id: str, given: str) -> None:
+        """Refuse an input the version does not take, before anything is read or loaded.
+        A version that cannot be served at all (deleted, partial) is left to ``predict``,
+        which refuses it after checking the input as before M10."""
+        try:
+            version, _ = self._check(version_id)
+        except (WeightsDeleted, Conflict):
+            return
+        self._refuse_input(version_id, self._meta(version), given)
 
     def _check(self, version_id: str) -> tuple[Any, Any]:
         """The version and its lineage, refusing what cannot be served."""
@@ -348,11 +492,42 @@ class ModelHolder:
             tensors = read_tensors(
                 folder / store.WEIGHTS_FILE, suggested_action="Re-train the version (REG-2.7)."
             )
-        shape = tuple(meta["input_shape"])
-        model = build_model(ModelSpec.model_validate(meta["model"]), shape, len(meta["classes"]))
+        shape: Any = (
+            Shape.from_json(meta["input"]) if meta.get("input") else tuple(meta["input_shape"])
+        )
+        outputs = 1 if meta.get("task") == "regression" else len(meta["classes"])
+        model = build_model(ModelSpec.model_validate(meta["model"]), shape, outputs)
         model.load_state_dict(tensors, strict=True)
         del tensors
+        if (folder / PREPROCESS_FILE).exists():
+            meta["_prep"] = TablePrep.from_json((folder / PREPROCESS_FILE).read_text("utf-8"))
+        if (meta.get("input") or {}).get("kind") == "tokens":
+            meta["_vocab"] = self._vocabulary(str(meta["dataset_version"]))
         return model.eval(), meta
+
+    def _table_schema(self, meta: dict[str, Any]) -> dict[str, Any]:
+        """The table schema a record is checked against: from ``model.json``, or for a
+        network trained before it was recorded there, from its dataset version."""
+        if meta.get("table_schema"):
+            return dict(meta["table_schema"])
+        with Session(self._engine) as session:
+            _, manifest = registry.manifest_for(
+                session, self._settings.data_dir, str(meta["dataset_version"])
+            )
+        text = read_metadata(manifest).get(META_TABLE_SCHEMA)
+        if text is None:
+            raise WrongInput(f"{meta.get('version_id')} has no table to check a record against.")
+        return dict(json.loads(text))
+
+    def _vocabulary(self, dataset_version: str) -> tuple[Vocabulary, int]:
+        """A text network's vocabulary and L, from its dataset version (ADR-0019 rule 11)."""
+        with Session(self._engine) as session:
+            _, manifest = registry.manifest_for(session, self._settings.data_dir, dataset_version)
+        found = vocab_of(manifest)
+        if found is None:
+            raise NotFound(f"{dataset_version} has no vocabulary to tokenize with.")
+        blob = BlobStore(self._settings.data_dir).path_for(str(found["sha256"]))
+        return Vocabulary.from_json(blob.read_text(encoding="utf-8")), int(found["max_length"])
 
     def _announce(self, info: dict[str, Any] | None) -> None:
         with contextlib.suppress(Exception):
@@ -375,7 +550,11 @@ class ModelHolder:
             shape=tuple(meta["input_shape"]),
             parameters=int(lineage.parameters),
             since=since,
+            task=str(meta.get("task") or "classification"),
+            prep=meta.get("_prep"),
         )
+        if "_vocab" in meta:
+            loaded.vocab, loaded.length = meta["_vocab"]
         if device == "cpu":
             loaded.model = model
             self._sink.emit(

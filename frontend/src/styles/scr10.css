@@ -1,0 +1,79 @@
+/* SCR-10 copied from docs/design/screens/SCR-10_v1.html (G2 approved), scoped under .scr10. Tokens only. Changes for a live page: "live:". */
+.content:has(> .scr10) { padding: var(--sp-4) var(--sp-5); overflow: auto; }
+.scr10 { display: flex; flex-direction: column; gap: var(--sp-3); }
+.scr10 .phead { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.scr10 .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.scr10 .spacer { flex: 1; }
+.scr10 .btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.scr10 .group-btns { display: inline-flex; }
+.scr10 .group-btns .btn { border-radius: 0; margin-left: -1px; }
+.scr10 .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; }
+.scr10 .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.scr10 .card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); min-width: 0; }
+.scr10 .card > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.scr10 .card > header h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.scr10 .card > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.scr10 .card > header .counts { font-size: var(--fs-12); color: var(--text-secondary); }
+.scr10 .card > .b { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr10 .kv2, .scr10-drawer .kv2 { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr10 .kv2 > span:nth-child(even), .scr10-drawer .kv2 > span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.scr10 .note2 { margin: 0; font-size: var(--fs-11); color: var(--text-muted); }
+.scr10 .callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid; font-size: var(--fs-12); color: var(--text-primary); border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); }
+.scr10 .callout svg.i { margin-top: 2px; flex: none; color: var(--info); }
+/* The mockup's SCR-10 rules. */
+.pill.pruned { --c: var(--state-cancelled); }
+[data-theme="dark"] .pill.pruned { color: color-mix(in srgb, var(--c) 75%, var(--text-primary)); }
+.badge.best { color: var(--accent); background: var(--accent-soft); border-color: transparent; margin-left: var(--sp-1); }
+[data-theme="light"] .badge.best { color: color-mix(in srgb, var(--accent) 85%, var(--text-primary)); }
+.scr10 .limits { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-6); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr10 .limits b { color: var(--text-primary); font: var(--fw-medium) var(--fs-13) var(--font-mono); font-variant-numeric: tabular-nums; }
+.scr10 .limits .progress { width: 96px; margin-left: var(--sp-1); display: inline-block; vertical-align: middle; }
+.scr10 .muted { color: var(--text-muted); }
+.scr10 .sgrid { display: grid; grid-template-columns: 1fr 380px; gap: var(--sp-3); min-height: 0; }
+.scr10 .sgrid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.scr10 .hist, .scr10-drawer .hist { display: block; width: 100%; height: auto; max-height: 220px; }
+.scr10 .hist .grid, .scr10-drawer .hist .grid { stroke: var(--border); stroke-width: 1; }
+.scr10 .hist .axis, .scr10-drawer .hist .axis { font: var(--fs-11) var(--font-mono); fill: var(--text-muted); }
+.scr10 .hist .best { fill: none; stroke: var(--cat-2); stroke-width: 2; }
+.scr10 .hist .dot, .scr10-drawer .hist .dot { fill: var(--cat-1); }
+.scr10 .hist .hollow { fill: var(--surface); stroke: var(--cat-1); stroke-width: 1.5; }
+.scr10 .hist .fail { stroke: var(--state-failed); stroke-width: 1.8; }
+.scr10-drawer .hist .med { fill: none; stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.scr10-drawer .hist .trial { fill: none; stroke: var(--cat-1); stroke-width: 2; }
+.scr10 .legend2, .scr10-drawer .legend2 { display: flex; flex-wrap: wrap; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); }
+.scr10 .legend2 i, .scr10-drawer .legend2 i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-pill); margin-right: var(--sp-1); vertical-align: middle; background: var(--cat-1); }
+.scr10 .legend2 i.h { background: transparent; border: 1.5px solid var(--cat-1); }
+.scr10 .legend2 i.l, .scr10-drawer .legend2 i.l { width: 12px; height: 2px; border-radius: 0; background: var(--cat-2); }
+.scr10-drawer .legend2 i.m { width: 12px; height: 0; border-radius: 0; border-top: 1.5px dashed var(--text-muted); background: transparent; }
+.scr10 .legend2 .x { color: var(--state-failed); font-weight: var(--fw-semibold); margin-right: var(--sp-1); }
+.scr10 .imp { display: grid; grid-template-columns: 132px 1fr 44px; gap: var(--sp-2) var(--sp-3); align-items: center; font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.scr10 .imp .bar { height: 10px; border-radius: var(--r-xs); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.scr10 .imp .bar > i { display: block; height: 100%; width: var(--p); background: var(--cat-1); }
+.scr10 .imp span:nth-child(3n) { text-align: right; color: var(--text-primary); }
+.scr10 .once { display: flex; flex-direction: column; gap: var(--sp-2); }
+.scr10 .once .figs { display: flex; gap: var(--sp-6); }
+.scr10 .once .figs > span { display: flex; flex-direction: column; gap: 2px; }
+.scr10 .once .big { font: var(--fw-semibold) var(--fs-24)/1.1 var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.scr10 .placeholder { display: flex; gap: var(--sp-2); align-items: flex-start; font-size: var(--fs-12); color: var(--text-muted); }
+.scr10 .placeholder svg.i { margin-top: 2px; flex: none; }
+.scr10 .placeholder.pad { padding: var(--sp-3) var(--sp-4); }
+.scr10 .t td .why { color: var(--text-muted); font-size: var(--fs-12); margin-left: var(--sp-1); }
+.scr10 .t th .i { width: 12px; height: 12px; vertical-align: -2px; }
+.scr10 .t td.p { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+.scr10 .t td.p.best-col { color: var(--text-primary); }
+.scr10 .t tr.clickable { cursor: pointer; }
+.scr10 .t tr.clickable:hover .why, .scr10 .t tr.clickable:focus .why, .scr10 .t tr.clickable:hover .muted { color: var(--text-secondary); }
+[data-theme="dark"] .scr10 .t tr.clickable:hover .pill.pruned { color: color-mix(in srgb, var(--c) 45%, var(--text-primary)); }
+/* live: the table scrolls inside its card, with the number and state pinned (frame F). */
+.scr10 .table-wrap.trials { max-height: 520px; overflow: auto; }
+.scr10 .table-wrap.trials th:first-child, .scr10 .table-wrap.trials td:first-child { position: sticky; left: 0; background: var(--surface); }
+.scr10 .table-wrap.trials thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.scr10 .sortbtn { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.scr10 .hist-table { max-height: 220px; overflow: auto; }
+.scr10 .select.sm { width: auto; height: var(--h-sm); }
+.scr10-drawer .body { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.scr10-drawer .body p { margin: 0; }
+.scr10-drawer .h-sub { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-secondary); }
+@media (max-width: 1279px) {
+  .scr10 .sgrid { grid-template-columns: 1fr; }
+}

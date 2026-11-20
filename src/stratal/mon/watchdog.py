@@ -12,6 +12,11 @@ Three checks, every few seconds:
 3. **Heat (RUN-1.6).** At ``thermal_pause_c`` the running GPU job is asked to
    pause, with the reason ``thermal``; below ``thermal_resume_c`` the jobs paused
    for that reason, and only those, are resumed.
+4. **Waiting studies (ADR-0018 rule 5).** A deep-learning study between its steps has
+   no process and no heartbeat; it is checked through its current trial instead. A
+   trial still queued, running or paused means all is well; a trial that ended with
+   no step queued (a lost message) gets the step queued here. A queued step nobody
+   took for ``stale_after_s`` is sent again (a duplicate is claimed once).
 """
 
 import time
@@ -25,11 +30,12 @@ from sqlalchemy.orm import Session
 from stratal.core.bus import Bus
 from stratal.core.logging import get_logger
 from stratal.db.models import Job, JobStage, ResourceSample
+from stratal.hpo import control as hpo_control
 from stratal.mon.events import Event, MetricValue
 from stratal.mon.store import insert_events
 from stratal.runtime import jobs as job_service
 from stratal.runtime.jobs import Enqueue
-from stratal.runtime.states import transition
+from stratal.runtime.states import TERMINAL, transition
 
 log = get_logger(__name__)
 
@@ -106,6 +112,8 @@ class Watchdog:
                 stage = session.scalars(
                     select(JobStage).where(JobStage.job_id == job.id, JobStage.status == "running")
                 ).first()
+                if stage is None and job.kind == "hpo_study":
+                    continue  # between steps: checked through its trial (check 4)
                 acted.append(job.id)
                 reason = (
                     f"No heartbeat from worker {job.worker} for more than "
@@ -148,8 +156,63 @@ class Watchdog:
                     transition(session, job, "failed", reason=reason, actor="watchdog")
         for item in to_enqueue:
             self._enqueue(item)
+        acted += self._check_waiting()
         acted += self._check_stalls()
         acted += self._check_heat()
+        return acted
+
+    # ------------------------------------------------------------------ ADR-0018 rule 5
+    def _check_waiting(self) -> list[str]:
+        """Queue the step of a study whose trial ended without queueing it; resend a step
+        that has sat in the queue unclaimed."""
+        acted: list[str] = []
+        to_enqueue: list[Enqueue] = []
+        with Session(self._engine) as session, session.begin():
+            cutoff = func.now() - timedelta(seconds=self.stale_after_s)
+            rows = session.execute(
+                select(Job, JobStage)
+                .join(
+                    JobStage, (JobStage.job_id == Job.id) & (JobStage.idx == Job.current_stage_idx)
+                )
+                .where(
+                    Job.kind == "hpo_study",
+                    Job.state == "running",
+                    JobStage.status.in_(("waiting", "queued")),
+                )
+                .with_for_update(of=Job, skip_locked=True)
+            ).all()
+            for job, stage in rows:
+                if stage.status == "queued":
+                    fresh = session.scalar(
+                        select(Job.id).where(Job.id == job.id, Job.heartbeat_at >= cutoff)
+                    )
+                    if fresh is not None:
+                        continue
+                    job.heartbeat_at = func.now()
+                    to_enqueue.append(Enqueue(job.id, stage.idx, stage.queue))
+                    acted.append(job.id)
+                    continue
+                study = hpo_control.study_of_job(session, job.id)
+                found = hpo_control.current_trial(session, study.id) if study else None
+                if found is not None and found[1].state not in TERMINAL:
+                    continue  # the trial is queued, running or paused: all is well
+                stage.status = "queued"
+                job.heartbeat_at = func.now()
+                self._event(
+                    session,
+                    job,
+                    stage.name,
+                    "WARN",
+                    "The study's trial ended but its next step was never queued: queued it",
+                    code="study_step_requeued",
+                    reason="The message that queues the next step was lost, or its worker "
+                    "stopped before sending it.",
+                    action="None needed: the study continues.",
+                )
+                to_enqueue.append(Enqueue(job.id, stage.idx, stage.queue))
+                acted.append(job.id)
+        for item in to_enqueue:
+            self._enqueue(item)
         return acted
 
     # ------------------------------------------------------------------ RUN-1.7

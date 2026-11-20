@@ -28,7 +28,9 @@ from stratal.core.errors import (
     ValidationFailed,
 )
 from stratal.data import registry
-from stratal.db.models import Checkpoint, Dataset, Job, JobStage
+from stratal.db.models import Checkpoint, Dataset, DatasetVersion, Job, JobStage
+from stratal.hpo.config import StudyRequest
+from stratal.ml.params import ClassicalConfig
 from stratal.mon.events import utc_now
 from stratal.registry import store as model_registry
 from stratal.runtime import stages as stage_registry
@@ -75,11 +77,16 @@ class PipelineRequest(BaseModel):
         description="Per-stage overrides of the default config.",
     )
     until_stage: str | None = Field(default=None, description="Stop after this stage.")
-    dataset_type: Literal["image_caption", "labelled_images"] | None = Field(
-        default=None,
-        description="Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest "
-        "to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from "
-        "class folders. Null: the type of 'from_version' if it has one, else image_caption.",
+    dataset_type: Literal["image_caption", "labelled_images", "tabular", "labelled_text"] | None = (
+        Field(
+            default=None,
+            description="Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest "
+            "to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from "
+            "class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, "
+            "stages.ingest.table.target required), clean_table, split. 'labelled_text': ingest "
+            "(JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it "
+            "has one, else image_caption.",
+        )
     )
 
     @model_validator(mode="after")
@@ -221,19 +228,32 @@ def _stage_overrides(dtype: str, request: PipelineRequest, name: str) -> dict[st
     }
 
 
+_INGEST_KIND: dict[str, str | None] = {
+    "image_caption": None,
+    "labelled_images": "label_from",
+    "tabular": "table",
+    "labelled_text": "text",
+}
+"""The ingest field each dataset type needs set (and every other type leaves unset)."""
+
+
 def _label_problems(dtype: str, plan: list[tuple[str, dict[str, Any]]]) -> list[FieldProblem]:
-    """A labelled-images dataset needs labels from ingest; an image–caption one has none."""
+    """Ingest's labels, table or text settings must match the dataset type (DATA-5.2)."""
+    wanted = _INGEST_KIND.get(dtype)
     for name, config in plan:
         if name != "ingest":
             continue
-        wants = dtype == stage_registry.LABELLED_IMAGES
-        if wants != (config.get("label_from") is not None):
+        for field_name in ("label_from", "table", "text"):
+            given = config.get(field_name) is not None
+            if given == (field_name == wanted):
+                continue
             msg = (
-                "labelled_images needs label_from 'folder'"
-                if wants
-                else "label_from is only for dataset_type labelled_images"
+                f"{dtype} needs stages.ingest.{field_name}"
+                if field_name == wanted
+                else f"{field_name} is only for dataset_type "
+                f"{next(t for t, f in _INGEST_KIND.items() if f == field_name)}"
             )
-            return [FieldProblem(loc=["stages", "ingest", "label_from"], msg=msg, code="invalid")]
+            return [FieldProblem(loc=["stages", "ingest", field_name], msg=msg, code="invalid")]
     return []
 
 
@@ -312,7 +332,7 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
     dataset = registry.ensure_dataset(
         session,
         slug=slug,
-        modality="image",
+        modality=stage_registry.modality_of(dtype),
         source_uri=request.source.path if request.source is not None else None,
     )
     spec = request.model_dump(mode="json")
@@ -345,16 +365,41 @@ def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqu
             suggested_action="List versions with GET /datasets/{slug}/versions and use one.",
             errors=[FieldProblem(loc=loc, msg="unknown version", code="not_found")],
         ) from exc
-    if version.dtype != stage_registry.LABELLED_IMAGES or version.stage != "split":
+    if request.classical is not None:
+        return _create_classical_job(session, request.classical, version)
+    assert request.config is not None
+    resolved = check_network(session, version, request.config)
+    return _create_network_job(session, version, resolved, kind="train", spec={"kind": "train"})
+
+
+def check_network(session: Session, version: DatasetVersion, config: TrainConfig) -> TrainConfig:
+    """A network's run checked against its dataset version, as ``POST /jobs`` does
+    (RUN-1.1, ADR-0017 rule 4), with the checkpoint interval fixed into it. Raises
+    :class:`ValidationFailed` naming the field."""
+    from stratal.build.io import TRAINS_ON
+
+    version_id = version.version_id
+    loc: list[str | int] = ["dataset_version"]
+    trains_on = TRAINS_ON.get(version.dtype or "")
+    if trains_on is None or version.stage != trains_on:
         made = f"a {version.stage} version of type {version.dtype or 'none'}"
         raise ValidationFailed(
-            f"Version {version_id} is {made}; training needs a split of a labelled-images dataset.",
-            suggested_action="Run a labelled_images pipeline through the split stage and "
-            "train on its output version.",
-            errors=[FieldProblem(loc=loc, msg="not a labelled split", code="invalid")],
+            f"Version {version_id} is {made}; a network trains on a split of labelled images "
+            "or of a table, or on a tokenize version of labelled text (ADR-0019 rule 12).",
+            suggested_action="Run the dataset's pipeline to the end and train on its output.",
+            errors=[FieldProblem(loc=loc, msg="not a trainable version", code="invalid")],
         )
-    dataset = session.get(Dataset, version.dataset_id)
-    resolved = request.config
+    if config.model.graph is None and version.dtype != stage_registry.LABELLED_IMAGES:
+        raise ValidationFailed(
+            f"The reference model {config.model.name} takes images; {version_id} is "
+            f"{version.dtype}.",
+            suggested_action="Build a model for this dataset on SCR-08, or start from one of "
+            "its templates.",
+            errors=[
+                FieldProblem(loc=["config", "model", "name"], msg="images only", code="invalid")
+            ],
+        )
+    resolved = config
     if resolved.model.graph is not None:  # a builder spec: checked against the version's ends
         from stratal.build.io import check_train_graph
         from stratal.core.settings import get_settings
@@ -378,23 +423,302 @@ def create_train_job(session: Session, request: TrainRequest) -> tuple[Job, Enqu
 
         minutes = limits.read(session, get_settings()).checkpoint_interval_min
         resolved = resolved.model_copy(update={"checkpoint_every_s": 60 * minutes})
+    return resolved
+
+
+def _create_network_job(
+    session: Session,
+    version: DatasetVersion,
+    resolved: TrainConfig,
+    *,
+    kind: str,
+    spec: dict[str, Any],
+) -> tuple[Job, Enqueue]:
+    dataset = session.get(Dataset, version.dataset_id)
     config = resolved.model_dump(mode="json")
-    plan = [("train", config)]
-    spec: dict[str, Any] = {
-        "kind": "train",
+    full: dict[str, Any] = {
+        **spec,
         "dataset": dataset.slug if dataset is not None else None,
-        "dataset_version": version_id,
+        "dataset_version": version.version_id,
         "stages": {"train": config},
     }
     return create_job_from_plan(
         session,
+        kind=kind,
+        spec=full,
+        plan=[("train", config)],
+        dataset_id=version.dataset_id,
+        input_version_id=version.version_id,
+        queues={"train": "cpu" if resolved.device == "cpu" else "gpu"},
+    )
+
+
+def create_trial_job(
+    session: Session,
+    *,
+    study_job_id: str,
+    study_id: str,
+    number: int,
+    version: DatasetVersion,
+    config: TrainConfig,
+) -> tuple[Job, Enqueue]:
+    """A deep-learning study's trial: a ``train`` run of kind ``hpo_trial`` that knows its
+    study and number (ADR-0018 rule 5). ``config`` was checked by :func:`check_network`."""
+    return _create_network_job(
+        session,
+        version,
+        config,
+        kind="hpo_trial",
+        spec={
+            "kind": "hpo_trial",
+            "study_id": study_id,
+            "study_job": study_job_id,
+            "trial": number,
+        },
+    )
+
+
+def network_task(session: Session, version: DatasetVersion) -> str:
+    """What a network on this version learns: a table's target decides; images and texts
+    are classified (ADR-0019 rule 12)."""
+    if version.dtype == stage_registry.TABULAR:
+        return str(_tabular_data(session, version).task)
+    return "classification"
+
+
+def _tabular_data(session: Session, version: DatasetVersion) -> Any:
+    """A tabular split's data, or ``validation_error`` at ``dataset_version``."""
+    from stratal.core.settings import get_settings
+    from stratal.ml.data import load_tabular
+
+    version_id = version.version_id
+    if version.dtype != stage_registry.TABULAR or version.stage != "split":
+        made = f"a {version.stage} version of type {version.dtype or 'none'}"
+        raise ValidationFailed(
+            f"Version {version_id} is {made}; a classical model needs a split of a tabular "
+            "dataset.",
+            suggested_action="Run a tabular pipeline through the split stage and train on it.",
+            errors=[
+                FieldProblem(loc=["dataset_version"], msg="not a tabular split", code="invalid")
+            ],
+        )
+    _, manifest = registry.manifest_for(session, get_settings().data_dir, version_id)
+    return load_tabular(manifest)
+
+
+def _classical_problems(config: ClassicalConfig, data: Any) -> list[FieldProblem]:
+    """What makes a classical model unfit for a table (ML-1.4), each at its field."""
+    from stratal.ml.params import check_data, check_task
+
+    spec = config.model.resolved()
+    problems: list[FieldProblem] = []
+    wrong_task = check_task(spec.estimator, data.task)
+    if wrong_task is not None:
+        problems.append(
+            FieldProblem(loc=["classical", "model", "estimator"], msg=wrong_task, code="invalid")
+        )
+    for field_name, reason in check_data(spec, data.facts()):
+        problems.append(
+            FieldProblem(
+                loc=["classical", "model", "params", field_name], msg=reason, code="invalid"
+            )
+        )
+    return problems
+
+
+def _create_classical_job(
+    session: Session, config: ClassicalConfig, version: DatasetVersion
+) -> tuple[Job, Enqueue]:
+    """A classical model's run on a tabular split, on the CPU queue (ML-1.1, ML-1.4)."""
+    version_id = version.version_id
+    problems = _classical_problems(config, _tabular_data(session, version))
+    if problems:
+        raise ValidationFailed(
+            "The classical model does not fit this dataset (ML-1.4).",
+            suggested_action="Fix the fields listed in 'errors'.",
+            errors=problems,
+        )
+    spec = config.model.resolved()
+    resolved = config.model_copy(update={"model": spec}).model_dump(mode="json")
+    dataset = session.get(Dataset, version.dataset_id)
+    spec_json: dict[str, Any] = {
+        "kind": "train",
+        "dataset": dataset.slug if dataset is not None else None,
+        "dataset_version": version_id,
+        "stages": {"train_classical": resolved},
+    }
+    return create_job_from_plan(
+        session,
         kind="train",
-        spec=spec,
-        plan=plan,
+        spec=spec_json,
+        plan=[("train_classical", resolved)],
         dataset_id=version.dataset_id,
         input_version_id=version_id,
-        queues={"train": "cpu" if request.config.device == "cpu" else "gpu"},
+        queues={"train_classical": "cpu"},
     )
+
+
+def create_study_job(session: Session, request: StudyRequest) -> tuple[Job, Enqueue]:
+    """An HPO study: a one-stage ``hpo_study`` job and its ``studies`` row (HPO-1.1 to
+    HPO-1.4, ADR-0018 rule 1). The base run is checked as a single run would be; the space
+    against each field's own range and the fixed fields (ADR-0018 rule 2)."""
+    from stratal.hpo import space as hpo_space
+    from stratal.hpo.config import objectives
+    from stratal.hpo.store import create_study
+
+    version_id = request.dataset_version
+    try:
+        version = registry.get_version(session, version_id)
+    except NotFound as exc:
+        raise ValidationFailed(
+            f"dataset_version {version_id!r} is not a known dataset version.",
+            errors=[FieldProblem(loc=["dataset_version"], msg="unknown version", code="not_found")],
+        ) from exc
+    if request.config is not None:
+        return _create_deep_study_job(session, request, version)
+    assert request.classical is not None
+    data = _tabular_data(session, version)
+    problems = _classical_problems(request.classical, data)
+    if problems:
+        raise ValidationFailed(
+            "The base run does not fit this dataset (ML-1.4).",
+            suggested_action="Fix the fields listed in 'errors'.",
+            errors=problems,
+        )
+    if data.task not in ("classification", "regression"):
+        raise ValidationFailed("Studies tune supervised models.")
+    from stratal.ml.params import check_task, task_for
+
+    estimator = request.classical.model.estimator
+    if task_for(estimator, data.task) not in ("classification", "regression"):
+        raise ValidationFailed(
+            f"{estimator} has no validation score to tune; studies tune classifiers and "
+            "regressors (HPO-1.4).",
+            errors=[
+                FieldProblem(
+                    loc=["classical", "model", "estimator"], msg="unsupervised", code="invalid"
+                )
+            ],
+        )
+    choices = objectives("classical", data.task)
+    objective = request.objective or next(iter(choices))
+    if objective not in choices:
+        raise ValidationFailed(
+            f"objective {objective!r} does not suit a classical {data.task}; choose one of "
+            f"{', '.join(choices)}.",
+            errors=[FieldProblem(loc=["objective"], msg="unknown objective", code="invalid")],
+        )
+    base = {
+        "classical": request.classical.model_copy(
+            update={"model": request.classical.model.resolved()}
+        ).model_dump(mode="json")
+    }
+
+    def invalid(document: dict[str, Any]) -> str | None:
+        try:
+            config = ClassicalConfig.model_validate(document["classical"])
+        except ValidationError as exc:
+            return str(exc.errors()[0]["msg"])
+        found = _classical_problems(config, data)
+        wrong = check_task(config.model.estimator, data.task)
+        return found[0]["msg"] if found else wrong
+
+    space_problems = hpo_space.check_space(request.space, base, invalid)
+    if space_problems:
+        raise ValidationFailed(
+            "The search space has problems (HPO-1.1).",
+            suggested_action="Fix the markers listed in 'errors'.",
+            errors=space_problems,
+        )
+    dataset = session.get(Dataset, version.dataset_id)
+    spec: dict[str, Any] = {
+        **request.model_dump(mode="json", exclude={"classical", "config"}),
+        "base": base,
+        "objective": objective,
+        "direction": choices[objective],
+        "study_kind": request.study_kind,
+        "task": data.task,
+        "dataset": dataset.slug if dataset is not None else None,
+    }
+    job, enqueue = create_job_from_plan(
+        session,
+        kind="hpo_study",
+        spec=spec,
+        plan=[("study", spec)],
+        dataset_id=version.dataset_id,
+        input_version_id=version_id,
+        queues={"study": "cpu"},
+    )
+    study_id = create_study(session, job_id=job.id, spec=spec)
+    job.spec = {**job.spec, "study_id": study_id}
+    stage = session.get(JobStage, (job.id, 0))
+    assert stage is not None
+    stage.config = {**stage.config, "study_id": study_id}
+    return job, enqueue
+
+
+def _create_deep_study_job(
+    session: Session, request: StudyRequest, version: DatasetVersion
+) -> tuple[Job, Enqueue]:
+    """A study of a network: a ``study`` stage advanced in short steps on the CPU queue,
+    one ``hpo_trial`` job per trial, then ``test_eval`` (ADR-0018 rules 5 and 8)."""
+    from stratal.hpo import space as hpo_space
+    from stratal.hpo.config import objectives
+    from stratal.hpo.store import create_study
+
+    assert request.config is not None
+    resolved = check_network(session, version, request.config)
+    task = network_task(session, version)
+    choices = objectives("deep", task)
+    objective = request.objective or next(iter(choices))
+    if objective not in choices:
+        raise ValidationFailed(
+            f"objective {objective!r} does not suit a network's {task}; choose one of "
+            f"{', '.join(choices)}.",
+            errors=[FieldProblem(loc=["objective"], msg="unknown objective", code="invalid")],
+        )
+    base = {"config": resolved.model_dump(mode="json")}
+
+    def invalid(document: dict[str, Any]) -> str | None:
+        try:
+            check_network(session, version, TrainConfig.model_validate(document["config"]))
+        except ValidationError as exc:
+            return str(exc.errors()[0]["msg"])
+        except ValidationFailed as exc:
+            return str(exc.errors[0]["msg"]) if exc.errors else exc.detail
+        return None
+
+    space_problems = hpo_space.check_space(request.space, base, invalid)
+    if space_problems:
+        raise ValidationFailed(
+            "The search space has problems (HPO-1.1).",
+            suggested_action="Fix the markers listed in 'errors'.",
+            errors=space_problems,
+        )
+    dataset = session.get(Dataset, version.dataset_id)
+    spec: dict[str, Any] = {
+        **request.model_dump(mode="json", exclude={"classical", "config"}),
+        "base": base,
+        "objective": objective,
+        "direction": choices[objective],
+        "study_kind": "deep",
+        "task": task,
+        "dataset": dataset.slug if dataset is not None else None,
+    }
+    job, enqueue = create_job_from_plan(
+        session,
+        kind="hpo_study",
+        spec=spec,
+        plan=[("study", spec), ("test_eval", {})],
+        dataset_id=version.dataset_id,
+        input_version_id=version.version_id,
+        queues={"study": "cpu", "test_eval": "cpu" if resolved.device == "cpu" else "gpu"},
+    )
+    study_id = create_study(session, job_id=job.id, spec=spec)
+    job.spec = {**job.spec, "study_id": study_id}
+    for stage in stages_of(session, job.id):
+        stage.config = {**stage.config, "study_id": study_id}
+    return job, enqueue
 
 
 def get_job(session: Session, job_id: str, *, lock: bool = False) -> Job:
@@ -411,7 +735,7 @@ def stages_of(session: Session, job_id: str) -> list[JobStage]:
 
 def cancel_unfinished_stages(session: Session, job_id: str) -> None:
     for stage in stages_of(session, job_id):
-        if stage.status in ("pending", "queued", "running", "paused"):
+        if stage.status in ("pending", "queued", "running", "paused", "waiting"):
             stage.status = "cancelled"
             stage.finished_at = stage.finished_at or utc_now()
 
@@ -425,7 +749,8 @@ def request_cancel(session: Session, job_id: str) -> tuple[Job, bool]:
     """
     job = get_job(session, job_id, lock=True)
     check_transition(job.id, job.state, "cancelled")
-    if job.state in ("running", "stalled"):  # a child is still at work: it stops itself
+    waiting = any(s.status == "waiting" for s in stages_of(session, job_id))
+    if job.state in ("running", "stalled") and not waiting:  # a child is at work: it stops
         job.desired_state = "cancelled"
         return job, True
     transition(session, job, "cancelled", reason="cancelled by the user", actor="user")
@@ -451,7 +776,19 @@ def request_pause(
         )
     job.desired_state = "paused"
     job.pause_reason = reason
+    if job.kind == "hpo_study":  # a study waiting for its trial pauses through it
+        from stratal.hpo.control import forward_pause
+
+        forward_pause(session, job)
     return job
+
+
+def signal_targets(session: Session, job: Job, *, running: bool) -> list[str]:
+    """The jobs whose running process must hear a pause or cancel through Redis: the job,
+    if a child runs it, and a study's current trial (ADR-0018 rule 5)."""
+    from stratal.hpo.control import trial_to_signal
+
+    return ([job.id] if running else []) + trial_to_signal(session, job)
 
 
 def request_resume(
@@ -539,6 +876,17 @@ def stage_view(stage: JobStage) -> dict[str, Any]:
     }
 
 
+def _study_link(job: Job) -> dict[str, Any] | None:
+    """An HPO study's job, or one of its trials: which study, and the trial's number."""
+    if job.kind not in ("hpo_study", "hpo_trial") or not job.spec.get("study_id"):
+        return None
+    return {
+        "id": job.spec["study_id"],
+        "trial": job.spec.get("trial"),
+        "study_job": job.spec.get("study_job"),
+    }
+
+
 def job_view(session: Session, job: Job) -> dict[str, Any]:
     """A job with its stages, as the API returns it."""
     stages = stages_of(session, job.id)
@@ -558,6 +906,7 @@ def job_view(session: Session, job: Job) -> dict[str, Any]:
         "output_version_id": job.output_version_id,
         "model_version_id": version.id if version is not None else None,
         "model_lineage_id": version.lineage_id if version is not None else None,
+        "study": _study_link(job),
         "error": job.error,
         "summary": job.summary,
         "created_at": _iso(job.created_at),
@@ -647,10 +996,13 @@ def create_retrain_job(session: Session, version_id: str) -> tuple[Job, Enqueue]
             f"{version_id} is a {version.state} version; only trained versions are re-trained.",
             suggested_action="Re-train a trained version, or start a new run.",
         )
+    model_spec: dict[str, Any] = dict(version.config.get("model") or {})
+    classical = model_spec.get("kind") == "sklearn"
     request = TrainRequest(
         kind="train",
         dataset_version=version.dataset_version_id,
-        config=TrainConfig.model_validate(version.config),
+        config=None if classical else TrainConfig.model_validate(version.config),
+        classical=ClassicalConfig.model_validate(version.config) if classical else None,
     )
     job, enqueue = create_train_job(session, request)
     job.spec = {**job.spec, "retrain_of": version_id}
