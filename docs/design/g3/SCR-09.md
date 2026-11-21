@@ -110,7 +110,7 @@
 | Mockup | [`screens/SCR-09v2_v1.html`](../screens/SCR-09v2_v1.html), G2 approved 2026-11-20: frames E and F, and the fixed study row of frame G |
 | Built | `frontend/src/screens/build/FineTune.tsx` (new: the Start from and Freeze layers cards, the validate and picker hooks), `RunScreen.tsx`, `StudyParts.tsx`, `models/VersionDrawer.tsx` (*Fine-tune…*, the parent), `job/Training.tsx` (epoch 0); styles appended to `scr09.css`. Route `/runs/new?init_from=mv_…` |
 | Checked | 2026-11-21, live on the running stack with the rebuilt images. Fine-tuned `mv_a014046ec3b5` (`small_cnn · cifar10`) from SCR-09, layers `n1`–`n12` frozen, 3 epochs on the GPU: `job_0106` registered `mv_7f950100ab48`. Epoch 0 gave val loss 0.7004, the parent's 0.7004 (AC1); the 24 frozen tensors, BatchNorm statistics included, are identical to the parent's on disk and the rest changed (AC2); retention now blocks the parent ("parent of mv_7f950100ab48, still with weights"). The pane was about 800 px wide, so the page was one column; content, behaviour and contrast were checked through the page |
-| Status | Waiting for the owner |
+| Status | **Approved by the owner on 2026-11-21** ("Approved"), with the listed differences |
 
 ## Screenshots (in `SCR-09/`)
 

@@ -653,7 +653,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_UI_2_1_*` (training entry, Vitest): a tabular split reaches SCR-09's classical mode without SCR-08; a non-tabular split shows *Classical* greyed with its reason; SCR-09 opened without a kind goes to step 2; G3 passed with SCR-09 v2 (the entry's G3 approved 2026-11-20; fine-tuning's G3 follows with RUN-1.10)
 - [ ] `test_UI_2_2_*`: charts for any dataset version
 - [ ] `test_EVAL_1_3_*`: three or more models compared in one view
-- [ ] `test_RUN_1_10_*`: a run from a version starts at its weights and records it as parent; frozen layers are unchanged; a shape mismatch is refused unless the head is reset
+- [x] `test_RUN_1_10_*`: a run from a version starts at its weights and records it as parent; frozen layers are unchanged; a shape mismatch is refused unless the head is reset (2026-11-21: `test_M11_fine_tune.py`, 11 tests, and `test_RUN_1_10_config.py`, 8; Vitest `FineTune.test.tsx`. Live on the GPU, `job_0106` fine-tuned `mv_a014046ec3b5` with `n1`–`n12` frozen: epoch 0 val loss 0.7004 = the parent's 0.7004, the 24 frozen tensors unchanged on disk, registered `mv_7f950100ab48` with its parent. Gate 3 for SCR-09's fine-tuning approved 2026-11-21)
 - [ ] `test_DATA_3_5_*` (P2, if time): the diff lists the changes correctly
 - [ ] `test_DATA_2_3_*` (P2): cropped variants are grouped together and a report is generated
 - [ ] 👤 `test_DATA_4_8_*` (P2): two photos of one scene from different angles land in the same split (written by the agent at the owner's request)
