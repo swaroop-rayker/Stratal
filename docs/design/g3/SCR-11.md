@@ -125,4 +125,4 @@ Frame F's empty state ("No models yet") cannot be shown live without deleting th
 ## Tests
 
 - Frontend: `frontend/src/screens/models/Compare.test.tsx` (8): three models in one view with intervals and *best*; a version tested elsewhere named and removable; the picker's Score on test and reasons; the overlap note naming only overlapping versions; per-class F1 by spread; a record from a test row with its label and imputation; a refused record's fields; a text's token facts.
-- Backend: `tests/integration/test_M11_compare.py` (3), `tests/unit/test_REG_1_4_text_facts.py` (2), lineage and children assertions in `test_M11_fine_tune.py`.
+- Backend: `tests/integration/test_M11_compare.py` (3), `tests/unit/test_REG_1_4_text_facts.py` (2), lineage and children assertions in `test_M11_fine_tune.py`. Run in the GPU worker's image on 2026-11-21 with `test_M11_fine_tune.py`, the corrected `test_REG_2_8_an_in_use_or_parent_version_is_blocked_and_logged` and the torch unit tests: 33 passed (11 min).
