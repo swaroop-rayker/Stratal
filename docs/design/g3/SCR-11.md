@@ -86,7 +86,7 @@ Frame F's empty state ("No models yet") cannot be shown live without deleting th
 | Mockup | [`screens/SCR-11v2_v1.html`](../screens/SCR-11v2_v1.html), G2 approved 2026-11-20, frames A–F, with both of the low-fi's questions approved (Score on test; a text's token facts) |
 | Built | `frontend/src/screens/models/CompareScreen.tsx` (new, route `/models/compare`), `TryValues.tsx` (new), `TryIt.tsx`, `VersionDrawer.tsx`, `LineageScreen.tsx`, `ModelsScreen.tsx`, `api/registry.ts`; styles appended to `scr11.css`. Backend `stratal.registry.compare`, `GET /models/compare`, `GET /models/compare/candidates`, `POST /model-versions/{id}/score-test`, the predict answer's `input`, `children` and `founded_from` |
 | Checked | 2026-11-21, live after the GPU was restored (E-012: `wsl --shutdown` and a Docker Desktop restart, with the owner's OK). Wine's three networks on `ds_6448d354c9c6`: 0.944 (17 of 18, 0.742–0.990), 1.000 and 1.000 (0.824–1.000), *best* shared, the overlap note. Score on test from the picker: `job_0108` scored `mv_a014046ec3b5` once on CIFAR-10's 5,963 test rows (accuracy 0.832), a second request refused `409`. CIFAR-10 compared three ways: the study's `mv_a4a0fb846812` 0.810 (0.800–0.820), the fine-tune `mv_7f950100ab48` 0.831 and its parent 0.832, whose intervals overlap. Try it: wine row `wine.csv#0000021` → `class_0` 1.000, its label matching; the caption → `person` 0.917, "11 tokens · 0 unknown · not cut". The pane was about 800 px wide |
-| Status | Waiting for the owner |
+| Status | **Approved by the owner on 2026-11-21** ("Approved"), with the listed differences |
 
 ## Screenshots (in `SCR-11/`)
 
