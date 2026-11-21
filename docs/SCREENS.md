@@ -319,7 +319,7 @@ Every section is a form generated from its schema (UI-2.3), saved with `PUT /set
 
 Raw against cleaned distributions and the rejection reasons per stage (UI-2.2); the difference from another version: rows added, removed and changed (DATA-3.5, P2); semantic-duplicate clusters, shown like duplicate groups (DATA-2.3, ADR-0013).
 
-As approved with the low-fi wireframe on 2026-11-21 (`design/screens/SCR-03v2-lofi_v1.html`), three tabs join Rows, Reasons and Config:
+As approved with the low-fi wireframe on 2026-11-21 (`design/screens/SCR-03v2-lofi_v1.html`) and the hi-fi mockup the same day (`design/screens/SCR-03v2_v1.html`), three tabs join Rows, Reasons and Config, in the order Rows, Reasons, Distributions, Compare, Models, Config:
 
 | Tab | Shows | Source |
 |---|---|---|
