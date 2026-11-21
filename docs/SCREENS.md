@@ -319,6 +319,16 @@ Every section is a form generated from its schema (UI-2.3), saved with `PUT /set
 
 Raw against cleaned distributions and the rejection reasons per stage (UI-2.2); the difference from another version: rows added, removed and changed (DATA-3.5, P2); semantic-duplicate clusters, shown like duplicate groups (DATA-2.3, ADR-0013).
 
+As approved with the low-fi wireframe on 2026-11-21 (`design/screens/SCR-03v2-lofi_v1.html`), three tabs join Rows, Reasons and Config:
+
+| Tab | Shows | Source |
+|---|---|---|
+| Distributions | The funnel from raw to this version (rows in, removed by reason, out, per stage; a split's parts), then per column raw (the ingest version) against here (accepted rows) and the removed rows: a histogram on shared edges and min, p10, median, p90, max. By type: images' width, height, file size, preprocessed long side, caption length, CLIP score; class counts per split; text lengths and tokens cut at L; a table's target | `GET /versions/{id}/distributions` *planned*, cached by version ID (K10) |
+| Compare | Another version of the dataset (the parent preselected; any stage, said when they differ), the config difference along both lineages, rows added, removed, changed (status, reason code, content or derived fields) and reason-wording-only on its own line, changed by field, the changed rows before → after; a field only one side has listed once as "only in B" | `GET /versions/{id}/diff?with=` *planned*, by `row_key` |
+| Models | On a version models train on: the model versions trained on it, by lineage, with the metric (test once scored, else validation, said which), weights and links to SCR-11; the lineage strip ends with "→ N models" | registry |
+
+Semantic clusters: a tile (clusters, rows, largest), a Rows filter, a cluster chip in the row, and the members side by side in the row drawer with each pair's similarity and their shared split group; every member stays accepted.
+
 ## 4. Later screens (outline)
 
 Detailed at each phase kickoff, when their interfaces are specified. Listed now so the shell and the phase-1 screens leave room.
