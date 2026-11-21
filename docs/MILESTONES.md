@@ -642,7 +642,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] The RUN-1.10 addendum to ADR-0014 and ADR-0015 approved (K3) (both Addendum A, 2026-11-20, "Approve both")
 - [x] G1 revision for choosing the model kind after the split approved (SCREENS.md, Flow 4); its G2 approved with SCR-09 v2 (G1 v3 and G2 approved 2026-11-20)
 - [ ] G2 for SCR-09 v2, SCR-11 v2, SCR-03 v2 and SCR-13 approved, in that order (K11) (SCR-09 v2 and SCR-11 v2 passed 2026-11-20)
-- [ ] Semantic-duplicate threshold chosen by the owner from the coco10k measurement (K1)
+- [x] Semantic-duplicate threshold chosen by the owner from the coco10k measurement (K1) (2026-11-21: **0.90**, the recommendation of spike S-10, `docs/spikes/S-10-semantic-threshold.md`; DATA-4.8.AC1's pair: two 90 % opposite-corner crops, one warped 6 %)
 - [ ] `test_MON_2_6_*`: each alert fires in a simulated test
 - [ ] `test_MON_2_7_*`: an alert and its action are shown together in the event log
 - [ ] `test_MON_3_2_*`: the diagnostic fires in a simulated slow-loader test

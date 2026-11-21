@@ -40,6 +40,10 @@
 - Every existing label and split version stays as it is; new runs make new versions once.
 - ARCHITECTURE.md §3's `clean` row is corrected.
 
+## The threshold (2026-11-21)
+
+The owner chose **0.90** from spike [S-10](../spikes/S-10-semantic-threshold.md), its recommendation: under `semantic_action: mark` a missed duplicate leaks across the split while a merged look-alike only coarsens it, and from 0.90 up union-find keeps clusters small (the largest 22 rows on coco10k; 260 at 0.85). A `remove` run should use 0.95 or more. Since M10, `worker-cpu` has NumPy; this does not change rule 1, since the label stage already holds the vectors on the GPU.
+
 ## Owner's decision (2026-11-17)
 
 Approved as proposed, to be built in M11 with the other data features (UI-2.2, DATA-3.5). The threshold's default comes with its measurement, for the owner to choose (as OC-5).
