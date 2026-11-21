@@ -64,6 +64,11 @@ export function ModelsScreen() {
       <div className="phead">
         <h1>Models</h1>
         <span className="spacer" />
+        {/* EVAL-1.3: versions side by side on one test split (SCR-11 v2). */}
+        <button type="button" className="btn" onClick={() => { void navigate("/models/compare"); }}>
+          <Icon name="grid" />
+          Compare…
+        </button>
         <button type="button" className="btn" onClick={() => { setTraining(true); }}>
           <Icon name="plus" />
           Train a model…

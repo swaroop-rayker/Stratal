@@ -97,15 +97,14 @@ export function LineageScreen() {
   };
   const tryVersion = usable(tryId) ?? usable(data.latest_version_id);
   const tryDataset = all.find((v) => v.id === tryVersion)?.dataset_version_id ?? null;
-  const [c, h, w] = data.input_shape;
 
   return (
     <div className="scr11 page">
       <div className="phead">
         <h1><span className="mono">{data.name}</span></h1>
         <span className="sub">
-          {data.task} · input <span className="mono">{c}×{h}×{w}</span> → {data.classes.length} classes ·{" "}
-          <span className="mono">{(data.parameters / 1e6).toFixed(2)} M</span> parameters
+          {data.task} · input <span className="mono">{data.input_shape.join("×")}</span> → {data.task === "regression" ? "1 value" : `${String(data.classes.length)} classes`} ·{" "}
+          <span className="mono">{data.parameters >= 100_000 ? `${(data.parameters / 1e6).toFixed(2)} M` : data.parameters.toLocaleString("en-US")}</span> parameters
         </span>
         <span className="spacer" />
         {(() => {
@@ -123,6 +122,16 @@ export function LineageScreen() {
           );
         })()}
       </div>
+      {data.founded_from ? (
+        // RUN-1.10 (SCR-11 v2 frame E): a lineage whose base is a fine-tune's starting weights.
+        <div className="callout info" style={{ maxWidth: 720 }}>
+          <Icon name="branch" />
+          <span>
+            Founded by fine-tuning <Link className="mono" to={`/models/${data.founded_from.lineage_id}?version=${data.founded_from.version_id}`}>{data.founded_from.version_id}</Link> from <b>{data.founded_from.lineage_name}</b>
+            {data.founded_from.reset_head ? `, head reset for ${data.task === "regression" ? "one value" : `${String(data.classes.length)} classes`}` : ""}. Its base is that run's starting weights.
+          </span>
+        </div>
+      ) : null}
       {queued ? (
         <p className="note2" role="status">
           Retention job <Link className="mono" to={`/jobs/${queued}`}>{queued}</Link> queued; this page updates when it finishes.

@@ -743,6 +743,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models/compare/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Candidates
+         * @description Every trained version on a split, newest first, with its main test metric, or why it
+         *     has none and whether it can be scored on test once (EVAL-1.3, SCR-11 v2 frame B).
+         */
+        get: operations["compare_candidates_api_v1_models_compare_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Versions
+         * @description Two to six versions on one test split, side by side (EVAL-1.3): the task's test
+         *     metrics, accuracy's Wilson 95 % interval, the best per metric, and per-class F1.
+         */
+        get: operations["compare_versions_api_v1_models_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/models/{lineage_id}": {
         parameters: {
             query?: never;
@@ -825,6 +867,28 @@ export interface paths {
          *     will delete it.
          */
         delete: operations["unpin_version_api_v1_model_versions__version_id__pin_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-versions/{version_id}/score-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Score Version
+         * @description Score on test, once, a trained network version that has no test metrics (EVAL-1.3;
+         *     the owner's exception to K8). ``409`` if it has them, is being scored, is classical,
+         *     or its weights were deleted (``weights_deleted``).
+         */
+        post: operations["score_version_api_v1_model_versions__version_id__score_test_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1274,6 +1338,120 @@ export interface components {
             } | null;
         };
         /**
+         * CompareCandidate
+         * @description A trained version on the split: compared if it has test metrics; scored once if not.
+         */
+        CompareCandidate: {
+            /** Id */
+            id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /** Lineage Name */
+            lineage_name: string;
+            /** Test Metric */
+            test_metric: string | null;
+            /** Test Value */
+            test_value: number | null;
+            /**
+             * Weights Status
+             * @enum {string}
+             */
+            weights_status: "present" | "deleting" | "weights_deleted";
+            /** Trained At */
+            trained_at: string | null;
+            /** Study Id */
+            study_id: string | null;
+            /** Scoring Job Id */
+            scoring_job_id: string | null;
+            /** Can Score */
+            can_score: boolean;
+            /** Why Not */
+            why_not: string | null;
+        };
+        /** CompareCandidates */
+        CompareCandidates: {
+            split: components["schemas"]["CompareSplit"];
+            /** Items */
+            items: components["schemas"]["CompareCandidate"][];
+        };
+        /** CompareSplit */
+        CompareSplit: {
+            /** Version Id */
+            version_id: string;
+            /** Dataset */
+            dataset: string;
+            /** Dataset Type */
+            dataset_type: string | null;
+            /** Test Rows */
+            test_rows: number | null;
+            /** Task */
+            task: string | null;
+            /** Classes */
+            classes: string[];
+        };
+        /** CompareVersion */
+        CompareVersion: {
+            /** Id */
+            id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /** Lineage Name */
+            lineage_name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "network" | "classical";
+            /** Model */
+            model: string;
+            /** Parameters */
+            parameters: number | null;
+            /** Trained At */
+            trained_at: string | null;
+            /** Job Id */
+            job_id: string | null;
+            /**
+             * Weights Status
+             * @enum {string}
+             */
+            weights_status: "present" | "deleting" | "weights_deleted";
+            /** Parent Version Id */
+            parent_version_id: string | null;
+            /** Parent Is Base */
+            parent_is_base: boolean;
+            /** Study Id */
+            study_id: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: number;
+            };
+            /** Correct */
+            correct: number | null;
+            /** Accuracy Low */
+            accuracy_low: number | null;
+            /** Accuracy High */
+            accuracy_high: number | null;
+            /** Per Class F1 */
+            per_class_f1: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * Comparison
+         * @description Two to six versions on one test split, side by side (EVAL-1.3).
+         */
+        Comparison: {
+            split: components["schemas"]["CompareSplit"];
+            /** Versions */
+            versions: components["schemas"]["CompareVersion"][];
+            /** Best */
+            best: {
+                [key: string]: string[];
+            };
+            /** Overlap */
+            overlap: boolean;
+        };
+        /**
          * Concat
          * @description Join inputs along the channel axis of images, the feature axis otherwise.
          */
@@ -1652,6 +1830,20 @@ export interface components {
              * @description Folder as the workers see it, e.g. /sources/coco10k.
              */
             path: string;
+        };
+        /**
+         * FoundedFrom
+         * @description The version a lineage's first fine-tune started from, in another lineage (RUN-1.10).
+         */
+        FoundedFrom: {
+            /** Version Id */
+            version_id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /** Lineage Name */
+            lineage_name: string;
+            /** Reset Head */
+            reset_head: boolean;
         };
         /** FreezeProblem */
         FreezeProblem: {
@@ -2221,6 +2413,7 @@ export interface components {
             /** Versions */
             versions: components["schemas"]["ModelVersion"][];
             retention: components["schemas"]["LineageRetention"];
+            founded_from?: components["schemas"]["FoundedFrom"] | null;
         };
         /** ModelLineageList */
         ModelLineageList: {
@@ -2365,6 +2558,11 @@ export interface components {
             weights_deleted_at: string | null;
             /** Study Id */
             study_id?: string | null;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["VersionChild"][];
         };
         /** Node */
         Node: {
@@ -2562,6 +2760,7 @@ export interface components {
             cluster?: number | null;
             /** Components */
             components?: number[] | null;
+            input?: components["schemas"]["TextInput"] | null;
             /** Load Ms */
             load_ms: number | null;
             /** Total Ms */
@@ -3638,6 +3837,15 @@ export interface components {
             description?: string | null;
             spec?: components["schemas"]["GraphSpec"] | null;
         };
+        /** TextInput */
+        TextInput: {
+            /** Tokens */
+            tokens: number;
+            /** Unknown */
+            unknown: number;
+            /** Truncated At */
+            truncated_at: number | null;
+        };
         /**
          * TrainConfig
          * @description Settings for the train stage. Every field is recorded with the run (NFR-4).
@@ -3870,6 +4078,20 @@ export interface components {
             created_by_job_state: ("queued" | "running" | "paused" | "completed" | "failed" | "cancelled" | "stalled") | null;
             /** Created At */
             created_at: string;
+        };
+        /** VersionChild */
+        VersionChild: {
+            /** Id */
+            id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /** Lineage Name */
+            lineage_name: string;
+            /**
+             * Weights Status
+             * @enum {string}
+             */
+            weights_status: "present" | "deleting" | "weights_deleted";
         };
         /** VersionCounts */
         VersionCounts: {
@@ -5145,6 +5367,72 @@ export interface operations {
             };
         };
     };
+    compare_candidates_api_v1_models_compare_candidates_get: {
+        parameters: {
+            query: {
+                /** @description The split version the versions were tested on. */
+                split: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompareCandidates"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_versions_api_v1_models_compare_get: {
+        parameters: {
+            query: {
+                /** @description The split version every version was tested on. */
+                split: string;
+                /** @description 2 to 6 version IDs, in column order. */
+                v: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comparison"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_model_api_v1_models__lineage_id__get: {
         parameters: {
             query?: {
@@ -5291,6 +5579,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelVersionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    score_version_api_v1_model_versions__version_id__score_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
                 };
             };
             /** @description Validation Error */

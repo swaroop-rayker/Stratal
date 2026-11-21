@@ -1223,6 +1223,8 @@ def run_test_eval(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult
     from stratal.db.models import ModelVersion
     from stratal.hpo import store as hpo_store
 
+    if run.config.get("model_version_id"):
+        return _score_version(run, str(run.config["model_version_id"]), units)
     study_id = str(run.config["study_id"])
     with Session(run.engine) as session:
         study = hpo_store.get_study(session, study_id)
@@ -1273,6 +1275,62 @@ def run_test_eval(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult
         metrics={"model_version_id": str(best), **test},
     )
     return StageResult(metrics={**test, "model_version_id": str(best)})
+
+
+def _score_version(run: StageRun, version_id: str, units: TrainUnits) -> StageResult:
+    """Score on test (M11, EVAL-1.3): one version without test metrics, scored once on its
+    own split's test rows. The write is conditional, so a retry or a second job never
+    scores it twice."""
+    from stratal.db.models import ModelVersion
+    from stratal.registry.compare import test_metrics
+
+    with Session(run.engine) as session:
+        version = session.get(ModelVersion, version_id)
+        if version is None or version.weights_path is None or version.dataset_version_id is None:
+            raise StratalError(
+                f"{version_id} has no weights to score.",
+                suggested_action="Re-train it (REG-2.7).",
+            )
+        if test_metrics(version):
+            kept = {f"test_{k}": v for k, v in test_metrics(version).items()}
+            return StageResult(metrics={**kept, "model_version_id": version_id})
+        config_json = dict(version.config)
+        weights_path, dataset_version = version.weights_path, version.dataset_version_id
+    # The weights hold everything; the parent of a fine-tune is not read again.
+    config = TrainConfig.model_validate(config_json).model_copy(
+        update={"init_from": None, "reset_head": False, "freeze": []}
+    )
+    training = _Run(replace(run, input_version_id=dataset_version), config, units)
+    training.prepare()
+    model = build_model(config.model, training.input, training.outputs)
+    weights.load_into(model, run.data_dir / weights_path)
+    if training.device == "cuda":
+        with gpu_lease(run.engine, holder=f"{run.ctx.job_id}/test_eval", wait_s=60):
+            torch.cuda.set_per_process_memory_fraction(VRAM_FRACTION)
+            scalars, detail = training._final_scores(model.to("cuda"), ("test",))
+            del model
+            torch.cuda.empty_cache()
+    else:
+        scalars, detail = training._final_scores(model, ("test",))
+    test = {k: v for k, v in scalars.items() if k.startswith("test_")}
+    with Session(run.engine) as session, session.begin():
+        row = session.get(ModelVersion, version_id, with_for_update=True)
+        assert row is not None
+        if not test_metrics(row):
+            metrics = dict(row.metrics or {})
+            row.metrics = {
+                **metrics,
+                **test,
+                "task": scalars.get("task", metrics.get("task")),
+                "detail": {**dict(metrics.get("detail") or {}), "test": detail.get("test")},
+            }
+    run.ctx.emit(
+        stage="test_eval",
+        message=f"{version_id} scored on test once: "
+        + ", ".join(f"{k} {v}" for k, v in test.items()),
+        metrics={"model_version_id": version_id, **test},
+    )
+    return StageResult(metrics={**test, "model_version_id": version_id})
 
 
 def run_train(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult:

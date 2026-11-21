@@ -129,6 +129,19 @@ def text_tensor(text: str, vocab: Vocabulary, length: int) -> torch.Tensor:
     return torch.tensor([ids], dtype=torch.long)
 
 
+def text_facts(text: str, vocab: Vocabulary, length: int) -> dict[str, Any]:
+    """How a text was read (M11, REG-1.4): its tokens before cutting, those outside the
+    vocabulary, and L when it was cut there."""
+    from stratal.data.tokenize import UNK_ID
+
+    ids, found = vocab.encode(normalise_text(text), length)
+    unknown = sum(1 for i in ids[: min(found, length)] if i == UNK_ID)
+    if found > length:  # the cut tokens count too
+        cut, _ = vocab.encode(normalise_text(text), found)
+        unknown = sum(1 for i in cut[:found] if i == UNK_ID)
+    return {"tokens": found, "unknown": unknown, "truncated_at": length if found > length else None}
+
+
 def network_result(
     output: torch.Tensor, task: str, classes: list[str], prep: TablePrep | None
 ) -> dict[str, Any]:

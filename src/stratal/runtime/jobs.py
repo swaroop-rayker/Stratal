@@ -1017,6 +1017,65 @@ def retention_after_run(session: Session, job: Job) -> Enqueue | None:
     return enqueue
 
 
+def create_score_job(session: Session, version_id: str) -> tuple[Job, Enqueue]:
+    """Score on test: a ``score_test`` job running ``test_eval`` once for a trained network
+    version that has no test metrics (M11, EVAL-1.3; K8's exception, approved with SCR-11
+    v2's low-fi on 2026-11-20). A version with test metrics is never scored again, so a
+    study's "computed once" (HPO-1.4) holds."""
+    from stratal.core.errors import WeightsDeleted
+    from stratal.registry.compare import is_classical, test_metrics
+
+    version = model_registry.get_version(session, version_id)
+    if version.state != "trained" or version.dataset_version_id is None:
+        raise Conflict(
+            f"{version_id} is a {version.state} version; only trained versions are scored.",
+            suggested_action="Pick a trained version.",
+        )
+    if test_metrics(version):
+        raise Conflict(
+            f"{version_id} already has test metrics; a version is scored on test once.",
+            suggested_action="Compare it as it is.",
+        )
+    if is_classical(version):
+        raise Conflict(
+            f"{version_id} is a classical model; those are scored at the end of their run.",
+            suggested_action="Re-train it to score it.",
+        )
+    if version.weights_status != "present" or version.weights_path is None:
+        raise WeightsDeleted(
+            f"The weights of {version_id} were deleted, so it cannot be scored.",
+            suggested_action="Re-train it (REG-2.7); the new version is scored when it ends.",
+        )
+    active = session.scalars(
+        select(Job.id).where(
+            Job.kind == "score_test",
+            Job.state.in_(("queued", "running", "paused", "stalled")),
+            Job.spec["model_version_id"].astext == version_id,
+        )
+    ).first()
+    if active is not None:
+        raise Conflict(
+            f"{version_id} is being scored by {active}.",
+            suggested_action=f"Wait for {active} to finish.",
+        )
+    dataset_version = session.get(DatasetVersion, version.dataset_version_id)
+    assert dataset_version is not None
+    device = str((version.config or {}).get("device") or "auto")
+    return create_job_from_plan(
+        session,
+        kind="score_test",
+        spec={
+            "kind": "score_test",
+            "model_version_id": version_id,
+            "dataset_version": version.dataset_version_id,
+        },
+        plan=[("test_eval", {"model_version_id": version_id})],
+        dataset_id=dataset_version.dataset_id,
+        input_version_id=version.dataset_version_id,
+        queues={"test_eval": "cpu" if device == "cpu" else "gpu"},
+    )
+
+
 def create_retrain_job(session: Session, version_id: str) -> tuple[Job, Enqueue]:
     """A new run with a version's exact config and dataset version (REG-2.7)."""
     version = model_registry.get_version(session, version_id)

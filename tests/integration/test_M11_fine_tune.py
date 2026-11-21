@@ -210,6 +210,15 @@ def test_RUN_1_10_AC3_other_classes_are_refused_unless_the_head_is_reset(
     assert all(torch.equal(start[k], theirs[k]) for k in theirs if not k.startswith("head."))
     assert start["head.weight"].shape == (3, 8), "only the head is new"
     assert api.history(child["id"])[0]["epoch"] == 0
+    assert lineage["founded_from"] == {
+        "version_id": parent["id"],
+        "lineage_id": parent["lineage_id"],
+        "lineage_name": "ft_cnn · ft-ac3",
+        "reset_head": True,
+    }
+    children = api.get(f"/model-versions/{parent['id']}")["children"]
+    assert [(c["id"], c["lineage_id"]) for c in children] == [(child["id"], child["lineage_id"])]
+    assert api.get(f"/models/{parent['lineage_id']}")["founded_from"] is None
 
 
 def test_RUN_1_10_AC3_another_input_shape_is_refused_even_with_a_reset_head(

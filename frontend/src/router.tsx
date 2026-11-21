@@ -8,6 +8,7 @@ import { DatasetsScreen } from "./screens/datasets/DatasetsScreen";
 import { JobScreen } from "./screens/job/JobScreen";
 import { JobsScreen } from "./screens/jobs/JobsScreen";
 import { LineageScreen } from "./screens/models/LineageScreen";
+import { CompareScreen } from "./screens/models/CompareScreen";
 import { ModelsScreen } from "./screens/models/ModelsScreen";
 import { Placeholder } from "./screens/Placeholder";
 import { ReportScreen } from "./screens/report/ReportScreen";
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
           { path: "versions/:versionId/report", element: <ReportScreen /> },
           { path: "models", element: <ModelsScreen /> },
           { path: "models/build", element: <BuilderScreen /> },
+          { path: "models/compare", element: <CompareScreen /> },
           { path: "models/:lineageId", element: <LineageScreen /> },
           { path: "runs/new", element: <RunScreen /> },
           { path: "studies/:studyId", element: <StudyScreen /> },

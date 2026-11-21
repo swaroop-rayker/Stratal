@@ -616,9 +616,20 @@ class LineageRetention(_Model):
     last_run: RetentionLastRun | None
 
 
+class FoundedFrom(_Model):
+    """The version a lineage's first fine-tune started from, in another lineage (RUN-1.10)."""
+
+    version_id: str
+    lineage_id: str
+    lineage_name: str
+    reset_head: bool
+
+
 class ModelLineageDetail(ModelLineage):
     versions: list[ModelVersion]
     retention: LineageRetention
+    founded_from: FoundedFrom | None = None
+    """Set when the lineage was founded by fine-tuning a version of another lineage."""
 
 
 class ModelVersionDetail(ModelVersion):
@@ -631,6 +642,15 @@ class ModelVersionDetail(ModelVersion):
     weights_deleted_at: str | None
     study_id: str | None = None
     """The HPO study whose best trial this version is (M10, HPO-1.4), else null."""
+    children: list["VersionChild"] = []
+    """Versions started from this one (RUN-1.10), in any lineage, newest first."""
+
+
+class VersionChild(_Model):
+    id: str
+    lineage_id: str
+    lineage_name: str
+    weights_status: WeightsStatus
 
 
 # -- retention and settings (REG-2; API.md §3.9, §3.10) ---------------------------
@@ -776,9 +796,89 @@ class Prediction(_Model):
     """k-means: the record's cluster."""
     components: list[float] | None = None
     """PCA: the record's projection."""
+    input: "TextInput | None" = None
+    """For a text: how it was read (M11, REG-1.4, SCR-11 v2 question 2)."""
     load_ms: float | None
     """Time to load the model, when this request loaded it."""
     total_ms: float
+
+
+class TextInput(_Model):
+    tokens: int
+    """Words and punctuation marks the text was split into, before cutting."""
+    unknown: int
+    """Tokens not in the version's vocabulary, read as the unknown token."""
+    truncated_at: int | None
+    """L, when the text had more tokens and was cut there; null when it was not cut."""
+
+
+# ------------------------------------------------------------------ comparison (M11, EVAL-1.3)
+
+
+class CompareSplit(_Model):
+    version_id: str
+    dataset: str
+    dataset_type: str | None
+    test_rows: int | None
+    task: str | None
+    classes: list[str]
+
+
+class CompareCandidate(_Model):
+    """A trained version on the split: compared if it has test metrics; scored once if not."""
+
+    id: str
+    lineage_id: str
+    lineage_name: str
+    test_metric: str | None
+    test_value: float | None
+    weights_status: WeightsStatus
+    trained_at: str | None
+    study_id: str | None
+    scoring_job_id: str | None
+    """A queued or running Score on test job for it."""
+    can_score: bool
+    why_not: str | None
+    """Why it has no test metrics and cannot be scored, in words."""
+
+
+class CompareCandidates(_Model):
+    split: CompareSplit
+    items: list[CompareCandidate]
+
+
+class CompareVersion(_Model):
+    id: str
+    lineage_id: str
+    lineage_name: str
+    kind: Literal["network", "classical"]
+    model: str
+    parameters: int | None
+    trained_at: str | None
+    job_id: str | None
+    weights_status: WeightsStatus
+    parent_version_id: str | None
+    parent_is_base: bool
+    study_id: str | None
+    metrics: dict[str, float]
+    """The task's test metrics (EVAL-1.2): accuracy and macro_f1, or mse, rmse, mae and r2."""
+    correct: int | None
+    """Classification: test rows right, accuracy × rows."""
+    accuracy_low: float | None
+    accuracy_high: float | None
+    """Accuracy's Wilson 95 % interval (EVAL-1.1's function)."""
+    per_class_f1: dict[str, float]
+
+
+class Comparison(_Model):
+    """Two to six versions on one test split, side by side (EVAL-1.3)."""
+
+    split: CompareSplit
+    versions: list[CompareVersion]
+    best: dict[str, list[str]]
+    """Per metric, the versions with the best value (ties share it); empty when all tie."""
+    overlap: bool
+    """True when any two accuracy intervals overlap: the split cannot tell them apart."""
 
 
 # ------------------------------------------------------------------ studies (M10, HPO-1.5)
@@ -852,3 +952,7 @@ class StudyTrial(_Model):
 
 class StudyTrialList(_Model):
     items: list[StudyTrial]
+
+
+ModelVersionDetail.model_rebuild()
+Prediction.model_rebuild()

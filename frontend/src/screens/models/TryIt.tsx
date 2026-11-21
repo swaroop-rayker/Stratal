@@ -4,8 +4,10 @@
 import { useRef, useState } from "react";
 
 import { ApiError, api, call } from "../../api/client";
+import { useVersion } from "../../api/queries";
 import { type Prediction, usePredict } from "../../api/registry";
 import { Badge, Button, Icon } from "../../components/ui";
+import { RecordTry, TextTry } from "./TryValues";
 
 function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -58,6 +60,10 @@ export function TryIt({ versionId, datasetVersion }: { versionId: string | null;
 
   const result = predict.data;
   const refused = predict.error instanceof ApiError ? predict.error.problem : null;
+  // M11 (SCR-11 v2, frames C and D): a table takes a record, a text a text box.
+  const dtype = useVersion(datasetVersion ?? "", datasetVersion !== null).data?.dtype;
+  if (versionId !== null && dtype === "tabular") return <RecordTry versionId={versionId} datasetVersion={datasetVersion} />;
+  if (versionId !== null && dtype === "labelled_text") return <TextTry versionId={versionId} datasetVersion={datasetVersion} />;
   return (
     <section className="card" aria-label="Try it">
       <h2>

@@ -135,7 +135,7 @@ export function useRetentionRun() {
 
 export function usePredict(versionId: string) {
   return useMutation({
-    mutationFn: (body: { image_b64?: string; blob?: string }) =>
+    mutationFn: (body: { image_b64?: string; blob?: string; record?: Record<string, unknown>; text?: string }) =>
       call(() =>
         api.POST("/api/v1/models/{version_id}/predict", {
           params: { path: { version_id: versionId } },
@@ -181,4 +181,33 @@ export function planOf(error: unknown): RetentionPlan | null {
 /** keep_intermediate as words: "0", "3", "all". */
 export function keepText(keep: Keep): string {
   return keep === "all" ? "all" : String(keep);
+}
+
+/** Two to six versions on one test split (EVAL-1.3, SCR-11 v2). */
+export function useComparison(split: string | null, ids: string[]) {
+  return useQuery({
+    queryKey: ["models", "compare", split, ids],
+    queryFn: () => call(() => api.GET("/api/v1/models/compare", { params: { query: { split: split ?? "", v: ids } } })),
+    enabled: split !== null && ids.length >= 2,
+    retry: false,
+  });
+}
+
+/** The versions trained on a split, for the comparison's picker (SCR-11 v2 frame B). */
+export function useCompareCandidates(split: string | null) {
+  return useQuery({
+    queryKey: ["models", "compare", "candidates", split],
+    queryFn: () => call(() => api.GET("/api/v1/models/compare/candidates", { params: { query: { split: split ?? "" } } })),
+    enabled: split !== null,
+  });
+}
+
+/** Score on test, once, a version without test metrics (K8's exception). */
+export function useScoreTest() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      call(() => api.POST("/api/v1/model-versions/{version_id}/score-test", { params: { path: { version_id: id } } })),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["models", "compare"] }); },
+  });
 }

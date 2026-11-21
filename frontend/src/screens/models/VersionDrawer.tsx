@@ -105,6 +105,20 @@ export function VersionDrawer({ versionId, onClose, onTry }: {
                   ) : `${v.parent_version_id} (base)`
                 ) : v.state === "base" ? "none: this is the base" : "none"}
               </span>
+              {v.children.length ? (
+                <>
+                  <span>Fine-tuned into</span>
+                  <span className="mono">
+                    {v.children.map((c, i) => (
+                      <span key={c.id}>
+                        {i ? ", " : ""}
+                        <Link to={`/models/${c.lineage_id}?version=${c.id}`}>{c.id}</Link>
+                        {c.lineage_id !== v.lineage_id ? <> in <b>{c.lineage_name}</b></> : null}
+                      </span>
+                    ))}
+                  </span>
+                </>
+              ) : null}
               <span>Config hash</span>
               <span className="mono" title={v.config_hash}>{short(v.config_hash)}</span>
               {v.study_id ? (
@@ -123,7 +137,7 @@ export function VersionDrawer({ versionId, onClose, onTry }: {
               }}
             />
             <pre className="code">{JSON.stringify(v.config, null, 2)}</pre>
-            <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+            <div style={{ display: "flex", gap: "var(--sp-2)", flexWrap: "wrap" }}>
               {v.state === "trained" ? (
                 <Button
                   size="sm"
@@ -147,6 +161,13 @@ export function VersionDrawer({ versionId, onClose, onTry }: {
                 <Button size="sm" onClick={() => { void navigate(`/runs/new?init_from=${v.id}`); }}>
                   <Icon name="branch" />
                   Fine-tune…
+                </Button>
+              ) : null}
+              {v.state === "trained" && v.dataset_version_id ? (
+                // EVAL-1.3: compare with the other versions scored on this version's split.
+                <Button size="sm" onClick={() => { void navigate(`/models/compare?split=${v.dataset_version_id ?? ""}&v=${v.id}`); }}>
+                  <Icon name="grid" />
+                  Compare on this test split
                 </Button>
               ) : null}
             </div>
