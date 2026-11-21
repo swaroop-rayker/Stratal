@@ -6,7 +6,7 @@ import { Link, useNavigate } from "react-router";
 import { usePin, useRetrain, useVersionDetail } from "../../api/registry";
 import { Drawer } from "../../components/Drawer";
 import { ErrorState } from "../../components/states";
-import { Button, Icon, Skeleton } from "../../components/ui";
+import { Badge, Button, Icon, Skeleton } from "../../components/ui";
 import { clock, DASH } from "../../lib/format";
 import { VersionLabel } from "./parts";
 import { TaskMetrics } from "./TaskMetrics";
@@ -30,6 +30,9 @@ export function VersionDrawer({ versionId, onClose, onTry }: {
   const retrain = useRetrain();
   const navigate = useNavigate();
   const v = detail.data;
+  // The parent: the lineage's base, or since M11 a trained version, maybe in another lineage
+  // (RUN-1.10; SCR-11 v2 frame E).
+  const parent = useVersionDetail(v?.parent_version_id ?? null).data;
   return (
     <Drawer
       open={versionId !== null}
@@ -93,7 +96,14 @@ export function VersionDrawer({ versionId, onClose, onTry }: {
               <span className="mono">{clock(v.trained_at ?? v.created_at).slice(0, 5)}</span>
               <span>Parent</span>
               <span className="mono">
-                {v.parent_version_id ? `${v.parent_version_id} (base)` : v.state === "base" ? "none: this is the base" : "none"}
+                {v.parent_version_id ? (
+                  parent && parent.state !== "base" ? (
+                    <>
+                      <Link to={`/models/${parent.lineage_id}?version=${parent.id}`}>{parent.id}</Link>
+                      {parent.lineage_id !== v.lineage_id ? <> in <b>{parent.lineage_name}</b> <Badge>another lineage</Badge></> : null}
+                    </>
+                  ) : `${v.parent_version_id} (base)`
+                ) : v.state === "base" ? "none: this is the base" : "none"}
               </span>
               <span>Config hash</span>
               <span className="mono" title={v.config_hash}>{short(v.config_hash)}</span>
@@ -132,6 +142,13 @@ export function VersionDrawer({ versionId, onClose, onTry }: {
               >
                 Try it
               </Button>
+              {v.state === "trained" && v.weights_status === "present" && (v.config as { model?: { kind?: string } } | null)?.model && (v.config as { model: { kind?: string } }).model.kind !== "sklearn" ? (
+                // RUN-1.10: a trained network starts a run from its weights (SCR-09 v2, decision 1).
+                <Button size="sm" onClick={() => { void navigate(`/runs/new?init_from=${v.id}`); }}>
+                  <Icon name="branch" />
+                  Fine-tune…
+                </Button>
+              ) : null}
             </div>
           </>
         )}

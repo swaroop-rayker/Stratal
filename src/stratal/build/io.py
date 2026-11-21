@@ -65,7 +65,9 @@ def image_shape(rows: Iterable[Mapping[str, Any]]) -> Shape:
 def image_classes(rows: Iterable[Mapping[str, Any]]) -> tuple[str, ...]:
     """Class names in label order: sorted, as the train stage numbers them."""
     return tuple(
-        sorted({str(r["label"]) for r in rows if r.get("status") == STATUS_ACCEPTED and r.get("split")})
+        sorted(
+            {str(r["label"]) for r in rows if r.get("status") == STATUS_ACCEPTED and r.get("split")}
+        )
     )
 
 
@@ -87,7 +89,9 @@ def _cached(engine: Engine, data_dir: str, version_id: str) -> VersionIo:
 
         trains_on = TRAINS_ON.get(dataset_type)
         if trains_on is None:
-            return ends(info.note if not info.trainable else f"{info.title} has no builder input yet.")
+            return ends(
+                info.note if not info.trainable else f"{info.title} has no builder input yet."
+            )
         if version.stage != trains_on:
             return ends(
                 f"{version_id} is a {version.stage} version; {info.title.lower()} models train "
@@ -98,9 +102,13 @@ def _cached(engine: Engine, data_dir: str, version_id: str) -> VersionIo:
             return _table_ends(version_id, dataset_type, info, manifest)
         if dataset_type == LABELLED_TEXT:
             _, manifest = registry.manifest_for(session, Path(data_dir), version_id)
-            rows = list(registry.load_version(session, Path(data_dir), version_id, columns=TEXT_COLUMNS))
+            rows = list(
+                registry.load_version(session, Path(data_dir), version_id, columns=TEXT_COLUMNS)
+            )
             return _text_ends(version_id, dataset_type, info, manifest, rows)
-        rows = list(registry.load_version(session, Path(data_dir), version_id, columns=IMAGE_COLUMNS))
+        rows = list(
+            registry.load_version(session, Path(data_dir), version_id, columns=IMAGE_COLUMNS)
+        )
     try:
         shape = image_shape(rows)
     except StratalError as exc:
@@ -123,12 +131,22 @@ def _table_ends(version_id: str, dataset_type: str, info: TypeInfo, manifest: Pa
         return VersionIo(version_id, dataset_type, info, None, None, (), exc.detail)
     if prep.task == "classification" and len(prep.classes) < 2:
         return VersionIo(
-            version_id, dataset_type, info, None, None, (),
+            version_id,
+            dataset_type,
+            info,
+            None,
+            None,
+            (),
             f"{version_id} has {len(prep.classes)} class; a classifier needs two or more.",
         )
     return VersionIo(
-        version_id, dataset_type, info, Shape("vector", (prep.width,)), prep.outputs,
-        prep.classes, None,
+        version_id,
+        dataset_type,
+        info,
+        Shape("vector", (prep.width,)),
+        prep.outputs,
+        prep.classes,
+        None,
     )
 
 
@@ -151,7 +169,12 @@ def _text_ends(
     classes = image_classes(rows)
     if len(classes) < 2:
         return VersionIo(
-            version_id, dataset_type, info, None, None, (),
+            version_id,
+            dataset_type,
+            info,
+            None,
+            None,
+            (),
             f"{version_id} has {len(classes)} class; a classifier needs two or more.",
         )
     shape = Shape("tokens", (int(vocab["max_length"]),), vocab=int(vocab["size"]))
@@ -200,6 +223,12 @@ def vram_problem(engine: Engine, data_dir: Path, config: Any, version_id: str) -
     report = graph_report(engine, data_dir, config.model.graph, version_id, optimizer)
     if report.memory is None:
         return None
+    memory = report.memory
+    if config.freeze:  # a fine-tune's frozen layers need no gradients or optimizer state
+        from stratal.train.finetune import frozen_parameters, trainable_memory
+
+        frozen = frozen_parameters(report, config.freeze)
+        memory = trainable_memory(memory, report.total_parameters or 0, frozen)
     with Session(engine) as session:
         card = session.scalar(
             select(ResourceSample.vram_total_mb)
@@ -208,7 +237,6 @@ def vram_problem(engine: Engine, data_dir: Path, config: Any, version_id: str) -
             .limit(1)
         )
     cap = float(card or CARD_MB) * TRAIN_VRAM_FRACTION
-    memory = report.memory
     batch = int(config.batch_size)
     need = (memory.total_bytes + memory.activation_bytes_per_sample * batch) / 2**20 + CONTEXT_MB
     if need <= cap:

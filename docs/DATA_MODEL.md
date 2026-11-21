@@ -293,15 +293,15 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 | `lineage_id` | text | no | FK |
 | `state` | text | no | `base`, `partial` (its run is paused), `trained` (REG-1.2) |
 | `weights_status` | text | no | `present`, `deleting`, `weights_deleted` (NFR-15, REG-2.7) |
-| `parent_version_id` | text | yes | FK → `model_versions`; the version the run started from. In M8 every run starts from its lineage's base. Null for a base, and for runs registered by the backfill that did not start from it |
+| `parent_version_id` | text | yes | FK → `model_versions`; the version the run started from: its lineage's base, or since M11 the trained version in `config.init_from` (RUN-1.10), which may be in another lineage. Null for a base, and for runs registered by the backfill that did not start from it. Retention keeps a version while a version naming it as parent has weights, or a queued or running fine-tune or study starts from it (ADR-0015 Addendum A) |
 | `job_id` | text | yes | FK; the run that made it. A base records the run that created the lineage, so uniqueness is per run: partial unique index on `job_id` where `state <> 'base'` |
 | `dataset_version_id` | text | yes | FK; the exact data (REG-1.1) |
 | `config`, `config_hash` | jsonb, text | no | the run's resolved train config and its SHA-256 over canonical JSON (REG-1.1) |
 | `metrics` | jsonb | yes | the stage's final metrics; null while partial |
-| `history` | jsonb | yes | one entry per finished epoch |
+| `history` | jsonb | yes | one entry per finished epoch; a fine-tune's starts with epoch 0, its validation before step 1 (RUN-1.10.AC1) |
 | `weights_path` | text | yes | `registry/<lineage>/<version>`, relative to the data folder; null while partial (its weights are the run's checkpoint) |
 | `weights_bytes` | bigint | yes | both files |
-| `note` | text | yes | how it came to be, where that is unusual (a base's seed; a backfilled run without a parent) |
+| `note` | text | yes | how it came to be, where that is unusual (a base's seed; a lineage founded by a fine-tune, whose base is the run's starting weights; a backfilled run without a parent) |
 | `created_at`, `trained_at`, `weights_deleted_at` | timestamptz | mixed | a base has no `trained_at` |
 | `weights_deleted_by_job_id` | text | yes | FK → `jobs`; the retention job that deleted the weights (REG-2.9; added with retention, migration `19c70056c3ce`) |
 

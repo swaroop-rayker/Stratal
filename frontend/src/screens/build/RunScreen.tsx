@@ -3,8 +3,10 @@
 // HPO-1.1). The model is a network (the builder's draft for ?version=, or with ?from=job_…
 // that run's model and settings, ?batch_size= overriding) or a classical estimator, chosen
 // before this page (?kind=, SCREENS.md v3; the Train a model drawer when absent). ?study=
-// prefills the best configuration of a study (HPO-1.5). The VRAM check warns and never
-// blocks (decision 6); for a study it takes the worst case in the space.
+// prefills the best configuration of a study (HPO-1.5). ?init_from=mv_… fine-tunes a trained
+// version (RUN-1.10, mockup SCR-09v2_v1 frames E and F): its model and settings, its split by
+// default, the checks from POST /jobs/validate. The VRAM check warns and never blocks
+// (decision 6); for a study it takes the worst case in the space.
 import type { RJSFSchema } from "@rjsf/utils";
 import { useQuery } from "@tanstack/react-query";
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
@@ -12,8 +14,8 @@ import { useNavigate, useSearchParams } from "react-router";
 
 import { type Optimizer, useSpecSchema, useTemplates, useValidate } from "../../api/builder";
 import { ApiError, api, call } from "../../api/client";
-import { useStageSchema, useSystem, useVersion } from "../../api/queries";
-import { useSettings } from "../../api/registry";
+import { useDatasets, useStageSchema, useSystem, useVersion, useVersions } from "../../api/queries";
+import { useSettings, useVersionDetail } from "../../api/registry";
 import { fieldName, type Marker, useStudy } from "../../api/studies";
 import { type FieldDecor, SchemaForm } from "../../components/SchemaForm";
 import { EmptyState, ErrorState } from "../../components/states";
@@ -24,7 +26,8 @@ import { useCrumbs } from "../../shell/hooks";
 import { inputVersion } from "../job/jobs";
 import { layerTypes } from "./layers";
 import { AddParameter, type LayerField, StudyCard, type StudyLimits, type SpaceRow, TuneButton, TuneEditor, tuneHelper } from "./StudyParts";
-import { TrainDrawer } from "./TrainDrawer";
+import { FreezeCard, StartFromCard, useCandidates, useTrainValidate } from "./FineTune";
+import { TrainDrawer, trainable } from "./TrainDrawer";
 import { isTunable, largest, NETWORK_TUNABLE, paths, spaceErrors, specProblem, startSpec, toMarker, TRIAL_START_S, type TuneSpec } from "./study";
 import { vramCheck } from "./vram";
 
@@ -33,7 +36,7 @@ type Device = "auto" | "gpu" | "cpu";
 type Mode = "network" | "classical";
 type Task = "classification" | "regression";
 const REFERENCE_TEMPLATE: Record<string, string> = { mlp: "MLP", small_cnn: "Small CNN" };
-const HIDDEN = new Set(["model", "device", "loader_workers", "algorithm_version"]);
+const HIDDEN = new Set(["model", "device", "loader_workers", "algorithm_version", "init_from", "reset_head", "freeze"]);
 
 /** The objectives a study may optimise, by model kind and task (stratal.hpo.config.OBJECTIVES). */
 export const OBJECTIVES: Record<Mode, Record<Task, Record<string, "maximize" | "minimize">>> = {
@@ -129,8 +132,23 @@ export function RunScreen() {
     enabled: fromStudy !== null,
   });
   const classicalSeed = bestConfig.data?.classical ?? (job.data?.kind === "train" && job.data.stages[0]?.name === "train_classical" ? (job.data.stages[0].config as { model: { estimator: string; params?: Values }; seed?: number }) : null);
-  const jobConfig: Values | null = bestConfig.data?.config ?? (classicalSeed ? null : (job.data?.stages[0]?.config ?? null));
-  const version = params.get("version") ?? (job.data ? inputVersion(job.data) : null) ?? study.data?.dataset_version ?? null;
+  // Fine-tuning (RUN-1.10): ?init_from= names the parent; a run or study that fine-tuned keeps
+  // its parent, head reset and freeze list.
+  const initParam = params.get("init_from");
+  const fromParent = useVersionDetail(initParam);
+  const parentConfig: Values | null = fromParent.data?.config ?? null;
+  const jobConfig: Values | null = bestConfig.data?.config ?? (classicalSeed ? null : (job.data?.stages[0]?.config ?? (initParam ? parentConfig : null)));
+  const inherited = !initParam && typeof jobConfig?.init_from === "string" ? jobConfig.init_from : null;
+  const inheritedParent = useVersionDetail(inherited);
+  const parentId = initParam ?? inherited;
+  const parent = (initParam ? fromParent.data : inheritedParent.data) ?? null;
+  const [fineTuneEdit, setFineTune] = useState<boolean | null>(null);
+  const fineTune = fineTuneEdit ?? parentId !== null;
+  const [resetEdit, setReset] = useState<boolean | null>(null);
+  const resetHead = resetEdit ?? (!initParam && jobConfig?.reset_head === true);
+  const [freezeEdit, setFreeze] = useState<string[] | null>(null);
+  const freeze = freezeEdit ?? (!initParam && Array.isArray(jobConfig?.freeze) ? (jobConfig.freeze as string[]) : []);
+  const version = params.get("version") ?? (job.data ? inputVersion(job.data) : null) ?? study.data?.dataset_version ?? (initParam ? fromParent.data?.dataset_version_id ?? null : null) ?? null;
   const overrideBatch = params.get("batch_size");
 
   const schema = useStageSchema("train", true);
@@ -164,10 +182,10 @@ export function RunScreen() {
     ? (job.data ? (classicalSeed ? "classical" : "network") : null)
     : fromStudy
       ? (bestConfig.data ? (bestConfig.data.classical ? "classical" : "network") : null)
-      : null;
+      : initParam ? "network" : null;
   const kind: Mode | null = kindParam === "network" || kindParam === "classical" ? kindParam : implicitKind;
   const mode: Mode = kind ?? "network";
-  const [choosing, setChoosing] = useState(kind === null && fromJob === null && fromStudy === null);
+  const [choosing, setChoosing] = useState(kind === null && fromJob === null && fromStudy === null && initParam === null);
   const chooseButton = useRef<HTMLButtonElement>(null);
   function setMode(next: Mode) {
     const nextParams = new URLSearchParams(params);
@@ -175,12 +193,18 @@ export function RunScreen() {
     setSearchParams(nextParams, { replace: true });
   }
   // A classical run never passes through the builder (mockup SCR-09v2_v1, frame D).
-  useCrumbs(mode === "classical" ? [{ label: "Models", to: "/models" }, { label: "New run" }] : [{ label: "Models", to: "/models" }, { label: "Build", to: "/models/build" }, { label: "New run" }]);
+  useCrumbs(
+    mode === "classical"
+      ? [{ label: "Models", to: "/models" }, { label: "New run" }]
+      : initParam && fromParent.data
+        ? [{ label: "Models", to: "/models" }, { label: fromParent.data.lineage_name, to: `/models/${fromParent.data.lineage_id}` }, { label: "Fine-tune" }]
+        : [{ label: "Models", to: "/models" }, { label: "Build", to: "/models/build" }, { label: "New run" }],
+  );
 
   // Initial training values: the schema's defaults, SCR-14's checkpoint interval, then the
   // job's or study's settings and ?batch_size=. State holds only the edits.
   const initial = useMemo(() => {
-    if (!schema.data || (fromJob && !job.data) || (fromStudy && !bestConfig.data && !bestConfig.isError)) return null;
+    if (!schema.data || (fromJob && !job.data) || (fromStudy && !bestConfig.data && !bestConfig.isError) || (initParam && !fromParent.data && !fromParent.isError)) return null;
     const defaults: Values = {};
     for (const [name, prop] of Object.entries((schema.data as RJSFSchema).properties ?? {})) {
       const value = typeof prop === "object" ? prop.default : undefined;
@@ -196,7 +220,7 @@ export function RunScreen() {
       next.batch_size = Number(overrideBatch);
     }
     return { values: next, was };
-  }, [schema.data, settings.data, jobConfig, fromJob, job.data, fromStudy, bestConfig.data, bestConfig.isError, overrideBatch]);
+  }, [schema.data, settings.data, jobConfig, fromJob, job.data, fromStudy, bestConfig.data, bestConfig.isError, overrideBatch, initParam, fromParent.data, fromParent.isError]);
   const [edits, setValues] = useState<Values | null>(null);
   const values = edits ?? initial?.values ?? null;
   const [deviceChoice, setDevice] = useState<Device | null>(null);
@@ -241,7 +265,24 @@ export function RunScreen() {
   const batchSpec = studyOn ? tuned[paths.train("batch_size")] : undefined;
   const batch = typeof values?.batch_size === "number" ? values.batch_size : 128;
   const worstBatch = batchSpec ? largest(batchSpec) ?? batch : batch;
-  const memory = worstReport?.memory;
+  const model = reference ? { name: reference } : { name: "graph", graph };
+  const fineTuneFields = fineTune && parentId ? { init_from: parentId, reset_head: resetHead, freeze } : {};
+  const ftValidation = useTrainValidate(
+    mode === "network" && fineTune && parentId && version && values && (graph || reference) && parent?.weights_status === "present"
+      ? { kind: "train", dataset_version: version, config: { ...values, model, device, ...fineTuneFields } }
+      : null,
+  );
+  const ft = fineTune && parentId ? ftValidation.data ?? null : null;
+  const ftBlocked = fineTune && (!parent || parent.weights_status !== "present" || !ft || ft.checks.some((c) => !c.ok) || ft.freeze_problems.length > 0);
+  const candidates = useCandidates(model, mode === "network" && fineTune && (graph !== null || reference !== null));
+  const parentInfo = useVersion(parent?.dataset_version_id ?? "", fineTune && Boolean(parent?.dataset_version_id));
+  const datasets = useDatasets();
+  const [ftDataset, setFtDataset] = useState<string | null>(null);
+  const splitDataset = ftDataset ?? versionInfo.data?.dataset ?? parentInfo.data?.dataset;
+  const datasetVersions = useVersions(fineTune ? splitDataset : undefined);
+  const parentModality = datasets.data?.items.find((d) => d.slug === parentInfo.data?.dataset)?.modality;
+  const headText = report?.head ? `output, linear ${String(report.head.in_features)} → ${String(report.head.out_features)}` : reference ? "the last linear layer" : "the output layer";
+  const memory = fineTune && ft?.memory ? ft.memory : worstReport?.memory;
   const check = memory && system.data?.vram_total_mb ? vramCheck(memory.total_bytes, memory.activation_bytes_per_sample, worstBatch, system.data.vram_total_mb) : null;
   const choices = batchSpec?.scale === "choices" ? (batchSpec.choices ?? []).filter((c): c is number => typeof c === "number").sort((a, b) => b - a) : [];
   const nextBatch = choices[1];
@@ -297,10 +338,12 @@ export function RunScreen() {
       helper: (name, s) => {
         const spec = tuned[pathOf(name)];
         if (spec) return tuneHelper(s, spec, spaceProblems.get(pathOf(name)));
+        if (fineTune && !studyOn && name === "learning_rate") return "Fine-tuning often uses a smaller rate, e.g. 10× lower.";
+        if (fineTune && !studyOn && name === "optimizer") return "Starts fresh: the parent's state is not loaded.";
         return studyOn && tunable(name) ? null : studyOn ? "The same for every trial." : null;
       },
       className: (name) => (tuned[pathOf(name)] ? "tuned" : null),
-      key: JSON.stringify([studyOn, tuned, [...spaceProblems]]),
+      key: JSON.stringify([studyOn, tuned, [...spaceProblems], fineTune]),
     };
   }
 
@@ -316,10 +359,9 @@ export function RunScreen() {
     setServerErrors({});
     setSpaceProblems(new Map());
     setFailure(null);
-    const model = reference ? { name: reference } : { name: "graph", graph };
     const base = mode === "classical"
       ? { classical: { model: { kind: "sklearn", estimator, params: paramValues }, seed: classicalSeedValue ?? classicalSeed?.seed ?? 0 } }
-      : { config: { ...values, model, device } };
+      : { config: { ...values, model, device, ...fineTuneFields } };
     const body = studyOn && markers.length
       ? { kind: "hpo_study", dataset_version: version, ...base, space: markers, objective, n_trials: limitsNow.n_trials, timeout_s: Math.round(limitsNow.minutes * 60), pruning: limitsNow.pruning, seed: limitsNow.seed, ...(mode === "classical" ? { cv_folds: limitsNow.cv_folds } : {}) }
       : { kind: "train", dataset_version: version, ...base };
@@ -366,7 +408,7 @@ export function RunScreen() {
     />
   );
 
-  const loadingFrom = (fromJob !== null && job.isLoading) || (fromStudy !== null && bestConfig.isLoading);
+  const loadingFrom = (fromJob !== null && job.isLoading) || (fromStudy !== null && bestConfig.isLoading) || (initParam !== null && fromParent.isLoading);
   if (!loadingFrom && (kind === null || (mode === "network" && !graph && !reference))) {
     return (
       <div className="scr09">
@@ -384,8 +426,8 @@ export function RunScreen() {
       </div>
     );
   }
-  if (schema.isError || job.isError || bestConfig.isError) {
-    return <div className="scr09"><ErrorState error={schema.error ?? job.error ?? bestConfig.error} title="The run setup could not be loaded" onRetry={() => { void schema.refetch(); void job.refetch(); void bestConfig.refetch(); }} /></div>;
+  if (schema.isError || job.isError || bestConfig.isError || fromParent.isError) {
+    return <div className="scr09"><ErrorState error={schema.error ?? job.error ?? bestConfig.error ?? fromParent.error} title="The run setup could not be loaded" onRetry={() => { void schema.refetch(); void job.refetch(); void bestConfig.refetch(); void fromParent.refetch(); }} /></div>;
   }
 
   const counts = splitRows(versionInfo.data?.counts);
@@ -405,7 +447,7 @@ export function RunScreen() {
 
   return (
     <div className="scr09">
-      <div className="phead"><h1>{isStudy ? "New study" : "New training run"}</h1><span className="sub">{isStudy ? "Many runs of one model, each with tuned fields drawn by TPE; the best is registered and tested once (HPO-1.4)" : "One run of a model on a split; it registers a version when it completes (REG-1.1)"}</span></div>
+      <div className="phead"><h1>{isStudy ? "New study" : "New training run"}</h1>{fineTune && parentId ? <Badge>fine-tuning {parentId}</Badge> : null}<span className="sub">{isStudy ? "Many runs of one model, each with tuned fields drawn by TPE; the best is registered and tested once (HPO-1.4)" : "One run of a model on a split; it registers a version when it completes (REG-1.1)"}</span></div>
       {fromJob && job.data ? (
         <div className="callout info">
           <Icon name="info" />
@@ -422,17 +464,18 @@ export function RunScreen() {
         <div className="cards">
           <section className="card">
             <header><h2>Model</h2><span className="req">{mode === "classical" ? "ML-1.1 · ML-1.4" : "BUILD-1.5"}</span>{modeSwitch}<span className="spacer" />
-              {mode === "network" && !reference ? <Button size="sm" variant="ghost" onClick={() => { void navigate(`/models/build?version=${version ?? ""}`); }}><Icon name="branch" />Edit in builder</Button> : null}</header>
+              {mode === "network" && !reference && !fineTune ? <Button size="sm" variant="ghost" onClick={() => { void navigate(`/models/build?version=${version ?? ""}`); }}><Icon name="branch" />Edit in builder</Button> : null}</header>
             <div className="b">
               {mode === "network" ? (
                 <>
                   <div className="facts">
-                    <span><b>{reference ?? graph?.label ?? "—"}</b> {reference ? <Badge>reference model</Badge> : <Badge>from the builder</Badge>}</span>
+                    <span><b>{reference ?? graph?.label ?? "—"}</b> {fineTune && parentId ? <Badge>the parent's architecture</Badge> : reference ? <Badge>reference model</Badge> : <Badge>from the builder</Badge>}</span>
                     {report?.family ? <span>{report.family}</span> : null}
                     <span><b>{count(report?.total_parameters)}</b> parameters</span>
                     {report?.memory ? <span><b>{bytes(report.memory.total_bytes)}</b> with {optimizer === "adam" ? "Adam" : "SGD"}</span> : null}
                     {validation.data ? (problems.length === 0 ? <span className="pill completed"><Icon name="check" />No problems</span> : <span className="pill failed"><Icon name="alert" />{String(problems.length)} problems</span>) : <Skeleton width={90} />}
                   </div>
+                  {fineTune && parentId ? <span>The layers are fixed by the parent's weights; only the head can be reset (Start from).</span> : null}
                   {problems.length ? (
                     <div className="callout err" role="alert">
                       <Icon name="alert" />
@@ -473,16 +516,29 @@ export function RunScreen() {
             <header><h2>Data</h2><span className="req">BUILD-1.3</span></header>
             <div className="b">
               <div className="facts">
-                <span className="mono" style={{ color: "var(--text-primary)" }}>{versionInfo.data?.dataset ?? "—"} · {version ?? "—"}</span>
+                {fineTune && parentId && mode === "network" ? (
+                  <>
+                    <label className="sr-only" htmlFor="ft-dataset">Dataset</label>
+                    <select id="ft-dataset" className="select mono" value={splitDataset ?? ""} onChange={(e) => { setFtDataset(e.target.value); }}>
+                      {(datasets.data?.items ?? []).filter((d) => !parentModality || d.modality === parentModality).map((d) => <option key={d.slug} value={d.slug}>{d.slug}</option>)}
+                    </select>
+                    <label className="sr-only" htmlFor="ft-version">Version</label>
+                    <select id="ft-version" className="select mono" value={version ?? ""} onChange={(e) => { const next = new URLSearchParams(params); next.set("version", e.target.value); setSearchParams(next, { replace: true }); }}>
+                      {version && !(datasetVersions.data?.items ?? []).some((v) => v.version_id === version) ? <option value={version}>{version}</option> : null}
+                      {(datasetVersions.data?.items ?? []).filter((v) => trainable(v) && (!parentInfo.data?.dtype || v.dtype === parentInfo.data.dtype)).map((v) => <option key={v.version_id} value={v.version_id}>{v.version_id} · {v.stage}</option>)}
+                    </select>
+                  </>
+                ) : <span className="mono" style={{ color: "var(--text-primary)" }}>{versionInfo.data?.dataset ?? "—"} · {version ?? "—"}</span>}
                 {Object.entries(counts).map(([k, v]) => <span key={k}>{k} <b>{count(v)}</b></span>)}
                 {ends ? <Badge tone="info">{task}</Badge> : null}
                 {ends?.input_text ? <span>{task === "classification" ? `${String(ends.output_size ?? "?")} classes · ` : ""}{ends.input_text}</span> : null}
               </div>
+              {fineTune && parentId && parentInfo.data?.dtype ? <span style={{ color: "var(--text-muted)" }}>Splits of {parentInfo.data.dtype.replace("_", " ")} only, the parent's type.</span> : null}
             </div>
           </section>
           {mode === "network" ? (
             <section className="card">
-              <header><h2>Training</h2><span className="req">BUILD-1.2 · UI-2.3{studyOn ? " · HPO-1.1" : ""}</span><span className="spacer" />{studyOn ? <span className="note">{String(space.filter((r) => !r.inline).length)} fields tuned</span> : <span className="note">form from <span className="mono">GET /config/schemas/train</span></span>}</header>
+              <header><h2>Training</h2><span className="req">BUILD-1.2 · UI-2.3{studyOn ? " · HPO-1.1" : ""}</span><span className="spacer" />{studyOn ? <span className="note">{String(space.filter((r) => !r.inline).length)} fields tuned</span> : initParam && fromParent.data?.job_id ? <span className="note">prefilled from the parent's run, <span className="mono">{fromParent.data.job_id}</span></span> : <span className="note">form from <span className="mono">GET /config/schemas/train</span></span>}</header>
               <div className="b">
                 {schema.data && values ? (
                   <div className="fgrid">
@@ -508,10 +564,26 @@ export function RunScreen() {
           ) : null}
           {mode === "network" ? (
             <>
-              <section className="card">
-                <header><h2>Start from</h2><span className="req">ADR-0015</span></header>
-                <div className="b"><span>{isStudy ? "Each trial starts from its lineage's base if one exists, else from its own initial weights; only the best trial founds or joins a lineage (ADR-0018 rule 7)." : "The run starts from its lineage's base: an existing lineage's, or a new one saved before step 1. Choosing a trained version to start from is not offered yet."}</span></div>
-              </section>
+              <StartFromCard
+                fineTune={fineTune}
+                onMode={(on) => { setFineTune(on); }}
+                parent={fineTune ? parent : null}
+                candidates={candidates.items}
+                candidatesLoading={candidates.loading}
+                onPick={(id) => { const next = new URLSearchParams(params); next.set("init_from", id); next.delete("from"); next.delete("study"); setSearchParams(next, { replace: true }); setValues(null); setFineTune(true); setReset(null); setFreeze(null); }}
+                resetHead={resetHead}
+                onReset={(on) => { setReset(on); if (on) setFreeze(freeze.filter((f) => f !== "head")); }}
+                validation={ft}
+                validating={ftValidation.isFetching}
+                headText={headText}
+                isStudy={isStudy}
+                classical={false}
+                serverError={serverErrors.init_from}
+                version={version}
+              />
+              {fineTune && parent && parent.weights_status === "present" ? (
+                <FreezeCard report={report} graph={graph} freeze={freeze} onChange={setFreeze} resetHead={resetHead} problems={ft?.freeze_problems ?? []} reference={reference} />
+              ) : null}
               <section className="card">
                 <header><h2>Device</h2><span className="req">RUN-1.9</span></header>
                 <div className="b">
@@ -540,6 +612,7 @@ export function RunScreen() {
               onAdd={mode === "network" && graph && !reference ? () => { setAdding(true); } : null}
               addable={layerFields.length > 0}
               onOff={() => { setStudyOn(false); setTuned({}); }}
+              fixedStart={fineTune && parentId ? `${parentId}${resetHead ? " · head reset" : ""}${freeze.length ? ` · ${String(freeze.length)} layers frozen` : ""}` : null}
             />
           ) : (
             <section className="card collapsed">
@@ -558,7 +631,7 @@ export function RunScreen() {
         <aside className="card check" aria-label={mode === "network" ? "VRAM check" : "Where it runs"}>
           {mode === "network" ? (
             <>
-              <header><h2>VRAM check</h2><span className="req">NFR-1</span>{isStudy ? <span className="note">worst case in the space</span> : null}</header>
+              <header><h2>VRAM check</h2><span className="req">NFR-1</span>{fineTune && ft ? <Badge>trainable only</Badge> : null}{isStudy ? <span className="note">worst case in the space</span> : null}</header>
               <div className="b">
                 {check ? (
                   <>
@@ -572,7 +645,12 @@ export function RunScreen() {
                       <div className="vscale"><span>0</span><span style={{ marginLeft: "auto", marginRight: "9%" }}>cap {bytes(check.cap)}</span><span>{bytes(check.card)}</span></div>
                     </div>
                     <div className="kv2">
-                      <span>Weights, gradients, optimizer</span><span>{bytes(check.fixed)}</span>
+                      {fineTune && ft?.memory ? (
+                        <>
+                          <span>Weights, all layers</span><span>{bytes(ft.memory.weights_bytes)}</span>
+                          <span>Gradients and {optimizer === "adam" ? "Adam" : "SGD"}, {count(ft.trainable_parameters)} trainable</span><span>{bytes(ft.memory.gradients_bytes + ft.memory.optimizer_bytes)}</span>
+                        </>
+                      ) : <><span>Weights, gradients, optimizer</span><span>{bytes(check.fixed)}</span></>}
                       <span>Activations × {String(worstBatch)}{batchSpec ? " (largest batch)" : " (estimate)"}</span><span>{bytes(check.activations)}</span>
                       <span>CUDA context</span><span>{bytes(check.context)}</span>
                       <span className="tot">{isStudy ? "Worst case" : "Total"}</span><span className="tot">{bytes(check.total)}</span>
@@ -608,12 +686,22 @@ export function RunScreen() {
                 <div className="plan">
                   {isStudy ? (
                     <>Up to <b>{String(limitsNow.n_trials)} trials</b> or <b>{String(limitsNow.minutes)} min</b>, whichever comes first. Each trial is its own job on the <b>{device === "cpu" ? "CPU" : "GPU"} queue</b>, one at a time, {text(epochs)} epochs each{steps ? ` of ${count(steps)} steps` : ""}, plus about {String(TRIAL_START_S)} s to start (S-09). Only the best trial is registered; the test split is used once, on it, at the end.</>
+                  ) : fineTune && parent ? (
+                    <>
+                      Starts from <b className="mono">{parent.id}</b>'s weights{resetHead ? ", head reset" : ""}{freeze.length ? `, ${String(freeze.length)} layers frozen` : ""}.<br />
+                      <b>Epoch 0:</b> one validation pass before step 1.{" "}
+                      {!resetHead && parent.dataset_version_id === version && typeof (parent.metrics as { val_loss?: number } | null)?.val_loss === "number"
+                        ? <>On this split it should equal the parent's val loss, <b>{(parent.metrics as { val_loss: number }).val_loss.toFixed(3)}</b> (RUN-1.10.AC1).</>
+                        : resetHead ? "The head is new, so there is no parent's value to compare." : "Another split, so there is no parent's value to compare."}
+                      <br />Then <b>{text(values?.epochs)} epochs</b>{steps ? <> of <b>{count(steps)} steps</b></> : null} on the <b>{device === "cpu" ? "CPU" : "GPU"} queue</b>, a checkpoint every epoch and every {String(Math.round(Number(values?.checkpoint_every_s ?? 300) / 60))} min.
+                    </>
                   ) : (
                     <>Will run <b>{text(values?.epochs)} epochs</b>{steps ? <> of <b>{count(steps)} steps</b></> : null} on the <b>{device === "cpu" ? "CPU" : "GPU"} queue</b>, checkpointing every epoch and every {String(Math.round(Number(values?.checkpoint_every_s ?? 300) / 60))} min.</>
                   )}
                 </div>
                 {failure ? <ErrorState error={failure} title={`The ${isStudy ? "study" : "run"} could not be started`} /> : null}
-                <Button variant="primary" disabled={starting || problems.length > 0 || values === null || !version} onClick={() => { void start(); }}>
+                {fineTune && ftBlocked && parent ? <span className="note">Start is disabled until every check passes.</span> : null}
+                <Button variant="primary" disabled={starting || problems.length > 0 || values === null || !version || ftBlocked} onClick={() => { void start(); }}>
                   {check && !check.fits && !isStudy ? "Start anyway" : startWord}
                   <Icon name="play" />
                 </Button>

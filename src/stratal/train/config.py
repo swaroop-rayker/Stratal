@@ -12,6 +12,7 @@ from pydantic import (
     ConfigDict,
     Field,
     SerializerFunctionWrapHandler,
+    field_validator,
     model_serializer,
     model_validator,
 )
@@ -113,6 +114,44 @@ class TrainConfig(BaseModel):
         "seconds have passed since the last one (ADR-0014 rule 5, OC-3).",
     )
     algorithm_version: int = Field(default=ALGORITHM_VERSION, json_schema_extra={"readOnly": True})
+    init_from: str | None = Field(
+        default=None,
+        pattern=r"^mv_[0-9a-f]{12}$",
+        description="Start from this trained version's weights instead of the lineage's "
+        "base (RUN-1.10, ADR-0014 Addendum A). The model must be that version's.",
+    )
+    reset_head: bool = Field(
+        default=False,
+        description="With init_from: re-initialise only the locked output layer, so a split "
+        "with other classes can be fine-tuned (RUN-1.10.AC3).",
+    )
+    freeze: list[str] = Field(
+        default_factory=lambda: list[str](),
+        max_length=500,
+        description="With init_from: graph node IDs (or 'head') whose weights stay as the "
+        "parent's; they are held in eval mode, so BatchNorm statistics stay too (RUN-1.10.AC2).",
+    )
+
+    @field_validator("freeze")
+    @classmethod
+    def _sorted_once(cls, value: list[str]) -> list[str]:
+        return sorted(set(value))
+
+    @model_validator(mode="after")
+    def _needs_a_parent(self) -> "TrainConfig":
+        if self.init_from is None and (self.reset_head or self.freeze):
+            raise ValueError("reset_head and freeze need init_from (RUN-1.10)")
+        return self
+
+    @model_serializer(mode="wrap")
+    def _without_fresh_start(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """A run that starts fresh serializes exactly as before M11, so the config hashes
+        of earlier runs, and of every run without ``init_from``, do not change."""
+        data: dict[str, Any] = handler(self)
+        if data.get("init_from") is None:
+            for name in ("init_from", "reset_head", "freeze"):
+                data.pop(name, None)
+        return data
 
 
 class TrainRequest(BaseModel):

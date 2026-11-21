@@ -739,26 +739,32 @@ class DeepStudy:
                     config=meta["config"],
                     config_hash=str(meta["config_hash"]),
                     weights_bytes=size,
-                    note=f"Initial weights of trial {number} of {self.study_id}, from seed "
-                    f"{config.seed}",
+                    note=(
+                        f"Starting weights of trial {number} of {self.study_id}, a fine-tune "
+                        f"of {config.init_from}"
+                        if config.init_from is not None
+                        else f"Initial weights of trial {number} of {self.study_id}, from seed "
+                        f"{config.seed}"
+                    ),
                 )
             else:
                 base_id = base.id
             existing = store.run_version(session, trial_job)
             version_id = existing.id if existing is not None else store.new_version_id()
+            parent_id = config.init_from or base_id  # ADR-0014 Addendum A rule 13
             size = copy(
                 folder / "trained",
                 lineage.id,
                 version_id,
                 state="trained",
-                parent_version_id=base_id,
+                parent_version_id=parent_id,
             )
             row = store.record_run(
                 session,
                 lineage_id=lineage.id,
                 job_id=trial_job,
                 state="trained",
-                parent_version_id=base_id,
+                parent_version_id=parent_id,
                 dataset_version_id=self.version_id,
                 config=meta["config"],
                 config_hash=str(meta["config_hash"]),

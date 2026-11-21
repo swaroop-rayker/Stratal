@@ -12,7 +12,8 @@ Per lineage it keeps:
 - pinned versions (REG-2.5).
 
 Every other trained version whose weights are on disk is deleted, unless it is
-in use or the parent of another version: then it is *blocked*, which retention
+in use or the parent of a version that still has weights (ADR-0015 Addendum A
+rule 3): then it is *blocked*, which retention
 logs as a refusal (REG-2.8). Partial versions are never deleted here; their
 weights are their run's checkpoint, which follows the run (REG-2.6).
 """
@@ -36,7 +37,7 @@ class VersionFacts:
     in_use: str | None = None
     """Why it is in use, e.g. "loaded for inference"; ``None`` if it is not."""
     children: tuple[str, ...] = ()
-    """Versions trained from it (REG-2.8b)."""
+    """Versions started from it that still have weights, in any lineage (REG-2.8b)."""
 
 
 @dataclass(frozen=True)
@@ -94,7 +95,7 @@ def plan_lineage(versions: Sequence[VersionFacts], keep_intermediate: int | None
             plan.blocked.append(
                 Decision(
                     v.id,
-                    f"parent of {', '.join(sorted(v.children))} (REG-2.8)",
+                    f"parent of {', '.join(sorted(v.children))}, still with weights (REG-2.8)",
                     v.weights_bytes,
                 )
             )

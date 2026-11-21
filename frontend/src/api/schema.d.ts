@@ -88,6 +88,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Train
+         * @description Check a network's run as ``POST /jobs`` would, and create nothing (RUN-1.10). A
+         *     fine-tune's mismatches come back in ``checks`` and ``freeze_problems``, all at once;
+         *     any other problem is the same ``422`` as ``POST /jobs``.
+         */
+        post: operations["validate_train_api_v1_jobs_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}": {
         parameters: {
             query?: never;
@@ -1590,6 +1612,25 @@ export interface components {
             /** Total */
             total: number | null;
         };
+        /**
+         * FineTuneCheck
+         * @description One compatibility rule between a fine-tune's parent and its split (ADR-0014
+         *     Addendum A rule 4), with both values.
+         */
+        FineTuneCheck: {
+            /** Rule */
+            rule: string;
+            /** Ok */
+            ok: boolean;
+            /** Parent */
+            parent: string;
+            /** Here */
+            here: string;
+            /** Message */
+            message: string;
+            /** Code */
+            code: string;
+        };
         /** Flatten */
         Flatten: {
             /**
@@ -1611,6 +1652,15 @@ export interface components {
              * @description Folder as the workers see it, e.g. /sources/coco10k.
              */
             path: string;
+        };
+        /** FreezeProblem */
+        FreezeProblem: {
+            /** Loc */
+            loc: (string | number)[];
+            /** Msg */
+            msg: string;
+            /** Code */
+            code: string;
         };
         /** GELU */
         GELU: {
@@ -1955,6 +2005,15 @@ export interface components {
             descendants: components["schemas"]["Version"][];
             /** In Progress */
             in_progress: components["schemas"]["ExtendingJob"][];
+        };
+        /** LineagePlace */
+        LineagePlace: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Joins */
+            joins: boolean;
         };
         /** LineagePlan */
         LineagePlan: {
@@ -3664,6 +3723,22 @@ export interface components {
              * @default 1
              */
             readonly algorithm_version: number;
+            /**
+             * Init From
+             * @description Start from this trained version's weights instead of the lineage's base (RUN-1.10, ADR-0014 Addendum A). The model must be that version's.
+             */
+            init_from?: string | null;
+            /**
+             * Reset Head
+             * @description With init_from: re-initialise only the locked output layer, so a split with other classes can be fine-tuned (RUN-1.10.AC3).
+             * @default false
+             */
+            reset_head: boolean;
+            /**
+             * Freeze
+             * @description With init_from: graph node IDs (or 'head') whose weights stay as the parent's; they are held in eval mode, so BatchNorm statistics stay too (RUN-1.10.AC2).
+             */
+            freeze?: string[];
         };
         /**
          * TrainRequest
@@ -3684,6 +3759,25 @@ export interface components {
             config?: components["schemas"]["TrainConfig"] | null;
             /** @description A classical model's run on a tabular split (ML-1.1, ADR-0019 rule 15); it runs on the CPU queue. Give this or 'config'. */
             classical?: components["schemas"]["ClassicalConfig"] | null;
+        };
+        /**
+         * TrainValidation
+         * @description What ``POST /jobs`` would make of a network's run, without making it (RUN-1.10,
+         *     ADR-0014 Addendum A rule 12).
+         */
+        TrainValidation: {
+            /** Parent Version Id */
+            parent_version_id: string | null;
+            /** Checks */
+            checks: components["schemas"]["FineTuneCheck"][];
+            lineage: components["schemas"]["LineagePlace"] | null;
+            /** Freeze Problems */
+            freeze_problems: components["schemas"]["FreezeProblem"][];
+            /** Trainable Parameters */
+            trainable_parameters: number | null;
+            /** Frozen Parameters */
+            frozen_parameters: number;
+            memory: components["schemas"]["Memory"] | null;
         };
         /**
          * TrainingContext
@@ -3946,6 +4040,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Job"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_train_api_v1_jobs_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrainRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainValidation"];
                 };
             };
             /** @description Validation Error */

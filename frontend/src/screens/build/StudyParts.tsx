@@ -117,7 +117,7 @@ function LimitField({ label, type, help, children }: { label: string; type: stri
   );
 }
 
-export function StudyCard({ classical, rows, errors, limits, objectives, onLimits, onRow, onRemove, onAdd, onOff, addable }: {
+export function StudyCard({ classical, rows, errors, limits, objectives, onLimits, onRow, onRemove, onAdd, onOff, addable, fixedStart }: {
   classical: boolean;
   rows: SpaceRow[];
   errors: Map<string, string>;
@@ -129,6 +129,8 @@ export function StudyCard({ classical, rows, errors, limits, objectives, onLimit
   onAdd: (() => void) | null;
   onOff: () => void;
   addable: boolean;
+  /** A fine-tune's start, the same for every trial and not tunable (RUN-1.10, frame G). */
+  fixedStart?: string | null;
 }) {
   return (
     <section className="card study" aria-label="Tune with a study">
@@ -156,6 +158,14 @@ export function StudyCard({ classical, rows, errors, limits, objectives, onLimit
                   </tr>
                 );
               })}
+              {fixedStart ? (
+                <tr className="fixed">
+                  <td className="mono">init_from · freeze</td>
+                  <td><span className="badge">fixed</span></td>
+                  <td><span className="mono">{fixedStart}</span> <span className="note">Every trial starts from it; not tunable.</span></td>
+                  <td />
+                </tr>
+              ) : null}
             </tbody>
           </table>
         ) : (

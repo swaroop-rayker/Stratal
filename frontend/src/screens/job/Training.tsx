@@ -67,6 +67,9 @@ export interface TrainingData {
   checkpoints: Checkpoint[];
   pauses: Pause[];
   bench: Bench | null;
+  /** A fine-tune's validation before step 1 (RUN-1.10.AC1): the val curves' starting point,
+   * not an epoch done. */
+  baseline: EpochPoint | null;
 }
 
 const CHECKPOINT_END = /end of epoch (\d+)/;
@@ -74,7 +77,7 @@ const CHECKPOINT_IN = /in epoch (\d+), step (\d+)/;
 
 /** Everything SCR-04 v2 shows about a training run, from its events in order. */
 export function deriveTraining(events: StreamEvent[]): TrainingData {
-  const data: TrainingData = { steps: [], epochs: [], checkpoints: [], pauses: [], bench: null };
+  const data: TrainingData = { steps: [], epochs: [], checkpoints: [], pauses: [], bench: null, baseline: null };
   let heatSinceResume: number | null = null;
   let sawHeat = false;
   for (const e of events) {
@@ -106,15 +109,11 @@ export function deriveTraining(events: StreamEvent[]): TrainingData {
       });
     } else if (e.substage === "validate") {
       const epoch = num(m.epoch);
-      if (epoch !== null) {
+      const point = epoch === null ? null : { epoch, trainLoss: num(m.train_loss), trainAccuracy: num(m.train_accuracy), valLoss: num(m.val_loss), valAccuracy: num(m.val_accuracy) };
+      if (point && epoch === 0) data.baseline = point;
+      else if (point) {
         data.epochs = data.epochs.filter((x) => x.epoch !== epoch);
-        data.epochs.push({
-          epoch,
-          trainLoss: num(m.train_loss),
-          trainAccuracy: num(m.train_accuracy),
-          valLoss: num(m.val_loss),
-          valAccuracy: num(m.val_accuracy),
-        });
+        data.epochs.push(point);
       }
     } else if (e.substage === "checkpoint") {
       const step = num(m.checkpoint_step);
@@ -361,7 +360,7 @@ export function TrainingCharts({ job, data }: { job: Job; data: TrainingData }) 
   const last = data.steps[data.steps.length - 1] ?? null;
   const lastEpoch = data.epochs[data.epochs.length - 1] ?? null;
   const valAt = (key: "valLoss" | "valAccuracy") =>
-    data.epochs.flatMap((e) => (e[key] !== null ? [[e.epoch * perEpoch, e[key]] as [number, number]] : []));
+    (data.baseline ? [data.baseline, ...data.epochs] : data.epochs).flatMap((e) => (e[key] !== null ? [[e.epoch * perEpoch, e[key]] as [number, number]] : []));
   const grads = data.steps.flatMap((p) => (p.gradNorm !== null ? [p.gradNorm] : []));
   const times = data.steps.flatMap((p) => (p.stepMs !== null ? [p.stepMs] : []));
   const toggle = { role: "button", tabIndex: 0, onClick: () => { setTable((t) => !t); }, onKeyDown: (e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTable((t) => !t); } }, "aria-expanded": table };

@@ -102,16 +102,26 @@ def _schedule(optimizer: torch.optim.Optimizer, config: TrainConfig, total_steps
 
 
 def _optimizer(model: nn.Module, config: TrainConfig) -> torch.optim.Optimizer:
+    """Over the trainable parameters only: frozen ones get no gradient, no weight decay and
+    no optimizer state (ADR-0014 Addendum A rules 7 and 8)."""
+    params = [p for p in model.parameters() if p.requires_grad]
     if config.optimizer == "sgd":
         return torch.optim.SGD(
-            model.parameters(),
+            params,
             lr=config.learning_rate,
             momentum=config.momentum,
             weight_decay=config.weight_decay,
         )
-    return torch.optim.Adam(
-        model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay
-    )
+    return torch.optim.Adam(params, lr=config.learning_rate, weight_decay=config.weight_decay)
+
+
+def _head_prefix(model: nn.Module) -> str:
+    """The state-dict prefix of the locked head: ``head.`` for a compiled graph (ADR-0017
+    rule 8), the last ``Linear`` of a reference model's ``Sequential``."""
+    if hasattr(model, "head"):
+        return "head."
+    last = [name for name, m in model.named_modules() if isinstance(m, nn.Linear)][-1]
+    return last + "."
 
 
 def _loader(dataset: Any, *, batch: int, sampler: Any, workers: int, cuda: bool) -> DataLoader:
@@ -139,6 +149,14 @@ class _Run:
         self.folder = ckpt.checkpoint_dir(run.data_dir, run.ctx.job_id)
         self.trial: Any = None
         """For an ``hpo_trial`` job: its link to the study (ADR-0018 rules 5 to 7)."""
+        self.parent: Any = None
+        """For a fine-tune: the trained version it starts from (RUN-1.10, ADR-0014 Addendum A)."""
+        self.parent_val_loss: float | None = None
+        """The parent's val loss when this run validates on the parent's own split with its
+        own head: what epoch 0 must equal (RUN-1.10.AC1)."""
+        self.frozen: list[nn.Module] = []
+        self.parent_id: str | None = None
+        """The version this run's version names as parent: ``init_from``, else the base."""
         if run.spec.get("kind") == "hpo_trial":
             from stratal.hpo.trial import TrialLink
 
@@ -155,6 +173,8 @@ class _Run:
         self.noun = "images"
         with Session(self.run.engine) as session:
             version, manifest = registry.manifest_for(session, self.run.data_dir, version_id)
+            if self.config.init_from is not None:
+                self._check_parent(session, version)
             dataset = session.get(Dataset, version.dataset_id)
             assert dataset is not None
             self.dataset_id, self.dataset_slug = dataset.id, dataset.slug
@@ -194,6 +214,21 @@ class _Run:
         self.steps_per_epoch = math.ceil(len(self.train) / self.config.batch_size)
         self.total_steps = self.steps_per_epoch * self.config.epochs
 
+    def _check_parent(self, session: Session, version: Any) -> None:
+        """The fine-tune's checks again, as the API ran them (ADR-0014 Addendum A rule 4):
+        the parent may have lost its weights, or the request skipped the API."""
+        from stratal.train import finetune
+
+        fine = finetune.check(
+            session, self.run.engine, self.run.data_dir, config=self.config, version=version
+        )
+        finetune.refuse(fine)
+        self.parent = fine.parent.version
+        metrics = fine.parent.version.metrics or {}
+        same_split = fine.parent.version.dataset_version_id == version.version_id
+        if same_split and not self.config.reset_head and "val_loss" in metrics:
+            self.parent_val_loss = float(metrics["val_loss"])
+
     def _prepare_images(self, rows: list[dict[str, Any]]) -> None:
         version_id = self.run.input_version_id
         blobs = BlobStore(self.run.data_dir)
@@ -219,9 +254,28 @@ class _Run:
 
         data = load_tabular(manifest)
         self.table_schema = data.schema
-        self.prep = table_prep.fit(data)
-        self.task = self.prep.task
-        self.classes = list(self.prep.classes)
+        fitted = table_prep.fit(data)
+        prep: table_prep.TablePrep = fitted
+        if self.parent is not None:
+            # The weights were learnt for the parent's scaling and encoding: keep them, a
+            # deliberate exception to ML-1.3 (ADR-0014 Addendum A rule 5). Only a reset
+            # head takes this split's classes and target scale.
+            from stratal.train.finetune import parent_table_prep
+
+            theirs = parent_table_prep(self.run.data_dir, self.parent)
+            prep = (
+                replace(
+                    theirs,
+                    classes=fitted.classes,
+                    target_mean=fitted.target_mean,
+                    target_std=fitted.target_std,
+                )
+                if self.config.reset_head
+                else theirs
+            )
+        self.prep = prep
+        self.task = prep.task
+        self.classes = list(prep.classes)
         self.noun = "rows"
         target_type = torch.long if self.task == "classification" else torch.float32
 
@@ -234,7 +288,7 @@ class _Run:
             return TensorRows(x, y)
 
         self.train, self.val, self.test = rows("train"), rows("val"), rows("test")
-        self.input = Shape("vector", (self.prep.width,))
+        self.input = Shape("vector", (prep.width,))
         self.shape = self.input.dims
 
     def _prepare_text(self, manifest: Any, rows: list[dict[str, Any]]) -> None:
@@ -284,6 +338,8 @@ class _Run:
             torch.backends.cudnn.benchmark = False
         model = build_model(config.model, self.input, self.outputs)
         self.parameters = parameter_count(model)
+        if self.parent is not None:
+            self._start_from_parent(model)
         self.ctx.emit(
             stage=STAGE,
             substage="setup",
@@ -362,7 +418,9 @@ class _Run:
                 )
         regression = self.task == "regression"
         loss_fn: nn.Module = nn.MSELoss() if regression else nn.CrossEntropyLoss()
-        model.train()
+        if self.parent is not None and not state.history and state.position.global_step == 0:
+            state = ckpt.Checkpoint(state.position, self.hash, [self._epoch_zero(model, loss_fn)])
+        self._train_mode(model)
         last_checkpoint = time.monotonic()
         checkpoint_bytes = 0
         position = state.position
@@ -704,9 +762,79 @@ class _Run:
                 if not regression:
                     correct += int((logits.argmax(1) == y).sum())
                 seen += len(y)
-        model.train()
+        self._train_mode(model)
         loss = total_loss / seen
         return loss, self._rmse(loss) if regression else correct / seen
+
+    def _train_mode(self, model: nn.Module) -> None:
+        """Train mode, except frozen layers, which stay in eval mode so their BatchNorm
+        statistics and dropout do not change (ADR-0014 Addendum A rule 7)."""
+        model.train()
+        for module in self.frozen:
+            module.eval()
+
+    def _epoch_zero(self, model: nn.Module, loss_fn: nn.Module) -> dict[str, Any]:
+        """One validation pass before step 1, recorded as epoch 0 (RUN-1.10.AC1, rule 9)."""
+        val_loss, val_score = self._evaluate(model, loss_fn)
+        score_name = "rmse" if self.task == "regression" else "accuracy"
+        record: dict[str, Any] = {
+            "epoch": 0,
+            "val_loss": round(val_loss, 5),
+            f"val_{score_name}": round(val_score, 5),
+        }
+        if self.parent_val_loss is not None:
+            versus = f"the parent's on its own split: {self.parent_val_loss:.4f}"
+        elif self.config.reset_head:
+            versus = "no parent's value to compare: the head is new"
+        else:
+            versus = "no parent's value to compare: another split"
+        extra = (
+            {"parent_val_loss": self.parent_val_loss} if self.parent_val_loss is not None else {}
+        )
+        self.ctx.emit(
+            stage=STAGE,
+            substage="validate",
+            message=f"Epoch 0, before training: val loss {val_loss:.4f} ({versus})",
+            metrics={**record, **extra},
+        )
+        return record
+
+    def _start_from_parent(self, model: nn.Module) -> None:
+        """Load the parent's weights, all but the head when it is reset, then freeze the
+        chosen nodes (ADR-0014 Addendum A rules 5 and 7). A reset head keeps its
+        initialisation from the run's seed."""
+        from stratal.registry.store import WEIGHTS_FILE
+
+        assert self.parent is not None and self.parent.weights_path is not None
+        path = self.run.data_dir / self.parent.weights_path / WEIGHTS_FILE
+        tensors = weights.read_tensors(path, suggested_action="Re-train the parent (REG-2.7).")
+        head = _head_prefix(model)
+        if self.config.reset_head:
+            tensors = {k: v for k, v in tensors.items() if not k.startswith(head)}
+        missing, unexpected = model.load_state_dict(tensors, strict=False)
+        wrong = [k for k in missing if not (self.config.reset_head and k.startswith(head))]
+        if wrong or unexpected:
+            raise StratalError(
+                f"The weights of {self.parent.id} do not fit this model: missing "
+                f"{wrong[:5]}, unexpected {list(unexpected)[:5]}.",
+                suggested_action="Fine-tune with the parent's own model spec.",
+            )
+        for node_id in self.config.freeze:
+            module = model.get_submodule("head" if node_id == "head" else f"nodes.{node_id}")
+            for param in module.parameters():
+                param.requires_grad_(False)
+            self.frozen.append(module)
+        frozen = sum(p.numel() for m in self.frozen for p in m.parameters())
+        self.ctx.emit(
+            stage=STAGE,
+            substage="setup",
+            message=f"Starting from {self.parent.id}'s weights"
+            + (", head reset" if self.config.reset_head else "")
+            + (
+                f", {len(self.frozen)} layers frozen ({frozen:,} parameters)" if self.frozen else ""
+            ),
+            metrics={"init_from": str(self.parent.id), "frozen_parameters": frozen},
+        )
 
     def _rmse(self, standardised_mse: float) -> float:
         """An MSE on the standardised target, as an RMSE on the target's own scale."""
@@ -736,7 +864,7 @@ class _Run:
                 else:
                     guess += [self.classes[int(i)] for i in logits.argmax(1)]
                     truth += [self.classes[int(i)] for i in y]
-        model.train()
+        self._train_mode(model)
         return truth, guess
 
     def _final_scores(
@@ -788,7 +916,7 @@ class _Run:
             "lineage_id": self.lineage_id,
             "version_id": version_id,
             "state": state,
-            "parent_version_id": None if state == "base" else self.base_id,
+            "parent_version_id": None if state == "base" else self.parent_id,
             "model": self.config.model.model_dump(mode="json"),
             "input_shape": list(self.input.dims),
             "input": self.input.as_json(),
@@ -817,7 +945,11 @@ class _Run:
         base's weights, so every run of a lineage starts from the base (REG-2.1).
 
         The model is built from the seed either way, so the random state the run
-        continues with does not depend on whether the lineage already existed."""
+        continues with does not depend on whether the lineage already existed.
+
+        A fine-tune (ADR-0014 Addendum A rule 6) holds its parent's weights already: it
+        never loads the base. Founding a lineage, it saves those starting weights as the
+        base. Its version's parent is the version it started from, not the base."""
         config = self.config
         if self.trial is not None:
             self._attach_trial(model)
@@ -836,6 +968,7 @@ class _Run:
             )
             self.lineage_id = lineage.id
             base = store.base_of(session, lineage.id)
+            fine_tune = config.init_from is not None
             if base is None:
                 self.base_id = store.new_version_id()
                 size = weights.write(
@@ -853,11 +986,25 @@ class _Run:
                     config=config.model_dump(mode="json"),
                     config_hash=self.hash,
                     weights_bytes=size,
-                    note=f"Initial weights from seed {config.seed}, saved before the first step",
+                    note=(
+                        f"Starting weights of a fine-tune of {config.init_from}"
+                        + (", head reset" if config.reset_head else "")
+                        + f" (seed {config.seed}), saved before the first step"
+                        if fine_tune
+                        else f"Initial weights from seed {config.seed}, saved before the first step"
+                    ),
                 )
                 message = (
                     f"New lineage {lineage.name}: base {self.base_id} saved before the first step"
+                    + (
+                        f" (the starting weights of a fine-tune of {config.init_from})"
+                        if fine_tune
+                        else ""
+                    )
                 )
+            elif fine_tune:
+                self.base_id = base.id
+                message = f"Lineage {lineage.name}: fine-tuning {config.init_from}"
             else:
                 if base.weights_path is None or base.weights_status != "present":
                     raise StratalError(
@@ -868,11 +1015,16 @@ class _Run:
                 weights.load_into(model, self.run.data_dir / base.weights_path)
                 self.base_id = base.id
                 message = f"Lineage {lineage.name}: starting from base {base.id}"
+        self.parent_id = config.init_from or self.base_id
         self.ctx.emit(
             stage=STAGE,
             substage="setup",
             message=message,
-            metrics={"lineage_id": self.lineage_id, "base_version_id": self.base_id},
+            metrics={
+                "lineage_id": self.lineage_id,
+                "base_version_id": self.base_id,
+                "parent_version_id": self.parent_id,
+            },
         )
 
     def _attach_trial(self, model: nn.Module) -> None:
@@ -893,7 +1045,12 @@ class _Run:
                 base.weights_path if base is not None and base.weights_status == "present" else None
             )
             base_id = base.id if base is not None and path is not None else None
-        if path is not None:
+        self.parent_id = config.init_from or base_id
+        if config.init_from is not None and path is not None:
+            # A fine-tuning trial holds its parent's weights already (Addendum A rule 13).
+            self.lineage_id, self.base_id = lineage_id, base_id
+            message = f"Trial {self.trial.number}: fine-tuning {config.init_from}"
+        elif path is not None:
             weights.load_into(model, self.run.data_dir / path)
             self.lineage_id, self.base_id = lineage_id, base_id
             message = f"Trial {self.trial.number}: starting from base {base_id}"
@@ -906,8 +1063,13 @@ class _Run:
                 self._extra_files(),
             )
             message = (
-                f"Trial {self.trial.number}: initial weights from seed {config.seed} kept with "
-                "the trial; the lineage is created only if it is the study's best"
+                f"Trial {self.trial.number}: "
+                + (
+                    f"the starting weights of a fine-tune of {config.init_from}"
+                    if config.init_from is not None
+                    else f"initial weights from seed {config.seed}"
+                )
+                + " kept with the trial; the lineage is created only if it is the study's best"
             )
         self.ctx.emit(
             stage=STAGE,
@@ -926,7 +1088,7 @@ class _Run:
                 lineage_id=self.lineage_id,
                 job_id=self.ctx.job_id,
                 state="partial",
-                parent_version_id=self.base_id,
+                parent_version_id=self.parent_id,
                 dataset_version_id=self.run.input_version_id,
                 config=self.config.model_dump(mode="json"),
                 config_hash=self.hash,
@@ -983,7 +1145,7 @@ class _Run:
                 lineage_id=self.lineage_id,
                 job_id=self.ctx.job_id,
                 state="trained",
-                parent_version_id=self.base_id,
+                parent_version_id=self.parent_id,
                 dataset_version_id=self.run.input_version_id,
                 config=self.config.model_dump(mode="json"),
                 config_hash=self.hash,

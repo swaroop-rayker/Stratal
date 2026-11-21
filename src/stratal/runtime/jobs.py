@@ -415,6 +415,8 @@ def check_network(session: Session, version: DatasetVersion, config: TrainConfig
         check_train_graph(
             get_engine(), get_settings().data_dir, resolved.model.graph, version_id, optimizer
         )
+    if resolved.init_from is not None:
+        check_fine_tune(session, version, resolved)
     if "checkpoint_every_s" not in resolved.model_fields_set:
         # The default comes from the settings saved on SCR-14 (OC-9), fixed into the
         # run's config now, so a later change never alters a running job (NFR-4).
@@ -424,6 +426,33 @@ def check_network(session: Session, version: DatasetVersion, config: TrainConfig
         minutes = limits.read(session, get_settings()).checkpoint_interval_min
         resolved = resolved.model_copy(update={"checkpoint_every_s": 60 * minutes})
     return resolved
+
+
+def check_fine_tune(session: Session, version: DatasetVersion, config: TrainConfig) -> Any:
+    """A fine-tune's checks (RUN-1.10, ADR-0014 Addendum A rules 2 to 4 and 7): the parent,
+    its fit with the split, and the freeze list. Raises :class:`ValidationFailed` (or
+    ``WeightsDeleted``) naming each problem; returns the checked ``FineTune``."""
+    from stratal.build.io import graph_report
+    from stratal.core.settings import get_settings
+    from stratal.db.engine import get_engine
+    from stratal.train import finetune
+
+    engine, data_dir = get_engine(), get_settings().data_dir
+    fine = finetune.check(session, engine, data_dir, config=config, version=version)
+    finetune.refuse(fine)
+    report = (
+        graph_report(engine, data_dir, config.model.graph, version.version_id, "adam")
+        if config.model.graph is not None
+        else None
+    )
+    problems = finetune.freeze_problems(config, report)
+    if problems:
+        raise ValidationFailed(
+            "The freeze list has problems: " + "; ".join(p["msg"] for p in problems) + ".",
+            suggested_action="Freeze only layers with weights, and leave something to train.",
+            errors=problems,
+        )
+    return fine
 
 
 def _create_network_job(

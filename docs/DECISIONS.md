@@ -754,6 +754,13 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **Also:** TPE is seeded per process from the study's seed and the trials already asked, so a new process continues the draws rather than repeating them; Optuna's storage opens under an advisory lock, so two studies can start at once.
 - **Why:** A process waiting hours for trials would hold one of two CPU slots (rule 5). A trial as an ordinary training job keeps checkpoints, pause, thermal pause and out-of-memory handling without a second copy. Keeping trial weights out of the registry keeps the registry to models someone chose.
 
+## M11: dashboards, monitoring completion, phase-2 acceptance
+
+**Fine-tuning a trained version** (RUN-1.10, REG-2.8; ADR-0014 and ADR-0015 Addendum A, approved 2026-11-20)
+- **What:** `init_from`, `reset_head` and `freeze` in the train config; checks against the split in `stratal.train.finetune`, run by the API and again by the stage; `POST /jobs/validate`; the parent's weights loaded before the lineage is found; an epoch-0 validation; retention holding parents of queued runs and of versions with weights.
+- **How:** The three fields are left out of a fresh run's serialization, so no earlier config hash changes. The stage loads the parent with every key checked, drops the head's keys when it is reset (the seeded head stays), sets `requires_grad = False` on frozen nodes, leaves them out of the optimizer and holds them in eval mode through `_train_mode`. A lineage founded by a fine-tune saves the starting weights as its base. On SCR-09 the checks come from `POST /jobs/validate`, so every mismatch shows at once; SCR-04 draws epoch 0 as the start of the validation curves, not as an epoch done.
+- **Why:** The config hash is the run's identity (NFR-4), and the start changes the result. Checking in the API gives the refusal before a job exists (AC3); checking again in the stage covers a parent that lost its weights in between. Holding frozen layers in eval mode is what makes AC2 hold for BatchNorm, whose statistics are buffers, not parameters. Retention's old rule (any child holds a parent) would have kept every fine-tuned-from version forever, since metadata is never deleted.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
