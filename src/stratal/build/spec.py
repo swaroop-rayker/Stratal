@@ -194,8 +194,11 @@ def _structure_problems(spec: GraphSpec) -> list[Problem]:
                 )
         if src == OUTPUT or dst == INPUT:
             problems.append(
-                _problem(None, "edge_direction", f"{src} → {dst}: nothing leaves output, "
-                         "nothing enters input")
+                _problem(
+                    None,
+                    "edge_direction",
+                    f"{src} → {dst}: nothing leaves output, nothing enters input",
+                )
             )
         if src == dst:
             problems.append(_problem(src, "cycle", f"'{src}' feeds itself"))
@@ -268,7 +271,10 @@ def validate_graph(
     if len(incoming.get(OUTPUT, [])) != 1:
         count = len(incoming.get(OUTPUT, []))
         problems.append(
-            _problem(None, "output_inputs", f"the output takes exactly one edge, got {count}",
+            _problem(
+                None,
+                "output_inputs",
+                f"the output takes exactly one edge, got {count}",
             )
         )
 

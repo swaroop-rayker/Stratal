@@ -35,8 +35,7 @@ class GraphModule(nn.Module):
         report = validate_graph(form, input_shape=input_shape, output_size=num_classes)
         if not report.valid or report.head is None:
             raise ValidationFailed(
-                "The model spec has problems: "
-                + "; ".join(p.message for p in report.problems),
+                "The model spec has problems: " + "; ".join(p.message for p in report.problems),
                 suggested_action="Fix them on SCR-08 (or POST /model-specs/validate) first.",
             )
         shapes: dict[str, Shape] = {INPUT: input_shape}
@@ -133,9 +132,7 @@ class ScratchLSTM(nn.Module):
     """A stacked, optionally bidirectional LSTM made of BUILD-1.8's cell (``implementation:
     scratch``). Same parameter count as ``torch.nn.LSTM``; one cell per layer and direction."""
 
-    def __init__(
-        self, input_size: int, spec: L.LSTM
-    ) -> None:
+    def __init__(self, input_size: int, spec: L.LSTM) -> None:
         super().__init__()
         self.directions = 2 if spec.bidirectional else 1
         self.last = spec.output == "last"

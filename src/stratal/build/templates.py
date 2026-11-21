@@ -42,7 +42,12 @@ def _residual_cnn() -> GraphSpec:
     previous = "stem_relu"
     for block in (1, 2):
         conv1, bn1, relu1 = f"b{block}_conv1", f"b{block}_bn1", f"b{block}_relu1"
-        conv2, bn2, add, relu2 = f"b{block}_conv2", f"b{block}_bn2", f"b{block}_add", f"b{block}_out"
+        conv2, bn2, add, relu2 = (
+            f"b{block}_conv2",
+            f"b{block}_bn2",
+            f"b{block}_add",
+            f"b{block}_out",
+        )
         nodes |= {
             conv1: L.Conv2d(out_channels=32, bias=False),
             bn1: L.BatchNorm(),

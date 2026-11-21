@@ -126,7 +126,9 @@ class PositionalEncoding(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         length = x.shape[1]
         if length > self.max_len:
-            raise ValueError(f"a sequence of {length} positions is longer than max_len {self.max_len}")
+            raise ValueError(
+                f"a sequence of {length} positions is longer than max_len {self.max_len}"
+            )
         out = x + self.table[:length].to(x.dtype)
         if self.training and self.dropout > 0:
             out = nn.functional.dropout(out, p=self.dropout)
