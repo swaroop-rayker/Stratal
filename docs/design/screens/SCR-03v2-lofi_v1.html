@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-03 v2 distributions, diff and clusters — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; background: #fff; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+.t td { padding: 0 8px; height: 30px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); } .t tr.sec td { height: 24px; background: var(--fill); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.t td.best { font-weight: 700; }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.ask { border: 2px solid var(--note); border-radius: 6px; padding: 10px 14px; background: #fff; max-width: 1280px; margin-top: 12px; } .ask li { color: var(--ink); margin: 4px 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.kvs { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; } .kvs span:nth-child(odd) { color: var(--ink-3); }
+.f { display: grid; grid-template-columns: 1fr; gap: 2px; font-size: 12px; }
+.f label { font-family: var(--mono); color: var(--ink-2); font-size: 11px; }
+.f .in { border: 1px solid var(--line); border-radius: 4px; height: 24px; display: flex; align-items: center; padding: 0 8px; background: #fff; font-family: var(--mono); font-size: 11px; }
+.f .in.bad { border: 2px solid var(--ink); } .f .in.ph { color: var(--ink-3); font-style: italic; font-family: inherit; }
+.f .hint { font-size: 10px; color: var(--ink-3); }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 12px; }
+.callout { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--fill); font-size: 12px; } .callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.hbar { display: inline-block; height: 8px; background: var(--ink-3); vertical-align: middle; border-radius: 2px; }
+.ci { position: relative; height: 22px; border-bottom: 1px dashed var(--soft); }
+.ci .w { position: absolute; top: 10px; height: 2px; background: var(--ink-2); }
+.ci .w::before, .ci .w::after { content: ""; position: absolute; top: -4px; width: 2px; height: 10px; background: var(--ink-2); } .ci .w::before { left: 0; } .ci .w::after { right: 0; }
+.ci .d { position: absolute; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); margin-left: -5px; }
+.axis { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--ink-3); }
+.textarea { border: 1px solid var(--line); border-radius: 4px; min-height: 64px; padding: 6px 8px; font-size: 12px; background: #fff; }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 560px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font: 600 15px var(--mono); }
+.drawer .body { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; font-size: 12px; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 2px; vertical-align: middle; text-align: center; font: 700 10px/10px system-ui; } .box.on::after { content: "✓"; } .box.dis { border-color: var(--soft); background: var(--fill); }
+.faint { opacity: .45; }
+</style>
+
+</head>
+<body>
+<main class="doc">
+<h1>SCR-03 v2 — Distributions, the diff, semantic clusters, and models trained on a version · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: UI-2.2 (raw vs cleaned, reasons per stage), DATA-3.5 (diff, P2), DATA-2.3 (semantic clusters, P2), UI-2.1 (models trained on a version, K11)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> SCR-03 and its v2 additions</span><span>Route: <span class="mono">/versions/:version_id?tab=…</span></span><span>Decisions: M11 kickoff K10, K11; spike S-10 (threshold 0.90)</span><span>2026-11-21</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-03 (faint where unchanged: header, lineage strip, tiles, Rows / Reasons / Config). Blue numbers are annotations. The data is real unless marked. Frames A and B are coco10k: its first pipeline to the split <span class="mono">ds_3f6fcc420a27</span>, and its two preprocess versions, whose ingests differ only by <span class="mono">min_size</span> 256 → 255. Frame C's cluster numbers come from spike S-10 (0.90, over all 10,000 images); no label version has clusters yet, so its rows are <b>illustrative</b> but its pair is real (<span class="mono">000000185291.jpg</span> and <span class="mono">000000452782.jpg</span>, 0.985). Frame D is CIFAR-10's split <span class="mono">ds_f8e67211dd94</span> and the models trained on it.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Three new tabs beside Rows, Reasons and Config:</b> <i>Distributions</i> (UI-2.2), <i>Compare</i> (DATA-3.5) and, on a version models train on, <i>Models</i> (UI-2.1). The tiles, lineage strip and Rows stay as approved. The Reasons tab already lists every reason with its stage, so it is unchanged.</li>
+<li><b>Distributions opens with the funnel</b>: one row per stage from raw to this version, with rows in, what the stage removed (by reason, as chips that filter Rows) and rows out. A split adds its three parts. This is "rejection reasons per stage" read top to bottom.</li>
+<li><b>Then the columns, raw against here.</b> Raw is the lineage's ingest version, every row; here is this version's accepted rows. Each column gets an overlaid histogram (raw as an outline, here filled) and a five-number table (min, p10, median, p90, max) for both. A third row, <i>removed</i>, summarises the rows the pipeline dropped, which is usually what explains a difference (the 60 rejected images all have a shorter side of 120–255 px).</li>
+<li><b>Which columns, by type:</b> labelled images: width, height, file size, the preprocessed long side, caption length and CLIP score once labelled; labelled images (CIFAR): class counts per split; texts: length in words and, on a tokenize version, tokens and the share cut at L; tables: rows and the target's distribution (the column view is M11b's).</li>
+<li><b>Compare picks another version of the same dataset</b> (a select, newest first, the parent preselected). It shows the config difference first, since that is usually the cause, then rows added, removed and changed, the changed count by field, and the changed rows with each field before → after; a row opens its drawer on either side.</li>
+<li><b>The diff matches rows by <span class="mono">row_key</span></b> (K10) and compares the fields both versions have; a field one side lacks (a label version's caption against a clean version) is listed once as "only in B", not per row.</li>
+<li><b>Semantic clusters look like duplicate groups</b> (ADR-0013 rule 5): a tile on a label or later version ("105 clusters · 290 rows"), a Rows filter <i>In a semantic cluster</i>, a cluster chip in the row, and in the row drawer the cluster's members side by side with each pair's similarity and "kept in one split group". Unlike a duplicate group, every member is accepted, so none is marked kept.</li>
+<li><b>Models lists the model versions trained on this version</b>, grouped by lineage: state, main metric (test if scored, else validation, said which), weights, trained, with links to SCR-11 and <i>Compare on this test split</i> (SCR-11 v2). The lineage strip gains a "→ 16 models" end chip that opens the tab.</li>
+</ol>
+</div>
+
+<div class="ask">
+<h3>Two questions this layout depends on</h3>
+<ol>
+<li><b>Should a change to a row's reason text alone count as "changed"?</b> In the real diff of frame B, 60 rows differ, but 59 of them only in <span class="mono">reason_detail</span> ("below the minimum 256px" → "255px"): one image really changed (rejected → accepted). I propose counting a row as changed when its status, reason code, content or derived fields differ, and listing wording-only changes on their own line ("59 rows: reason wording only"). Otherwise the headline would read 60 changed rows for a one-row change.</li>
+<li><b>Can Compare cross stages?</b> Within a dataset every version has the same rows (INV-06), so a clean version can be diffed against a split; the split's own columns would show as "only in B". I propose allowing any two versions of one dataset and saying when the stages differ. The alternative is to offer only versions of the same stage.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Distributions on coco10k's split <span class="mono">ds_3f6fcc420a27</span></h2>
+<div class="frame" style="height:1180px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k / ds_3f6fcc420a27</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="faint" style="display:flex;flex-direction:column;gap:8px">
+        <div class="phead"><b class="mono">ds_3f6fcc420a27</b><span class="k">split</span><span class="spacer"></span><span class="btn sm">Train a model…</span></div>
+        <div class="card" style="height:44px">lineage: ingest → clean → preprocess → label → filter → <b>split</b> <span class="k">→ 0 models</span></div>
+        <div class="card" style="height:40px">tiles: accepted 9,838 · rejected 60 · duplicate 8 · filtered 94</div>
+      </div>
+      <div class="group" style="align-self:flex-start"><span class="btn sm">Rows</span><span class="btn sm">Reasons</span><span class="btn sm on">Distributions</span><span class="btn sm">Compare</span><span class="btn sm">Config</span></div>
+      <div class="card"><h3><span class="n in">1</span>From raw to this version <span class="muted" style="font-weight:400;font-size:11px">rows each stage took in, removed and passed on</span></h3>
+        <table class="t">
+          <tr><th>Stage</th><th>Version</th><th class="r">In</th><th>Removed, by reason</th><th class="r">Out</th></tr>
+          <tr><td>ingest</td><td class="m">ds_5c8d4e6a081b</td><td class="r m">10,000</td><td><span class="pill dash">below_min_size 60</span></td><td class="r m">9,940</td></tr>
+          <tr><td>clean</td><td class="m">ds_3c8ee080a4c9</td><td class="r m">9,940</td><td><span class="pill dash">near_duplicate 8</span></td><td class="r m">9,932</td></tr>
+          <tr><td>preprocess</td><td class="m">ds_f81d0d552a1a</td><td class="r m">9,932</td><td class="muted">none</td><td class="r m">9,932</td></tr>
+          <tr><td>label</td><td class="m">ds_047b184c1f70</td><td class="r m">9,932</td><td class="muted">none (captions and CLIP scores added)</td><td class="r m">9,932</td></tr>
+          <tr><td>filter</td><td class="m">ds_db6bcccdb054</td><td class="r m">9,932</td><td><span class="pill dash">clip_below_threshold 94</span></td><td class="r m">9,838</td></tr>
+          <tr class="on"><td><b>split</b></td><td class="m">ds_3f6fcc420a27</td><td class="r m">9,838</td><td class="muted">none · train 7,870 · val 984 · test 984</td><td class="r m">9,838</td></tr>
+        </table>
+        <div class="muted" style="font-size:11px">A reason chip opens Rows filtered to it. 162 rows of 10,000 (1.6 %) were removed in all.</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="card"><h3><span class="n in">2</span>Width <span class="muted" style="font-weight:400;font-size:11px">px · raw outline, here filled</span><span class="spacer"></span><span class="btn sm ghost">Table</span></h3>
+          <div style="display:grid;grid-template-columns:70px 1fr 104px;gap:3px 8px;font:11px var(--mono);align-items:center">
+            <span>0–199</span><span><span class="hbar" style="width:1%;background:none;border:1px solid var(--ink-2)"></span></span><span>6 · 0</span>
+            <span>200–299</span><span><span class="hbar" style="width:1%;background:none;border:1px solid var(--ink-2)"></span></span><span>24 · 17</span>
+            <span>300–399</span><span><span class="hbar" style="width:5%"></span></span><span>345 · 327</span>
+            <span>400–499</span><span><span class="hbar" style="width:25%"></span></span><span>1,743 · 1,727</span>
+            <span>500–599</span><span><span class="hbar" style="width:13%"></span></span><span>926 · 915</span>
+            <span>600–640</span><span><span class="hbar" style="width:98%"></span></span><span>6,956 · 6,852</span>
+          </div>
+          <table class="t"><tr><th></th><th class="r">min</th><th class="r">p10</th><th class="r">median</th><th class="r">p90</th><th class="r">max</th></tr>
+            <tr><td>raw · 10,000</td><td class="r m">150</td><td class="r m">427</td><td class="r m">640</td><td class="r m">640</td><td class="r m">640</td></tr>
+            <tr class="on"><td>here · 9,838</td><td class="r m">263</td><td class="r m">428</td><td class="r m">640</td><td class="r m">640</td><td class="r m">640</td></tr>
+            <tr class="off"><td colspan="6">removed · 162: the 60 rejected at ingest have a shorter side of 120–255 px (median 226)</td></tr></table></div>
+        <div class="card"><h3>CLIP score <span class="muted" style="font-weight:400;font-size:11px">caption against image · labelled rows</span></h3>
+          <table class="t"><tr><th></th><th class="r">min</th><th class="r">p10</th><th class="r">median</th><th class="r">p90</th><th class="r">max</th></tr>
+            <tr><td>labelled · 9,932</td><td class="r m">0.115</td><td class="r m">0.258</td><td class="r m">0.313</td><td class="r m">0.364</td><td class="r m">0.459</td></tr>
+            <tr class="on"><td>here · 9,838</td><td class="r m">0.200</td><td class="r m">0.261</td><td class="r m">0.314</td><td class="r m">0.364</td><td class="r m">0.459</td></tr></table>
+          <div class="muted" style="font-size:11px">The filter's threshold, 0.2 (OC-5), cuts the left tail: 94 rows. A histogram draws it as a marker, as SCR-06 does.</div>
+          <h3 style="margin-top:6px">Caption length <span class="muted" style="font-weight:400;font-size:11px">words</span></h3>
+          <div class="muted" style="font-size:12px;font-family:var(--mono)">here · 9,838: 6 · 9 · 11 · 12 · 17 (min · p10 · median · p90 · max)</div></div>
+      </div>
+      <div class="card"><h3>Height · file size · preprocessed long side</h3>
+        <table class="t"><tr><th>Column</th><th>Rows</th><th class="r">min</th><th class="r">p10</th><th class="r">median</th><th class="r">p90</th><th class="r">max</th></tr>
+          <tr><td>height (px)</td><td>raw</td><td class="r m">120</td><td class="r m">375</td><td class="r m">480</td><td class="r m">640</td><td class="r m">640</td></tr>
+          <tr class="on"><td></td><td>here</td><td class="r m">257</td><td class="r m">375</td><td class="r m">480</td><td class="r m">640</td><td class="r m">640</td></tr>
+          <tr><td>file size (KB)</td><td>raw</td><td class="r m">9.1</td><td class="r m">83.9</td><td class="r m">153.8</td><td class="r m">246.7</td><td class="r m">898.9</td></tr>
+          <tr class="on"><td></td><td>here</td><td class="r m">10.7</td><td class="r m">84.5</td><td class="r m">154.3</td><td class="r m">247.0</td><td class="r m">898.9</td></tr>
+          <tr class="on"><td>preprocessed long side (px)</td><td>here</td><td class="r m">300</td><td class="r m">500</td><td class="r m">640</td><td class="r m">640</td><td class="r m">640</td></tr></table>
+        <div class="muted" style="font-size:11px">Every column has the histogram card of <span class="n in">2</span>; drawn once here. All 10,000 are JPEG, so format has no chart.</div></div>
+    </section>
+    <footer class="status">CPU 3% · RAM 3.1 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Funnel</td><td>Each stage from raw to this version: rows in, removed by reason, out; the split's parts</td><td><span class="mono">GET /versions/{id}/lineage</span> and each ancestor's <span class="mono">counts</span>; <span class="mono">GET /versions/{id}/stats</span> (reasons by stage)</td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Distributions</td><td>Per column: raw (the ingest version, all rows), here (accepted rows), removed; histogram on shared edges and the five numbers</td><td><span class="mono">GET /versions/{id}/distributions</span> <i>planned</i>, computed from the manifests and cached by version ID (K10)</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Compare: coco10k's two preprocess versions</h2>
+<div class="frame" style="height:530px">
+  <div class="shell">
+    <aside class="side"></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k / ds_bad290a73446</span></header>
+    <section class="content">
+      <div class="group" style="align-self:flex-start"><span class="btn sm">Rows</span><span class="btn sm">Reasons</span><span class="btn sm">Distributions</span><span class="btn sm on">Compare</span><span class="btn sm">Config</span></div>
+      <div class="card"><h3><span class="n in">3</span>Compare with <span class="select" style="font-weight:400">ds_f81d0d552a1a · preprocess · 2026-11-16 ▾</span><span class="spacer"></span><span class="btn sm ghost">Swap</span></h3>
+        <div style="display:flex;gap:24px;font-size:12px"><span>A <span class="mono">ds_f81d0d552a1a</span> (preprocess)</span><span>B, this version <span class="mono">ds_bad290a73446</span> (preprocess)</span></div>
+        <div class="callout"><b>Config:</b> their lineages differ at ingest: <span class="mono">min_size</span> <b>256 → 255</b>. Clean and preprocess are the same.</div></div>
+      <div style="display:grid;grid-template-columns:280px 1fr;gap:12px">
+        <div class="card"><h3><span class="n in">4</span>Rows</h3>
+          <div class="kvs" style="grid-template-columns:1fr auto"><span>added in B</span><span class="mono">0</span><span>removed in B</span><span class="mono">0</span><span><b>changed</b></span><span class="mono"><b>1</b></span><span>reason wording only <span class="k">question 1</span></span><span class="mono">59</span><span>the same</span><span class="mono">9,940</span></div>
+          <h3 style="margin-top:6px">Changed, by field</h3>
+          <div class="kvs" style="grid-template-columns:1fr auto"><span>status</span><span class="mono">1</span><span>reason_code</span><span class="mono">1</span><span>decided_at_stage</span><span class="mono">1</span><span>derived size and file</span><span class="mono">1</span></div></div>
+        <div class="card"><h3><span class="n in">5</span>Changed rows <span class="muted" style="font-weight:400;font-size:11px">A → B</span></h3>
+          <table class="t">
+            <tr><th>Row</th><th>Field</th><th>A</th><th>B</th></tr>
+            <tr><td class="m" rowspan="3">000000471773.jpg<br><span class="muted">255 × 600</span></td><td>status</td><td><span class="pill dash">rejected</span></td><td><span class="pill">accepted</span></td></tr>
+            <tr><td>reason_code</td><td class="m">below_min_size</td><td class="m">–</td></tr>
+            <tr><td>derived size</td><td class="m">–</td><td class="m">255 × 600</td></tr>
+            <tr class="off"><td colspan="4">59 rows: reason wording only ("below the minimum 256px" → "255px") <span class="btn sm ghost">Show</span></td></tr>
+          </table>
+          <div class="muted" style="font-size:11px">A row opens its drawer, on A or on B. Up to 200 changed rows are listed, then a count; the full list downloads as CSV.</div></div>
+      </div>
+    </section>
+    <footer class="status"></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">3</span></td><td>The other version</td><td>A select of the dataset's versions, newest first, the parent preselected; the config difference along both lineages</td><td><span class="mono">GET /datasets/{slug}/versions</span>; both lineages' configs</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Counts</td><td>Added, removed, changed, wording-only, the same; changed by field</td><td><span class="mono">GET /versions/{id}/diff?with=</span> <i>planned</i>, by <span class="mono">row_key</span> (K10)</td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Changed rows</td><td>Each row's changed fields, before → after</td><td>same</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · Semantic clusters on a label version <span class="k">illustrative rows; S-10's numbers and pair</span></h2>
+<div class="frame" style="height:520px">
+  <div class="shell">
+    <aside class="side"></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / coco10k / ds_… (label, after M11)</span></header>
+    <section class="content">
+      <div style="display:flex;gap:8px"><span class="card" style="padding:6px 10px">accepted 9,932</span><span class="card" style="padding:6px 10px">duplicate 8</span><span class="card" style="padding:6px 10px;border-width:2px"><span class="n in">6</span><b>semantic clusters 105</b> · 290 rows · largest 22</span></div>
+      <div style="display:flex;gap:6px;align-items:center;font-size:12px"><span class="select">Status: all ▾</span><span class="btn sm on">In a semantic cluster</span><span class="muted">290 rows</span></div>
+      <table class="t" style="width:620px">
+        <tr><th>Row</th><th>Status</th><th>Cluster</th><th>Caption</th></tr>
+        <tr class="on"><td class="m">000000185291.jpg</td><td><span class="pill">accepted</span></td><td><span class="k">sc 1e4b… · 2</span></td><td class="muted">A man stands with a cow at a show.</td></tr>
+        <tr><td class="m">000000452782.jpg</td><td><span class="pill">accepted</span></td><td><span class="k">sc 1e4b… · 2</span></td><td class="muted">People and a cow in a hall.</td></tr>
+        <tr><td class="m">000000412419.jpg</td><td><span class="pill">accepted</span></td><td><span class="k">sc 33a0… · 2</span></td><td class="muted">A batter swings at a pitch.</td></tr>
+      </table>
+    </section>
+    <footer class="status"></footer>
+    <div class="drawer" style="width:470px">
+      <header><b>000000185291.jpg</b><span class="pill">accepted</span><span class="spacer"></span><span class="btn sm ghost">✕</span></header>
+      <div class="body">
+        <h3><span class="n in">7</span>Semantic cluster <span class="mono" style="font-weight:400">sc 1e4b…</span> · 2 rows</h3>
+        <div style="display:flex;gap:8px"><div class="faint" style="width:150px;height:110px;border:1px solid var(--line)"></div><div class="faint" style="width:150px;height:110px;border:1px solid var(--line)"></div></div>
+        <div class="kvs"><span>000000185291.jpg ↔ 000000452782.jpg</span><span class="mono">similarity 0.985</span><span>pHash distance</span><span class="mono">over 8: not a near-duplicate</span><span>Split</span><span>both in one split group (DATA-4.8)</span></div>
+        <div class="muted">Every member stays accepted: a semantic cluster is detected, not removed (ADR-0013 rule 3). Threshold 0.90 (S-10).</div>
+      </div>
+    </div>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">6</span></td><td>Tile and filter</td><td>Clusters, rows in them and the largest (the label version's <span class="mono">counts.semantic</span>); the filter <i>In a semantic cluster</i></td><td><span class="mono">GET /versions/{id}</span> counts; <span class="mono">GET /versions/{id}/rows?semantic=true</span> <i>planned</i></td><td>–</td></tr>
+<tr><td><span class="num">7</span></td><td>Cluster in the drawer</td><td>Its members side by side, each pair's similarity, and that they share a split group</td><td><span class="mono">GET /versions/{id}/rows?semantic_cluster_id=</span> <i>planned</i></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · Models trained on CIFAR-10's split <span class="mono">ds_f8e67211dd94</span></h2>
+<div class="frame w1024" style="height:360px">
+  <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+    <div class="card" style="height:44px;font-size:12px">lineage: ingest → clean → preprocess → <b>split</b> <span class="pill"><span class="n in">8</span>→ 16 models</span></div>
+    <div class="group" style="align-self:flex-start"><span class="btn sm">Rows</span><span class="btn sm">Reasons</span><span class="btn sm">Distributions</span><span class="btn sm">Compare</span><span class="btn sm on">Models 16</span><span class="btn sm">Config</span></div>
+    <table class="t">
+      <tr><th>Version</th><th>State</th><th class="r">Metric</th><th>Weights</th><th>Trained</th><th></th></tr>
+      <tr class="sec"><td colspan="6">small_cnn · cifar10 · ml_7d806d9897fa</td></tr>
+      <tr><td class="m">mv_7f950100ab48</td><td>trained · fine-tune</td><td class="r m">test 0.831</td><td>present</td><td class="m">11-21 17:36</td><td><span class="btn sm ghost">Open in SCR-11</span></td></tr>
+      <tr><td class="m">mv_a014046ec3b5</td><td>trained</td><td class="r m">test 0.832</td><td>present</td><td class="m">11-19 13:26</td><td></td></tr>
+      <tr><td class="m">mv_2a7c0b4c8b72</td><td>trained</td><td class="r m">val 0.839</td><td>deleted</td><td class="m">11-19 13:18</td><td></td></tr>
+      <tr class="sec"><td colspan="6">small_cnn · cifar10 · ml_319245b543d4 (reference)</td></tr>
+      <tr><td class="m">mv_a4a0fb846812</td><td>trained · study</td><td class="r m">test 0.810</td><td>present</td><td class="m">11-20</td><td></td></tr>
+      <tr class="sec"><td colspan="6">… my_model · cifar10, mlp · cifar10</td></tr>
+    </table>
+    <div style="display:flex;gap:8px"><span class="btn sm">Compare on this test split</span><span class="btn sm">Train a model…</span></div>
+  </div>
+</div>
+<p class="caption">The metric says which split it is on: test once scored, validation otherwise (SCR-11 v2's Score on test fills the rest). Offered on versions models train on (a split, a tokenize version); other stages have no Models tab.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · Other types, and states</h2>
+<div class="frame" style="height:330px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+    <div class="card"><h3>Text (coco10k-captions, tokenize)</h3><div style="font-size:12px">Length in words, raw against here; on a tokenize version also tokens per text and the share cut at L (16: <i>n</i> %). Class counts per split.</div></div>
+    <div class="card"><h3>Table (wine, split)</h3><div style="font-size:12px">Rows by status and split; the target: class counts per split, or a regression target's histogram. Per-column distributions come with M11b's column view.</div></div>
+    <div class="card"><h3>Labelled images (CIFAR-10)</h3><div style="font-size:12px">Class counts per split as grouped bars, and the image size (all 32 × 32: one line, no chart).</div></div>
+    <div class="empty"><div><b>Pick a version to compare with.</b><p style="margin:6px 0">coco10k has 9 versions.</p></div></div>
+    <div class="empty"><div><b>These two versions have the same rows.</b><p style="margin:6px 0">No row was added, removed or changed. Their configs differ in <span class="mono">resample</span> only, which changed no output.</p></div></div>
+    <div class="empty err"><div><b>The distributions could not be computed</b><p style="margin:6px 0"><span class="mono">version_data_missing</span> · the manifest is not on disk. Check the data volume, then try again.</p><span class="btn sm">Try again</span></div></div>
+  </div>
+</div>
+<p class="caption">Loading shows skeletons of the funnel and two cards. At 1024 px the column cards stack in one column and the funnel's chips wrap.</p>
+</main>
+</body>
+</html>
