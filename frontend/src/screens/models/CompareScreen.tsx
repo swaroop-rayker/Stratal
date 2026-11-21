@@ -142,6 +142,25 @@ function Picker({ open, onClose, split, chosen, onCompare }: {
   );
 }
 
+/** Which versions' intervals overlap, in words (decision 4): every one, or the groups that do. */
+export function overlapText(data: Comparison): string {
+  const rows = data.versions.filter((v) => v.accuracy_low !== null && v.accuracy_high !== null);
+  const overlaps = (a: (typeof rows)[number], b: (typeof rows)[number]) => (a.accuracy_low ?? 0) <= (b.accuracy_high ?? 0) && (b.accuracy_low ?? 0) <= (a.accuracy_high ?? 0);
+  const words = ["", "", "two", "three", "four", "five", "six"];
+  const n = data.split.test_rows ?? 0;
+  const mistake = n > 0 && n < 1000 ? ` With ${count(n)} test rows one mistake moves accuracy by ${(1 / n).toFixed(3)}.` : "";
+  const all = rows.every((a) => rows.every((b) => a === b || overlaps(a, b)));
+  if (all) return `The intervals overlap: this split cannot tell these ${words[rows.length] ?? String(rows.length)} apart.${mistake} A larger test split would.`;
+  const pairs = rows.flatMap((a, i) => rows.slice(i + 1).filter((b) => overlaps(a, b)).map((b) => `${a.id} and ${b.id}`));
+  return `Some intervals overlap: this split cannot tell ${pairs.join("; ")} apart.${mistake} The others differ by more than chance on ${count(n)} rows.`;
+}
+
+function OverlapNote({ data }: { data: Comparison }) {
+  const text = overlapText(data);
+  const [head, ...rest] = text.split(": ");
+  return <div className="callout info"><Icon name="info" /><span><b>{head}.</b> {rest.join(": ").replace(/^./, (c) => c.toUpperCase())}</span></div>;
+}
+
 function IntervalChart({ data }: { data: Comparison }) {
   const [table, setTable] = useState(false);
   const rows = data.versions.filter((v) => v.accuracy_low !== null && v.accuracy_high !== null);
@@ -169,9 +188,7 @@ function IntervalChart({ data }: { data: Comparison }) {
           <span /><div className="cmp-ax">{ticks.map((t) => <span key={t}>{t.toFixed(t * 100 % 5 === 0 ? 2 : 3)}</span>)}</div><span />
         </div>
       )}
-      {data.overlap ? (
-        <div className="callout info"><Icon name="info" /><span><b>The intervals overlap.</b> With {count(data.split.test_rows)} test rows one mistake moves accuracy by {data.split.test_rows ? (1 / data.split.test_rows).toFixed(3) : "?"}, so this split cannot tell these {["", "", "two", "three", "four", "five", "six"][rows.length] ?? String(rows.length)} apart. A larger test split would.</span></div>
-      ) : null}
+      {data.overlap ? <OverlapNote data={data} /> : null}
     </section>
   );
 }

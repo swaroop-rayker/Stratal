@@ -28,12 +28,12 @@ export const registryKeys = {
   settings: ["settings"] as const,
 };
 
-/** Refresh registry views when a training or retention job changes state. */
+/** Refresh registry views when a training, retention or Score on test job changes state. */
 export function useRegistryLive(): void {
   const client = useQueryClient();
   const onJob = useCallback(
     (job: Job) => {
-      if (job.kind !== "train" && job.kind !== "retention") return;
+      if (job.kind !== "train" && job.kind !== "retention" && job.kind !== "score_test") return;
       void client.invalidateQueries({ queryKey: registryKeys.all });
       void client.invalidateQueries({ queryKey: registryKeys.settings });
     },

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { stubApi } from "../../test/api";
 import { FakeSource } from "../../test/eventsource";
-import { bySpread, CompareScreen } from "./CompareScreen";
+import { bySpread, CompareScreen, overlapText } from "./CompareScreen";
 import { RecordTry, TextTry } from "./TryValues";
 
 const SPLIT = "ds_6448d354c9c6";
@@ -53,7 +53,7 @@ describe("SCR-11 v2 comparison", () => {
     expect(within(table).getAllByText("best")).toHaveLength(4); // two ties share it, on two metrics
     expect(within(table).getByText("17 of 18")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Accuracy intervals/ })).toBeInTheDocument();
-    expect(screen.getByText(/so this split cannot tell these three apart/)).toBeInTheDocument();
+    expect(screen.getByText(/This split cannot tell these three apart/)).toHaveTextContent("With 18 test rows one mistake moves accuracy by 0.056.");
 
     fireEvent.click(screen.getByRole("button", { name: "Table" }));
     expect(screen.getByRole("table", { name: "Accuracy and its Wilson 95 % interval" })).toBeInTheDocument();
@@ -97,6 +97,13 @@ describe("SCR-11 v2 comparison", () => {
     await waitFor(() => { expect(calls.some((c) => c.method === "POST" && c.url.pathname.endsWith("/mv_a014046ec3b5/score-test"))).toBe(true); });
   });
 
+  test("test_EVAL_1_3_the_overlap_note_names_only_the_versions_that_overlap", () => {
+    const three = { ...WINE, split: { ...FACTS, test_rows: 5963 }, versions: [
+      column("mv_a4a0fb846812", 0.81, 4829, 0.8, 0.82, {}), column("mv_7f950100ab48", 0.831, 4956, 0.821, 0.84, {}), column("mv_a014046ec3b5", 0.832, 4962, 0.822, 0.841, {}),
+    ] };
+    expect(overlapText(three as never)).toBe("Some intervals overlap: this split cannot tell mv_7f950100ab48 and mv_a014046ec3b5 apart. The others differ by more than chance on 5,963 rows.");
+  });
+
   test("test_EVAL_1_3_per_class_f1_puts_the_largest_spread_first_and_keeps_twenty", () => {
     const many = Object.fromEntries(Array.from({ length: 25 }, (_, i) => [`c${String(i)}`, i / 25]));
     const flat = Object.fromEntries(Array.from({ length: 25 }, (_, i) => [`c${String(i)}`, 0]));
@@ -127,7 +134,7 @@ describe("SCR-11 v2 Try it", () => {
     fireEvent.click(screen.getByRole("button", { name: "Predict" }));
 
     expect(await screen.findByText(/This row's label/)).toHaveTextContent("class_0 · matches");
-    expect(screen.getByText(/Served on the GPU/)).toBeInTheDocument();
+    expect(screen.getByText(/Served on the GPU/)).toHaveTextContent("Served on the GPU · cold start 11.3 s · 13.0 s");
 
     fireEvent.change(screen.getByLabelText("hue"), { target: { value: "" } }); // no longer that row
     fireEvent.click(screen.getByRole("button", { name: "Predict" }));

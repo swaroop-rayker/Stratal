@@ -161,7 +161,7 @@
 .scr11 .try-row .spacer { flex: 1; }
 .scr11 .try-answer { display: grid; grid-template-columns: 96px 1fr 48px; gap: 4px var(--sp-2); align-items: center; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 .scr11 .try-answer b { color: var(--text-primary); font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scr11 .try-answer > span:not(.cmp-bar):nth-child(3n) { text-align: right; color: var(--text-primary); }
+.scr11 .try-answer .try-p { text-align: right; color: var(--text-primary); }
 .scr11 .try-answer .try-bar { height: 10px; border-radius: var(--r-xs); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
 .scr11 .try-answer .try-bar > i { display: block; height: 100%; width: var(--p); min-width: 1px; background: var(--cat-1); }
 .scr11 .try-served { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }

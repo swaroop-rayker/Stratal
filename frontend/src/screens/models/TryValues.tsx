@@ -51,14 +51,14 @@ export function Answer({ result, truth, target }: { result: Prediction; truth: s
           <span key={t.class} style={{ display: "contents" }}>
             {i === 0 ? <b>{t.class}</b> : <span>{t.class}</span>}
             <span className="try-bar" aria-hidden="true"><i style={{ ["--p" as string]: `${String(100 * (t.probability ?? 0))}%` }} /></span>
-            <span>{t.probability === null ? "–" : t.probability.toFixed(3)}</span>
+            <span className="try-p">{t.probability === null ? "–" : t.probability.toFixed(3)}</span>
           </span>
         )) : result.task === "regression" ? (
-          <><b>{target ?? "value"}</b><span /><span>{(result.value ?? 0).toFixed(1)}</span></>
+          <><b>{target ?? "value"}</b><span /><span className="try-p">{(result.value ?? 0).toFixed(1)}</span></>
         ) : result.task === "clustering" ? (
-          <><b>cluster</b><span /><span>{String(result.cluster)}</span></>
+          <><b>cluster</b><span /><span className="try-p">{String(result.cluster)}</span></>
         ) : (
-          <><b>components</b><span /><span>{(result.components ?? []).map((c) => c.toFixed(2)).join(", ")}</span></>
+          <><b>components</b><span /><span className="try-p">{(result.components ?? []).map((c) => c.toFixed(2)).join(", ")}</span></>
         )}
       </div>
       {truth !== null && (result.task === "classification" || result.task === "regression") ? (

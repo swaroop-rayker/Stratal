@@ -25,7 +25,10 @@ function toBase64(file: File): Promise<string> {
 export function servedText(result: Prediction): string {
   const device = result.device === "gpu" ? "GPU" : "CPU";
   const why = result.fallback_reason ? `: ${result.fallback_reason}` : "";
-  return `Served on the ${device}${why} · ${String(Math.round(result.total_ms))} ms`;
+  // A cold start says so, and times over a second read in seconds (SCR-11 v2, frame C).
+  const cold = result.load_ms ? ` · cold start ${(result.load_ms / 1000).toFixed(1)} s` : "";
+  const total = result.total_ms >= 1000 ? `${(result.total_ms / 1000).toFixed(1)} s` : `${String(Math.round(result.total_ms))} ms`;
+  return `Served on the ${device}${why}${cold} · ${total}`;
 }
 
 export function TryIt({ versionId, datasetVersion }: { versionId: string | null; datasetVersion: string | null }) {
