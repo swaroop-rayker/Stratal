@@ -77,3 +77,66 @@
 .scr03 .node, .scr03 .edge { flex: none; } /* live: nodes keep their width; the strip scrolls (frame I) */
 .scr03 .lineage { position: relative; } /* live: offsetLeft is measured from the strip */
 .scr03 .wide-action { display: contents; } @media (max-width: 1279px) { .scr03 .vhead .wide-action { display: none; } }
+
+/* ============================================================================ SCR-03 v2 (M11), from
+   docs/design/screens/SCR-03v2_v1.html (G2 approved 2026-11-21). Tokens only. */
+.scr03 .tiles.five { grid-template-columns: repeat(5, 1fr); }
+.scr03 .panel.scroll { overflow: auto; padding-right: var(--sp-1); } /* live: the v2 tabs scroll inside the fixed-height page */
+.scr03 .stile.sem { --c: var(--cat-1); }
+.scr03 .v2stack { display: flex; flex-direction: column; gap: var(--sp-3); }
+.scr03 .v2card { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); min-width: 0; }
+.scr03 .v2card > h2 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.scr03 .v2card > h2 .sub2 { font-weight: var(--fw-regular); font-size: var(--fs-11); color: var(--text-secondary); }
+.scr03 .v2card .spacer { flex: 1; }
+.scr03 .note2 { font-size: var(--fs-12); color: var(--text-secondary); margin: 0; }
+.scr03 .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-3); }
+@media (max-width: 1279px) { .scr03 .two { grid-template-columns: minmax(0, 1fr); } }
+.scr03 .t.dense td { height: 32px; }
+.scr03 .t td.r, .scr03 .t th.r { text-align: right; } .scr03 .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.scr03 .t tr.here td { background: var(--accent-soft); }
+.scr03 .t tr.here td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+.scr03 .t td.lab { color: var(--text-secondary); white-space: normal; }
+.scr03 .t td.gone { color: var(--text-secondary); }
+.scr03 .t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.scr03 .t tr.sec td .lid { text-transform: none; letter-spacing: 0; font-weight: var(--fw-regular); }
+.scr03 .t td.rowkey { vertical-align: top; padding-top: var(--sp-2); }
+.scr03 .t tr.wording td { color: var(--text-secondary); }
+/* the funnel's reason chips: the status's dot, the code, the rows; they filter Rows */
+.scr03 .chips { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); }
+.scr03 .chip { display: inline-flex; align-items: center; gap: var(--sp-1); height: 22px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-pill); background: var(--surface-raised); font: var(--fs-11) var(--font-mono); color: var(--text-primary); cursor: pointer; }
+.scr03 .chip i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.scr03 .chip b { font-weight: var(--fw-medium); }
+.scr03 .chip.rej { --c: var(--danger); } .scr03 .chip.dup { --c: var(--text-muted); } .scr03 .chip.fil { --c: var(--warning); }
+.scr03 .parts { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+/* histogram: raw as an outline, here filled */
+.scr03 .hist { display: flex; flex-direction: column; gap: 4px; font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.scr03 .hist .hrow { display: grid; grid-template-columns: 96px 1fr 120px; gap: var(--sp-2); align-items: center; }
+.scr03 .hist .track { position: relative; height: 14px; }
+.scr03 .hist .raw { position: absolute; left: 0; top: 0; bottom: 0; border: var(--bw) solid var(--text-secondary); border-radius: var(--r-xs); min-width: 1px; }
+.scr03 .hist .here { position: absolute; left: 0; top: 3px; bottom: 3px; background: var(--cat-1); border-radius: var(--r-xs); min-width: 1px; }
+.scr03 .hist .n { color: var(--text-primary); text-align: right; }
+.scr03 .key { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); align-items: center; }
+.scr03 .key i { display: inline-block; width: 14px; height: 8px; margin-right: var(--sp-1); vertical-align: middle; border-radius: var(--r-xs); }
+.scr03 .key .k-raw { border: var(--bw) solid var(--text-secondary); } .scr03 .key .k-here { background: var(--cat-1); }
+.scr03 .mark-line { font-size: var(--fs-11); color: var(--text-secondary); margin: 0; }
+.scr03 .cbar { display: block; height: 8px; border-radius: var(--r-xs); background: var(--cat-1); min-width: 1px; }
+/* compare */
+.scr03 .cmp-pick { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); flex-wrap: wrap; }
+.scr03 .cmp-pick select { min-width: 360px; }
+.scr03 .cmp-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--sp-3); align-items: start; }
+@media (max-width: 1279px) { .scr03 .cmp-grid { grid-template-columns: minmax(0, 1fr); } }
+.scr03 .counts { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); }
+.scr03 .counts > span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.scr03 .counts > span:nth-child(odd) { color: var(--text-secondary); }
+.scr03 .counts b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.scr03 .callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-primary); }
+.scr03 .callout svg.i { margin-top: 2px; flex: none; }
+.scr03 .callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .scr03 .callout.info svg.i { color: var(--info); }
+.scr03 .linkish { background: none; border: 0; padding: 0; color: var(--text-primary); cursor: pointer; text-decoration: underline; text-decoration-color: var(--border-strong); font: inherit; }
+/* semantic cluster chip, the drawer's similarity line, the lineage's end chip */
+.scr03 .scchip, .row-drawer .scchip { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; margin-left: var(--sp-2); border-radius: var(--r-xs); font: var(--fs-11) var(--font-mono); color: var(--text-primary); background: color-mix(in srgb, var(--cat-1) 16%, transparent); border: var(--bw) solid color-mix(in srgb, var(--cat-1) 45%, transparent); }
+.row-drawer .simline { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; font-size: var(--fs-12); color: var(--text-secondary); }
+.row-drawer .simline .dist { color: var(--text-primary); font-family: var(--font-mono); }
+.row-drawer .linkish { background: none; border: 0; padding: 0; color: var(--text-primary); cursor: pointer; text-decoration: underline; font: inherit; }
+.scr03 .endchip { display: inline-flex; align-items: center; gap: var(--sp-1); margin-left: var(--sp-3); height: 24px; padding: 0 var(--sp-2); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-pill); font-size: var(--fs-12); color: var(--text-primary); background: transparent; cursor: pointer; white-space: nowrap; flex: none; }
+.scr03 .endchip svg.i { width: 12px; height: 12px; color: var(--text-secondary); }
