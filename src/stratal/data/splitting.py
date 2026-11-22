@@ -82,6 +82,8 @@ class LeakageItem:
     """The clean stage's perceptual hash: lowercase hex, the same length for every row."""
     dup_group_id: str | None
     """The duplicate group this row keeps (CL-17), or ``None``. See DATA_MODEL.md §5."""
+    semantic_cluster_id: str | None = None
+    """The semantic cluster this row is in (DATA-2.3, ADR-0013), or ``None``."""
 
 
 @dataclass(frozen=True)
@@ -107,12 +109,15 @@ def group_for_split(items: Sequence[LeakageItem], *, max_distance: int) -> list[
        group of one (unlike the dedupe functions, which return only groups of
        two or more).
     2. Two items with the same non-null ``dup_group_id`` are in the same group.
+    2b. Two items with the same non-null ``semantic_cluster_id`` are in the same
+       group (DATA-4.8, ADR-0013 rule 4; added in M11 by the agent at the owner's
+       request).
     3. Two items whose perceptual hashes are at most ``max_distance`` bits
        apart (Hamming distance of the hex strings read as bits) are in the
        same group.
     4. Grouping is transitive: if A joins B and B joins C, all three are one
-       group. Two items are never in one group unless a chain of rule-2 and
-       rule-3 links joins them.
+       group. Two items are never in one group unless a chain of rule-2,
+       rule-2b and rule-3 links joins them.
     5. ``anchor`` is the smallest ``sha256`` among a group's members;
        ``members`` is sorted ascending; the list is sorted by ``anchor``.
     6. The same items in any order give the same result (NFR-4).
