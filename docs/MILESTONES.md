@@ -649,7 +649,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_MON_3_3_*`: an unload event shows VRAM before and after (2026-11-22: `test_MON_3_3_load_events.py`; live on SCR-13, Florence-2-base 0.44 → 0.00 GB)
 - [x] `test_MON_4_4_*`: two runs' curves overlay (2026-11-22: `test_M11_monitoring.py`, by time with a pause removed and by epoch; Vitest; live on `job_0030` and `job_0051`)
 - [ ] `test_MON_4_5_*` (P2, if time): trends shown for the last N jobs
-- [ ] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included
+- [x] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included (2026-11-22: the training part, models trained on a version, in `test_M11_profile.py` and Vitest `test_UI_2_1_models_trained_on_a_version_with_the_split_named`; live on CIFAR-10's split, 17 versions; datasets, lineage and jobs since M6 and M8)
 - [x] `test_UI_2_1_*` (training entry, Vitest): a tabular split reaches SCR-09's classical mode without SCR-08; a non-tabular split shows *Classical* greyed with its reason; SCR-09 opened without a kind goes to step 2; G3 passed with SCR-09 v2 (the entry's G3 approved 2026-11-20; fine-tuning's G3 follows with RUN-1.10)
 - [x] `test_UI_2_2_*`: charts for any dataset version (2026-11-22: `test_M11_profile.py`, the funnel and raw against here on a pipeline's split; Vitest `VersionV2.test.tsx`; live on coco10k's split, every figure as in the mockup)
 - [x] `test_EVAL_1_3_*`: three or more models compared in one view (2026-11-21: `test_M11_compare.py`, three networks scored on one split with Wilson intervals, refusals and Score on test; Vitest `Compare.test.tsx`. Live: wine's three networks (0.944, 1.000, 1.000 on 18 rows, intervals overlapping) and CIFAR-10's three after Score on test, `job_0108`. Gate 3 for SCR-11 v2 approved 2026-11-21)
@@ -657,7 +657,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_DATA_3_5_*` (P2, if time): the diff lists the changes correctly (2026-11-22: `test_M11_profile.py`, a changed row, a wording-only row and the config change; live on coco10k's two preprocess versions: 1 changed, 59 wording only)
 - [x] `test_DATA_2_3_*` (P2): cropped variants are grouped together and a report is generated (2026-11-22: `test_DATA_2_3_semantic_clusters.py`, 13 unit tests, also in the GPU worker; `test_M11_semantic.py`, a pipeline job: a scene's stripes, crop and checkerboard in one cluster, the report in the label version's counts)
 - [x] 👤 `test_DATA_4_8_*` (P2): two photos of one scene from different angles land in the same split (written by the agent at the owner's request; 2026-11-22: the checkerboard view, more than 12 bits from the stripes by pHash, lands in their split and split group in `test_M11_semantic.py`; rule 2b in `test_DATA_2_3_semantic_clusters.py`)
-- [ ] G3 for SCR-13, SCR-03 v2 and SCR-11 v2 (SCR-11 v2 approved 2026-11-21, SCR-13 with SCR-04's and SCR-14's addenda 2026-11-22)
+- [x] G3 for SCR-13, SCR-03 v2 and SCR-11 v2 (SCR-11 v2 approved 2026-11-21, SCR-13 with SCR-04's and SCR-14's addenda 2026-11-22, SCR-03 v2 2026-11-22)
 - [ ] Phase-2 acceptance (`tests/acceptance`): a CNN built on SCR-08, trained on a dataset version, test metrics on SCR-11; NFR-1, NFR-2, NFR-4 and NFR-5 measured for training
 - [ ] `test_NFR_11_*` rerun with alerts and diagnostics on
 - [ ] `test_BUG8_*`: a study job's stage duration on SCR-04 covers all its steps, not the last (M10's open point 3)

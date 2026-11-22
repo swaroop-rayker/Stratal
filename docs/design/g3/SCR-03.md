@@ -68,7 +68,7 @@ Frame F (every row rejected) does not exist on this machine. It is covered by `t
 | Mockup | [`screens/SCR-03v2_v1.html`](../screens/SCR-03v2_v1.html), G2 approved 2026-11-21 |
 | Built | `frontend/src/screens/version/` (`Distributions`, `CompareVersions`, `ModelsTab`; the tile, filter and chip in `VersionScreen` and `RowsPanel`; the cluster in `RowDrawer`; the end chip in `LineageStrip`), `frontend/src/styles/scr03.css` (M11 section); API `GET /versions/{id}/distributions`, `/diff?with=`, `/models`, `/clusters/{id}`, rows `semantic` and `semantic_cluster_id` |
 | Checked | 2026-11-22, live at 1280 × 1000, dark and light, on the mockup's real data: coco10k's split `ds_3f6fcc420a27` (frame A), its preprocess versions `ds_f81d0d552a1a` and `ds_bad290a73446` (frame B), CIFAR-10's split `ds_f8e67211dd94` (frame D); and for frame C, coco10k labelled again by `job_0109` with the semantic clusters (`ds_859d0861ae19` → split `ds_ade1d41f91f5`): 93 clusters, 261 rows, the largest 22 |
-| Status | Waiting for the owner |
+| Status | **Approved by the owner on 2026-11-22** ("Approved"), with the eight listed differences |
 
 ## Screenshots (in `SCR-03/`)
 
