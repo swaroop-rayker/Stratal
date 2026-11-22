@@ -662,7 +662,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `test_NFR_11_*` rerun with alerts and diagnostics on (2026-11-22, on a quiet machine: runtime +0.35 %, the monitor at 1.54 % of the machine; M7 measured +0.02 % and 1.58 %)
 - [x] `test_BUG8_*`: a study job's stage duration on SCR-04 covers all its steps, not the last (M10's open point 3) (2026-11-22: each step's claim reset the stage's start; a running job's next step keeps it. `test_BUG8_study_duration.py` fails without the fix)
 - [x] `inference` at 1.25 GB and `worker-gpu` at 3.25 GB, both peaks measured in the acceptance run (K12) (limits set 2026-11-22 in `compose.yaml`; peaks in the acceptance run: `worker-gpu` 2.08 GiB, `inference` 851 MiB serving on the GPU)
-- [ ] Meta-test green: every phase-2 P0 (32) has a passing ID-named test
+- [x] Meta-test green: every phase-2 P0 (32) has a passing ID-named test (2026-11-22: `test_NFR_9_every_phase_2_p0_requirement_has_a_named_test`; the suites green in M11: dev unit 510 and integration 154, the GPU worker's PyTorch tests 98, the CPU worker's scikit-learn tests 33 and 7, Vitest 23 files)
 - [ ] M12–M13 detailed and approved by the owner
 - [ ] Owner's OK to merge; tag `phase-2`
 
