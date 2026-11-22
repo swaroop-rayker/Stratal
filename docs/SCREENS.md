@@ -190,7 +190,7 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 | Activity log | As phase 1, with checkpoint, pause, resume and out-of-memory events | events | yes |
 | State banners | Paused: by whom (user or heat, "GPU 84 °C, resumes below 75 °C"); stalled: "no progress for 5 min" with the last activity | job and events | yes |
 
-**Actions.** Pause, resume, cancel (RUN-1.2; `POST /jobs/{id}/pause`, `/resume` *planned*, M8); open the registered version (SCR-11) when the run completes. An out-of-memory failure shows MON-1.3's "reduce batch size from 32 → 16" with *Start again with 16*.
+**Actions.** Pause, resume, cancel (RUN-1.2; `POST /jobs/{id}/pause`, `/resume` *planned*, M8); open the registered version (SCR-11) when the run completes. *Compare with…* opens SCR-13's *Compare two jobs* with this job as A (M11 addendum, approved with SCR-13's low-fi, 2026-11-22); the activity log's alert, diagnostic and action lines carry their link ("← GPU hot 84 °C", ADR-0020). An out-of-memory failure shows MON-1.3's "reduce batch size from 32 → 16" with *Start again with 16*.
 
 **Empty.** Not applicable (a job exists). Before the first step: "Preparing data…" or "Benchmarking devices…" with the activity message.
 
@@ -289,18 +289,24 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 
 **Purpose.** The machine over time, beyond any one job: where the resources went, what alerted, and why things were slow.
 
-| Region | Shows | Source | Live |
+As approved with the low-fi wireframe on 2026-11-22 (`design/screens/SCR-13-lofi_v1.html`): three tabs, *Overview*, *Compare two jobs* and *History* (MON-4.5, P2: the tab appears only if built), under a header with the range and the monitor's health. Sources from [ADR-0020](decisions/ADR-0020-alerts-and-diagnostics.md) rule 13.
+
+| Tab · region | Shows | Source | Live |
 |---|---|---|---|
-| Resource history | CPU, RAM, GPU, VRAM and temperature for a chosen range; one-minute averages beyond 7 days (NFR-12), marked as such | telemetry *planned*, M11 | yes |
-| Alerts | Each alert with the action taken (pause, fail, smaller batch) (MON-2.6, MON-2.7) | events | yes |
-| Diagnostics | Expected against observed bottleneck per running stage, in words (MON-3.2) | *planned*, M11 | yes |
-| Load and unload | Each model load and unload with VRAM before and after (MON-3.3) | events | yes |
-| Compare two jobs | Their resource curves overlaid (MON-4.4) | telemetry | |
-| History | Throughput and peaks across the last N jobs (MON-4.5, P2) | job summaries | |
+| Header: range | Presets *1 h* (the default), *6 h*, *24 h*, *7 d* and *Custom…*, kept in the URL; a range ending now extends live | – | – |
+| Header: monitor health | Reporting, or "not reporting since …" when the newest sample is over 30 s old (alerts and heat pauses stop with it, NFR-13) | `GET /system`, `/telemetry/latest` | yes |
+| Overview: resource history | Five lanes on one time axis (CPU, RAM, GPU, VRAM, temperature) with the thresholds as labelled dashed lines; a jobs strip above with each job's stages, ▲ alerts and ◆ loads; a click on a job's band narrows the range to it; one-minute averages beyond 7 days (NFR-12), said in the lane's label | `GET /telemetry?from=&to=` *planned*, M11; jobs from `GET /jobs` | yes |
+| Overview: alerts | One row per alert: when, what and its value against the threshold, job and stage or "no job", the action it caused, how long it lasted; a row opens a drawer with what it caused (`caused_by`), its clearing and a link to the job's log (MON-2.6, MON-2.7) | `GET /system/alerts` *planned* | yes |
+| Overview: diagnostics | *Now*: per running stage, the expected resource and GPU %, the job's CPU in cores against its capacity and disk reads over 30 s, each against its threshold, with the diagnosis and its action; *Earlier*: past diagnoses with their duration (MON-3.2) | `GET /system/diagnostics` *planned* | yes, every 5 s |
+| Overview: loads and unloads | PyTorch allocated and the card's figure, before → after, and the time taken; reserved in the tooltip (MON-3.3, MON-2.4) | `GET /system/models` *planned* | yes |
+| Compare two jobs | Two pickers (training runs first), *By time running* or *By epoch* (two training runs only; otherwise disabled with its reason), small multiples of GPU, card VRAM, the job's RSS and temperature, A solid and B dashed, and a table of means and peaks (MON-4.4) | `GET /system/compare?a=&b=&align=` *planned* | |
+| History (P2) | Throughput and peaks across the last N jobs (MON-4.5) | `GET /system/history?n=` *planned* | |
 
-**Actions.** Pick a range; pick two jobs to compare; open any job. NVML's "GPU utilisation" keeps its tooltip (MON-2 interpretation note).
+**Actions.** Pick a range; zoom to a job from its band; open an alert's drawer; pick two jobs to compare; open any job. NVML's "GPU utilisation" keeps its tooltip (MON-2 interpretation note). New alerts, diagnoses and loads join the top of their tables without moving the rows below; each table holds the 50 most recent in the range, with *Show more*. At 1024 px Alerts and Diagnostics stack.
 
-**Empty.** Before any sample: "No telemetry yet: the monitor has not reported." with the monitor's health.
+**Reached from** the side navigation (*System*), and from SCR-04's *Compare with…*, which opens *Compare two jobs* with that job as A (approved with the low-fi, 2026-11-22; part of SCR-04's M11 addendum).
+
+**Empty.** Before any sample: "No telemetry yet: the monitor has not reported." with the monitor's health. The monitor stopped: "The monitor stopped reporting at …", the lanes stopping there. No alerts in the range: the thresholds in force. Compare with no jobs picked: "Pick two jobs to compare."
 
 ### SCR-14 — Settings (M8; thresholds M11)
 
