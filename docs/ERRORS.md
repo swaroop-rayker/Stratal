@@ -35,6 +35,16 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-016 — The raw-hex lint read a record's row key as a colour
+
+- **Date:** 2026-11-22
+- **Seen:** The full `check.ps1 -Gpu` before M11's merge stopped at its frontend step: `src/screens/models/Compare.test.tsx:121: raw colour #0000021`. The line holds the row key `wine.csv#0000021`, not a colour.
+- **Where:** M11, `frontend/scripts/no-raw-hex.mjs` (SPEC §9.6's rule against one-off colours), on SCR-11 v2's Try it test (REG-1.4). The test came in with SCR-11 v2 and had passed in Vitest, but no full check had run since.
+- **Cause:** The rule matched any `#` followed by 3 to 8 hex digits. A record's row key is `file#line` with the line zero-padded (M10, `stratal.data.tables`, `texts`), so any such key in the frontend's source or tests looked like a colour.
+- **Fix:** A CSS hex colour has 3, 4, 6 or 8 digits and never follows a word character, and the rule now requires both (commit `bc67edc`). Colours in quotes, after a colon, in brackets and in parentheses are still caught.
+- **Guard:** `check.ps1`'s frontend step: `npm run lint` scans the test that holds the row key.
+- **Status:** verified (`check.ps1`'s frontend step, 2026-11-22)
+
 ### E-015 — The pause toast named a step before the one the run paused at
 
 - **Date:** 2026-11-19
