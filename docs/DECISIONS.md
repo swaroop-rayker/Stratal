@@ -771,6 +771,16 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Resource alerts are a pure state machine run by the sampler on each sample (5 s hold, once per crossing, re-armed below a lower point; `gpu_hot` at the resume limit). Alerts, clearings and diagnostics are events; `events.caused_by` holds the alert's `event_uid` on the action, and `insert_events` links a `gpu_oom` or `host_oom_killed` failure to a recent alert of its job. The job's reporter adds `cpu_cores`; the watchdog diagnoses each running GPU stage over 30 s with the same pure function the API uses.
 - **Why:** The sampler already has the figures, so alerts cost no query and are not late. One column on events records the cause, as K4 asks, without a second record of what events already hold. OC-12 needs the job's own CPU, since a saturated loader core is about 6 % of the machine.
 
+**Semantic duplicates in the label stage** (DATA-2.3, DATA-4.8; [ADR-0013](decisions/ADR-0013-semantic-duplicates.md), built 2026-11-22)
+- **What:** `semantic_clusters` (cosine links at 0.90, union-find, clusters of two or more) on the accepted rows' CLIP vectors; `semantic_cluster_id` on each member; rule 2b of `group_for_split` joins a cluster into one split group.
+- **How:** The label stage keeps each image's vector as a `clip_image_embedding` derivation while scoring and encodes the images scored before M11 once; the links are blocked matrix products on the GPU (20,000 × 512 in 6.4 s), every pair in Python without PyTorch. Older manifests read the new column as null.
+- **Why:** The vectors exist only in the label stage (ADR-0013 rule 1). Keeping them as derivations makes a rerun cluster without encoding again. On coco10k the real run found 93 clusters, 261 rows, the largest 22.
+
+**A version's profile and the diff of two** (UI-2.2, DATA-3.5, UI-2.1; SCR-03 v2, K10)
+- **What:** `stratal.data.profile`: the funnel from raw to a version and each column raw against here; the diff of two versions by `row_key`; the models trained on a version; a cluster's pairs.
+- **How:** One manifest is enough for the funnel, because every version holds every row with the stage that decided it (INV-06). The API caches profiles by version ID in its process. A row is changed for its status, reason code, content or a derived field; `reason_detail` alone is wording only; a field one side lacks is listed once.
+- **Why:** K10 asked for computing on request from manifests and caching by ID; versions never change, so the cache never goes stale. The wording rule is the owner's answer at the low-fi: otherwise a one-row change read as 60.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
