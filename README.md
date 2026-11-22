@@ -116,6 +116,23 @@ Measured on 2026-11-15 on the RTX 4050 Laptop GPU (6 GB) in the M4 demo (`job_00
 
 On SCR-08 a CNN was built layer by layer from the palette on the CIFAR-10 split `ds_f8e67211dd94`: two 3×3 convolutions of 32 channels, each with batch norm and ReLU, a max pool and a global average pool, then the locked head to 10 classes: **10,602 parameters**, checked by the server on every edit. SCR-09 started it with the defaults (10 epochs, batch 128, Adam): `job_0053` timed both devices and chose the **GPU (6.9 ms a step against 74.6 ms on the CPU)**, trained in **65 s** to **53.6 %** validation accuracy and peaked at **302 MB** of VRAM. It registered `mv_0cfa1ce88a16` in a new lineage, `my_model · cifar10`, found on SCR-11.
 
+### Phase-2 acceptance (M11, 2026-11-22)
+
+`tests/acceptance/test_M11_phase2_acceptance.py` ran on the live stack, through the API as SCR-08 and SCR-09 do. It took the built-in *Small CNN* template's spec, checked by `POST /model-specs/validate` against the CIFAR-10 split `ds_f8e67211dd94`, and trained it for 10 epochs with seed 11, batch 128, on the GPU:
+
+| Run | Job | Version | Minutes | Val accuracy | Test accuracy | PyTorch VRAM peak | RAM peak (VM) |
+|---|---|---|---|---|---|---|---|
+| A | `job_0116` | `mv_889c2071d7a5` | 1.0 | 83.4 % | **83.97 %** | 422 MB | 4.25 GB |
+| B | `job_0118` | `mv_a038110eecdb` | 1.0 | 83.3 % | **84.00 %** | 422 MB | 4.26 GB |
+| C, killed | `job_0114` | `mv_ebaa40d9620f` | 1.8 | 83.4 % | 83.78 % | 422 MB | 4.25 GB |
+
+- **NFR-4 (one seed, test accuracy within 1 point, OC-11):** A and B differ by **0.03 points**. An earlier pair (`job_0110`, `job_0112`) differed by 0.29.
+- **NFR-1 (VRAM under 5.5 GB):** PyTorch's peak reserve was **422 MB**, and the card's total 758 MB.
+- **NFR-2 (RAM under 9 GB):** the VM's used memory peaked at **4.26 GB**.
+- **NFR-5 (at most 10 minutes lost):** the GPU worker of run C was killed with `docker kill` at epoch 4. The watchdog requeued the run, a new worker resumed it from its epoch-7 checkpoint ("Resuming from checkpoint: epoch 7/10"), and it completed. Work lost, from that checkpoint to the worker's last event: **35 s**.
+- **The registry and Try it (SCR-11):** every run registered a trained version with test metrics. `/predict` answered for a test image from the latest version, on the GPU, or on the CPU while a run held the card. A first run's version had its weights deleted by retention (`keep_intermediate` 0), and `/predict` refused it with `409 weights_deleted`, as REG-2.7 asks.
+- **Container memory (K12):** `memory.peak` was **2.08 GiB** for `worker-gpu` (limit 3.25 GB), and **851 MiB** for `inference` serving on the GPU (limit 1.25 GB). That is about 15 % under the old 1.0 GB limit, which is why it moved.
+
 ## Documentation
 
 | | |
