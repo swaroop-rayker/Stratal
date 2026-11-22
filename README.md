@@ -103,6 +103,8 @@ Measured on 2026-11-15 on the RTX 4050 Laptop GPU (6 GB) in the M4 demo (`job_00
 
 `check.ps1 -Bench`: a CPU-bound synthetic stage with one event per item (about 50 events a second, far above a real stage), three runs with monitoring off and three on. On a quiet machine: runtime **+0.02 %**; the `monitor` process used **1.58 % of the machine's 16 logical CPUs, which is 25 % of one core**, mostly the collector storing and publishing each event. That is within NFR-11, which the owner reads as a share of the machine (SPEC OC-6).
 
+**Again in M11 (2026-11-22)**, with the alerts run on every sample, the diagnostics every 5 s and the job's CPU in its memory reports (ADR-0020): runtime **+0.35 %** (median of three: 23.36 s on, 23.28 s off), and the `monitor` process at **1.54 % of the machine**, 24.7 % of one core. Still within both limits; the added runtime is mostly the reporter reading the job's process tree each second.
+
 ### Training demo (M8, 2026-11-19)
 
 `job_0051` trained the reference CNN (`small_cnn`, 0.29 M parameters) on CIFAR-10 (`ds_f8e67211dd94`) on the GPU for 30 epochs: **84.3 %** validation accuracy in 108 s of training.
