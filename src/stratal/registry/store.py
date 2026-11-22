@@ -567,3 +567,53 @@ def unpin(session: Session, version_id: str) -> ModelVersion:
     session.execute(delete(Pin).where(Pin.version_id == version_id))
     session.flush()
     return version
+
+
+def trained_on(session: Session, dataset_version_id: str) -> list[dict[str, Any]]:
+    """Model versions trained on a dataset version, newest first: each with its lineage,
+    how it was made, its main metric and the split that metric is on (test once scored,
+    else validation), and its weights (UI-2.1, SCR-03 v2 frame D)."""
+    rows = session.execute(
+        select(ModelVersion, ModelLineage.name)
+        .join(ModelLineage, ModelLineage.id == ModelVersion.lineage_id)
+        .where(
+            ModelVersion.dataset_version_id == dataset_version_id,
+            ModelVersion.state.in_(("trained", "partial")),
+        )
+        .order_by(ModelVersion.trained_at.desc().nulls_last(), ModelVersion.id)
+    ).all()
+    items: list[dict[str, Any]] = []
+    for version, lineage_name in rows:
+        metrics: dict[str, Any] = dict(version.metrics or {})
+        metric = None
+        for split in ("test", "val"):
+            for name in ("accuracy", "r2", "macro_f1", "loss"):
+                value = metrics.get(f"{split}_{name}")
+                if isinstance(value, int | float) and not isinstance(value, bool):
+                    metric = {"split": split, "name": name, "value": float(value)}
+                    break
+            if metric:
+                break
+        model: dict[str, Any] = dict((version.config or {}).get("model") or {})
+        kind = "run"
+        if version.study_id:
+            kind = "study"
+        elif (version.config or {}).get("init_from"):
+            kind = "fine-tune"
+        elif model.get("kind") == "sklearn":
+            kind = "classical"
+        items.append(
+            {
+                "id": version.id,
+                "lineage_id": version.lineage_id,
+                "lineage_name": lineage_name,
+                "state": version.state,
+                "kind": kind,
+                "parent_version_id": version.parent_version_id,
+                "metric": metric,
+                "weights_status": version.weights_status,
+                "trained_at": iso(version.trained_at),
+                "study_id": version.study_id,
+            }
+        )
+    return items

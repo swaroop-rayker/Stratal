@@ -163,3 +163,9 @@ def pack_vector(vector: Sequence[float]) -> str:
 def unpack_vector(text: str) -> list[float]:
     raw = base64.b64decode(text)
     return list(struct.unpack(f"<{len(raw) // 2}e", raw))
+
+
+def cosine(a: Sequence[float], b: Sequence[float]) -> float:
+    """``a·b / (|a| |b|)``, for one pair (the cluster drawer, SCR-03 v2)."""
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
+    return dot / (math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b)))

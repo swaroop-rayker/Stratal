@@ -125,3 +125,15 @@ def test_DATA_2_3_cropped_variants_are_grouped_and_reported_and_DATA_4_8_one_spl
 
     assert len({split_rows[k]["split"] for k in scene}) == 1, "DATA-4.8.AC1: one split"
     assert len({split_rows[k]["split_group"] for k in scene}) == 1
+
+    # SCR-03 v2 frame C: the filter and the cluster's drawer
+    client = PipelineApi(runner).client
+    in_cluster = client.get(f"/api/v1/versions/{label_id}/rows", params={"semantic": "true"}).json()
+    assert sorted(r["row_key"] for r in in_cluster["items"]) == scene
+    cluster_id = in_cluster["items"][0]["semantic_cluster_id"]
+    view = client.get(f"/api/v1/versions/{job['output_version_id']}/clusters/{cluster_id}").json()
+    assert sorted(r["row_key"] for r in view["rows"]) == scene
+    assert len(view["pairs"]) == 3 and all(p["similarity"] > 0.99 for p in view["pairs"])
+    checker = next(p for p in view["pairs"] if "scene_checker.png" in (p["a"], p["b"]))
+    assert checker["phash_distance"] > 12
+    assert len(view["split_groups"]) == 1

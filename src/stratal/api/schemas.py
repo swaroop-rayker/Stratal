@@ -299,6 +299,8 @@ class Row(BaseModel):
     split: str | None = None
     split_group: str | None = None
     split_stratum: str | None = None
+    semantic_cluster_id: str | None = None
+    """M11 (DATA-2.3): the semantic cluster an accepted row is in."""
 
 
 class RowPage(_Model):
@@ -1129,3 +1131,167 @@ class JobOverlay(_Model):
     """Why the two cannot be aligned by epoch, when they cannot."""
     a: OverlaySide
     b: OverlaySide
+
+
+# -- SCR-03 v2: distributions, diff, models trained on a version, clusters (M11) -----------
+
+
+class FiveNumbers(_Model):
+    n: int
+    min: float
+    p10: float
+    median: float
+    p90: float
+    max: float
+    mean: float
+
+
+class HistBin(_Model):
+    low: float
+    high: float
+    raw: int
+    here: int
+
+
+class ColumnProfile(_Model):
+    key: str
+    label: str
+    unit: str
+    raw_label: str
+    """``raw`` (every row) or ``with a value`` (a column a later stage adds)."""
+    raw: FiveNumbers | None
+    here: FiveNumbers | None
+    removed: FiveNumbers | None
+    bins: list[HistBin] | None
+    """Shared bins; null when every row has one value."""
+
+
+class RemovedReason(_Model):
+    reason_code: str
+    status: str
+    rows: int
+
+
+class FunnelStep(_Model):
+    stage: str
+    version_id: str
+    rows_in: int
+    removed: list[RemovedReason]
+    rows_out: int
+    parts: dict[str, int] | None
+
+
+class ClassCounts(_Model):
+    label: str
+    train: int
+    val: int
+    test: int
+    rows: int
+
+
+class TokenCut(_Model):
+    length: int
+    cut: int
+    rows: int
+
+
+class Distributions(_Model):
+    version_id: str
+    stage: str
+    dtype: str | None
+    row_count: int
+    accepted: int
+    removed: int
+    funnel: list[FunnelStep]
+    columns: list[ColumnProfile]
+    classes: list[ClassCounts] | None
+    formats: dict[str, int]
+    markers: dict[str, Any]
+    """Thresholds to draw on a column, e.g. the filter's ``clip_score``."""
+    token_cut: TokenCut | None
+
+
+class VersionRef(_Model):
+    version_id: str
+    stage: str
+    created_at: str | None
+
+
+class ConfigChange(_Model):
+    stage: str
+    field: str | None
+    """Null when the stage is in one lineage only."""
+    a: Any
+    b: Any
+
+
+class DiffField(_Model):
+    field: str
+    a: Any
+    b: Any
+
+
+class DiffRow(_Model):
+    row_key: str
+    fields: list[DiffField]
+
+
+class WordingRow(_Model):
+    row_key: str
+    a: str | None
+    b: str | None
+
+
+class VersionDiff(_Model):
+    a: VersionRef
+    b: VersionRef
+    stages_differ: bool
+    config_diff: list[ConfigChange]
+    added: int
+    removed: int
+    changed: int
+    wording_only: int
+    same: int
+    by_field: dict[str, int]
+    only_in_a: list[str]
+    only_in_b: list[str]
+    changed_rows: list[DiffRow]
+    wording_rows: list[WordingRow]
+    shown_limit: int
+
+
+class ModelMetric(_Model):
+    split: Literal["test", "val"]
+    name: str
+    value: float
+
+
+class TrainedModel(_Model):
+    id: str
+    lineage_id: str
+    lineage_name: str
+    state: str
+    kind: Literal["run", "fine-tune", "study", "classical"]
+    parent_version_id: str | None
+    metric: ModelMetric | None
+    weights_status: str
+    trained_at: str | None
+    study_id: str | None
+
+
+class VersionModels(_Model):
+    items: list[TrainedModel]
+
+
+class ClusterPair(_Model):
+    a: str
+    b: str
+    similarity: float | None
+    phash_distance: int | None
+
+
+class SemanticClusterView(_Model):
+    cluster_id: str
+    rows: list[Row]
+    pairs: list[ClusterPair]
+    split_groups: list[str]
