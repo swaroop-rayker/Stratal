@@ -9,7 +9,7 @@
 // (decision 6); for a study it takes the worst case in the space.
 import type { RJSFSchema } from "@rjsf/utils";
 import { useQuery } from "@tanstack/react-query";
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { type Optimizer, useSpecSchema, useTemplates, useValidate } from "../../api/builder";
@@ -114,6 +114,69 @@ function without(tuned: Record<string, TuneSpec>, path: string): Record<string, 
 }
 
 type Estimators = Record<string, { title: string; tasks: string[]; schema: RJSFSchema }>;
+
+/** One estimator in SCR-09's list, with why it cannot be chosen here (null when it can). */
+interface EstimatorOption { name: string; title: string; reason: string | null }
+interface EstimatorChoices { fits: EstimatorOption[]; anyTable: EstimatorOption[]; elsewhere: EstimatorOption[] }
+
+/** SCR-09's estimator list (addendum SCR-09v2-estimators_v1, approved 2026-11-22; ML-1.1,
+ * DATA-5.5): every estimator, sorted into those for the split's task, those that ignore the
+ * target, and those for the other task, which stay listed, disabled with their reason, rather
+ * than hidden. With a study on, the ones that ignore the target are disabled too: a study scores
+ * each fold against the target. Within a group the schema's order is kept. */
+function estimatorChoices(estimators: Estimators, task: Task, studyOn: boolean): EstimatorChoices {
+  const choices: EstimatorChoices = { fits: [], anyTable: [], elsewhere: [] };
+  for (const [name, e] of Object.entries(estimators)) {
+    const supervised = e.tasks.filter((t) => t === "classification" || t === "regression");
+    if (supervised.length === 0) choices.anyTable.push({ name, title: e.title, reason: studyOn ? "not in a study" : null });
+    else if (supervised.includes(task)) choices.fits.push({ name, title: e.title, reason: null });
+    else choices.elsewhere.push({ name, title: e.title, reason: `${supervised.join(" or ")} only` });
+  }
+  return choices;
+}
+
+function estimatorGroups(choices: EstimatorChoices, task: Task): { label: string; options: EstimatorOption[] }[] {
+  return [
+    { label: `For ${task}`, options: choices.fits },
+    { label: "Any table · ignores the target", options: choices.anyTable },
+    { label: "Not for this split", options: choices.elsewhere },
+  ].filter((g) => g.options.length > 0);
+}
+
+/** Names in mono, joined as "a", "a and b" or "a, b and c". */
+function namesOf(names: string[], last: "and" | "or"): ReactNode[] {
+  return names.flatMap((n, i) => [
+    i === 0 ? "" : i === names.length - 1 ? ` ${last} ` : ", ",
+    <span key={n} className="mono">{n}</span>,
+  ]);
+}
+
+/** The line under the estimator select: what this split, or a study, rules out, and why. */
+function RuledOut({ id, choices, task, dataset }: { id: string; choices: EstimatorChoices; task: Task; dataset: string | undefined }) {
+  const noStudy = choices.anyTable.filter((o) => o.reason !== null).map((o) => o.name);
+  const elsewhere = choices.elsewhere.map((o) => o.name);
+  if (elsewhere.length === 0 && noStudy.length === 0) return null;
+  const target = `${dataset ? `${dataset}'s` : "this split's"} target`;
+  const one = elsewhere.length === 1;
+  const linear = choices.fits.map((o) => o.name).filter((n) => n === "linear" || n === "ridge" || n === "lasso");
+  return (
+    <div className="est-out" id={id}>
+      <Icon name="info" />
+      <span>
+        {elsewhere.length > 0 ? (
+          <>
+            Not for this split: {namesOf(elsewhere, "and")}, {task === "regression"
+              ? <>which {one ? "is a classifier" : "are classifiers"}; {target} is a number.</>
+              : <>which {one ? "predicts" : "predict"} a number; {target} is a class.</>}
+            {task === "regression" && elsewhere.includes("logistic_regression") && linear.length > 0 ? <> For a linear model, use {namesOf(linear, "or")}.</> : null}
+          </>
+        ) : null}
+        {elsewhere.length > 0 && noStudy.length > 0 ? " " : null}
+        {noStudy.length > 0 ? <>Not in a study: {namesOf(noStudy, "and")}, which {noStudy.length === 1 ? "ignores" : "ignore"} the target a study scores against.</> : null}
+      </span>
+    </div>
+  );
+}
 
 export function RunScreen() {
   const navigate = useNavigate();
@@ -252,8 +315,14 @@ export function RunScreen() {
   const limitsNow: StudyLimits = limits ?? { n_trials: 20, minutes: 60, objective: Object.keys(objectives)[0] ?? "", pruning: true, seed: 0, cv_folds: 5 };
   const objective = limitsNow.objective in objectives ? limitsNow.objective : (Object.keys(objectives)[0] ?? "");
 
-  const estimatorList = Object.entries(estimators.data ?? {}).filter(([, e]) => e.tasks.includes(task) || (!studyOn && !e.tasks.some((t) => t === "classification" || t === "regression")));
-  const estimator = estimatorChoice ?? classicalSeed?.model.estimator ?? (estimators.data?.random_forest ? "random_forest" : estimatorList[0]?.[0] ?? null);
+  // Every estimator is listed; those this split or a study cannot use are disabled with their
+  // reason (addendum SCR-09v2-estimators_v1). One that ignores the target never starts a study,
+  // so turning a study on cannot take the selected estimator out from under the form (E-017).
+  const estChoices = estimatorChoices(estimators.data ?? {}, task, studyOn);
+  const firstOpen = [...estChoices.fits, ...estChoices.anyTable].find((o) => o.reason === null)?.name ?? null;
+  const estimator = estimatorChoice ?? classicalSeed?.model.estimator ?? (estimators.data?.random_forest ? "random_forest" : firstOpen);
+  const ignoresTarget = mode === "classical" && estChoices.anyTable.some((o) => o.name === estimator);
+  const ruledOut = estChoices.elsewhere.length > 0 || estChoices.anyTable.some((o) => o.reason !== null);
   const estimatorSchema = estimator ? estimators.data?.[estimator]?.schema : undefined;
   const paramValues: Values = paramEdits ?? (classicalSeed && classicalSeed.model.estimator === estimator ? (classicalSeed.model.params ?? {}) : {});
 
@@ -487,11 +556,16 @@ export function RunScreen() {
                 <>
                   <div className="facts">
                     <label className="sr-only" htmlFor="estimator">Estimator</label>
-                    <select id="estimator" className="select mono" value={estimator ?? ""} onChange={(e) => { setEstimator(e.target.value); setParams({}); setTuned(Object.fromEntries(Object.entries(tuned).filter(([p]) => !p.startsWith("/classical/")))); }}>
-                      {estimatorList.map(([name]) => <option key={name} value={name}>{name}</option>)}
+                    <select id="estimator" className="select mono est-select" value={estimator ?? ""} aria-describedby={ruledOut ? "estimator-ruled-out" : undefined} onChange={(e) => { setEstimator(e.target.value); setParams({}); setTuned(Object.fromEntries(Object.entries(tuned).filter(([p]) => !p.startsWith("/classical/")))); }}>
+                      {estimatorGroups(estChoices, task).map((g) => (
+                        <optgroup key={g.label} label={g.label}>
+                          {g.options.map((o) => <option key={o.name} value={o.name} disabled={o.reason !== null}>{`${o.name} · ${o.title}${o.reason ? ` — ${o.reason}` : ""}`}</option>)}
+                        </optgroup>
+                      ))}
                     </select>
                     <span>{estimator ? estimators.data?.[estimator]?.title : null}, after imputing, scaling and one-hot encoding fitted on the train split (ML-1.3).</span>
                   </div>
+                  {ruledOut ? <RuledOut id="estimator-ruled-out" choices={estChoices} task={task} dataset={versionInfo.data?.dataset} /> : null}
                   {estimatorSchema ? (
                     <div className="fgrid">
                       <SchemaForm
@@ -499,7 +573,7 @@ export function RunScreen() {
                         values={paramValues}
                         serverErrors={serverErrors}
                         onChange={(next) => { setParams({ ...paramValues, ...next }); }}
-                        decor={decor(paths.param, () => true, paramValues)}
+                        decor={decor(paths.param, () => !ignoresTarget, paramValues)}
                       />
                     </div>
                   ) : <Skeleton width={480} height={40} />}
@@ -617,7 +691,14 @@ export function RunScreen() {
           ) : (
             <section className="card collapsed">
               <header><Icon name="sliders" /><h2>Tune with a study</h2><span className="req">HPO-1.1</span><span className="spacer" />
-                <Button size="sm" onClick={() => { setStudyOn(true); }}>Turn on</Button></header>
+                {ignoresTarget ? <span className="est-why" id="study-why">A study scores each fold against the target, and <span className="mono">{estimator}</span> ignores it. Choose a supervised estimator to tune.</span> : null}
+                <Button
+                  size="sm"
+                  aria-disabled={ignoresTarget || undefined}
+                  className={ignoresTarget ? "is-disabled" : undefined}
+                  aria-describedby={ignoresTarget ? "study-why" : undefined}
+                  onClick={() => { if (!ignoresTarget) setStudyOn(true); }}
+                >Turn on</Button></header>
             </section>
           )}
           {adding ? (

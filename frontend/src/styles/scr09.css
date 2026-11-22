@@ -108,3 +108,12 @@
 @media (max-width: 1279px) {
   .scr09 .ft-table th:nth-child(4), .scr09 .ft-table td:nth-child(4) { display: none; }
 }
+/* The estimator list (addendum screens/SCR-09v2-estimators_v1.html, approved 2026-11-22): every
+   estimator listed, the ruled-out ones disabled with their reason, named in the line below. */
+.scr09 .est-select { width: 46ch; max-width: 100%; }
+.scr09 .est-out { display: flex; gap: var(--sp-2); align-items: flex-start; font-size: var(--fs-12); color: var(--text-secondary); max-width: 92ch; }
+.scr09 .est-out svg.i { margin-top: 2px; color: var(--text-muted); }
+/* live: the study card is narrower than the mockup's frame, so the reason takes a second row of
+   its header, under the heading, after Turn on. */
+.scr09 .card > header:has(> .est-why) { flex-wrap: wrap; row-gap: var(--sp-1); }
+.scr09 .est-why { order: 1; flex: 1 0 100%; padding-left: 22px; font-size: var(--fs-12); color: var(--text-secondary); }

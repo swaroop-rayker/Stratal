@@ -152,3 +152,92 @@ describe("Train a model drawer", () => {
     expect(await screen.findByLabelText("Model kind: Classical")).toBeInTheDocument();
   });
 });
+
+// SCR-09's estimator list (addendum SCR-09v2-estimators_v1, approved 2026-11-22; ML-1.1,
+// DATA-5.5): every estimator is listed, and the ones the split or a study cannot use are disabled
+// with their reason instead of hidden. The schema's order, as GET /ml/estimators/schema serves it.
+const NO_PARAMS = { type: "object", properties: {} };
+const ESTIMATORS = {
+  linear: { title: "Linear regression", tasks: ["regression"], schema: NO_PARAMS },
+  ridge: { title: "Ridge regression", tasks: ["regression"], schema: NO_PARAMS },
+  lasso: { title: "Lasso regression", tasks: ["regression"], schema: NO_PARAMS },
+  logistic_regression: { title: "Logistic regression", tasks: ["classification"], schema: NO_PARAMS },
+  random_forest: { title: "Random forest", tasks: ["classification", "regression"], schema: { type: "object", properties: { n_estimators: { type: "integer", minimum: 1, maximum: 2000, default: 100 } } } },
+  naive_bayes: { title: "Naive Bayes", tasks: ["classification"], schema: NO_PARAMS },
+  kmeans: { title: "k-means", tasks: ["clustering"], schema: { type: "object", properties: { n_clusters: { type: "integer", minimum: 2, maximum: 1000, default: 8 } } } },
+  pca: { title: "PCA", tasks: ["projection"], schema: NO_PARAMS },
+};
+const DIABETES_ENDS = {
+  version_id: "ds_de5f2ad338c9", dataset_type: "tabular", input: { kind: "vector", dims: [10], vocab: null }, input_text: "vector 10",
+  output_size: 1, classes: [], families: ["mlp"], trainable: true, problem: null,
+};
+const DIABETES = {
+  "/api/v1/versions/ds_de5f2ad338c9": {
+    version_id: "ds_de5f2ad338c9", dataset: "diabetes", stage: "split", dtype: "tabular",
+    counts: { split: { splits: { train: { rows: 354 }, val: { rows: 44 }, test: { rows: 44 } } } },
+  },
+};
+
+describe("SCR-09's estimator list", () => {
+  test("test_DATA_5_5_estimators_a_split_cannot_use_are_listed_disabled_with_their_reason", async () => {
+    stubApi(routes(DIABETES_ENDS, { ...DIABETES, "/api/v1/ml/estimators/schema": ESTIMATORS }));
+    renderAt("/runs/new?version=ds_de5f2ad338c9&kind=classical");
+
+    const select = await screen.findByLabelText("Estimator");
+    const logistic = await within(select).findByRole("option", { name: "logistic_regression · Logistic regression — classification only" });
+    expect(logistic).toBeDisabled();
+    expect(within(select).getByRole("group", { name: "Not for this split" })).toContainElement(logistic);
+    expect(within(select).getByRole("option", { name: "naive_bayes · Naive Bayes — classification only" })).toBeDisabled();
+    expect(within(select).getByRole("option", { name: "linear · Linear regression" })).toBeEnabled();
+    expect(within(select).getByRole("group", { name: "For regression" })).toBeInTheDocument();
+    expect(within(select).getByRole("option", { name: "kmeans · k-means" })).toBeEnabled();
+    expect(select).toHaveValue("random_forest");
+    await waitFor(() => {
+      expect(select).toHaveAccessibleDescription(
+        "Not for this split: logistic_regression and naive_bayes, which are classifiers; diabetes's target is a number. For a linear model, use linear, ridge or lasso.",
+      );
+    });
+  });
+
+  test("test_ML_1_1_logistic_regression_is_offered_on_a_classification_split", async () => {
+    stubApi(routes(WINE_ENDS, { "/api/v1/ml/estimators/schema": ESTIMATORS }));
+    renderAt("/runs/new?version=ds_6448d354c9c6&kind=classical");
+
+    const select = await screen.findByLabelText("Estimator");
+    const logistic = await within(select).findByRole("option", { name: "logistic_regression · Logistic regression" });
+    expect(logistic).toBeEnabled();
+    expect(within(select).getByRole("option", { name: "linear · Linear regression — regression only" })).toBeDisabled();
+    fireEvent.change(select, { target: { value: "logistic_regression" } });
+    expect(select).toHaveValue("logistic_regression");
+    expect(screen.getByText(/^Logistic regression, after imputing/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(select).toHaveAccessibleDescription("Not for this split: linear, ridge and lasso, which predict a number; wine's target is a class.");
+    });
+  });
+
+  test("test_DATA_5_5_turning_a_study_on_never_changes_the_selected_estimator", async () => {
+    // E-017: with kmeans selected, turning a study on took it out of the list, and the select
+    // showed logistic_regression while the form was still k-means's.
+    stubApi(routes(WINE_ENDS, { "/api/v1/ml/estimators/schema": ESTIMATORS }));
+    renderAt("/runs/new?version=ds_6448d354c9c6&kind=classical");
+
+    const select = await screen.findByLabelText("Estimator");
+    await within(select).findByRole("option", { name: "kmeans · k-means" });
+    fireEvent.change(select, { target: { value: "kmeans" } });
+    const turnOn = screen.getByRole("button", { name: "Turn on" });
+    expect(turnOn).toHaveAttribute("aria-disabled", "true");
+    expect(turnOn).toHaveAccessibleDescription("A study scores each fold against the target, and kmeans ignores it. Choose a supervised estimator to tune.");
+    expect(screen.queryByRole("button", { name: "Tune n_clusters" })).not.toBeInTheDocument();
+    fireEvent.click(turnOn);
+    expect(screen.queryByRole("region", { name: "Tune with a study" })).not.toBeInTheDocument();
+    expect(select).toHaveValue("kmeans");
+
+    fireEvent.change(select, { target: { value: "random_forest" } });
+    expect(screen.getByRole("button", { name: "Turn on" })).not.toHaveAttribute("aria-disabled");
+    fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
+    expect(await screen.findByRole("region", { name: "Tune with a study" })).toBeInTheDocument();
+    expect(within(select).getByRole("option", { name: "kmeans · k-means — not in a study" })).toBeDisabled();
+    expect(select).toHaveValue("random_forest");
+    expect(select).toHaveAccessibleDescription(/Not in a study: kmeans and pca, which ignore the target a study scores against\.$/);
+  });
+});
