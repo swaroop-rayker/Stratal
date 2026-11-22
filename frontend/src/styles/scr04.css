@@ -137,3 +137,7 @@
 .scr04 .seg.paused { --c: var(--state-paused); }
 /* live: the running epoch carries "7 · 45%"; it widens to fit instead of spilling into the next. */
 .scr04 .ep.running { min-width: max-content; }
+/* M11 addendum (ADR-0020, SCR-13's low-fi): an action names the alert that caused it; selecting either line highlights both. */
+.scr04 .log .cause { margin-left: var(--sp-2); padding: 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); font: var(--fs-11) var(--font-mono); cursor: pointer; }
+.scr04 .log .cause:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.scr04 .log > div.linked { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }

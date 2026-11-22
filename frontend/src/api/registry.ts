@@ -154,7 +154,7 @@ export function useSettings() {
 
 /** A section save. A 409 ``confirmation_required`` carries the plan to confirm (REG-2.10). */
 export interface SaveRequest {
-  section: "training" | "retention";
+  section: "training" | "retention" | "monitoring";
   values: Record<string, unknown>;
   version: string;
   confirm?: string | null;

@@ -596,6 +596,116 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/telemetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Telemetry Range
+         * @description The machine over a range for SCR-13's lanes: at most ``max_points`` time buckets,
+         *     each the mean of its samples. Beyond the raw retention the one-minute averages are
+         *     used and the point says so (NFR-12). With the jobs that ran in the range and their
+         *     stages, for the jobs strip. Default: the last hour.
+         */
+        get: operations["telemetry_range_api_v1_telemetry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System Alerts
+         * @description Alerts fired in the range, newest first, each with its clearing and the actions it
+         *     caused (pause, stalled, a failure with its suggested batch). Default: the last hour.
+         */
+        get: operations["system_alerts_api_v1_system_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System Diagnostics
+         * @description *Now*: every running stage's expected resource and what was observed over the last
+         *     30 s, with the diagnosis the watchdog would give; *Earlier*: past diagnoses in the
+         *     range, with how long each lasted.
+         */
+        get: operations["system_diagnostics_api_v1_system_diagnostics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System Models
+         * @description Model loads and unloads in the range, newest first, with PyTorch's and the card's
+         *     VRAM before and after in ``metrics`` (``allocated_mb_*``, ``reserved_mb_*``,
+         *     ``card_used_mb_*``).
+         */
+        get: operations["system_models_api_v1_system_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Jobs
+         * @description Two jobs' resource curves on one axis (MON-4.4, K7): by time spent running (pauses
+         *     and queueing removed), or by epoch for two training runs, over the epochs both ran.
+         *     ``epoch_unavailable`` says why epoch alignment cannot be used, when it cannot.
+         */
+        get: operations["compare_jobs_api_v1_system_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/versions/{version_id}/reviews": {
         parameters: {
             query?: never;
@@ -1236,6 +1346,19 @@ export interface components {
              */
             type: "add";
         };
+        /** AlertThresholds */
+        AlertThresholds: {
+            /** Vram Percent */
+            vram_percent: number;
+            /** Ram Percent */
+            ram_percent: number;
+            /** Pause C */
+            pause_c: number;
+            /** Resume C */
+            resume_c: number;
+            /** Stall S */
+            stall_s: number;
+        };
         /**
          * Attention
          * @description Multi-head self-attention, from scratch (BUILD-1.8).
@@ -1633,6 +1756,67 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** DiagnosisText */
+        DiagnosisText: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Reason */
+            reason: string;
+            /** Suggested Action */
+            suggested_action: string;
+        };
+        /** DiagnosticLive */
+        DiagnosticLive: {
+            /** Job Id */
+            job_id: string;
+            /** Stage */
+            stage: string;
+            /**
+             * Queue
+             * @enum {string}
+             */
+            queue: "cpu" | "gpu";
+            /** Expected */
+            expected: string[];
+            /** Running For S */
+            running_for_s: number;
+            observed: components["schemas"]["DiagnosticObserved"];
+            thresholds: components["schemas"]["DiagnosticThresholds"];
+            diagnosis: components["schemas"]["DiagnosisText"] | null;
+        };
+        /** DiagnosticObserved */
+        DiagnosticObserved: {
+            /** Samples */
+            samples: number;
+            /** Gpu Percent */
+            gpu_percent: number | null;
+            /** Cpu Cores */
+            cpu_cores: number | null;
+            /** Capacity Cores */
+            capacity_cores: number;
+            /** Loader Workers */
+            loader_workers: number;
+            /** Disk Read Mb S */
+            disk_read_mb_s: number;
+        };
+        /** DiagnosticPast */
+        DiagnosticPast: {
+            fired: components["schemas"]["Event"];
+            cleared: components["schemas"]["Event"] | null;
+            /** Lasted S */
+            lasted_s: number | null;
+        };
+        /** DiagnosticThresholds */
+        DiagnosticThresholds: {
+            /** Gpu Low Percent */
+            gpu_low_percent: number;
+            /** Cpu Saturated Share */
+            cpu_saturated_share: number;
+            /** Disk Mb S */
+            disk_mb_s: number;
+        };
         /** DiskOrphan */
         DiskOrphan: {
             /** Path */
@@ -1766,6 +1950,8 @@ export interface components {
             suggested_action: string | null;
             /** Attempt */
             attempt: number | null;
+            /** Caused By */
+            caused_by?: string | null;
         };
         /** EventList */
         EventList: {
@@ -2048,6 +2234,20 @@ export interface components {
             counts: {
                 [key: string]: number;
             };
+        };
+        /** JobOverlay */
+        JobOverlay: {
+            /**
+             * Align
+             * @enum {string}
+             */
+            align: "time" | "epoch";
+            /** Common Epochs */
+            common_epochs: number | null;
+            /** Epoch Unavailable */
+            epoch_unavailable: string | null;
+            a: components["schemas"]["OverlaySide"];
+            b: components["schemas"]["OverlaySide"];
         };
         /** JobStage */
         JobStage: {
@@ -2591,6 +2791,73 @@ export interface components {
             /** Parameters */
             parameters: number | null;
         };
+        /** OverlayMachinePoint */
+        OverlayMachinePoint: {
+            /** X */
+            x: number;
+            /** Gpu Util Percent */
+            gpu_util_percent: number | null;
+            /** Vram Used Mb */
+            vram_used_mb: number | null;
+            /** Gpu Temp C */
+            gpu_temp_c: number | null;
+            /** Cpu Percent */
+            cpu_percent: number | null;
+            /** Ram Used Mb */
+            ram_used_mb: number | null;
+            /** Minute Average */
+            minute_average: boolean;
+        };
+        /** OverlayProcessPoint */
+        OverlayProcessPoint: {
+            /** X */
+            x: number;
+            /** Rss Mb */
+            rss_mb: number | null;
+            /** Torch Allocated Mb */
+            torch_allocated_mb: number | null;
+            /** Cpu Cores */
+            cpu_cores: number | null;
+        };
+        /** OverlaySide */
+        OverlaySide: {
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /** State */
+            state: string;
+            /** Label */
+            label: string;
+            /** Started At */
+            started_at: string | null;
+            /** Running S */
+            running_s: number;
+            /** Epochs */
+            epochs: number | null;
+            /** Machine */
+            machine: components["schemas"]["OverlayMachinePoint"][];
+            /** Process */
+            process: components["schemas"]["OverlayProcessPoint"][];
+            summary: components["schemas"]["OverlaySummary"];
+        };
+        /** OverlaySummary */
+        OverlaySummary: {
+            /** Seconds Per Epoch */
+            seconds_per_epoch: number | null;
+            /** Gpu Mean Percent */
+            gpu_mean_percent: number | null;
+            /** Vram Peak Mb */
+            vram_peak_mb: number | null;
+            /** Torch Allocated Peak Mb */
+            torch_allocated_peak_mb: number | null;
+            /** Rss Mean Mb */
+            rss_mean_mb: number | null;
+            /** Cpu Cores Mean */
+            cpu_cores_mean: number | null;
+            /** Gpu Temp Max C */
+            gpu_temp_max_c: number | null;
+        };
         /**
          * PipelineRequest
          * @description ``POST /jobs`` with ``kind: pipeline``.
@@ -2796,6 +3063,8 @@ export interface components {
             torch_reserved_mb: number | null;
             /** Torch Max Allocated Mb */
             torch_max_allocated_mb: number | null;
+            /** Cpu Cores */
+            cpu_cores?: number | null;
         };
         /** RNN */
         RNN: {
@@ -2842,6 +3111,58 @@ export interface components {
              * @enum {string}
              */
             nonlinearity: "tanh" | "relu";
+        };
+        /** RangeJob */
+        RangeJob: {
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /** State */
+            state: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Stages */
+            stages: components["schemas"]["RangeStage"][];
+        };
+        /**
+         * RangePoint
+         * @description One time bucket's mean of the machine samples (SCR-13's lanes).
+         */
+        RangePoint: {
+            /** Ts */
+            ts: string;
+            /** Minute Average */
+            minute_average: boolean;
+            /** Cpu Percent */
+            cpu_percent: number | null;
+            /** Ram Used Mb */
+            ram_used_mb: number | null;
+            /** Ram Total Mb */
+            ram_total_mb: number | null;
+            /** Gpu Util Percent */
+            gpu_util_percent: number | null;
+            /** Vram Used Mb */
+            vram_used_mb: number | null;
+            /** Vram Total Mb */
+            vram_total_mb: number | null;
+            /** Gpu Temp C */
+            gpu_temp_c: number | null;
+            /** Disk Read Mb S */
+            disk_read_mb_s: number | null;
+        };
+        /** RangeStage */
+        RangeStage: {
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
         };
         /** ReLU */
         ReLU: {
@@ -3268,7 +3589,7 @@ export interface components {
              * Section
              * @enum {string}
              */
-            section: "retention" | "training";
+            section: "retention" | "training" | "monitoring";
             /** Values */
             values: {
                 [key: string]: unknown;
@@ -3319,7 +3640,7 @@ export interface components {
              * Name
              * @enum {string}
              */
-            name: "retention" | "training";
+            name: "retention" | "training" | "monitoring";
             /** Title */
             title: string;
             /** Requirements */
@@ -3766,6 +4087,34 @@ export interface components {
             /** Stall Timeout S */
             stall_timeout_s: number;
         };
+        /** SystemAlert */
+        SystemAlert: {
+            /** Code */
+            code: string;
+            /** Firing */
+            firing: boolean;
+            fired: components["schemas"]["Event"];
+            cleared: components["schemas"]["Event"] | null;
+            /** Actions */
+            actions: components["schemas"]["Event"][];
+            /** Lasted S */
+            lasted_s: number | null;
+        };
+        /** SystemAlerts */
+        SystemAlerts: {
+            /** Items */
+            items: components["schemas"]["SystemAlert"][];
+            thresholds: components["schemas"]["AlertThresholds"];
+        };
+        /** SystemDiagnostics */
+        SystemDiagnostics: {
+            /** Live */
+            live: components["schemas"]["DiagnosticLive"][];
+            /** Logical Cpus */
+            logical_cpus: number;
+            /** Items */
+            items: components["schemas"]["DiagnosticPast"][];
+        };
         /** Tanh */
         Tanh: {
             /**
@@ -3780,6 +4129,19 @@ export interface components {
             resource: components["schemas"]["ResourceSample"][];
             /** Process */
             process: components["schemas"]["ProcessSample"][];
+        };
+        /** TelemetryRange */
+        TelemetryRange: {
+            /** From */
+            from: string;
+            /** To */
+            to: string;
+            /** Bucket S */
+            bucket_s: number;
+            /** Points */
+            points: components["schemas"]["RangePoint"][];
+            /** Jobs */
+            jobs: components["schemas"]["RangeJob"][];
         };
         /** TemperatureHigh */
         TemperatureHigh: {
@@ -5063,6 +5425,173 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    telemetry_range_api_v1_telemetry_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                max_points?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelemetryRange"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    system_alerts_api_v1_system_alerts_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                job_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemAlerts"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    system_diagnostics_api_v1_system_diagnostics_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemDiagnostics"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    system_models_api_v1_system_models_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_jobs_api_v1_system_compare_get: {
+        parameters: {
+            query: {
+                a: string;
+                b: string;
+                align?: "time" | "epoch";
+                max_points?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOverlay"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

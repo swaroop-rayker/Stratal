@@ -15,6 +15,7 @@ import { ReportScreen } from "./screens/report/ReportScreen";
 import { ReviewScreen } from "./screens/review/ReviewScreen";
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { StudyScreen } from "./screens/studies/StudyScreen";
+import { SystemScreen } from "./screens/system/SystemScreen";
 import { VersionScreen } from "./screens/version/VersionScreen";
 import { AppShell } from "./shell/AppShell";
 
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
           { path: "models/:lineageId", element: <LineageScreen /> },
           { path: "runs/new", element: <RunScreen /> },
           { path: "studies/:studyId", element: <StudyScreen /> },
+          { path: "system", element: <SystemScreen /> },
           { path: "settings", element: <SettingsScreen /> },
           { path: "*", element: <Placeholder screen="Not found" crumb="Not found" /> },
         ],

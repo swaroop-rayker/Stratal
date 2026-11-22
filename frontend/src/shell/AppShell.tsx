@@ -23,6 +23,7 @@ const SHORTCUTS: [string, ReactNode][] = [
   ["/", "Filter this list"],
   ["g j", "Jobs"],
   ["g m", "Models"],
+  ["g s", "System"],
   ["j", <>Next row (<kbd>k</kbd> previous)</>],
   ["g a", "Active job"],
   ["Enter", "Open the row"],
@@ -89,6 +90,7 @@ export function AppShell() {
       "g d": () => void navigate("/datasets"),
       "g j": () => void navigate("/jobs"),
       "g m": () => void navigate("/models"),
+      "g s": () => void navigate("/system"),
       "g a": () => {
         const job = active.data?.items[0];
         if (job) void navigate(`/jobs/${job.id}`);
@@ -125,6 +127,14 @@ export function AppShell() {
           ))}
           <div className="foot">
             <HealthDot />
+            <NavLink className="nav" to="/system" aria-label="System">
+              <Icon name="chart" />
+              <span className="label">System</span>
+              <kbd>g s</kbd>
+              <span className="tip rail-tip" aria-hidden="true">
+                System · g s
+              </span>
+            </NavLink>
             <NavLink className="nav" to="/settings" aria-label="Settings">
               <Icon name="sliders" />
               <span className="label">Settings</span>
