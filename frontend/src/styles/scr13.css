@@ -40,7 +40,7 @@
 .scr13 .sys-custom label { display: inline-flex; align-items: center; gap: var(--sp-2); }
 
 /* lanes: labels left, the jobs strip and the canvas right, one width */
-.scr13 .sys-lanes { display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: var(--sp-3); row-gap: var(--sp-2); align-items: start; }
+.scr13 .sys-lanes { display: grid; grid-template-columns: 168px minmax(0, 1fr); column-gap: var(--sp-3); row-gap: var(--sp-2); align-items: start; }
 .scr13 .sys-lanes .lab { font-size: var(--fs-12); color: var(--text-primary); line-height: 1.25; }
 .scr13 .sys-lanes .lab i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); margin-right: var(--sp-1); }
 .scr13 .sys-lanes .lab small { display: block; color: var(--text-secondary); font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; }
