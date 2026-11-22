@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     thermal_resume_c: float = 75.0
     # RUN-1.7 (OC-3): a running stage with no progress or activity for this long is stalled.
     stall_timeout_s: float = 300.0
+    # MON-2.6 (OC-7): alert above these shares of the card's VRAM and the VM's RAM, and
+    # MON-3.2: disk reads at least this fast count as the bottleneck (ADR-0020). Until the
+    # monitoring section is saved on SCR-14.
+    vram_alert_percent: float = 90.0
+    ram_alert_percent: float = 85.0
+    disk_bottleneck_mb_s: float = 50.0
     # Time a cancelled child gets to stop by itself before its process group is killed.
     cancel_grace_s: float = 10.0
     # The job's own reporter thread (process RSS, PyTorch allocator).

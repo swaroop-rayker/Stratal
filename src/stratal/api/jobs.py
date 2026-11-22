@@ -89,6 +89,7 @@ def event_view(row: EventRow) -> Json:
         "reason": row.reason,
         "suggested_action": row.suggested_action,
         "attempt": row.attempt,
+        "caused_by": str(row.caused_by) if row.caused_by is not None else None,
     }
 
 

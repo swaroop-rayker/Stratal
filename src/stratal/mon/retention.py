@@ -31,7 +31,7 @@ RESOURCE_AVERAGED = (
     "disk_read_mb_s",
     "disk_write_mb_s",
 )
-PROCESS_AVERAGED = ("rss_mb", "torch_allocated_mb", "torch_reserved_mb")
+PROCESS_AVERAGED = ("rss_mb", "torch_allocated_mb", "torch_reserved_mb", "cpu_cores")
 PROCESS_MAXIMUM = ("torch_max_allocated_mb",)
 
 BATCH = timedelta(hours=6)

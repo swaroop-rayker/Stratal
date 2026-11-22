@@ -191,6 +191,7 @@ class Event(Base):
         Index("ix_events_job_id", "job_id", "id"),
         Index("ix_events_warn_error", "id", postgresql_where=text("level IN ('WARN', 'ERROR')")),
         Index("ix_events_ts_brin", "ts", postgresql_using="brin"),
+        Index("ix_events_caused_by", "caused_by", postgresql_where=text("caused_by IS NOT NULL")),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -210,6 +211,9 @@ class Event(Base):
     reason: Mapped[str | None] = mapped_column(Text)
     suggested_action: Mapped[str | None] = mapped_column(Text)
     attempt: Mapped[int | None] = mapped_column(Integer)
+    # The event_uid of the alert that caused this event (ADR-0020 rule 4). No foreign key:
+    # the writer knows the alert's uid before its row exists.
+    caused_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
 
 
 class ResourceSample(Base):
@@ -254,6 +258,8 @@ class ProcessSample(Base):
     torch_allocated_mb: Mapped[float | None] = mapped_column(REAL)
     torch_reserved_mb: Mapped[float | None] = mapped_column(REAL)
     torch_max_allocated_mb: Mapped[float | None] = mapped_column(REAL)
+    # CPU time of the job's process tree per wall second, in cores (MON-3.2, OC-12).
+    cpu_cores: Mapped[float | None] = mapped_column(REAL)
 
 
 class ResourceSample1m(Base):
@@ -305,6 +311,7 @@ class ProcessSample1m(Base):
     torch_allocated_mb: Mapped[float | None] = mapped_column(REAL)
     torch_reserved_mb: Mapped[float | None] = mapped_column(REAL)
     torch_max_allocated_mb: Mapped[float | None] = mapped_column(REAL)
+    cpu_cores: Mapped[float | None] = mapped_column(REAL)
 
 
 class Derivation(Base):

@@ -333,6 +333,7 @@ Since M11 a version's detail has `children` (`[{id, lineage_id, lineage_name, we
 
 - **Retention** (`retention`, REG-2.3, REG-2.4, REG-2.10): `values` is `{keep_intermediate: 0–100 | "all", overrides: {lineage_id: 0–100 | "all"}}`; `schema` is its JSON Schema, with `x-applies` on each field; `lineages` lists each lineage's `keep_intermediate` in force, its `source` and its current `intermediates` and `intermediates_bytes`. 
 - **Training** (`training`, RUN-1.3, RUN-1.6, RUN-1.7): `values` is `{checkpoint_interval_min: 1–60, thermal_pause_c: 60–100, thermal_resume_c, stall_timeout_s: 60–3600}`; `thermal_resume_c` must be at least 5 below `thermal_pause_c`, and `thermal_pause_c` at most the card's slowdown point. A field's problem is `422 validation_error` with `errors[].loc` = `["values", field]`. `context` is `{gpu_slowdown_c, gpu_temp_high_7d: {celsius, job_id, at} | null, running_jobs}`; `lineages` is null. The section is the retention section's sibling in `sections`; retention's `context` is null. The watchdog applies a saved section from its next check; the checkpoint interval applies to new runs (NFR-4).
+- **Monitoring** (`monitoring`, MON-2.2, MON-2.6, MON-3.2; M11, ADR-0020 rule 14): `values` is `{sample_interval_active_s: 0.5–10, sample_interval_idle_s: 2–60 and at least the active one, vram_alert_percent: 50–99, ram_alert_percent: 50–99, disk_bottleneck_mb_s: 5–2000}`; `context` and `lineages` are null. The alerts use a save within 5 s, the sampler within 30 s.
 - `version` must be the one read; otherwise `409 conflict` with the current `version`.
 - A save that would delete weights is refused with `409 confirmation_required` and the `plan`; the same body with `confirm: plan.token` saves it and queues a retention job that deletes only that plan's versions (`job_id`). If anything changed in between, the token no longer matches and a new plan is returned the same way (ADR-0015 rule 7).
 - An unknown lineage in `overrides` is `422 validation_error`.
@@ -397,6 +398,18 @@ Since M11 a version's detail has `children` (`[{id, lineage_id, lineage_name, we
 | `GET /config/defaults` | Current defaults | `200` |
 
 Built in M6 (2026-11-16) for the Start pipeline drawer. The names are the stage names, in pipeline order: `GET /config/schemas` gives `{items: [{name, queue, title}]}`, `title` being the config model's class. `GET /config/defaults` gives `{stage: config}`, each as a pipeline with no overrides would resolve it. An unknown name is `404 not_found`.
+
+### 3.13 System monitor (M11, SCR-13; MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4; [ADR-0020](decisions/ADR-0020-alerts-and-diagnostics.md) rule 13)
+
+| Method and path | Purpose | Success |
+|---|---|---|
+| `GET /telemetry?from=&to=&max_points=` | The machine over a range (default the last hour): at most `max_points` time buckets (10–2000, default 600), each the mean of its samples, with `minute_average` true for points from the one-minute table (NFR-12); and the jobs that ran in the range with their stages | `200 {from, to, bucket_s, points, jobs}` |
+| `GET /system/alerts?from=&to=&job_id=&limit=` | Alerts fired in the range, newest first: `{code, firing, fired, cleared, actions, lasted_s}`, `actions` being the events whose `caused_by` is the alert; with the `thresholds` in force | `200 {items, thresholds}` |
+| `GET /system/diagnostics?from=&to=&limit=` | `live`: every running stage's expected resource (MON-3's table), what was observed over the last 30 s (GPU %, the job's CPU in cores against its capacity, disk reads) and the diagnosis the watchdog would give; `items`: past diagnoses with their clearing and duration | `200 {live, logical_cpus, items}` |
+| `GET /system/models?from=&to=&limit=` | Model loads and unloads, newest first (MON-3.3) | `200` list of Event |
+| `GET /system/compare?a=&b=&align=time\|epoch&max_points=` | Two jobs' machine and process series on one axis: seconds spent running (pauses and queueing removed), or the epoch reached for two training runs over the epochs both ran; each side's means and peaks. `epoch_unavailable` says why epoch alignment cannot be used | `200 {align, common_epochs, epoch_unavailable, a, b}`; `422 validation_error` for `align=epoch` when it cannot be used; `404 not_found` for an unknown job |
+
+Built in M11 (2026-11-22). A range whose `from` is not before `to` is `422 validation_error`. New alerts, diagnoses and loads are ordinary events on the global stream (§4). Every Event gains `caused_by` (DATA_MODEL.md §4.6), and process samples gain `cpu_cores`. The settings gain a `monitoring` section (§3.10).
 
 ### 3.8 Host script
 

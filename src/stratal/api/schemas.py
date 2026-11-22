@@ -121,6 +121,8 @@ class Event(_Model):
     reason: str | None
     suggested_action: str | None
     attempt: int | None
+    caused_by: str | None = None
+    """The ``event_uid`` of the alert that caused this event (MON-2.7, ADR-0020)."""
 
 
 class EventList(_Model):
@@ -370,6 +372,8 @@ class ProcessSample(_Model):
     torch_allocated_mb: float | None
     torch_reserved_mb: float | None
     torch_max_allocated_mb: float | None
+    cpu_cores: float | None = None
+    """The job's process tree's CPU, in cores (MON-3.2)."""
 
 
 class Telemetry(_Model):
@@ -746,7 +750,7 @@ class TrainingContext(_Model):
 
 
 class SettingsSection(_Model):
-    name: Literal["retention", "training"]
+    name: Literal["retention", "training", "monitoring"]
     title: str
     requirements: list[str]
     values: Json
@@ -956,3 +960,172 @@ class StudyTrialList(_Model):
 
 ModelVersionDetail.model_rebuild()
 Prediction.model_rebuild()
+
+
+# -- system monitor (SCR-13; MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4; ADR-0020) -------
+
+
+class RangePoint(_Model):
+    """One time bucket's mean of the machine samples (SCR-13's lanes)."""
+
+    ts: str
+    minute_average: bool
+    """From the one-minute averages kept beyond the raw retention (NFR-12)."""
+    cpu_percent: float | None
+    ram_used_mb: float | None
+    ram_total_mb: float | None
+    gpu_util_percent: float | None
+    vram_used_mb: float | None
+    vram_total_mb: float | None
+    gpu_temp_c: float | None
+    disk_read_mb_s: float | None
+
+
+class RangeStage(_Model):
+    name: str
+    status: str
+    started_at: str | None
+    finished_at: str | None
+
+
+class RangeJob(_Model):
+    job_id: str
+    kind: str
+    state: str
+    started_at: str | None
+    finished_at: str | None
+    stages: list[RangeStage]
+
+
+class TelemetryRange(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    from_: str = Field(alias="from")
+    to: str
+    bucket_s: float
+    points: list[RangePoint]
+    jobs: list[RangeJob]
+    """Jobs that ran in the range, with their stages (the jobs strip)."""
+
+
+class AlertThresholds(_Model):
+    vram_percent: float
+    ram_percent: float
+    pause_c: float
+    resume_c: float
+    stall_s: float
+
+
+class SystemAlert(_Model):
+    code: str
+    """``vram_high``, ``ram_high``, ``gpu_hot`` or ``no_progress``."""
+    firing: bool
+    fired: Event
+    cleared: Event | None
+    actions: list[Event]
+    """Events that record this alert in ``caused_by``: a pause, a resume, ``stalled``, a
+    linked out-of-memory failure."""
+    lasted_s: float | None
+
+
+class SystemAlerts(_Model):
+    items: list[SystemAlert]
+    thresholds: AlertThresholds
+
+
+class DiagnosticObserved(_Model):
+    samples: int
+    gpu_percent: float | None
+    cpu_cores: float | None
+    """The job's process tree, in cores (OC-12)."""
+    capacity_cores: float
+    """``1 + loader_workers``, at most the logical CPUs."""
+    loader_workers: int
+    disk_read_mb_s: float
+
+
+class DiagnosticThresholds(_Model):
+    gpu_low_percent: float
+    cpu_saturated_share: float
+    disk_mb_s: float
+
+
+class DiagnosisText(_Model):
+    code: str
+    message: str
+    reason: str
+    suggested_action: str
+
+
+class DiagnosticLive(_Model):
+    job_id: str
+    stage: str
+    queue: Literal["cpu", "gpu"]
+    expected: list[str]
+    """MON-3's main resource: ``gpu``, ``cpu``, ``disk``, ``ram``."""
+    running_for_s: float
+    observed: DiagnosticObserved
+    thresholds: DiagnosticThresholds
+    diagnosis: DiagnosisText | None
+
+
+class DiagnosticPast(_Model):
+    fired: Event
+    cleared: Event | None
+    lasted_s: float | None
+
+
+class SystemDiagnostics(_Model):
+    live: list[DiagnosticLive]
+    logical_cpus: int
+    items: list[DiagnosticPast]
+
+
+class OverlayMachinePoint(_Model):
+    x: float
+    """Seconds spent running, or the epoch reached (``align``)."""
+    gpu_util_percent: float | None
+    vram_used_mb: float | None
+    gpu_temp_c: float | None
+    cpu_percent: float | None
+    ram_used_mb: float | None
+    minute_average: bool
+
+
+class OverlayProcessPoint(_Model):
+    x: float
+    rss_mb: float | None
+    torch_allocated_mb: float | None
+    cpu_cores: float | None
+
+
+class OverlaySummary(_Model):
+    seconds_per_epoch: float | None
+    gpu_mean_percent: float | None
+    vram_peak_mb: float | None
+    torch_allocated_peak_mb: float | None
+    rss_mean_mb: float | None
+    cpu_cores_mean: float | None
+    gpu_temp_max_c: float | None
+
+
+class OverlaySide(_Model):
+    job_id: str
+    kind: str
+    state: str
+    label: str
+    started_at: str | None
+    running_s: float
+    epochs: int | None
+    machine: list[OverlayMachinePoint]
+    process: list[OverlayProcessPoint]
+    summary: OverlaySummary
+
+
+class JobOverlay(_Model):
+    align: Literal["time", "epoch"]
+    common_epochs: int | None
+    epoch_unavailable: str | None
+    """Why the two cannot be aligned by epoch, when they cannot."""
+    a: OverlaySide
+    b: OverlaySide

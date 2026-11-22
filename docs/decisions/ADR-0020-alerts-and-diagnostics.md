@@ -142,6 +142,15 @@
 - `test_MON_4_4_*`: alignment by time with a pause removed, alignment by epoch, the series thinned; the overlay renders (Vitest).
 - `test_MON_4_5_*` (P2, if time).
 
+## As built in M11 (2026-11-22)
+
+- **The inference service's events reach the log.** Its holder used a log-only sink, so its loads and unloads never reached `events`; rule 9's claim that it "needs nothing more" was wrong. It now has a `StreamSink` (`stratal.mon.sink`), which sends each event to the stream with no job, and to the log as before. No spool file: the service has no job folder.
+- **The sink protocol gains `event_type`** (`activity`, `model_loaded`, `model_unloaded`), so the VRAM manager can type its two result events without a second channel. `JobContext`, `LogSink`, `StreamSink` and the test sink take it.
+- **A stall alert also clears when the supervisor ends the stalled stage**, not only when the watchdog sees progress return: the watchdog clears any open `no_progress` alert whose job is no longer `stalled` (found by the integration test).
+- **An unknown stage on the GPU queue is expected to be GPU-bound** in `stratal.mon.diagnose.expected`, as the synthetic test stage is.
+- **`GET /telemetry` also returns the jobs in the range with their stages**, so SCR-13's jobs strip needs one request, not a second one to `GET /jobs`.
+- **Alert limits are read at most every 5 s and sampling intervals every 30 s** (`_AlertLimits` in `stratal.mon.__main__`), so the sampler adds no query per sample (NFR-11).
+
 ## Alternatives
 
 | Option | Why not |

@@ -9,9 +9,15 @@ Three checks, every few seconds:
 2. **Stall (RUN-1.7).** A stage whose heartbeat is fresh but which has reported
    no progress or activity for ``stall_after_s`` becomes ``stalled``; when
    progress returns it is ``running`` again.
-3. **Heat (RUN-1.6).** At ``thermal_pause_c`` the running GPU job is asked to
-   pause, with the reason ``thermal``; below ``thermal_resume_c`` the jobs paused
-   for that reason, and only those, are resumed.
+3. **Heat (RUN-1.6).** The ``gpu_hot`` alert (:mod:`stratal.mon.alerts`, run by the
+   sampler) calls :meth:`Watchdog.pause_for_heat` once the GPU has been at
+   ``thermal_pause_c`` for 5 s: the running GPU job is asked to pause, with the reason
+   ``thermal``, its action recording the alert (ADR-0020). Below ``thermal_resume_c``
+   the jobs paused for that reason, and only those, are resumed here.
+5. **Diagnostics (MON-3.2, ADR-0020 part B).** Each running GPU stage's last 30 s
+   against :func:`stratal.mon.diagnose.diagnose`; a diagnosis is a ``diagnostic``
+   event, once per crossing and at most every 10 minutes per stage. It does not act
+   on the job, so it is not in :meth:`Watchdog.run_once`'s result.
 4. **Waiting studies (ADR-0018 rule 5).** A deep-learning study between its steps has
    no process and no heartbeat; it is checked through its current trial instead. A
    trial still queued, running or paused means all is well; a trial that ended with
@@ -20,6 +26,7 @@ Three checks, every few seconds:
 """
 
 import time
+import uuid
 from collections.abc import Callable
 from datetime import timedelta
 from typing import Literal
@@ -29,8 +36,10 @@ from sqlalchemy.orm import Session
 
 from stratal.core.bus import Bus
 from stratal.core.logging import get_logger
+from stratal.db.models import Event as EventRow
 from stratal.db.models import Job, JobStage, ResourceSample
 from stratal.hpo import control as hpo_control
+from stratal.mon import diagnose as diag
 from stratal.mon.events import Event, MetricValue
 from stratal.mon.store import insert_events
 from stratal.runtime import jobs as job_service
@@ -40,6 +49,15 @@ from stratal.runtime.states import TERMINAL, transition
 log = get_logger(__name__)
 
 SLEEP_JUMP_S = 30.0
+DIAGNOSIS_EVERY_S = 600.0
+"""A stage gets the same diagnosis at most once in this long (ADR-0020 rule 8)."""
+
+
+class _Diagnosed:
+    def __init__(self, uid: uuid.UUID, at: float) -> None:
+        self.uid = uid
+        self.at = at
+        self.open = True
 
 
 class Watchdog:
@@ -58,6 +76,7 @@ class Watchdog:
         limits: Callable[[], tuple[float, float, float]] | None = None,
         wall: Callable[[], float] = time.time,
         mono: Callable[[], float] = time.monotonic,
+        disk_threshold: Callable[[], float] | None = None,
     ) -> None:
         self._engine = engine
         self._enqueue = enqueue
@@ -74,6 +93,8 @@ class Watchdog:
         self._mono = mono
         self._last = (wall(), mono())
         self._grace_until = 0.0
+        self._disk_threshold = disk_threshold or (lambda: 50.0)
+        self._diagnosed: dict[tuple[str, str, int], _Diagnosed] = {}
 
     def _slept(self) -> float:
         """Seconds the machine was suspended since the last check, if any (ADR-0008)."""
@@ -159,7 +180,130 @@ class Watchdog:
         acted += self._check_waiting()
         acted += self._check_stalls()
         acted += self._check_heat()
+        try:
+            self.check_diagnostics()
+        except Exception as exc:  # a hint must never stop the checks that act
+            log.warning("diagnostics_failed", reason=str(exc)[:300])
         return acted
+
+    # ------------------------------------------------------------------ MON-3.2
+    def check_diagnostics(self) -> list[str]:
+        """Diagnose each running GPU stage; returns the codes written (tests)."""
+        written: list[str] = []
+        try:
+            disk = float(self._disk_threshold())
+        except Exception:
+            disk = 50.0
+        with Session(self._engine) as session, session.begin():
+            now = session.scalar(select(func.now()))
+            assert now is not None
+            rows = session.execute(
+                select(Job, JobStage)
+                .join(JobStage, (JobStage.job_id == Job.id) & (JobStage.status == "running"))
+                .where(Job.state == "running", JobStage.queue == "gpu")
+            ).all()
+            live = {(job.id, stage.name, job.attempt) for job, stage in rows}
+            for key in [k for k in self._diagnosed if k not in live]:
+                del self._diagnosed[key]
+            for job, stage in rows:
+                key = (job.id, stage.name, job.attempt)
+                window = diag.read_window(
+                    session, job_id=job.id, stage=stage.name, started_at=stage.started_at, now=now
+                )
+                seen = window.observed
+                found = diag.diagnose(
+                    seen,
+                    queue=stage.queue,
+                    running_for_s=window.running_for_s,
+                    disk_threshold_mb_s=disk,
+                )
+                last = self._diagnosed.get(key)
+                if last is not None and last.open:
+                    busy = (
+                        seen.samples >= diag.MIN_SAMPLES
+                        and seen.gpu_percent is not None
+                        and seen.gpu_percent >= diag.GPU_LOW
+                    )
+                    if busy:
+                        last.open = False
+                        self._diagnostic(
+                            session,
+                            job,
+                            stage.name,
+                            "INFO",
+                            f"GPU busy again: {seen.gpu_percent:.0f}%",
+                            seen,
+                            state="cleared",
+                            caused_by=last.uid,
+                        )
+                        written.append("cleared")
+                    continue
+                if found is None:
+                    continue
+                if last is not None and self._mono() - last.at < DIAGNOSIS_EVERY_S:
+                    continue
+                uid = uuid.uuid4()
+                self._diagnosed[key] = _Diagnosed(uid, self._mono())
+                self._diagnostic(
+                    session,
+                    job,
+                    stage.name,
+                    "WARN",
+                    found.message,
+                    seen,
+                    state="fired",
+                    code=found.code,
+                    reason=found.reason,
+                    action=found.action,
+                    uid=uid,
+                )
+                written.append(found.code)
+        return written
+
+    def _diagnostic(
+        self,
+        session: Session,
+        job: Job,
+        stage: str,
+        level: Literal["INFO", "WARN"],
+        message: str,
+        seen: diag.Observed,
+        *,
+        state: str,
+        code: str | None = None,
+        reason: str | None = None,
+        action: str | None = None,
+        uid: uuid.UUID | None = None,
+        caused_by: uuid.UUID | None = None,
+    ) -> None:
+        metrics: dict[str, MetricValue] = {"state": state, "samples": seen.samples}
+        if code is not None:
+            metrics["code"] = code
+        if seen.gpu_percent is not None:
+            metrics["gpu_percent"] = round(seen.gpu_percent, 1)
+        if seen.cpu_cores is not None:
+            metrics["cpu_cores"] = round(seen.cpu_cores, 2)
+        metrics["capacity_cores"] = seen.capacity_cores
+        metrics["loader_workers"] = seen.loader_workers
+        metrics["disk_read_mb_s"] = round(seen.disk_read_mb_s, 1)
+        insert_events(
+            session,
+            [
+                Event(
+                    event_uid=uid or uuid.uuid4(),
+                    job_id=job.id,
+                    stage=stage,
+                    attempt=job.attempt,
+                    type="diagnostic",
+                    level=level,
+                    message=message,
+                    reason=reason,
+                    suggested_action=action,
+                    metrics=metrics,
+                    caused_by=caused_by,
+                )
+            ],
+        )
 
     # ------------------------------------------------------------------ ADR-0018 rule 5
     def _check_waiting(self) -> list[str]:
@@ -239,6 +383,24 @@ class Watchdog:
                         f"No progress or activity from stage {stage.name} for more than "
                         f"{self.stall_after_s:.0f} s, while its worker is alive."
                     )
+                    alert = uuid.uuid4()
+                    self._event(
+                        session,
+                        job,
+                        stage.name,
+                        "WARN",
+                        f"No progress from {stage.name} for {self.stall_after_s:.0f} s",
+                        code="no_progress",
+                        reason=reason,
+                        action="Open the job's log to see what the stage was doing.",
+                        event_type="alert",
+                        uid=alert,
+                        extra={
+                            "state": "fired",
+                            "value": round(self.stall_after_s),
+                            "threshold": round(self.stall_after_s),
+                        },
+                    )
                     transition(session, job, "stalled", reason=reason, actor="watchdog")
                     self._event(
                         session,
@@ -251,15 +413,70 @@ class Watchdog:
                         action="Open the job's log to see what the stage was doing. It "
                         "becomes running again by itself if progress returns; otherwise "
                         "cancel and retry it.",
+                        caused_by=alert,
                     )
                     acted.append(job.id)
                 elif job.state == "stalled" and not silent:
+                    alert = _latest_alert(session, "no_progress", job.id)
                     transition(session, job, "running", reason="progress resumed", actor="watchdog")
+                    if alert is not None:
+                        self._event(
+                            session,
+                            job,
+                            stage.name,
+                            "INFO",
+                            f"Progress from {stage.name} again",
+                            code="no_progress",
+                            event_type="alert",
+                            caused_by=alert,
+                            extra={"state": "cleared"},
+                        )
                     self._event(
-                        session, job, stage.name, "INFO", "Progress resumed: job running again"
+                        session,
+                        job,
+                        stage.name,
+                        "INFO",
+                        "Progress resumed: job running again",
+                        caused_by=alert,
                     )
                     acted.append(job.id)
+            self._clear_stall_alerts(session)
         return acted
+
+    def _clear_stall_alerts(self, session: Session) -> None:
+        """Clear the ``no_progress`` alerts of jobs that left ``stalled`` some other way:
+        the supervisor ends a stalled job's stage, or the job is cancelled."""
+        open_alerts = session.execute(
+            select(EventRow.event_uid, EventRow.job_id, EventRow.stage)
+            .where(
+                EventRow.level == "WARN",  # the partial index on warnings and errors
+                EventRow.type == "alert",
+                EventRow.metrics["code"].astext == "no_progress",
+                EventRow.metrics["state"].astext == "fired",
+                EventRow.ts >= func.now() - timedelta(days=1),
+            )
+            .order_by(EventRow.id)
+        ).all()
+        for uid, job_id, stage in open_alerts:
+            done = session.scalar(
+                select(EventRow.id)
+                .where(EventRow.caused_by == uid, EventRow.metrics["state"].astext == "cleared")
+                .limit(1)
+            )
+            job = session.get(Job, job_id) if job_id else None
+            if done is not None or job is None or job.state == "stalled":
+                continue
+            self._event(
+                session,
+                job,
+                stage,
+                "INFO",
+                f"No longer stalled: the job is {job.state}",
+                code="no_progress",
+                event_type="alert",
+                caused_by=uid,
+                extra={"state": "cleared"},
+            )
 
     # ------------------------------------------------------------------ RUN-1.6
     def _latest_gpu_temperature(self) -> float | None:
@@ -280,13 +497,13 @@ class Watchdog:
         temperature = self._temperature()
         if temperature is None:
             return []
-        if temperature >= self.thermal_pause_c:
-            return self._pause_for_heat(temperature)
         if temperature < self.thermal_resume_c:
             return self._resume_after_heat(temperature)
         return []
 
-    def _pause_for_heat(self, temperature: float) -> list[str]:
+    def pause_for_heat(self, temperature: float, caused_by: uuid.UUID | None = None) -> list[str]:
+        """Pause every running GPU job for heat (RUN-1.6). Called by the ``gpu_hot``
+        alert, whose ``event_uid`` each pause records. Returns the paused jobs."""
         acted: list[str] = []
         with Session(self._engine) as session, session.begin():
             rows = session.execute(
@@ -309,6 +526,7 @@ class Watchdog:
                     action=f"None needed: it resumes by itself below "
                     f"{self.thermal_resume_c:.0f} °C. Check the laptop's airflow.",
                     temperature=temperature,
+                    caused_by=caused_by,
                 )
                 acted.append(job_id)
         for job_id in acted:
@@ -322,6 +540,7 @@ class Watchdog:
             paused = session.scalars(
                 select(Job.id).where(Job.state == "paused", Job.pause_reason == "thermal")
             ).all()
+            alert = _latest_alert(session, "gpu_hot") if paused else None
             for job_id in paused:
                 job, item = job_service.request_resume(
                     session,
@@ -337,6 +556,7 @@ class Watchdog:
                     f"GPU cooled to {temperature:.0f} °C: resuming {job_id}",
                     code="thermal_resume",
                     temperature=temperature,
+                    caused_by=alert,
                 )
                 to_enqueue.append(item)
                 acted.append(job_id)
@@ -368,25 +588,32 @@ class Watchdog:
         reason: str | None = None,
         action: str | None = None,
         temperature: float | None = None,
+        caused_by: uuid.UUID | None = None,
+        event_type: Literal["action", "alert"] = "action",
+        uid: uuid.UUID | None = None,
+        extra: dict[str, MetricValue] | None = None,
     ) -> None:
         metrics: dict[str, MetricValue] = {}
         if code is not None:
             metrics["code"] = code
         if temperature is not None:
             metrics["gpu_temp_c"] = round(temperature, 1)
+        metrics.update(extra or {})
         insert_events(
             session,
             [
                 Event(
+                    event_uid=uid or uuid.uuid4(),
                     job_id=job.id,
                     stage=stage,
                     attempt=job.attempt,
-                    type="action",
+                    type=event_type,
                     level=level,
                     message=message,
                     reason=reason,
                     suggested_action=action,
                     metrics=metrics or None,
+                    caused_by=caused_by,
                 )
             ],
         )
@@ -410,3 +637,15 @@ class Watchdog:
                 )
         except Exception as exc:
             log.warning("suspend_event_failed", reason=str(exc)[:300])
+
+
+def _latest_alert(session: Session, code: str, job_id: str | None = None) -> uuid.UUID | None:
+    """The ``event_uid`` of the latest firing of ``code`` (for that job, if given)."""
+    query = select(EventRow.event_uid).where(
+        EventRow.type == "alert",
+        EventRow.metrics["code"].astext == code,
+        EventRow.metrics["state"].astext == "fired",
+    )
+    if job_id is not None:
+        query = query.where(EventRow.job_id == job_id)
+    return session.scalar(query.order_by(EventRow.id.desc()).limit(1))

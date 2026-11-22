@@ -31,6 +31,7 @@ _PROCESS_FIELDS = (
     "torch_allocated_mb",
     "torch_reserved_mb",
     "torch_max_allocated_mb",
+    "cpu_cores",
 )
 
 

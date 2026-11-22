@@ -91,7 +91,8 @@ def test_RUN_1_6_heat_pauses_the_gpu_job_and_cooling_resumes_it(runner: Runner) 
     wait_until(lambda: runner.job(gpu_job)["state"] == "running", what="the job to start")
 
     temperatures.append(84.0)
-    assert watchdog.run_once() == [gpu_job]
+    assert watchdog.run_once() == [], "the watchdog only resumes; the gpu_hot alert pauses"
+    assert watchdog.pause_for_heat(84.0) == [gpu_job]  # what the alert calls (ADR-0020)
     thread.join(15)
     job = runner.job(gpu_job)
     assert (job["state"], job["stages"][0]["status"]) == ("paused", "paused")
@@ -123,7 +124,7 @@ def test_RUN_1_6_heat_leaves_cpu_jobs_and_user_pauses_alone(runner: Runner) -> N
     thread = runner.run_in_thread()
     wait_until(lambda: runner.job(cpu_job)["state"] == "running", what="the job to start")
 
-    assert watchdog.run_once() == [], "a CPU job is not paused for the GPU's heat"
+    assert watchdog.pause_for_heat(90.0) == [], "a CPU job is not paused for the GPU's heat"
     with Session(get_engine()) as session, session.begin():
         job_service.request_pause(session, cpu_job)  # the user pauses it
     runner.bus.set_control(cpu_job, "pause")
