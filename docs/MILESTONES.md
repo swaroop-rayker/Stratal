@@ -643,11 +643,11 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] G1 revision for choosing the model kind after the split approved (SCREENS.md, Flow 4); its G2 approved with SCR-09 v2 (G1 v3 and G2 approved 2026-11-20)
 - [x] G2 for SCR-09 v2, SCR-11 v2, SCR-03 v2 and SCR-13 approved, in that order (K11) (SCR-09 v2 and SCR-11 v2 passed 2026-11-20, SCR-03 v2 2026-11-21, SCR-13 2026-11-22)
 - [x] Semantic-duplicate threshold chosen by the owner from the coco10k measurement (K1) (2026-11-21: **0.90**, the recommendation of spike S-10, `docs/spikes/S-10-semantic-threshold.md`; DATA-4.8.AC1's pair: two 90 % opposite-corner crops, one warped 6 %)
-- [ ] `test_MON_2_6_*`: each alert fires in a simulated test
-- [ ] `test_MON_2_7_*`: an alert and its action are shown together in the event log
-- [ ] `test_MON_3_2_*`: the diagnostic fires in a simulated slow-loader test
-- [ ] `test_MON_3_3_*`: an unload event shows VRAM before and after
-- [ ] `test_MON_4_4_*`: two runs' curves overlay
+- [x] `test_MON_2_6_*`: each alert fires in a simulated test (2026-11-22: `test_MON_2_6_alert_rules.py`, 7 unit tests of the state machine; `test_M11_monitoring.py`, each alert stored once with its job or without one, and the thresholds as a settings section)
+- [x] `test_MON_2_7_*`: an alert and its action are shown together in the event log (2026-11-22: `test_M11_monitoring.py`, heat pause and resume recording the alert, an out-of-memory failure linked to a VRAM alert, no progress and `stalled`; Vitest `System.test.tsx`; SCR-04's log names the alert)
+- [x] `test_MON_3_2_*`: the diagnostic fires in a simulated slow-loader test (2026-11-22: `test_MON_3_2_diagnose.py`, 6 unit tests; `test_M11_monitoring.py`, planted slow-loader samples give `diag_data_loading` once, cleared when the GPU is busy)
+- [x] `test_MON_3_3_*`: an unload event shows VRAM before and after (2026-11-22: `test_MON_3_3_load_events.py`; live on SCR-13, Florence-2-base 0.44 → 0.00 GB)
+- [x] `test_MON_4_4_*`: two runs' curves overlay (2026-11-22: `test_M11_monitoring.py`, by time with a pause removed and by epoch; Vitest; live on `job_0030` and `job_0051`)
 - [ ] `test_MON_4_5_*` (P2, if time): trends shown for the last N jobs
 - [ ] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included
 - [x] `test_UI_2_1_*` (training entry, Vitest): a tabular split reaches SCR-09's classical mode without SCR-08; a non-tabular split shows *Classical* greyed with its reason; SCR-09 opened without a kind goes to step 2; G3 passed with SCR-09 v2 (the entry's G3 approved 2026-11-20; fine-tuning's G3 follows with RUN-1.10)
@@ -657,7 +657,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] `test_DATA_3_5_*` (P2, if time): the diff lists the changes correctly
 - [ ] `test_DATA_2_3_*` (P2): cropped variants are grouped together and a report is generated
 - [ ] 👤 `test_DATA_4_8_*` (P2): two photos of one scene from different angles land in the same split (written by the agent at the owner's request)
-- [ ] G3 for SCR-13, SCR-03 v2 and SCR-11 v2 (SCR-11 v2 approved 2026-11-21)
+- [ ] G3 for SCR-13, SCR-03 v2 and SCR-11 v2 (SCR-11 v2 approved 2026-11-21, SCR-13 with SCR-04's and SCR-14's addenda 2026-11-22)
 - [ ] Phase-2 acceptance (`tests/acceptance`): a CNN built on SCR-08, trained on a dataset version, test metrics on SCR-11; NFR-1, NFR-2, NFR-4 and NFR-5 measured for training
 - [ ] `test_NFR_11_*` rerun with alerts and diagnostics on
 - [ ] `test_BUG8_*`: a study job's stage duration on SCR-04 covers all its steps, not the last (M10's open point 3)

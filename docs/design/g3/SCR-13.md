@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-13_v1.html`](../screens/SCR-13_v1.html), G2 approved 2026-11-22 |
 | Built | `frontend/src/screens/system/` (`SystemScreen`, `Overview`, `CompareJobs`, `Lanes`), `frontend/src/api/monitor.ts`, `frontend/src/styles/scr13.css`; route `/system` (`?range=`, `?from=&to=`, `?tab=compare&a=&b=&align=`). Addenda: SCR-04's *Compare with…* and linked log lines (`screens/job/`), SCR-14's Monitoring section (`screens/settings/`) |
 | Checked | 2026-11-22, live at 1280 × 1000, dark and light, on the real database: coco10k's first pipeline (`job_0026`, 17 Nov 16:35–17:15) and the two Small CNN runs `job_0030` and `job_0051`, as in the mockup. The monitor was down during the check (E-012, the GPU lost to Docker), so the header showed its error state |
-| Status | Waiting for the owner |
+| Status | **Approved by the owner on 2026-11-22** ("Approved"), with the eight listed differences |
 
 ## Screenshots (in `SCR-13/`)
 
