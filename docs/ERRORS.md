@@ -35,6 +35,16 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-017 — Turning a study on changed SCR-09's estimator under its form
+
+- **Date:** 2026-11-22
+- **Seen:** On SCR-09 in Classical mode, on wine's split with `kmeans` selected, *Turn on* (or a Tune toggle on one of k-means's fields) started a study, and `kmeans` left the estimator list. The select then showed `logistic_regression`, while the sentence beside it and the parameter form were still k-means's. Found while checking the owner's report that logistic regression was missing; it is offered only on classification splits, by design.
+- **Where:** M11, SCR-09 (`frontend/src/screens/build/RunScreen.tsx`); ML-1.1, DATA-5.5, HPO-1.1.
+- **Cause:** The list was filtered, and the estimators that ignore the target were dropped while a study was on. Dropping the selected one left the native select showing the first remaining option, while the page's state still held `kmeans`.
+- **Fix:** Every estimator stays listed, disabled with its reason when the split or a study rules it out. While an estimator that ignores the target is selected, *Turn on* is disabled with its reason and its fields have no Tune toggles (SCR-09's estimator-list addendum, approved 2026-11-22).
+- **Guard:** `test_DATA_5_5_turning_a_study_on_never_changes_the_selected_estimator` (Vitest, `frontend/src/screens/build/TrainEntry.test.tsx`).
+- **Status:** verified (the guard passes; checked live on wine's split, 2026-11-22)
+
 ### E-016 — The raw-hex lint read a record's row key as a colour
 
 - **Date:** 2026-11-22

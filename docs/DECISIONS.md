@@ -781,6 +781,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** One manifest is enough for the funnel, because every version holds every row with the stage that decided it (INV-06). The API caches profiles by version ID in its process. A row is changed for its status, reason code, content or a derived field; `reason_detail` alone is wording only; a field one side lacks is listed once.
 - **Why:** K10 asked for computing on request from manifests and caching by ID; versions never change, so the cache never goes stale. The wording rule is the owner's answer at the low-fi: otherwise a one-row change read as 60.
 
+**Every estimator in SCR-09's list** (ML-1.1, DATA-5.5; SCR-09's estimator-list addendum, approved 2026-11-22)
+- **What:** SCR-09's Classical select lists every estimator in groups (the split's task, the ones that ignore the target, the ones for the other task), disabled with their reason when the split or a study cannot use them; a line under it names those and why; *Turn on* waits for a supervised estimator.
+- **How:** One grouping in `RunScreen.tsx` from each estimator's `tasks` (`GET /ml/estimators/schema`) and the split's task; a native select with option groups and disabled options, described by the line (`aria-describedby`); *Turn on* `aria-disabled` with its reason while an estimator that ignores the target is selected, whose fields then have no Tune toggles.
+- **Why:** A hidden choice read as a missing feature (the owner's report: no logistic regression, on a regression split), and filtering the list under a selection let the select and the form disagree (E-017). The *Train a model* drawer already shows a kind it cannot use, greyed, with the reason.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
