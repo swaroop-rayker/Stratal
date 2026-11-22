@@ -1,6 +1,6 @@
 # ADR-0020 — Alerts, bottleneck diagnostics, load and unload events, run comparison
 
-**Status:** Proposed 2026-11-21, for the owner's approval before any of it is built (M11, K3). Serves MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4 and, if time, MON-4.5 (P2). Follows the owner's kickoff decisions K4 to K7 (MILESTONES.md, M11) and OC-7, OC-12.
+**Status:** Accepted by the owner on 2026-11-22, as proposed, with both recommendations ("Approve as proposed"; proposed 2026-11-21, M11, K3). Serves MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4 and, if time, MON-4.5 (P2). Follows the owner's kickoff decisions K4 to K7 (MILESTONES.md, M11) and OC-7, OC-12.
 
 ## Context
 
@@ -30,7 +30,7 @@
    |---|---|---|---|---|
    | `vram_high` | NVML used ÷ total > 90 % | 5 s | below 85 % | none at the time: warns. A later `gpu_oom` failure of the job it was tagged with links to it (rule 5) |
    | `ram_high` | VM (total − available) ÷ total > 85 % | 5 s | below 80 % | none at the time: warns. A later `host_oom_killed` failure links to it |
-   | `gpu_hot` | GPU temperature ≥ the pause limit (83 °C, SCR-14) | 5 s | below the resume limit (75 °C, SCR-14), see question 1 | pause the running GPU job (RUN-1.6) |
+   | `gpu_hot` | GPU temperature ≥ the pause limit (83 °C, SCR-14) | 5 s | below the resume limit (75 °C, SCR-14; point 1 below) | pause the running GPU job (RUN-1.6) |
    | `no_progress` | a running stage silent for the stall timeout (300 s, SCR-14) | the timeout itself | when progress returns | mark the job `stalled` (RUN-1.7) |
 
    The thresholds are settings (rule 9). "5 points below" is in percentage points for VRAM and RAM.
@@ -53,7 +53,7 @@
    - A partial index on `(caused_by) where caused_by is not null` serves the reverse lookup: the actions an alert caused.
 
 5. **Actions and their links.**
-   - `gpu_hot` calls the watchdog's existing pause (one transaction, as now). The `thermal_pause` action event gets `caused_by`. The watchdog's own heat check keeps only the resume side; the pause now waits for the 5 s hold (question 2).
+   - `gpu_hot` calls the watchdog's existing pause (one transaction, as now). The `thermal_pause` action event gets `caused_by`. The watchdog's own heat check keeps only the resume side; the pause now waits for the 5 s hold (point 2 below).
    - `no_progress` writes the alert, then the existing `stalled` action with `caused_by`, in one transaction.
    - For VRAM and RAM there is no action at the time. When `insert_events` (`stratal.mon.store`, the one function every writer uses) stores an event with `code` `gpu_oom` or `host_oom_killed`, it sets `caused_by`. It points to the latest `vram_high` or `ram_high` alert for that job if that alert is still fired or cleared less than 60 s earlier. One indexed lookup, only for those two rare codes.
    - The suggested batch of RUN-1.5 stays in the failure's own event: it is the "smaller batch" action.
@@ -154,12 +154,12 @@
 ## Consequences
 
 - Two schema changes and a migration: `events.caused_by` and `process_samples.cpu_cores` (with `process_samples_1m.cpu_cores`), plus the event type `diagnostic`. All are nullable or additive, so older rows stay valid.
-- RUN-1.6's pause waits 5 s longer than today, unless question 2 is answered otherwise. Its tests change to feed held samples.
+- RUN-1.6's pause waits 5 s longer than today (point 2). Its tests change to feed held samples.
 - The VRAM manager's events change type. SCR-04 shows them as before; filters by type gain two values.
 - A diagnosis is a hint in words, not a measurement of the cause. The disk threshold is a guess until the acceptance run.
 - SCR-13 (G2 next) has concrete sources for each region. SCR-04's and SCR-14's addenda are checked at G3 (K11).
 
-## Questions for the owner
+## Points settled by the owner (2026-11-22)
 
-1. **`gpu_hot` re-arms at the resume limit (75 °C), not 5 °C below the pause limit (78 °C).** Recommended. The job stays paused until 75 °C anyway, so at 78 °C a second crossing would fire an alert about a job that is already paused.
-2. **The thermal pause waits for the 5 s hold, like every alert.** Recommended. Today it pauses on one reading at 83 °C. Five seconds at 83 °C does no harm, and one noisy reading no longer pauses a run.
+1. **`gpu_hot` re-arms at the resume limit (75 °C), not 5 °C below the pause limit (78 °C): accepted.** The job stays paused until 75 °C anyway, so at 78 °C a second crossing would fire an alert about a job that is already paused.
+2. **The thermal pause waits for the 5 s hold, like every alert: accepted.** Today it pauses on one reading at 83 °C. Five seconds at 83 °C does no harm, and one noisy reading no longer pauses a run.

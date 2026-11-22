@@ -638,7 +638,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] ADR-0020 (alerts and diagnostics) approved (K3)
+- [x] ADR-0020 (alerts and diagnostics) approved (K3) (2026-11-22, "Approve as proposed", with both recommendations: `gpu_hot` re-arms at the resume limit; the thermal pause waits for the 5 s hold)
 - [x] The RUN-1.10 addendum to ADR-0014 and ADR-0015 approved (K3) (both Addendum A, 2026-11-20, "Approve both")
 - [x] G1 revision for choosing the model kind after the split approved (SCREENS.md, Flow 4); its G2 approved with SCR-09 v2 (G1 v3 and G2 approved 2026-11-20)
 - [ ] G2 for SCR-09 v2, SCR-11 v2, SCR-03 v2 and SCR-13 approved, in that order (K11) (SCR-09 v2 and SCR-11 v2 passed 2026-11-20, SCR-03 v2 2026-11-21)

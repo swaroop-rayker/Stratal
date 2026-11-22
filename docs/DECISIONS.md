@@ -766,6 +766,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Only versions whose `dataset_version_id` is the split and that have `test_*` metrics are compared, by the API, so the page cannot mix splits. The interval is EVAL-1.1's `wilson_interval` over `round(accuracy × rows)`. Score on test copies the study's single test evaluation but keys on the version, with `SELECT … FOR UPDATE` and a check for existing test metrics, so it writes at most once. Try it's table form takes its columns and kinds from the split's test rows, which leave the target out.
 - **Why:** K8 limits comparison to one split and adds no new evaluation, except scoring pre-M10 versions once, as approved with the low-fi; reusing `test_eval` keeps one scoring path. The interval is the point of the page on small splits: wine's 18 test rows cannot tell 0.944 from 1.000.
 
+**Alerts and diagnostics** (MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4; [ADR-0020](decisions/ADR-0020-alerts-and-diagnostics.md), accepted 2026-11-22; not built yet)
+- **What:** Four alerts (`vram_high`, `ram_high`, `gpu_hot`, `no_progress`) linked to their actions; three diagnostics for a GPU stage with the GPU under 30 %; typed load and unload events with PyTorch's and the card's figures; two runs overlaid by running time or epoch.
+- **How:** Resource alerts are a pure state machine run by the sampler on each sample (5 s hold, once per crossing, re-armed below a lower point; `gpu_hot` at the resume limit). Alerts, clearings and diagnostics are events; `events.caused_by` holds the alert's `event_uid` on the action, and `insert_events` links a `gpu_oom` or `host_oom_killed` failure to a recent alert of its job. The job's reporter adds `cpu_cores`; the watchdog diagnoses each running GPU stage over 30 s with the same pure function the API uses.
+- **Why:** The sampler already has the figures, so alerts cost no query and are not late. One column on events records the cause, as K4 asks, without a second record of what events already hold. OC-12 needs the job's own CPU, since a saturated loader core is about 6 % of the machine.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
