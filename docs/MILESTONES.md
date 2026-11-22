@@ -30,8 +30,8 @@
 | M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
 | M11 | Dashboards and monitoring completion | 2 | L | In progress (kickoff decisions K1–K12, 2026-11-20) |
 | M11b | Tabular transforms | 2 | M | Not started (added at the owner's request 2026-11-19; outline) |
-| M12 | LLM serving and RAG | 3 | L | Detailed, proposed 2026-11-22 |
-| M13 | Router, tools, caption refinement | 3 | L | Detailed, proposed 2026-11-22 |
+| M12 | LLM serving and RAG | 3 | L | Detailed, approved 2026-11-22 |
+| M13 | Router, tools, caption refinement | 3 | L | Detailed, approved 2026-11-22 |
 | M14 | Text→image and LoRA | 4 | L | Outline |
 | M15 | Translation, chat UI, polish | 5 | L | Outline |
 
@@ -668,7 +668,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] `inference` at 1.25 GB and `worker-gpu` at 3.25 GB, both peaks measured in the acceptance run (K12) (limits set 2026-11-22 in `compose.yaml`; peaks in the acceptance run: `worker-gpu` 2.08 GiB, `inference` 851 MiB serving on the GPU)
 - [x] Meta-test green: every phase-2 P0 (32) has a passing ID-named test (2026-11-22: `test_NFR_9_every_phase_2_p0_requirement_has_a_named_test`; the suites green in M11: dev unit 510 and integration 154, the GPU worker's PyTorch tests 98, the CPU worker's scikit-learn tests 33 and 7, Vitest 23 files)
 - [x] `test_DATA_5_5_*` and `test_ML_1_1_*` (SCR-09's estimator list; its G2 addendum approved 2026-11-22): on diabetes, `logistic_regression` and `naive_bayes` are listed disabled with their reason and named under the select; on wine, `linear`, `ridge` and `lasso` likewise; with a study on, the four that ignore the target are disabled and *Turn on* waits for a supervised estimator, so turning a study on never changes the selection (E-017); its G3 approved (2026-11-22: three Vitest tests in `TrainEntry.test.tsx`, which fail against the screen before the fix; checked live on diabetes and wine; Gate 3 approved by the owner with six differences, `design/g3/SCR-09.md`)
-- [ ] M12–M13 detailed and approved by the owner
+- [x] M12–M13 detailed and approved by the owner (2026-11-22, "yes I do approve"; the decisions stay open until M12's kickoff)
 - [ ] Owner's OK to merge; tag `phase-2`
 
 ## M11b — Tabular transforms
@@ -701,7 +701,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 | | |
 |---|---|
-| Status | **Proposed 2026-11-22, waiting for the owner's approval.** Until it is approved, the outline table under "Later phases" governs, and each recommendation below is only a recommendation. M11b still comes before M12, as planned |
+| Status | **Approved by the owner on 2026-11-22** ("yes I do approve"). The decisions below are still open: they are put to the owner at M12's kickoff (M13's open points at M13's), and until then each recommendation is only a recommendation. M11b still comes before M12, as planned |
 | Done when (SPEC §2) | Chat answers grounded in the corpus, with citations; the router picks the correct model |
 | Requirements | All 12 phase-3 requirements: 4 P0 (LLM-1.1, LLM-2.1, LLM-2.2, LLM-3.1), 5 P1 (DATA-5.3, LLM-2.3, LLM-2.4, LLM-3.2, LABEL-1.6) and 3 P2 (LLM-4.1, LLM-5.1, LABEL-1.7), plus NFR-6. NFR-1, NFR-2, NFR-7 and NFR-8 are checked again for the new services. Each requirement stays in the milestone the outline gave it; nothing is added or dropped |
 
