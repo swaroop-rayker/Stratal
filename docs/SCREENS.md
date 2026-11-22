@@ -289,7 +289,7 @@ Detailed at phase 2's kickoff (2026-11-17) from the approved plan (MILESTONES.md
 
 **Purpose.** The machine over time, beyond any one job: where the resources went, what alerted, and why things were slow.
 
-As approved with the low-fi wireframe on 2026-11-22 (`design/screens/SCR-13-lofi_v1.html`): three tabs, *Overview*, *Compare two jobs* and *History* (MON-4.5, P2: the tab appears only if built), under a header with the range and the monitor's health. Sources from [ADR-0020](decisions/ADR-0020-alerts-and-diagnostics.md) rule 13.
+As approved with the low-fi wireframe and the hi-fi mockup on 2026-11-22 (`design/screens/SCR-13-lofi_v1.html`, `SCR-13_v1.html`): three tabs, *Overview*, *Compare two jobs* and *History* (MON-4.5, P2: the tab appears only if built), under a header with the range and the monitor's health. Sources from [ADR-0020](decisions/ADR-0020-alerts-and-diagnostics.md) rule 13.
 
 | Tab · region | Shows | Source | Live |
 |---|---|---|---|
