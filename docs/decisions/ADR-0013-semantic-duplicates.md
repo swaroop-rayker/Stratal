@@ -1,6 +1,6 @@
 # ADR-0013 — Where semantic duplicates are found, and how the split uses them
 
-**Status:** Accepted by the owner on 2026-11-17, as proposed. Built in M11 (DATA-2.3 and DATA-4.8 moved there from M7); nothing is built yet.
+**Status:** Accepted by the owner on 2026-11-17, as proposed. Built in M11 (DATA-2.3 and DATA-4.8 moved there from M7) on 2026-11-22; see "As built".
 
 ## Context
 
@@ -47,3 +47,12 @@ The owner chose **0.90** from spike [S-10](../spikes/S-10-semantic-threshold.md)
 ## Owner's decision (2026-11-17)
 
 Approved as proposed, to be built in M11 with the other data features (UI-2.2, DATA-3.5). The threshold's default comes with its measurement, for the owner to choose (as OC-5).
+
+## As built in M11 (2026-11-22)
+
+- **The unit** is `stratal.label.semantic.semantic_clusters(items, *, threshold)`: cosine similarity of normalised vectors, union-find, clusters of two or more, `cluster_id` the smallest original `sha256`. Links come from blocked matrix products in `stratal.label.semantic_torch` (2,048 rows at a time) when PyTorch is there, else from every pair in Python (the dev image's tests). 20,000 random vectors of 512 took 6.4 s in the GPU worker.
+- **Vectors are cached** as `clip_image_embedding` derivations, keyed by the preprocessed copy's `sha256` and the CLIP model, dtype and library versions, not by caption: a vector does not depend on it. They are written while scoring; images scored before M11 are encoded once more, images only.
+- **The config** gains `semantic_threshold` (0.90), `semantic_action` (`mark`) and `semantic_algorithm_version` (1). The new fields change the label config, so new runs make new versions once (rule 7); the split's `ALGORITHM_VERSION` is 3.
+- **The manifest** gains `semantic_cluster_id` (nullable, appended). `iter_rows` returns null for a column an older manifest lacks, so the split can read label versions made before M11.
+- **The counts** gain `semantic: {clusters, rows_in_clusters, largest, threshold, action, examples}`, the 20 largest clusters as examples (rule 5).
+- **The pipeline tests' fake CLIP** gives every image of a colour the same vector, so the fake label units find no clusters; `stratal.testing.semantic_label` (vectors from each image's mean colour) runs the real clusters in `tests/integration/test_M11_semantic.py`.

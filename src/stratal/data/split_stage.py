@@ -202,6 +202,8 @@ class _Accepted:
     clip_score: float | None
     width: int
     height: int
+    semantic_cluster_id: str | None = None
+    """DATA-4.8: the label stage's semantic cluster, joined into one split group."""
 
 
 @dataclass
@@ -225,6 +227,7 @@ _COLUMNS = [
     "height",
     "derived_width",
     "derived_height",
+    "semantic_cluster_id",
 ]
 
 
@@ -263,6 +266,7 @@ def _read(parent_manifest: Path) -> tuple[list[_Accepted], dict[str, list[str]]]
                 row["clip_score"],
                 int(width),
                 int(height),
+                row.get("semantic_cluster_id"),
             )
         )
     return accepted, dict(copies)
@@ -378,7 +382,10 @@ def _checked_assignment(splits: object, groups: Sequence[GroupToAssign]) -> dict
 def _plan(
     rows: Sequence[_Accepted], previous: dict[str, str], config: SplitConfig, units: SplitUnits
 ) -> _Plan:
-    leakage = [LeakageItem(r.row_key, r.sha256, r.phash, r.dup_group_id) for r in rows]
+    leakage = [
+        LeakageItem(r.row_key, r.sha256, r.phash, r.dup_group_id, r.semantic_cluster_id)
+        for r in rows
+    ]
     groups = _checked_groups(units.group(leakage, max_distance=config.leakage_distance), rows)
     strata_items = [StratumItem(r.row_key, r.clip_score, r.width, r.height) for r in rows]
     strata = _checked_strata(units.strata(strata_items, keys=config.stratum_keys), rows)

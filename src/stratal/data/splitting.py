@@ -34,7 +34,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
-ALGORITHM_VERSION = 2
+ALGORITHM_VERSION = 3  # 3: rule 2b of group_for_split, semantic clusters (DATA-4.8, M11)
 """Bump this whenever you change what any function in this file returns.
 
 It is part of the split stage's config, so a new value gives a new version ID
@@ -156,9 +156,12 @@ def group_for_split(items: Sequence[LeakageItem], *, max_distance: int) -> list[
     ordered = sorted(items, key=lambda item: item.sha256)
     sets = _DisjointSets(len(ordered))
     first_of_group: dict[str, int] = {}
+    first_of_cluster: dict[str, int] = {}
     for index, item in enumerate(ordered):
         if item.dup_group_id is not None:
             sets.union(first_of_group.setdefault(item.dup_group_id, index), index)
+        if item.semantic_cluster_id is not None:  # rule 2b (DATA-4.8)
+            sets.union(first_of_cluster.setdefault(item.semantic_cluster_id, index), index)
     hashes = [int(item.phash, 16) for item in ordered]
     for i, value in enumerate(hashes):
         near = [

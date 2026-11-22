@@ -259,6 +259,7 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 |---|---|---|---|
 | `phash` | original file's `sha256` | `hash_size`, `algorithm_version` and the Pillow version | the hash, lowercase hex text |
 | `preprocess` | original file's `sha256` | the whole `PreprocessConfig` and the Pillow version | `{"sha256", "width", "height"}` of the copy; reused only if that blob still exists (INV-04) |
+| `clip_image_embedding` (M11) | preprocessed copy's `sha256` | CLIP model and revision, dtype, torch, transformers and Pillow versions | the image's CLIP vector, float16 base64 (about 1 KB), for the semantic clusters (ADR-0013 rule 2) |
 | `caption` | preprocessed copy's `sha256` | captioner name and revision, task, `max_new_tokens`, `num_beams`, dtype, the caption loop's `ALGORITHM_VERSION`, torch, transformers and Pillow versions | the caption text |
 | `clip_score` | SHA-256 of the copy's `sha256`, a newline and the caption | CLIP model and revision, dtype, the similarity's `ALGORITHM_VERSION`, library versions | the score, a number |
 
@@ -382,6 +383,7 @@ Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `belo
 | `text_group` | string | ingest | rows that must share a split (the captions of one image); null: the row is its own group |
 | `tokens` | string | tokenize | L token IDs as space-separated numbers (0 padding, 1 unknown); a string, because the version hash takes scalar values only (DATA-3.2) |
 | `token_count` | int32 | tokenize | the text's length in tokens before it was cut to L |
+| `semantic_cluster_id` | string | label | M11 (DATA-2.3, [ADR-0013](decisions/ADR-0013-semantic-duplicates.md)): the smallest original `sha256` of the semantic cluster an accepted row is in; null for a row in none. Rows with one ID join one split group (DATA-4.8). With `semantic_action: remove`, all but the cluster's first member are `duplicate` with `reason_code` `semantic_duplicate`, `dup_kind` `semantic`, `dup_group_id` the cluster ID and `dup_of` the kept row. Appended and nullable, so no earlier version ID changes; reading an older manifest gives null |
 
 All six are nullable and appended, so no earlier version's ID changed.
 

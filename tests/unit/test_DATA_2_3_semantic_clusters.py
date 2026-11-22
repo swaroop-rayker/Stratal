@@ -1,9 +1,11 @@
 """DATA-2.3 (ADR-0013): semantic duplicates as clusters of close CLIP vectors, and DATA-4.8:
 a cluster joins one split group.
 
-Strict expected failures until the units are written (the working model's order, ADR-0012).
-The vectors are small and hand-made: what is checked is the contract, not CLIP. The real
-vectors are checked on the GPU in ``tests/integration/test_M11_semantic.py``.
+Written first as strict expected failures (the working model's order, ADR-0012); the markers
+came off with the code.
+The vectors are small and hand-made: what is checked is the contract, not CLIP. A pipeline
+job runs it in ``tests/integration/test_M11_semantic.py``; real CLIP vectors were measured in
+spike S-10.
 """
 
 import hashlib
@@ -22,10 +24,6 @@ from stratal.label.semantic import (
     unpack_vector,
 )
 
-PENDING = pytest.mark.xfail(
-    strict=True, raises=NotImplementedError, reason="DATA-2.3 not written yet"
-)
-
 
 def _sha(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
@@ -42,7 +40,6 @@ def _item(key: str, vector: list[float]) -> EmbeddedItem:
 
 
 # cos(20°) = 0.940, cos(30°) = 0.866: at 0.90 the first is linked, the second is not.
-@PENDING
 def test_DATA_2_3_cropped_variants_are_grouped_together() -> None:
     items = [
         _item("photo.jpg", _unit(0)),
@@ -54,7 +51,6 @@ def test_DATA_2_3_cropped_variants_are_grouped_together() -> None:
     assert clusters == [SemanticCluster(cluster_id=pair[0], members=tuple(pair))]
 
 
-@PENDING
 def test_DATA_2_3_threshold_is_inclusive_and_below_it_nothing_links() -> None:
     a, b = _item("a", _unit(0)), _item("b", _unit(30))
     exact = math.cos(math.radians(30))
@@ -62,7 +58,6 @@ def test_DATA_2_3_threshold_is_inclusive_and_below_it_nothing_links() -> None:
     assert semantic_clusters([a, b], threshold=0.90) == []
 
 
-@PENDING
 def test_DATA_2_3_clusters_chain_through_links() -> None:
     # 0°, 20°, 40°: neighbours are 0.94 alike, the ends only 0.77; one cluster by the chain.
     items = [
@@ -77,7 +72,6 @@ def test_DATA_2_3_clusters_chain_through_links() -> None:
     assert list(cluster.members) == sorted(cluster.members)
 
 
-@PENDING
 def test_DATA_2_3_order_does_not_matter() -> None:
     rng = random.Random(7)
     items = [_item(f"img{i}", [rng.gauss(0, 1) for _ in range(16)]) for i in range(60)]
@@ -92,7 +86,6 @@ def test_DATA_2_3_order_does_not_matter() -> None:
     assert len(first) >= 3 and first == sorted(first, key=lambda c: c.cluster_id)
 
 
-@PENDING
 @pytest.mark.parametrize(
     ("items", "threshold"),
     [
@@ -111,7 +104,6 @@ def test_DATA_2_3_bad_input_is_refused(
         semantic_clusters([_item(k, v) for k, v in items], threshold=threshold)
 
 
-@PENDING
 def test_DATA_2_3_a_lone_or_empty_input_gives_no_cluster() -> None:
     assert semantic_clusters([], threshold=0.9) == []
     assert semantic_clusters([_item("a", _unit(0))], threshold=0.9) == []
@@ -124,7 +116,6 @@ def test_DATA_2_3_vectors_pack_as_float16() -> None:
     assert len(pack_vector([0.1] * 512)) <= 1400, "about 1 KB for 512 numbers"
 
 
-@pytest.mark.xfail(strict=True, reason="DATA-4.8 rule 2b not written yet")
 def test_DATA_4_8_a_semantic_cluster_joins_one_split_group() -> None:
     # Two photos of one scene from different angles: 64 bits apart by pHash, one cluster by CLIP.
     one = LeakageItem("scene_left.jpg", _sha("left"), f"{0:016x}", None, semantic_cluster_id="sc1")

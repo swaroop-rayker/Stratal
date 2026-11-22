@@ -70,6 +70,9 @@ _FIELDS: list[tuple[str, pa.DataType]] = [
     ("text_group", pa.string()),
     ("tokens", pa.string()),
     ("token_count", pa.int32()),
+    # M11 (DATA-2.3, ADR-0013): the semantic cluster an accepted row is in. Nullable and
+    # appended, as above.
+    ("semantic_cluster_id", pa.string()),
 ]
 SCHEMA: pa.Schema = pa.schema(
     [pa.field(name, kind, nullable=name != "row_key") for name, kind in _FIELDS]
@@ -166,11 +169,22 @@ def write_manifest(
 def iter_rows(
     path: Path, *, columns: list[str] | None = None, batch_size: int = 2000
 ) -> Iterator[Row]:
-    """Stream a manifest's rows in file order."""
+    """Stream a manifest's rows in file order.
+
+    A requested column that an older manifest lacks (one appended since, such as M11's
+    ``semantic_cluster_id``) comes back as null, as a column of the current schema would.
+    """
     parquet = pq.ParquetFile(path)
     try:
-        for batch in parquet.iter_batches(batch_size=batch_size, columns=columns):
-            yield from batch.to_pylist()
+        present = set(parquet.schema_arrow.names)
+        wanted = None if columns is None else [c for c in columns if c in present]
+        missing = [] if columns is None else [c for c in columns if c not in present]
+        for batch in parquet.iter_batches(batch_size=batch_size, columns=wanted):
+            rows = batch.to_pylist()
+            if missing:
+                for row in rows:
+                    row.update(dict.fromkeys(missing))
+            yield from rows
     finally:
         parquet.close()
 
