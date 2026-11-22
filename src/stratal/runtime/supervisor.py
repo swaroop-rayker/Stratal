@@ -101,6 +101,9 @@ def claim(job_id: str, idx: int, worker: str) -> Claim | None:
             job.desired_state = None
             transition(session, job, "paused", reason=_pause_reason(job), actor="supervisor")
             return None
+        next_step = job.state == "running" and stage.started_at is not None
+        """A study's next step: the job runs on between steps, and its stage keeps the time
+        it first started, so SCR-04 shows all its steps, not the last (BUG8)."""
         if job.state == "queued":
             job.attempt += 1
             job.started_at = job.started_at or now
@@ -108,7 +111,8 @@ def claim(job_id: str, idx: int, worker: str) -> Claim | None:
         elif job.state != "running":
             return None
         stage.status = "running"
-        stage.started_at = now
+        if not next_step:
+            stage.started_at = now
         stage.finished_at = None
         stage.error = None
         stage.step = stage.total = None

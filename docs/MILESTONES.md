@@ -660,8 +660,8 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [x] G3 for SCR-13, SCR-03 v2 and SCR-11 v2 (SCR-11 v2 approved 2026-11-21, SCR-13 with SCR-04's and SCR-14's addenda 2026-11-22, SCR-03 v2 2026-11-22)
 - [ ] Phase-2 acceptance (`tests/acceptance`): a CNN built on SCR-08, trained on a dataset version, test metrics on SCR-11; NFR-1, NFR-2, NFR-4 and NFR-5 measured for training
 - [ ] `test_NFR_11_*` rerun with alerts and diagnostics on
-- [ ] `test_BUG8_*`: a study job's stage duration on SCR-04 covers all its steps, not the last (M10's open point 3)
-- [ ] `inference` at 1.25 GB and `worker-gpu` at 3.25 GB, both peaks measured in the acceptance run (K12)
+- [x] `test_BUG8_*`: a study job's stage duration on SCR-04 covers all its steps, not the last (M10's open point 3) (2026-11-22: each step's claim reset the stage's start; a running job's next step keeps it. `test_BUG8_study_duration.py` fails without the fix)
+- [ ] `inference` at 1.25 GB and `worker-gpu` at 3.25 GB, both peaks measured in the acceptance run (K12) (limits set 2026-11-22 in `compose.yaml`; the peaks wait for the acceptance run)
 - [ ] Meta-test green: every phase-2 P0 (32) has a passing ID-named test
 - [ ] M12–M13 detailed and approved by the owner
 - [ ] Owner's OK to merge; tag `phase-2`
