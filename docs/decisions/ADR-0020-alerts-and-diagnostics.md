@@ -90,6 +90,8 @@
 
 10. **Training too.** The training stage emits `model_loaded` once the network and optimizer are on the GPU (allocated before and after), and `model_unloaded` at the stage's end. Before the process exits, it drops the model and optimizer, empties the cache and measures. That is telemetry around the owner's loop; the loop itself does not change. The inference service already goes through the VRAM manager, so it needs nothing more.
 
+    **Correction (2026-11-22, found while drafting SCR-13's low-fi).** Training already emits load and unload events through the VRAM manager v2 (RUN-1.4, M8; for example `job_0106`: "Loaded small_cnn to GPU", "Unloaded small_cnn …"). So rule 10 needs nothing beyond rule 9's types and card figure. The Context's line saying training has no such event was wrong.
+
 ### D. Two runs overlaid (MON-4.4) and history (MON-4.5)
 
 11. **Alignment.**
