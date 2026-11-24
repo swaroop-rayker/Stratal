@@ -55,18 +55,37 @@ def table_task(schema: TableSchema) -> Task:
     return "classification" if target.kind == "categorical" else "regression"
 
 
+def column_to_json(column: Column) -> dict[str, Any]:
+    """A column as stored. ``encoding`` and ``order`` only when set, so a schema without
+    encodings is written exactly as before DATA-7.3 (ADR-0019 rule 29)."""
+    out: dict[str, Any] = {"name": column.name, "kind": column.kind, "role": column.role}
+    if column.encoding is not None:
+        out["encoding"] = column.encoding
+    if column.order is not None:
+        out["order"] = list(column.order)
+    return out
+
+
+def column_from_json(raw: Mapping[str, Any]) -> Column:
+    order = raw.get("order")
+    return Column(
+        str(raw["name"]),
+        raw["kind"],
+        raw["role"],
+        raw.get("encoding"),
+        tuple(str(x) for x in order) if order is not None else None,
+    )
+
+
 def schema_to_json(schema: TableSchema) -> str:
     return canonical_json(
-        {
-            "columns": [{"name": c.name, "kind": c.kind, "role": c.role} for c in schema.columns],
-            "task": table_task(schema),
-        }
+        {"columns": [column_to_json(c) for c in schema.columns], "task": table_task(schema)}
     )
 
 
 def schema_from_json(text: str) -> TableSchema:
     raw: dict[str, Any] = json.loads(text)
-    return TableSchema(tuple(Column(str(c["name"]), c["kind"], c["role"]) for c in raw["columns"]))
+    return TableSchema(tuple(column_from_json(c) for c in raw["columns"]))
 
 
 def table_schema_of(manifest: Path) -> TableSchema | None:

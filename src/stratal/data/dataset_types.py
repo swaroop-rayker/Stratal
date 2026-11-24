@@ -141,13 +141,35 @@ DATASET_TYPES: dict[str, Validator] = {
 # ---------------------------------------------------------------------------- M9: the other two
 
 
+Encoding = Literal["one_hot", "embedding", "ordinal", "ignore"]
+"""How a feature reaches a model (DATA-7.3, ADR-0019 rule 29)."""
+
+
 @dataclass(frozen=True)
 class Column:
-    """One column of a tabular dataset (DATA-5.2)."""
+    """One column of a tabular dataset (DATA-5.2).
+
+    ``encoding`` is ``None`` for the default: a number as a number, a category
+    one-hot. A transform may set it (DATA-7.3); ``order`` is the category order
+    of an ``ordinal`` column. Defaults are not written into the schema's JSON, so
+    a version without encodings keeps its ID (rule 29).
+    """
 
     name: str
     kind: Literal["numeric", "categorical"]
     role: Literal["feature", "target"] = "feature"
+    encoding: Encoding | None = None
+    order: tuple[str, ...] | None = None
+
+    @property
+    def ignored(self) -> bool:
+        return self.encoding == "ignore"
+
+    def effective_encoding(self) -> Literal["number", "one_hot", "embedding", "ordinal", "ignore"]:
+        """What a model does with the column, defaults resolved."""
+        if self.encoding is not None:
+            return self.encoding
+        return "number" if self.kind == "numeric" else "one_hot"
 
 
 @dataclass(frozen=True)
