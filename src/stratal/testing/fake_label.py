@@ -3,12 +3,14 @@
 Name this module in ``STRATAL_EXTRA_STAGES`` to run whole pipelines through
 labeling on a machine without a GPU and before the owner's M4 units exist. The
 label stage then captions with :class:`FakeCaptioner`, scores every pair 0.5,
-and the filter marks nothing.
+finds no semantic clusters, and the filter marks nothing.
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from stratal.label.filter_stage import FilterConfig
+from stratal.label.semantic import EmbeddedItem, SemanticCluster
 from stratal.label.stage import LabelConfig, LabelModels, LabelUnits
 from stratal.runtime.stages import StageDef, make_filter_runner, make_label_runner, register
 from stratal.testing.fake_models import (
@@ -21,10 +23,19 @@ from stratal.testing.fake_models import (
     filter_nothing,
 )
 
+
+def no_clusters(_items: Sequence[EmbeddedItem], *, threshold: float) -> list[SemanticCluster]:
+    del threshold
+    return []
+
+
 FAKE_UNITS = LabelUnits(
     caption=caption_all_at_once,
     similarity=ConstantSimilarity(0.5),
     vram=lambda gpu, sink: PassthroughVram(gpu, sink),
+    # FakeClipEncoder gives every image of a colour the same vector, so real clusters
+    # would join whole colours. ``stratal.testing.semantic_label`` tests the clusters.
+    clusters=no_clusters,
 )
 
 

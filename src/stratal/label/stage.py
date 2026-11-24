@@ -24,7 +24,7 @@ import math
 import time
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager, nullcontext
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
@@ -34,7 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from stratal.core.errors import GpuOom, StratalError
 from stratal.data.commit import VersionRecord, commit_version
 from stratal.data.versioning import VersionDeriver
-from stratal.label import captioning, scoring
+from stratal.label import captioning, scoring, semantic
 from stratal.label.captioning import CaptionItem, CaptionReport
 from stratal.label.models import Captioner, ClipEncoder, CudaOutOfMemory, GpuBackend, GpuModel
 from stratal.label.vram import UnloadReport, VramManager
@@ -42,8 +42,14 @@ from stratal.mon.events import MetricValue
 from stratal.mon.sink import EventSink
 from stratal.pretrained.catalog import get_model
 from stratal.storage.blobs import BlobStore
-from stratal.storage.derivations import KIND_CAPTION, KIND_CLIP_SCORE, DerivationCache, params_hash
-from stratal.storage.manifest import STATUS_ACCEPTED, Row, iter_rows
+from stratal.storage.derivations import (
+    KIND_CAPTION,
+    KIND_CLIP_IMAGE,
+    KIND_CLIP_SCORE,
+    DerivationCache,
+    params_hash,
+)
+from stratal.storage.manifest import STATUS_ACCEPTED, STATUS_DUPLICATE, Row, iter_rows
 
 STAGE = "label"
 _LOOKUP_BATCH = 1000
@@ -87,6 +93,22 @@ class LabelConfig(BaseModel):
     scoring_algorithm_version: int = Field(
         default=scoring.ALGORITHM_VERSION, json_schema_extra={"readOnly": True}
     )
+    semantic_threshold: float = Field(
+        default=semantic.DEFAULT_THRESHOLD,
+        ge=0.5,
+        le=1.0,
+        description="Images whose CLIP vectors are at least this alike (cosine) form a "
+        "semantic cluster (DATA-2.3). 0.90 from spike S-10; use 0.95 or more to remove.",
+    )
+    semantic_action: Literal["mark", "remove"] = Field(
+        default="mark",
+        description="mark: every member stays accepted and shares semantic_cluster_id, which "
+        "keeps a cluster in one split group (DATA-4.8). remove: all but one per cluster become "
+        "duplicates (ADR-0013 rule 3).",
+    )
+    semantic_algorithm_version: int = Field(
+        default=semantic.ALGORITHM_VERSION, json_schema_extra={"readOnly": True}
+    )
 
 
 class CaptionLoop(Protocol):
@@ -122,6 +144,7 @@ class LabelUnits:
 
     caption: CaptionLoop = captioning.caption_items
     similarity: Similarity = scoring.clip_similarity
+    clusters: Callable[..., list[semantic.SemanticCluster]] = semantic.semantic_clusters
     vram: Callable[[GpuBackend, EventSink], ModelManager] = lambda gpu, sink: VramManager(
         gpu, sink=sink, stage=STAGE
     )
@@ -180,6 +203,17 @@ def clip_params(config: LabelConfig, versions: Mapping[str, str]) -> dict[str, A
     }
 
 
+def embedding_params(config: LabelConfig, versions: Mapping[str, str]) -> dict[str, Any]:
+    """An image vector depends on the CLIP model and the libraries, not on the caption."""
+    model = get_model(config.clip_model)
+    return {
+        "model": model.name,
+        "revision": model.revision,
+        "dtype": config.dtype,
+        "libraries": dict(sorted(versions.items())),
+    }
+
+
 def pair_key(image_sha256: str, caption: str) -> str:
     """Cache key of one image-caption pair."""
     return hashlib.sha256(f"{image_sha256}\n{caption}".encode()).hexdigest()
@@ -206,6 +240,10 @@ class _Stats:
     scored_rows: int = 0
     row_score_sum: float = 0.0
     used_gpu: bool = False
+    embeddings_computed: int = 0
+    clusters: list[semantic.SemanticCluster] = field(
+        default_factory=lambda: list[semantic.SemanticCluster]()
+    )
 
 
 class _Labeler:
@@ -231,6 +269,10 @@ class _Labeler:
         self.checkpoint = checkpoint
         self.caption_params = params_hash(caption_params(config, models.library_versions))
         self.clip_params = params_hash(clip_params(config, models.library_versions))
+        self.embedding_params = params_hash(embedding_params(config, models.library_versions))
+        self.cluster_of: dict[str, str] = {}
+        """A row's original ``sha256`` → its cluster's ID (DATA-2.3)."""
+        self.key_of_sha: dict[str, str] = {}
         self.captioner = get_model(config.captioner)
         self.clip = get_model(config.clip_model)
         self.stats = _Stats()
@@ -280,6 +322,86 @@ class _Labeler:
                 self.stats.used_gpu = True
                 self.models.prepare(self.config)
                 self._score(missing)
+        vectors = self._lookup(KIND_CLIP_IMAGE, self.embedding_params, images)
+        unembedded = [sha for sha in images if sha not in vectors]
+        if unembedded:
+            with self.lease():
+                self.stats.used_gpu = True
+                self.models.prepare(self.config)
+                self._embed(unembedded)
+
+    def cluster(self, accepted: list[tuple[str, str, str]]) -> None:
+        """Semantic clusters of the accepted rows (DATA-2.3, ADR-0013 rule 1). ``accepted``
+        holds ``(row_key, sha256, derived_sha256)``."""
+        derived = sorted({d for _k, _s, d in accepted})
+        found = self._lookup(KIND_CLIP_IMAGE, self.embedding_params, derived)
+        items = [
+            semantic.EmbeddedItem(sha, semantic.unpack_vector(str(found[d])))
+            for _key, sha, d in accepted
+            if d in found
+        ]
+        self.sink.emit(
+            stage=STAGE,
+            substage="semantic",
+            message=f"Comparing {len(items):,} CLIP vectors at "
+            f"{self.config.semantic_threshold:.2f}",
+        )
+        started = time.monotonic()
+        clusters = self.units.clusters(items, threshold=self.config.semantic_threshold)
+        self.stats.clusters = clusters
+        self.cluster_of = {sha: c.cluster_id for c in clusters for sha in c.members}
+        self.key_of_sha = {sha: key for key, sha, _d in accepted}
+        rows = sum(len(c.members) for c in clusters)
+        self.sink.emit(
+            stage=STAGE,
+            substage="semantic",
+            message=f"{len(clusters):,} semantic clusters, {rows:,} rows in them"
+            + (f", the largest {max(len(c.members) for c in clusters)}" if clusters else ""),
+            metrics={
+                "semantic_clusters": len(clusters),
+                "semantic_rows": rows,
+                "semantic_seconds": round(time.monotonic() - started, 2),
+            },
+        )
+
+    def _embed(self, images: list[str]) -> None:
+        """Image vectors for images scored before M11, whose vectors were not kept."""
+        manager = self.units.vram(self.models.gpu(), self.sink)
+        clip = manager.load(
+            lambda: self.models.load_clip(self.config),
+            name=self.clip.display,
+            estimate_mb=_estimate(self.clip.name, self.config.clip_vram_estimate_mb),
+        )
+        size = self.config.clip_batch_size
+        total = math.ceil(len(images) / size)
+        try:
+            for index, start in enumerate(range(0, len(images), size), start=1):
+                self.checkpoint()
+                batch = images[start : start + size]
+                try:
+                    vectors = clip.encode_images([self._open(sha) for sha in batch])
+                except CudaOutOfMemory as exc:
+                    raise GpuOom(
+                        f"CLIP ran out of VRAM on a batch of {len(batch)}: {exc.detail}",
+                        suggested_action="Set stages.label.clip_batch_size to "
+                        f"{max(1, size // 2)}.",
+                    ) from None
+                self.cache.put_many(
+                    KIND_CLIP_IMAGE,
+                    self.embedding_params,
+                    {sha: semantic.pack_vector(v) for sha, v in zip(batch, vectors, strict=True)},
+                )
+                self.stats.embeddings_computed += len(batch)
+                self.sink.emit(
+                    stage=STAGE,
+                    substage="clip",
+                    message=f"CLIP image vectors {index}/{total} · {self.clip.display} · bs={size}",
+                    step=index,
+                    total=total,
+                )
+        finally:
+            del clip
+            manager.unload()
 
     def _caption(self, todo: list[CaptionItem]) -> None:
         manager = self.units.vram(self.models.gpu(), self.sink)
@@ -349,6 +471,14 @@ class _Labeler:
                     self.clip_params,
                     {key: float(s) for (key, _sha, _c), s in zip(batch, scores, strict=True)},
                 )
+                self.cache.put_many(  # kept for the semantic clusters (ADR-0013 rule 2)
+                    KIND_CLIP_IMAGE,
+                    self.embedding_params,
+                    {
+                        sha: semantic.pack_vector(v)
+                        for (_key, sha, _c), v in zip(batch, image_vectors, strict=True)
+                    },
+                )
                 self.stats.clip_computed += len(batch)
                 self.stats.score_sum += sum(scores)
                 rate = self.stats.clip_computed / max(time.monotonic() - started, 1e-9)
@@ -404,12 +534,48 @@ class _Labeler:
                 )
                 self.stats.scored_rows += 1
                 self.stats.row_score_sum += float(score)
+                self._mark(row)
             yield row
 
+    def _mark(self, row: Row) -> None:
+        """``semantic_cluster_id`` on a member; with ``remove``, all but the cluster's
+        first member become duplicates of it (ADR-0013 rule 3)."""
+        cluster = self.cluster_of.get(str(row["sha256"]))
+        if cluster is None:
+            return
+        row["semantic_cluster_id"] = cluster
+        if self.config.semantic_action == "remove" and row["sha256"] != cluster:
+            row.update(
+                status=STATUS_DUPLICATE,
+                decided_at_stage=STAGE,
+                reason_code="semantic_duplicate",
+                reason_detail=f"CLIP vector at least {self.config.semantic_threshold:.2f} alike "
+                f"to {self.key_of_sha.get(cluster, cluster[:12])}",
+                dup_kind="semantic",
+                dup_group_id=cluster,
+                dup_of=self.key_of_sha.get(cluster),
+            )
 
-def _accepted_images(parent_manifest: Path) -> list[str]:
-    shas: set[str] = set()
-    for row in iter_rows(parent_manifest, columns=["row_key", "status", "derived_sha256"]):
+    def semantic_counts(self) -> dict[str, Any]:
+        """For the version's counts (ADR-0013 rule 5): the clusters and up to 20 of the
+        largest, for SCR-03's tile."""
+        clusters = self.stats.clusters
+        largest = sorted(clusters, key=lambda c: (-len(c.members), c.cluster_id))[:20]
+        return {
+            "clusters": len(clusters),
+            "rows_in_clusters": sum(len(c.members) for c in clusters),
+            "largest": max((len(c.members) for c in clusters), default=0),
+            "threshold": self.config.semantic_threshold,
+            "action": self.config.semantic_action,
+            "examples": [{"cluster_id": c.cluster_id, "rows": len(c.members)} for c in largest],
+        }
+
+
+def _accepted_rows(parent_manifest: Path) -> list[tuple[str, str, str]]:
+    """``(row_key, sha256, derived_sha256)`` of every accepted row."""
+    rows: list[tuple[str, str, str]] = []
+    columns = ["row_key", "status", "sha256", "derived_sha256"]
+    for row in iter_rows(parent_manifest, columns=columns):
         if row["status"] != STATUS_ACCEPTED:
             continue
         if not row["derived_sha256"]:
@@ -417,8 +583,8 @@ def _accepted_images(parent_manifest: Path) -> list[str]:
                 f"Accepted row {row['row_key']!r} has no preprocessed copy.",
                 suggested_action="Label a version made by the preprocess stage.",
             )
-        shas.add(str(row["derived_sha256"]))
-    return sorted(shas)
+        rows.append((str(row["row_key"]), str(row["sha256"]), str(row["derived_sha256"])))
+    return rows
 
 
 def run_label(
@@ -447,8 +613,11 @@ def run_label(
         lease=lease,
         checkpoint=checkpoint,
     )
-    images = _accepted_images(parent_manifest)
+    accepted = _accepted_rows(parent_manifest)
+    images = sorted({derived for _key, _sha, derived in accepted})
     labeler.work(images)
+    checkpoint()
+    labeler.cluster(accepted)
     checkpoint()
     record = commit_version(
         data_dir=data_dir,
@@ -459,6 +628,7 @@ def run_label(
         derive=derive,
         sink=sink,
     )
+    record = replace(record, counts={**record.counts, "semantic": labeler.semantic_counts()})
     stats = labeler.stats
     seconds = round(time.monotonic() - started, 3)
     report = stats.report
@@ -472,6 +642,9 @@ def run_label(
         "oom_retries": report.oom_retries if report else 0,
         "clip_computed": stats.clip_computed,
         "clip_cache_hits": stats.clip_hits,
+        "embeddings_computed": stats.embeddings_computed,
+        "semantic_clusters": len(stats.clusters),
+        "semantic_rows": sum(len(c.members) for c in stats.clusters),
         "used_gpu": int(stats.used_gpu),
         "images_per_s": round(stats.images / max(seconds, 1e-9), 1),
     }

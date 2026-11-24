@@ -18,6 +18,8 @@ from stratal.core.settings import get_settings
 from stratal.db.engine import get_engine
 from stratal.inference.app import create_inference_app
 from stratal.inference.holder import ModelHolder, decode_image
+from stratal.mon.emitter import StreamEmitter
+from stratal.mon.sink import StreamSink
 
 
 def main() -> int:
@@ -25,7 +27,11 @@ def main() -> int:
     configure_logging(settings.log_level, sys.stderr)
     log = get_logger("stratal.inference")
     bus = Bus(settings.redis_url, timeout_s=2.0)
-    holder = ModelHolder(engine=get_engine(), settings=settings, bus=bus)
+    # Its loads and unloads reach the event log with no job, for SCR-13 (MON-3.3).
+    events = StreamEmitter(
+        redis_url=settings.redis_url, spool_path=None, maxlen=settings.event_stream_maxlen
+    )
+    holder = ModelHolder(engine=get_engine(), settings=settings, bus=bus, sink=StreamSink(events))
     bus.set_inference_loaded(None)  # whatever a previous process held is gone with it
     stop = threading.Event()
     checks = threading.Thread(target=holder.run_checks, args=(stop,), daemon=True)

@@ -14,7 +14,7 @@ function version(metrics: Record<string, unknown> | null, extra: Partial<Version
     dataset_version_id: "ds_f8e67211dd94", config_hash: "e0ef".repeat(16), main_metric: 0.804, note: null,
     created_at: "2026-11-20T12:00:00Z", trained_at: "2026-11-20T12:01:00Z", weights_deleted_by_job_id: null,
     retention_action: "keep", retention_reason: "latest (REG-2.2)", lineage_name: "small_cnn · cifar10",
-    config: {}, metrics, history: [], weights_path: "registry/x", weights_deleted_at: null, study_id: null, ...extra,
+    config: {}, metrics, history: [], weights_path: "registry/x", weights_deleted_at: null, study_id: null, children: [], ...extra,
   };
 }
 

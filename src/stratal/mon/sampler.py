@@ -26,6 +26,7 @@ from stratal.mon.events import utc_now
 log = get_logger(__name__)
 
 ActiveJobs = dict[str, dict[str, str]]
+INTERVALS_EVERY_S = 30.0
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,8 @@ class Sampler:
         bus: Bus | None = None,
         active_interval_s: float = 1.0,
         idle_interval_s: float = 10.0,
+        on_sample: Callable[[dict[str, Any]], object] | None = None,
+        intervals: Callable[[], tuple[float, float]] | None = None,
     ) -> None:
         self._engine = engine
         self._probe = probe
@@ -113,6 +116,11 @@ class Sampler:
         self._bus = bus
         self.active_interval_s = active_interval_s
         self.idle_interval_s = idle_interval_s
+        self._on_sample = on_sample
+        """Called with each stored row: the resource alerts (ADR-0020 rule 2)."""
+        self._intervals = intervals
+        """``(active, idle)`` as saved on SCR-14, read every :data:`INTERVALS_EVERY_S`."""
+        self._intervals_at = 0.0
 
     def sample(self, active: ActiveJobs, interval_s: float, ts: datetime | None = None) -> None:
         """Take one reading, store it, and send it to live viewers."""
@@ -128,6 +136,11 @@ class Sampler:
         }
         with Session(self._engine) as session, session.begin():
             session.add(ResourceSample(**values))
+        if self._on_sample is not None:
+            try:
+                self._on_sample(values)
+            except Exception as exc:  # alerts must never stop sampling
+                log.warning("on_sample_failed", reason=str(exc)[:300])
         if self._bus is not None:
             with contextlib.suppress(Exception):
                 payload = {**values, "ts": values["ts"].isoformat()}
@@ -135,6 +148,15 @@ class Sampler:
                 self._bus.publish(LIVE_GLOBAL, message)
                 for active_job in active:
                     self._bus.publish(live_channel(active_job), message)
+
+    def _refresh_intervals(self) -> None:
+        if self._intervals is None or time.monotonic() - self._intervals_at < INTERVALS_EVERY_S:
+            return
+        self._intervals_at = time.monotonic()
+        try:
+            self.active_interval_s, self.idle_interval_s = self._intervals()
+        except Exception as exc:  # keep the last ones
+            log.warning("intervals_not_read", reason=str(exc)[:200])
 
     def run(self, stop: threading.Event) -> None:
         """Sample until ``stop`` is set.
@@ -147,6 +169,7 @@ class Sampler:
         due = time.monotonic()
         interval = self.idle_interval_s
         while not stop.is_set():
+            self._refresh_intervals()
             try:
                 active = self._active_jobs()
             except Exception:

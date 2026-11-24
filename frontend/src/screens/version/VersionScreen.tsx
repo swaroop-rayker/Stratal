@@ -7,15 +7,19 @@ import { type CSSProperties, type ReactNode, useCallback, useMemo, useState } fr
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
 import { ApiError, api, call, type Schemas } from "../../api/client";
-import { type RowFilters, useLatestReport, useLineage, useRows, useStats, useVersion } from "../../api/queries";
+import { type RowFilters, useLatestReport, useLineage, useRows, useStats, useVersion, useVersionModels } from "../../api/queries";
 import { useFeedMessage } from "../../api/stream";
 import { Modal, ModalClose } from "../../components/Modal";
 import { copy, ErrorState } from "../../components/states";
 import { Badge, Button, Icon, type IconName, Skeleton } from "../../components/ui";
 import { bytes, count } from "../../lib/format";
 import { useCrumbs } from "../../shell/hooks";
+import { TrainDrawer, trainable } from "../build/TrainDrawer";
 import { StartPipelineDrawer } from "../datasets/StartPipelineDrawer";
+import { CompareTab } from "./CompareVersions";
+import { DistributionsTab } from "./Distributions";
 import { LineageStrip } from "./LineageStrip";
+import { ModelsTab } from "./ModelsTab";
 import { RowDrawer } from "./RowDrawer";
 import { count as versionCount, type Row, STATUS_COLOR, type Status, type Version } from "./rows";
 import { RowsPanel, RowStatus, STATUSES } from "./RowsPanel";
@@ -45,13 +49,33 @@ function configOf(lineage: Lineage | undefined, version: Version, stage: string)
   return v ? v.config : null;
 }
 
-function Tiles({ version, stats, lineage, pressed, onPress }: {
+interface SemanticCounts {
+  clusters: number;
+  rows_in_clusters: number;
+  largest: number;
+  threshold: number;
+}
+
+/** The label version's semantic clusters (DATA-2.3, ADR-0013 rule 5), carried by its children. */
+function semanticOf(version: Version, lineage: Lineage | undefined): SemanticCounts | null {
+  const own = (version.counts as Record<string, unknown>)["semantic"];
+  const label = lineage?.ancestors.find((a) => a.stage === "label");
+  const found = own ?? (label ? (label.counts as Record<string, unknown>)["semantic"] : undefined);
+  if (!found || typeof found !== "object") return null;
+  const s = found as SemanticCounts;
+  return s.clusters > 0 ? s : null;
+}
+
+function Tiles({ version, stats, lineage, pressed, onPress, semantic, onSemantic }: {
   version: Version;
   stats: Stats | undefined;
   lineage: Lineage | undefined;
   pressed: Status | null;
   onPress: (s: Status | null) => void;
+  semantic: boolean;
+  onSemantic: (on: boolean) => void;
 }) {
+  const clusters = semanticOf(version, lineage);
   const reasons = stats?.reasons ?? [];
   const rows = (code: string) => reasons.find((r) => r.reason_code === code)?.rows ?? 0;
   const total = version.row_count || 1;
@@ -68,7 +92,7 @@ function Tiles({ version, stats, lineage, pressed, onPress }: {
       : "no filter stage yet",
   };
   return (
-    <div className="tiles">
+    <div className={clusters ? "tiles five" : "tiles"}>
       {STATUSES.map((s) => {
         const n = versionCount(version, s);
         const word = s.charAt(0).toUpperCase() + s.slice(1);
@@ -91,6 +115,19 @@ function Tiles({ version, stats, lineage, pressed, onPress }: {
           </button>
         );
       })}
+      {clusters ? (
+        <button
+          type="button"
+          className="stile sem"
+          aria-pressed={semantic}
+          aria-label={`In a semantic cluster, ${count(clusters.rows_in_clusters)} rows in ${count(clusters.clusters)} clusters${semantic ? ", filtering the rows" : ""}`}
+          onClick={() => { onSemantic(!semantic); }}
+        >
+          <span className="k"><i />Semantic clusters</span>
+          <span className="v">{count(clusters.clusters)}</span>
+          <span className="d">{count(clusters.rows_in_clusters)} rows · largest {count(clusters.largest)}</span>
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -262,11 +299,12 @@ function ReviewModal({ version, open, onOpenChange }: { version: Version; open: 
   );
 }
 
-function Actions({ version, stats, onContinue, onReview, compact }: {
+function Actions({ version, stats, onContinue, onReview, onTrain, compact }: {
   version: Version;
   stats: Stats | undefined;
   onContinue: () => void;
   onReview: () => void;
+  onTrain: () => void;
   compact?: boolean;
 }) {
   const navigate = useNavigate();
@@ -315,6 +353,21 @@ function Actions({ version, stats, onContinue, onReview, compact }: {
       </Button>
     )
   ) : null;
+  // Train a model… (SCREENS.md v3): on a version a model trains on, else disabled with why.
+  const trainOk = trainable(version);
+  const whyTrain = "Training needs a split version (a tokenize version for text).";
+  const trainButton = (
+    <Button
+      aria-disabled={!trainOk || undefined}
+      className={trainOk ? undefined : "is-disabled"}
+      title={trainOk ? undefined : whyTrain}
+      aria-describedby={trainOk ? undefined : "why-train"}
+      onClick={() => { if (trainOk) onTrain(); }}
+    >
+      <Icon name="plus" />
+      Train a model…
+    </Button>
+  );
   const continueButton = (
     <Button
       variant={captioned ? "secondary" : "primary"}
@@ -337,7 +390,9 @@ function Actions({ version, stats, onContinue, onReview, compact }: {
       </span>
       {review}
       <span id="why-review" className="sr-only">{captioned ? "" : why}</span>
+      <span id="why-train" className="sr-only">{trainOk ? "" : whyTrain}</span>
       <span className="wide-action">
+        {trainButton}
         {reportButton}
         {version.created_by_job_id ? (
           <Button onClick={() => void navigate(`/jobs/${version.created_by_job_id ?? ""}`)}>
@@ -361,6 +416,7 @@ function Actions({ version, stats, onContinue, onReview, compact }: {
                 {version.created_by_job_id ? (
                   <Menu.Item onSelect={() => void navigate(`/jobs/${version.created_by_job_id ?? ""}`)}><Icon name="list" />Open job</Menu.Item>
                 ) : null}
+                <Menu.Item disabled={!trainOk} onSelect={onTrain}><Icon name="plus" />Train a model…</Menu.Item>
                 {reportable ? (
                   <Menu.Item onSelect={() => { if (report.data) void navigate(`/versions/${version.version_id}/report`); else build.mutate(); }}>
                     <Icon name="report" />
@@ -387,6 +443,7 @@ export function VersionScreen() {
   const stats = useStats(versionId);
   const [drawer, setDrawer] = useState(false);
   const [review, setReview] = useState(false);
+  const [training, setTraining] = useState(false);
   const [selected, setSelected] = useState(0);
   const [loaded, setLoaded] = useState<Row[]>([]);
 
@@ -404,6 +461,8 @@ export function VersionScreen() {
   useFeedMessage("job", onJob);
 
   const accepted = v ? versionCount(v, "accepted") : 1;
+  const modelsHere = v ? trainable(v) : false;
+  const models = useVersionModels(versionId, modelsHere);
   const status = (params.get("status") ?? (v && accepted === 0 ? "rejected" : null)) as Status | null;
   const filters: RowFilters = useMemo(() => {
     const f: RowFilters = {};
@@ -414,6 +473,7 @@ export function VersionScreen() {
     if (split === "train" || split === "val" || split === "test") f.split = split;
     const q = params.get("q");
     if (q) f.q = q;
+    if (params.get("semantic") === "1") f.semantic = true;
     return f;
   }, [params, status]);
   const tab = params.get("tab") ?? "rows";
@@ -430,7 +490,7 @@ export function VersionScreen() {
         }
         return next;
       }, { replace: true });
-      if ("status" in patch || "reason" in patch || "split" in patch || "q" in patch) setSelected(0);
+      if ("status" in patch || "reason" in patch || "split" in patch || "q" in patch || "semantic" in patch) setSelected(0);
     },
     [setParams],
   );
@@ -487,6 +547,7 @@ export function VersionScreen() {
   }
 
   const parent = lineage.data?.ancestors[0];
+  // Models train on a split (and on a tokenize version of texts): SCR-03 v2 frame D.
   const jobState = v.created_by_job_state;
   const reasons = stats.data?.reasons.map((r) => r.reason_code) ?? [];
   const splits = stats.data?.by_split ? Object.keys(stats.data.by_split) : [];
@@ -527,11 +588,16 @@ export function VersionScreen() {
           </div>
         </div>
         <span className="spacer" />
-        <Actions version={v} stats={stats.data} onContinue={() => { setDrawer(true); }} onReview={() => { setReview(true); }} />
+        <Actions version={v} stats={stats.data} onContinue={() => { setDrawer(true); }} onReview={() => { setReview(true); }} onTrain={() => { setTraining(true); }} />
       </div>
 
       {lineage.data ? (
-        <LineageStrip lineage={lineage.data} current={v} />
+        <LineageStrip
+          lineage={lineage.data}
+          current={v}
+          models={modelsHere ? (models.data?.items.length ?? null) : null}
+          onModels={() => { set({ tab: "models" }); }}
+        />
       ) : lineage.isError ? (
         <ErrorState error={lineage.error} title="Lineage could not be loaded" onRetry={() => void lineage.refetch()} />
       ) : (
@@ -559,7 +625,9 @@ export function VersionScreen() {
         stats={stats.data}
         lineage={lineage.data}
         pressed={status}
-        onPress={(s) => { set({ status: s, tab: null }); }}
+        onPress={(s) => { set({ status: s, semantic: null, tab: null }); }}
+        semantic={params.get("semantic") === "1"}
+        onSemantic={(on) => { set({ semantic: on ? "1" : null, status: null, tab: null }); }}
       />
 
       <Tabs.Root className="panel" value={tab} onValueChange={(t) => { set({ tab: t === "rows" ? null : t }); }}>
@@ -570,6 +638,17 @@ export function VersionScreen() {
           <Tabs.Trigger className="tab" value="reasons">
             Reasons <span className="count">{stats.data ? stats.data.reasons.length : "…"}</span>
           </Tabs.Trigger>
+          <Tabs.Trigger className="tab" value="distributions">
+            Distributions
+          </Tabs.Trigger>
+          <Tabs.Trigger className="tab" value="compare">
+            Compare
+          </Tabs.Trigger>
+          {modelsHere ? (
+            <Tabs.Trigger className="tab" value="models">
+              Models <span className="count">{models.data ? count(models.data.items.length) : "…"}</span>
+            </Tabs.Trigger>
+          ) : null}
           <Tabs.Trigger className="tab" value="config">
             Config
           </Tabs.Trigger>
@@ -603,6 +682,31 @@ export function VersionScreen() {
             <Skeleton width={400} />
           )}
         </Tabs.Content>
+        <Tabs.Content value="distributions" className="panel scroll">
+          <DistributionsTab versionId={v.version_id} active={tab === "distributions"} onReason={(code) => { set({ reason: code, status: null, tab: null }); }} />
+        </Tabs.Content>
+        <Tabs.Content value="compare" className="panel scroll">
+          {tab === "compare" ? (
+            <CompareTab
+              versionId={v.version_id}
+              slug={v.dataset}
+              stage={v.stage}
+              createdAt={v.created_at}
+              parentId={parent?.version_id ?? null}
+              other={params.get("with")}
+              onOther={(id, swap) => {
+                if (swap && id) void navigate(`/versions/${id}?tab=compare&with=${v.version_id}`);
+                else set({ with: id });
+              }}
+              onOpen={(key) => { set({ row: key }); }}
+            />
+          ) : null}
+        </Tabs.Content>
+        {modelsHere ? (
+          <Tabs.Content value="models" className="panel scroll">
+            <ModelsTab versionId={v.version_id} active={tab === "models"} onTrain={() => { setTraining(true); }} />
+          </Tabs.Content>
+        ) : null}
         <Tabs.Content value="config" className="panel">
           <Config version={v} />
         </Tabs.Content>
@@ -629,6 +733,7 @@ export function VersionScreen() {
         <StartPipelineDrawer open from={{ mode: "version", versionId: v.version_id, dataset: v.dataset }} onOpenChange={(o) => { if (!o) setDrawer(false); }} />
       ) : null}
       {review ? <ReviewModal version={v} open onOpenChange={setReview} /> : null}
+      {training ? <TrainDrawer open version={v.version_id} onOpenChange={setTraining} /> : null}
     </div>
   );
 }

@@ -134,6 +134,43 @@ def process_rss_mb(pid: int) -> float:
     return total / MB
 
 
+class ProcessCpu:
+    """CPU of a process and all of its children, in cores, between two calls (MON-3.2).
+
+    Each process's user and system time is remembered by PID, so a DataLoader worker
+    that started since the last call counts from zero and one that ended simply drops
+    out; the total is never negative. The first call only sets the baseline and returns
+    ``None``.
+    """
+
+    def __init__(self, pid: int, clock: Callable[[], float] | None = None) -> None:
+        import time
+
+        self._pid = pid
+        self._clock = clock or time.monotonic
+        self._times: dict[int, float] = {}
+        self._at: float | None = None
+
+    def _read(self) -> dict[int, float]:
+        times: dict[int, float] = {}
+        with contextlib.suppress(psutil.Error):
+            process = psutil.Process(self._pid)
+            for each in [process, *process.children(recursive=True)]:
+                with contextlib.suppress(psutil.Error):
+                    t = each.cpu_times()
+                    times[each.pid] = t.user + t.system
+        return times
+
+    def __call__(self) -> float | None:
+        now, times = self._clock(), self._read()
+        previous, at = self._times, self._at
+        self._times, self._at = times, now
+        if at is None or now <= at:
+            return None
+        used = sum(max(t - previous.get(pid, 0.0), 0.0) for pid, t in times.items())
+        return used / (now - at)
+
+
 def torch_stats() -> tuple[float, float, float] | None:
     """Allocated, reserved and peak-allocated VRAM in MB, as PyTorch sees them.
 

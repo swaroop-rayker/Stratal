@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-11 v2 comparison and Try it — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; background: #fff; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+.t td { padding: 0 8px; height: 30px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); } .t tr.sec td { height: 24px; background: var(--fill); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.t td.best { font-weight: 700; }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.ask { border: 2px solid var(--note); border-radius: 6px; padding: 10px 14px; background: #fff; max-width: 1280px; margin-top: 12px; } .ask li { color: var(--ink); margin: 4px 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.kvs { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; } .kvs span:nth-child(odd) { color: var(--ink-3); }
+.f { display: grid; grid-template-columns: 1fr; gap: 2px; font-size: 12px; }
+.f label { font-family: var(--mono); color: var(--ink-2); font-size: 11px; }
+.f .in { border: 1px solid var(--line); border-radius: 4px; height: 24px; display: flex; align-items: center; padding: 0 8px; background: #fff; font-family: var(--mono); font-size: 11px; }
+.f .in.bad { border: 2px solid var(--ink); } .f .in.ph { color: var(--ink-3); font-style: italic; font-family: inherit; }
+.f .hint { font-size: 10px; color: var(--ink-3); }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 12px; }
+.callout { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--fill); font-size: 12px; } .callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.hbar { display: inline-block; height: 8px; background: var(--ink-3); vertical-align: middle; border-radius: 2px; }
+.ci { position: relative; height: 22px; border-bottom: 1px dashed var(--soft); }
+.ci .w { position: absolute; top: 10px; height: 2px; background: var(--ink-2); }
+.ci .w::before, .ci .w::after { content: ""; position: absolute; top: -4px; width: 2px; height: 10px; background: var(--ink-2); } .ci .w::before { left: 0; } .ci .w::after { right: 0; }
+.ci .d { position: absolute; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); margin-left: -5px; }
+.axis { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--ink-3); }
+.textarea { border: 1px solid var(--line); border-radius: 4px; min-height: 64px; padding: 6px 8px; font-size: 12px; background: #fff; }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 560px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font: 600 15px var(--mono); }
+.drawer .body { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; font-size: 12px; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 2px; vertical-align: middle; text-align: center; font: 700 10px/10px system-ui; } .box.on::after { content: "✓"; } .box.dis { border-color: var(--soft); background: var(--fill); }
+.faint { opacity: .45; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-11 v2 — Comparison, the parent, and Try it for tables and texts · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: EVAL-1.3; REG-1.1 (the parent, RUN-1.10); REG-1.4 (Try it for records and texts, M10's open point 2)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> SCR-11 (v3)</span><span>Routes: <span class="mono">/models/compare?split=ds_…&amp;v=mv_…,mv_…</span>, <span class="mono">/models/:lineage</span></span><span>Decisions: M11 kickoff K8, K9, K11</span><span>2026-11-20</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-11 (faint where unchanged). Blue numbers are annotations. The data is real unless marked: three networks tested on the wine split <span class="mono">ds_6448d354c9c6</span>, whose test part has <b>18 rows</b>; a wine test record (<span class="mono">wine.csv#0000021</span>) and a caption sent to <span class="mono">POST /models/{version}/predict</span> today, with the answers they got. Frame E's fine-tuned lineage is <b>illustrative</b>: nothing has been fine-tuned yet.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Comparison is its own page under Models</b>, <span class="mono">/models/compare</span>, because K8 compares across lineages and a lineage's page shows one. The URL holds the split and the versions, so a comparison can be bookmarked. It is reached from <i>Compare…</i> on the registry list and from <i>Compare on this test split</i> in a version's drawer, which opens it with that version already chosen.</li>
+<li><b>One test split per comparison.</b> The header names it: dataset, split version, test rows, task and classes. The picker lists only versions tested on that split, grouped by lineage, newest first; 2 to 6 can be chosen (EVAL-1.3 asks for 3 or more; 6 keep the columns readable at 1280 px). Versions whose weights were deleted stay comparable: their metrics are kept (REG-2.7).</li>
+<li><b>Versions are columns, metrics are rows.</b> The task's EVAL-1.2 set (classification: accuracy, macro F1; regression: MSE, MAE, R²), then facts: lineage, kind (network or classical), parameters, epochs, trained, parent. The best figure in each row is in bold <i>and</i> marked "best" in words, never by shade alone.</li>
+<li><b>Uncertainty is shown, not hidden (K8).</b> Accuracy carries its Wilson 95 % interval in the table and as a dot-and-whisker chart. When the intervals overlap, one sentence says the split cannot tell the models apart. Here, 18 test rows give 0.74–0.99 for 17 of 18 and 0.82–1.00 for 18 of 18.</li>
+<li><b>Per-class F1 side by side</b>, classes as rows and versions as columns, each cell with its figure and a small bar. Sorted by the largest spread between versions, so the classes where the models differ come first. Above 20 classes it shows the 20 with the largest spread and says so. A version's confusion matrix opens in its drawer (SCR-11's task metrics).</li>
+<li><b>Try it follows the version's input.</b> The image form is unchanged. A table gets one field per feature from the table schema, numbers or a category list, with the target left out; an empty field is sent as null and imputed, as the API already allows. A text gets a text box. Each has <i>Fill from a test row</i>, which also shows that row's true label next to the prediction.</li>
+<li><b>Answers by task:</b> classes as up to five bars with probabilities; a value with the target's name; a cluster ID; a PCA projection as its components. Below, the served line as today ("Served on the GPU · cold start 11.3 s · 13.0 s"). A refused record marks each field the API names (<span class="mono">wrong_input</span>, <span class="mono">loc: body.record.&lt;name&gt;</span>).</li>
+<li><b>The parent across lineages.</b> The version drawer's <i>Parent</i> names the parent's lineage when it is another one and links to it. A new <i>Fine-tuned into</i> row lists the versions started from this one. A lineage founded by a fine-tune says so under its title. <i>Fine-tune…</i> sits in the drawer's actions for a trained network version with its weights (→ SCR-09 v2, <span class="mono">?init_from=</span>).</li>
+</ol>
+</div>
+
+<div class="ask">
+<h3>Two questions this layout depends on</h3>
+<ol>
+<li><b>Versions trained before M10 have no test metrics.</b> Test scoring arrived with EVAL-1.2, so on CIFAR-10's split <span class="mono">ds_f8e67211dd94</span> only one of seven trained versions can be compared (the study's best, <span class="mono">mv_a4a0fb846812</span>, test accuracy 0.810). K8 said "no new evaluation jobs in M11". I propose one narrow exception: <i>Score on test</i> in the picker for a version that has weights and no test metrics. It queues the existing <span class="mono">test_eval</span> stage for that version, once. A version that already has test metrics is never scored again, so a study's "computed once" (HPO-1.4) still holds. Without it, they stay listed, greyed, with "no test metrics: trained before M10" (frame B shows both).</li>
+<li><b>Try it for texts could say how the text was read:</b> its token count, how many words were unknown to the vocabulary, and whether it was cut at the maximum length L. The predict response has none of these today; adding <span class="mono">input: {tokens, unknown, truncated_at}</span> for texts is a small API change. I propose adding it (frame D draws it); without it the frame drops that line.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Three wine networks on one test split</h2>
+<div class="frame" style="height:800px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav on">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b> / Compare</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><b>Compare on one test split</b><span class="spacer"></span><span class="btn sm">Add or remove versions…</span><span class="btn sm ghost">Copy link</span></div>
+      <div class="card"><h3><span class="n in">1</span>Test split</h3>
+        <div style="display:flex;gap:22px;font-size:12px;align-items:center"><span><b>wine</b> · <span class="mono">ds_6448d354c9c6</span></span><span class="mono">test 18 rows</span><span>table · classification · 3 classes (class_0, class_1, class_2)</span><span class="muted">Every column below was scored on these 18 rows.</span></div></div>
+      <div class="card"><h3><span class="n in">2</span>Metrics <span class="muted" style="font-weight:400;font-size:11px">test split · best in bold and named</span></h3>
+        <table class="t">
+          <tr><th style="width:220px"></th><th><span class="mono">mv_50029d931e06</span><br><span style="text-transform:none;letter-spacing:0">wine_mlp · wine</span></th><th><span class="mono">mv_83c38a0d9774</span><br><span style="text-transform:none;letter-spacing:0">my_model · wine</span></th><th><span class="mono">mv_310c2f892167</span><br><span style="text-transform:none;letter-spacing:0">tabular_mlp · wine</span></th></tr>
+          <tr><td>Accuracy</td><td class="m">0.944 <span class="muted">17 of 18</span></td><td class="m best">1.000 <span class="muted">18 of 18</span> · best</td><td class="m best">1.000 <span class="muted">18 of 18</span> · best</td></tr>
+          <tr><td>95 % interval (Wilson)</td><td class="m">0.742 – 0.990</td><td class="m">0.824 – 1.000</td><td class="m">0.824 – 1.000</td></tr>
+          <tr><td>Macro F1</td><td class="m">0.949</td><td class="m best">1.000 · best</td><td class="m best">1.000 · best</td></tr>
+          <tr class="sec"><td colspan="4">About each version</td></tr>
+          <tr><td>Kind</td><td>network (graph)</td><td>network (graph)</td><td>network (graph)</td></tr>
+          <tr><td>Parameters</td><td class="m">836</td><td class="m">18,691</td><td class="m">3,075</td></tr>
+          <tr><td>Trained</td><td class="m">2026-11-20 12:46 · job_0091</td><td class="m">2026-11-20 05:49 · job_0075</td><td class="m">2026-11-19 18:07 · job_0065</td></tr>
+          <tr><td>Weights</td><td>present</td><td>present</td><td>present</td></tr>
+          <tr><td>Parent</td><td class="m">its lineage's base</td><td class="m">its lineage's base</td><td class="m">its lineage's base</td></tr>
+        </table></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="card"><h3><span class="n in">3</span>Accuracy with its 95 % interval <span class="spacer"></span><span class="btn sm ghost">Table view</span></h3>
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:4px 10px;font-size:11px;align-items:center">
+            <span class="mono">mv_50029d931e06</span><div class="ci"><span class="w" style="left:48.4%;width:47.4%"></span><span class="d" style="left:77.8%"></span></div>
+            <span class="mono">mv_83c38a0d9774</span><div class="ci"><span class="w" style="left:64.8%;width:35.2%"></span><span class="d" style="left:100%"></span></div>
+            <span class="mono">mv_310c2f892167</span><div class="ci"><span class="w" style="left:64.8%;width:35.2%"></span><span class="d" style="left:100%"></span></div>
+            <span></span><div class="axis"><span>0.50</span><span>0.75</span><span>1.00</span></div>
+          </div>
+          <div class="callout"><b>The intervals overlap:</b> with 18 test rows, one mistake moves accuracy by 0.056, so this split cannot tell these three apart. A larger test split would.</div></div>
+        <div class="card"><h3><span class="n in">4</span>F1 by class <span class="muted" style="font-weight:400;font-size:11px">largest spread first</span></h3>
+          <table class="t">
+            <tr><th>Class</th><th class="r">mv_50029d931e06</th><th class="r">mv_83c38a0d9774</th><th class="r">mv_310c2f892167</th></tr>
+            <tr><td>class_0</td><td class="r m">0.923 <span class="hbar" style="width:46px"></span></td><td class="r m best">1.000 <span class="hbar" style="width:50px"></span></td><td class="r m best">1.000 <span class="hbar" style="width:50px"></span></td></tr>
+            <tr><td>class_1</td><td class="r m">0.923 <span class="hbar" style="width:46px"></span></td><td class="r m best">1.000 <span class="hbar" style="width:50px"></span></td><td class="r m best">1.000 <span class="hbar" style="width:50px"></span></td></tr>
+            <tr><td>class_2</td><td class="r m">1.000 <span class="hbar" style="width:50px"></span></td><td class="r m">1.000 <span class="hbar" style="width:50px"></span></td><td class="r m">1.000 <span class="hbar" style="width:50px"></span></td></tr>
+          </table>
+          <div class="muted" style="font-size:11px">A tie shows no "best". Each version's confusion matrix: <span class="btn sm ghost">open in its drawer</span></div></div>
+      </div>
+    </section>
+    <footer class="status">CPU 3% · RAM 3.4 / 9.7 GB · GPU 0% · VRAM 0.4 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Test split</td><td>The split version every column was scored on: dataset, test rows, task, classes</td><td><span class="mono">GET /versions/{id}</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Metrics</td><td>The task's test metrics per version, the Wilson interval for accuracy, the best per row, and facts about each version (REG-1.1)</td><td><span class="mono">GET /models/compare?split=&amp;v=</span> <i>planned</i>: each version's <span class="mono">metrics.detail.test</span>, lineage and config; the interval computed by the API</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Interval chart</td><td>Accuracy as a dot with its interval, one row per version, with a table view; the overlap sentence</td><td>same</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>F1 by class</td><td>Per-class F1 side by side, sorted by spread, at most 20 classes</td><td>same (<span class="mono">per_class_f1</span>)</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Choosing the versions: what can be compared, and versions without test metrics</h2>
+<div class="frame" style="height:400px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card"><h3>Add or remove versions · wine <span class="mono" style="font-weight:400">ds_6448d354c9c6</span></h3>
+      <table class="t">
+        <tr><th style="width:24px"></th><th>Version</th><th class="r">Test acc</th><th>Weights</th><th>Trained</th></tr>
+        <tr class="sec"><td colspan="5">wine_mlp · wine</td></tr>
+        <tr class="on"><td><span class="box on"></span></td><td class="m">mv_50029d931e06</td><td class="r m">0.944</td><td>present</td><td class="m">11-20 12:46</td></tr>
+        <tr class="sec"><td colspan="5">my_model · wine</td></tr>
+        <tr class="on"><td><span class="box on"></span></td><td class="m">mv_83c38a0d9774</td><td class="r m">1.000</td><td>present</td><td class="m">11-20 05:49</td></tr>
+        <tr><td><span class="box"></span></td><td class="m">mv_5eb26c36a35a</td><td class="r m">1.000</td><td>deleted</td><td class="m">11-20 05:48</td></tr>
+        <tr><td><span class="box"></span></td><td class="m">mv_872a4187b5e5</td><td class="r m">0.944</td><td>deleted</td><td class="m">11-20 05:48</td></tr>
+        <tr class="sec"><td colspan="5">tabular_mlp · wine</td></tr>
+        <tr class="on"><td><span class="box on"></span></td><td class="m">mv_310c2f892167</td><td class="r m">1.000</td><td>present</td><td class="m">11-19 18:07</td></tr>
+      </table>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px"><span>3 chosen · 2 to 6</span><span class="spacer"></span><span class="btn sm primary">Compare 3</span></div></div>
+    <div class="card"><h3>Same picker on CIFAR-10 <span class="mono" style="font-weight:400">ds_f8e67211dd94</span> <span class="k">question 1</span></h3>
+      <table class="t">
+        <tr><th style="width:24px"></th><th>Version</th><th class="r">Test acc</th><th>Weights</th><th></th></tr>
+        <tr class="sec"><td colspan="5">small_cnn · cifar10 · ml_319245b543d4 (reference)</td></tr>
+        <tr class="on"><td><span class="box on"></span></td><td class="m">mv_a4a0fb846812</td><td class="r m">0.810</td><td>present</td><td class="muted">study st_8293da6ebe0e</td></tr>
+        <tr class="off"><td><span class="box dis"></span></td><td class="m">mv_e80834ce01b0</td><td class="r">—</td><td>present</td><td><span class="btn sm">Score on test</span></td></tr>
+        <tr class="sec"><td colspan="5">small_cnn · cifar10 · ml_7d806d9897fa (graph)</td></tr>
+        <tr class="off"><td><span class="box dis"></span></td><td class="m">mv_a014046ec3b5</td><td class="r">—</td><td>present</td><td><span class="btn sm">Score on test</span></td></tr>
+        <tr class="off"><td><span class="box dis"></span></td><td class="m">mv_2a7c0b4c8b72</td><td class="r">—</td><td>deleted</td><td class="muted">cannot be scored</td></tr>
+        <tr class="sec"><td colspan="5">mlp · cifar10</td></tr>
+        <tr class="off"><td><span class="box dis"></span></td><td class="m">mv_e56a61b2e5af</td><td class="r">—</td><td>present</td><td><span class="btn sm">Score on test</span></td></tr>
+      </table>
+      <div class="muted" style="font-size:11px">Greyed: "no test metrics: trained before M10". With question 1's exception, <i>Score on test</i> queues one <span class="mono">test_eval</span> job; the row fills in when it finishes. Without it, the button is not there. Two lineages share a name, so a group header adds its ID.</div></div>
+  </div>
+</div>
+<p class="caption">The picker shows only versions tested, or testable, on this split. Choosing another split starts a new comparison: <i>Compare…</i> on the registry list first asks for the dataset and its split version, as the <i>Train a model</i> drawer's step 1 does.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Try it with a table record: wine_mlp · wine</h2>
+<div class="frame w1024" style="height:400px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 320px;gap:16px">
+    <div class="card"><h3><span class="n in">5</span>Try it <span class="muted" style="font-weight:400;font-size:11px">one record · 13 features from the table schema · the target column left out</span><span class="spacer"></span><span class="btn sm">Fill from a test row</span><span class="btn sm ghost">Clear</span></h3>
+      <div class="grid4">
+        <div class="f"><label>alcohol</label><span class="in">14.06</span></div>
+        <div class="f"><label>malic_acid</label><span class="in">1.63</span></div>
+        <div class="f"><label>ash</label><span class="in">2.28</span></div>
+        <div class="f"><label>alcalinity_of_ash</label><span class="in">16.0</span></div>
+        <div class="f"><label>magnesium</label><span class="in">126.0</span></div>
+        <div class="f"><label>total_phenols</label><span class="in">3.0</span></div>
+        <div class="f"><label>flavanoids</label><span class="in">3.17</span></div>
+        <div class="f"><label>nonflavanoid_phenols</label><span class="in">0.24</span></div>
+        <div class="f"><label>proanthocyanins</label><span class="in">2.1</span></div>
+        <div class="f"><label>color_intensity</label><span class="in">5.65</span></div>
+        <div class="f"><label>hue</label><span class="in">1.09</span></div>
+        <div class="f"><label>od280/od315_of_diluted_wines</label><span class="in">3.71</span></div>
+        <div class="f"><label>proline</label><span class="in">780.0</span></div>
+      </div>
+      <div class="muted" style="font-size:11px">Numeric fields take numbers; a categorical field is a list of the categories seen in training, plus "another value". An empty field is sent as null and imputed as in training: a number becomes the train split's median, a category the encoder's unknown slot (ML-1.3, ADR-0019).</div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="muted">Filled from test row <span class="mono">wine.csv#0000021</span></span><span class="spacer"></span><span class="btn sm primary">Predict</span></div>
+    </div>
+    <div class="card"><h3><span class="n in">6</span>Prediction</h3>
+      <div style="display:grid;grid-template-columns:60px 1fr 50px;gap:4px 8px;font-size:12px;align-items:center">
+        <b>class_0</b><span class="hbar" style="width:100%"></span><span class="mono">1.000</span>
+        <span>class_1</span><span class="hbar" style="width:1px"></span><span class="mono">0.000</span>
+        <span>class_2</span><span class="hbar" style="width:1px"></span><span class="mono">0.000</span>
+      </div>
+      <div class="callout">This row's label: <b>class_0</b> · ✓ matches</div>
+      <div class="muted" style="font-size:11px">Served on the GPU · cold start 11.3 s · 13.0 s</div>
+      <div style="border-top:1px solid var(--soft);padding-top:8px;font-size:12px"><b>Other tasks</b><br><span class="muted">Regression: the value, named by the target column ("<span class="mono">progression</span> 152.3" on diabetes). k-means: "cluster 2". PCA: "components 0.41, −1.07". DBSCAN and HDBSCAN cannot place a new record: the API's <span class="mono">not_servable</span> reason is shown instead of the form.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================== D -->
+<h2>D · Try it with a text: lstm_text · coco10k-captions</h2>
+<div class="frame w1024" style="height:240px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 320px;gap:16px">
+    <div class="card"><h3>Try it <span class="muted" style="font-weight:400;font-size:11px">one text · tokenized like the train split (vocabulary of the tokenize version, L = 16)</span><span class="spacer"></span><span class="btn sm">Fill from a test row</span></h3>
+      <div class="textarea">A man riding a wave on top of a surfboard.</div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="muted"><span class="k">question 2</span> 11 tokens (the full stop is one) · 0 unknown · cut to 16: no</span><span class="spacer"></span><span class="btn sm primary">Predict</span></div>
+    </div>
+    <div class="card"><h3>Prediction <span class="muted" style="font-weight:400;font-size:11px">top 5 of 78 classes</span></h3>
+      <div style="display:grid;grid-template-columns:86px 1fr 50px;gap:4px 8px;font-size:12px;align-items:center">
+        <b>person</b><span class="hbar" style="width:92%"></span><span class="mono">0.917</span>
+        <span>surfboard</span><span class="hbar" style="width:4%"></span><span class="mono">0.035</span>
+        <span>kite</span><span class="hbar" style="width:2%"></span><span class="mono">0.014</span>
+        <span>motorcycle</span><span class="hbar" style="width:1%"></span><span class="mono">0.004</span>
+        <span>umbrella</span><span class="hbar" style="width:1%"></span><span class="mono">0.003</span>
+      </div>
+      <div class="muted" style="font-size:11px">Served on the GPU · cold start 1.2 s · 2.2 s</div>
+    </div>
+  </div>
+</div>
+<p class="caption">The label is the caption's image category, so "person" for a surfer is what this dataset taught it (DATA-1.4, decision 1 of M8's kickoff). An empty text after normalising is refused on the box (<span class="mono">wrong_input</span>, <span class="mono">loc: body.text</span>).</p>
+
+<!-- ===================================================================== E -->
+<h2>E · The parent across lineages, and Fine-tune… <span class="k">illustrative</span></h2>
+<div class="frame" style="height:470px">
+  <div class="shell">
+    <aside class="side"></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b> / small_cnn · cifar10-vehicles</span></header>
+    <section class="content">
+      <div class="phead"><b>small_cnn · cifar10-vehicles</b><span class="k">ml_…</span></div>
+      <div class="callout" style="width:640px"><span class="n in">7</span>Founded by fine-tuning <span class="mono">mv_a014046ec3b5</span> from <b>small_cnn · cifar10</b>, head reset for 4 classes. Its base is that run's starting weights.</div>
+      <div class="faint" style="display:flex;flex-direction:column;gap:8px"><span class="skel" style="width:640px;height:30px"></span><span class="skel" style="width:640px;height:30px"></span><span class="skel" style="width:640px;height:30px"></span></div>
+    </section>
+    <footer class="status"></footer>
+    <div class="drawer">
+      <header><b>mv_…</b><span class="pill">trained</span><span class="spacer"></span><span class="btn sm">Fine-tune…</span><span class="btn sm ghost">Compare on this test split</span><span class="btn sm ghost">✕</span></header>
+      <div class="body">
+        <div class="kvs">
+          <span>Lineage</span><span>small_cnn · cifar10-vehicles</span>
+          <span>Parent</span><span><span class="mono">mv_a014046ec3b5</span> in <b>small_cnn · cifar10</b> → <span class="muted">another lineage</span></span>
+          <span>Started as</span><span>fine-tune: head reset, 8 layers frozen (n1 … n12), <span class="mono">init_from</span> in its config</span>
+          <span>Fine-tuned into</span><span class="muted">none yet</span>
+          <span>Dataset version</span><span class="mono">ds_… (cifar10-vehicles split)</span>
+        </div>
+        <div class="faint"><span class="skel" style="width:500px;height:120px"></span></div>
+        <div class="muted" style="font-size:11px"><span class="n in">8</span><i>Fine-tune…</i> shows for a trained network version with its weights. For a classical version it is absent; for one whose weights were deleted, <i>Re-train</i> shows instead (REG-2.7). On the parent's own drawer, <i>Fine-tuned into</i> lists this version with its lineage, and the retention preview names it when it keeps the parent (ADR-0015 Addendum A).</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================== F -->
+<h2>F · Empty, loading, error, 1024 px</h2>
+<div class="frame w1024" style="height:360px">
+  <div class="shell rail"><aside class="side"></aside><header class="top"><span><b>Models</b> / Compare</span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-content:start">
+      <div class="empty" style="height:170px"><div><b>Pick at least two versions.</b><p style="margin:6px 0">They must be tested on one split. wine <span class="mono">ds_6448d354c9c6</span> has 5.</p><span class="btn sm primary">Choose versions</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px"><span class="skel" style="width:220px;height:18px"></span><span class="skel" style="height:40px"></span><span class="skel" style="height:110px"></span></div>
+      <div class="empty err" style="height:170px"><div><b>These versions were not tested on one split</b><p style="margin:6px 0"><span class="mono">validation_error</span> · <span class="mono">mv_a4a0fb846812</span> was tested on <span class="mono">ds_f8e67211dd94</span>, not <span class="mono">ds_6448d354c9c6</span>.</p><span class="btn sm">Remove it</span></div></div>
+      <div class="card" style="grid-column:1 / 4"><div style="font-size:12px">At 1024 px the metrics table keeps the versions as columns and scrolls sideways with the metric names pinned; the interval chart and F1 by class stack below it. Try it's record form drops to two fields a row.</div></div>
+    </section><footer class="status"></footer></div>
+</div>
+</main>
+</body>
+</html>

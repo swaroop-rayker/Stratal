@@ -8,12 +8,14 @@ import { DatasetsScreen } from "./screens/datasets/DatasetsScreen";
 import { JobScreen } from "./screens/job/JobScreen";
 import { JobsScreen } from "./screens/jobs/JobsScreen";
 import { LineageScreen } from "./screens/models/LineageScreen";
+import { CompareScreen } from "./screens/models/CompareScreen";
 import { ModelsScreen } from "./screens/models/ModelsScreen";
 import { Placeholder } from "./screens/Placeholder";
 import { ReportScreen } from "./screens/report/ReportScreen";
 import { ReviewScreen } from "./screens/review/ReviewScreen";
 import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { StudyScreen } from "./screens/studies/StudyScreen";
+import { SystemScreen } from "./screens/system/SystemScreen";
 import { VersionScreen } from "./screens/version/VersionScreen";
 import { AppShell } from "./shell/AppShell";
 
@@ -36,9 +38,11 @@ export const router = createBrowserRouter([
           { path: "versions/:versionId/report", element: <ReportScreen /> },
           { path: "models", element: <ModelsScreen /> },
           { path: "models/build", element: <BuilderScreen /> },
+          { path: "models/compare", element: <CompareScreen /> },
           { path: "models/:lineageId", element: <LineageScreen /> },
           { path: "runs/new", element: <RunScreen /> },
           { path: "studies/:studyId", element: <StudyScreen /> },
+          { path: "system", element: <SystemScreen /> },
           { path: "settings", element: <SettingsScreen /> },
           { path: "*", element: <Placeholder screen="Not found" crumb="Not found" /> },
         ],

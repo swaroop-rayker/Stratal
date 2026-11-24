@@ -32,10 +32,28 @@ export function matches(event: StreamEvent, f: LogFilters, jobId: string): boole
   return true;
 }
 
-function Line({ e, jobs }: { e: StreamEvent; jobs: boolean }) {
+/** "GPU hot 84 °C": the alert an action names in the log (MON-2.7, ADR-0020; SCR-04's M11
+ * addendum). */
+function causeLabel(cause: StreamEvent): string {
+  const m = (cause.metrics ?? {}) as Record<string, unknown>;
+  const name: Record<string, string> = { vram_high: "VRAM high", ram_high: "RAM high", gpu_hot: "GPU hot", no_progress: "No progress" };
+  const code = typeof m["code"] === "string" ? m["code"] : "";
+  const value = typeof m["value"] === "number" ? m["value"] : null;
+  const unit = code === "gpu_hot" ? " °C" : code === "no_progress" ? " s" : " %";
+  return `${name[code] ?? cause.message}${value === null ? "" : ` ${value.toFixed(0)}${unit}`}`;
+}
+
+function Line({ e, jobs, cause, linked, onSelect }: {
+  e: StreamEvent;
+  jobs: boolean;
+  cause?: StreamEvent | undefined;
+  linked: boolean;
+  onSelect: (uid: string | null) => void;
+}) {
   const loud = e.level === "WARN" || e.level === "ERROR";
+  const tone = e.level === "WARN" ? "warn" : e.level === "ERROR" ? "error" : "";
   return (
-    <div className={e.level === "WARN" ? "warn" : e.level === "ERROR" ? "error" : undefined}>
+    <div className={[tone, linked ? "linked" : ""].filter(Boolean).join(" ") || undefined}>
       <span className="ts">{clock(e.ts)}</span>
       {jobs ? (
         <span className="mono" style={{ color: "var(--text-primary)" }}>
@@ -43,8 +61,24 @@ function Line({ e, jobs }: { e: StreamEvent; jobs: boolean }) {
         </span>
       ) : null}
       <span className={`lv-${e.level}`}>{e.level}</span>
-      <span className="st">{e.stage ?? "–"}</span>
-      <span>{e.message}</span>
+      <span className="st" title={e.stage ?? undefined}>{e.stage ?? "–"}</span>
+      <span>
+        {e.message}
+        {cause ? (
+          <button
+            type="button"
+            className="cause"
+            title={cause.message}
+            onClick={() => { onSelect(linked ? null : (e.caused_by ?? null)); }}
+          >
+            ← {causeLabel(cause)}
+          </button>
+        ) : e.type === "alert" && e.metrics?.["state"] === "fired" ? (
+          <button type="button" className="cause" onClick={() => { onSelect(linked ? null : e.event_uid); }}>
+            what it caused
+          </button>
+        ) : null}
+      </span>
       {loud && (e.reason || e.suggested_action) ? (
         <span className="why">
           {e.reason ? (
@@ -89,6 +123,7 @@ export function ActivityLog({ jobId, stages, feed, filters, onFilters }: {
   const [live, setLive] = useState<StreamEvent[]>([]);
   const [held, setHeld] = useState<StreamEvent[]>([]);
   const [paused, setPaused] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLInputElement>(null);
 
@@ -128,6 +163,8 @@ export function ActivityLog({ jobId, stages, feed, filters, onFilters }: {
     .filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)))
     .filter((e) => matches(e, filters, jobId));
   const all = filters.scope === "all";
+  // An action names the alert that caused it; selecting either highlights both (MON-2.7).
+  const byUid = new Map([...live, ...(initial.data?.items ?? [])].map((e) => [e.event_uid, e]));
   const set = (patch: Partial<LogFilters>) => {
     onFilters({ ...filters, ...patch });
   };
@@ -202,7 +239,16 @@ export function ActivityLog({ jobId, stages, feed, filters, onFilters }: {
         ) : lines.length === 0 ? (
           <div><span className="ts">–</span><span /><span /><span className="muted">No events match these filters.</span></div>
         ) : (
-          lines.map((e) => <Line key={e.id} e={e} jobs={all} />)
+          lines.map((e) => (
+            <Line
+              key={e.id}
+              e={e}
+              jobs={all}
+              cause={e.caused_by ? byUid.get(e.caused_by) : undefined}
+              linked={selected !== null && (e.event_uid === selected || e.caused_by === selected)}
+              onSelect={setSelected}
+            />
+          ))
         )}
       </div>
     </section>

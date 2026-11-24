@@ -28,7 +28,16 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from stratal.core.errors import ValidationFailed
-from stratal.db.models import Checkpoint, Job, ModelLineage, ModelVersion, Pin, RetentionSetting
+from stratal.db.models import (
+    Checkpoint,
+    Job,
+    JobStage,
+    ModelLineage,
+    ModelVersion,
+    Pin,
+    RetentionSetting,
+    Study,
+)
 from stratal.mon.events import MetricValue, utc_now
 from stratal.registry import store
 from stratal.registry.policy import Decision, LineagePlan, VersionFacts, plan_lineage
@@ -150,6 +159,25 @@ def in_use(session: Session, loaded: dict[str, Any] | None, *, redis_ok: bool) -
     ).all()
     for parent, job_id in active:
         reasons.setdefault(str(parent), f"{job_id} started from it")
+    # A fine-tune that has no version row yet: queued, or a study between trials
+    # (ADR-0015 Addendum A rule 2). Its parent is read before step 1.
+    for config, job_id in session.execute(
+        select(JobStage.config, Job.id)
+        .join(Job, Job.id == JobStage.job_id)
+        .where(Job.state.in_(ACTIVE_JOB_STATES), JobStage.name == "train")
+    ):
+        stage_config: dict[str, Any] = dict(config or {})
+        if stage_config.get("init_from"):
+            reasons.setdefault(str(stage_config["init_from"]), f"{job_id} starts from it")
+    for base, study_id in session.execute(
+        select(Study.base, Study.id).where(Study.state == "running")
+    ):
+        base_run: dict[str, Any] = dict(base or {})
+        run_config: dict[str, Any] = dict(base_run.get("config") or {})
+        if run_config.get("init_from"):
+            reasons.setdefault(
+                str(run_config["init_from"]), f"study {study_id} starts its trials from it"
+            )
     unknown = (
         None
         if redis_ok
@@ -175,13 +203,19 @@ def _facts(session: Session, lineage_id: str, use: InUse) -> list[VersionFacts]:
     ).all()
     ids = [v.id for v in versions]
     pinned = set(session.scalars(select(Pin.version_id).where(Pin.version_id.in_(ids))))
+    # A parent is held only while a child has weights: on disk, being deleted, or a paused
+    # run's checkpoint (ADR-0015 Addendum A rule 3). Children in any lineage count.
     children: dict[str, list[str]] = {}
-    for child, parent in session.execute(
-        select(ModelVersion.id, ModelVersion.parent_version_id).where(
-            ModelVersion.parent_version_id.in_(ids)
-        )
+    for child, parent, state, status in session.execute(
+        select(
+            ModelVersion.id,
+            ModelVersion.parent_version_id,
+            ModelVersion.state,
+            ModelVersion.weights_status,
+        ).where(ModelVersion.parent_version_id.in_(ids))
     ):
-        children.setdefault(str(parent), []).append(child)
+        if state == "partial" or status in ("present", "deleting"):
+            children.setdefault(str(parent), []).append(child)
     facts: list[VersionFacts] = []
     for v in versions:
         reason = use.reasons.get(v.id)

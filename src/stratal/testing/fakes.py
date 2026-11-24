@@ -33,7 +33,7 @@ from stratal.eval.report_stats import (
     RowStatus,
     ScoreDistribution,
 )
-from stratal.mon.sink import Level, Metrics
+from stratal.mon.sink import Level, Metrics, SinkType
 from stratal.storage.manifest import Row
 
 
@@ -114,6 +114,7 @@ class ListSink:
         metrics: Metrics | None = None,
         reason: str | None = None,
         suggested_action: str | None = None,
+        event_type: SinkType = "activity",
     ) -> None:
         if level == "WARN" and not (reason and suggested_action):
             # The runtime's Event refuses this (MON-1.3); fail here too, not only on the stack.
@@ -129,6 +130,7 @@ class ListSink:
                 "metrics": dict(metrics) if metrics else {},
                 "reason": reason,
                 "suggested_action": suggested_action,
+                "type": event_type,
             }
         )
 

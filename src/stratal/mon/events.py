@@ -23,6 +23,7 @@ EventType = Literal[
     "model_unloaded",
     "job_state",
     "system",
+    "diagnostic",
 ]
 MetricValue = float | int | str
 
@@ -52,6 +53,8 @@ class Event(BaseModel):
     reason: str | None = None
     suggested_action: str | None = None
     attempt: int | None = None
+    caused_by: uuid.UUID | None = None
+    """The ``event_uid`` of the alert that caused this event (ADR-0020 rule 4)."""
 
     @model_validator(mode="after")
     def _warnings_explain_themselves(self) -> "Event":

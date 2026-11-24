@@ -1,0 +1,355 @@
+"""What a version holds, and how two versions differ (UI-2.2, DATA-3.5; SCR-03 v2, K10).
+
+Every version of a dataset holds every row (INV-06), each keeping the stage that decided
+it, so one manifest is enough for the funnel from raw to the version: rows decided at
+each stage of its lineage, by reason. "Raw" is every row, "here" the accepted rows and
+"removed" the rest. The diff matches two versions' rows by ``row_key``.
+
+Pure functions over manifests and lineage facts; the API caches their results by version
+ID, since a version never changes.
+"""
+
+import math
+from collections import Counter, defaultdict
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any
+
+from stratal.storage.manifest import COLUMNS, STATUS_ACCEPTED, Row, read_all
+
+__all__ = ["Step", "diff", "distributions", "read_all"]
+
+Json = dict[str, Any]
+
+
+@dataclass(frozen=True)
+class Step:
+    """One version of the lineage, root first."""
+
+    version_id: str
+    stage: str
+    config: Mapping[str, Any]
+
+
+# ---------------------------------------------------------------- numbers
+
+
+def summary(values: Sequence[float]) -> Json | None:
+    """n, min, p10, median, p90, max and mean (nearest-rank percentiles)."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    n = len(ordered)
+
+    def rank(p: float) -> float:
+        return ordered[min(n - 1, max(0, math.ceil(p * n) - 1))]
+
+    return {
+        "n": n,
+        "min": ordered[0],
+        "p10": rank(0.10),
+        "median": rank(0.50),
+        "p90": rank(0.90),
+        "max": ordered[-1],
+        "mean": sum(ordered) / n,
+    }
+
+
+def nice_edges(low: float, high: float, bins: int = 8) -> list[float]:
+    """Round bin edges covering ``[low, high]``: a step of 1, 2 or 5 times a power of ten."""
+    if high <= low:
+        return [low, low + 1.0]
+    raw = (high - low) / bins
+    power = 10 ** math.floor(math.log10(raw))
+    step = next(m * power for m in (1, 2, 5, 10) if m * power >= raw)
+    start = math.floor(low / step) * step
+    edges = [start]
+    while edges[-1] < high:
+        edges.append(round(edges[-1] + step, 10))
+    if len(edges) == 1:
+        edges.append(start + step)
+    return edges
+
+
+def histogram(values: Sequence[float], edges: Sequence[float]) -> list[int]:
+    counts = [0] * (len(edges) - 1)
+    for v in values:
+        for i in range(len(edges) - 1):
+            last = i == len(edges) - 2
+            if edges[i] <= v < edges[i + 1] or (last and v == edges[-1]):
+                counts[i] += 1
+                break
+    return counts
+
+
+# ---------------------------------------------------------------- distributions (UI-2.2)
+
+
+@dataclass(frozen=True)
+class _Column:
+    key: str
+    label: str
+    unit: str
+    value: Callable[[Row], float | None]
+    raw_too: bool = True
+    """Whether the column exists before the stage that adds it (width does; captions do not)."""
+
+
+def _num(name: str, scale: float = 1.0) -> Callable[[Row], float | None]:
+    def get(row: Row) -> float | None:
+        value = row.get(name)
+        return None if value is None else float(value) / scale
+
+    return get
+
+
+def _long_side(row: Row) -> float | None:
+    w, h = row.get("derived_width"), row.get("derived_height")
+    return None if w is None or h is None else float(max(int(w), int(h)))
+
+
+def _words(name: str) -> Callable[[Row], float | None]:
+    def get(row: Row) -> float | None:
+        text = row.get(name)
+        return None if not text else float(len(str(text).split()))
+
+    return get
+
+
+_IMAGE_COLUMNS = (
+    _Column("width", "Width", "px", _num("width")),
+    _Column("height", "Height", "px", _num("height")),
+    _Column("size_kb", "File size", "KB", _num("size_bytes", 1024.0)),
+    _Column("long_side", "Preprocessed long side", "px", _long_side, raw_too=False),
+    _Column("caption_words", "Caption length", "words", _words("caption"), raw_too=False),
+    _Column("clip_score", "CLIP score", "", _num("clip_score"), raw_too=False),
+)
+_TEXT_COLUMNS = (
+    _Column("text_words", "Text length", "words", _words("text")),
+    _Column("token_count", "Tokens before the cut", "tokens", _num("token_count"), raw_too=False),
+)
+_TABLE_COLUMNS = (_Column("target_value", "Target", "", _num("target_value")),)
+
+
+def _columns_for(dtype: str | None) -> tuple[_Column, ...]:
+    if dtype in ("labelled_text",):
+        return _TEXT_COLUMNS
+    if dtype in ("tabular",):
+        return _TABLE_COLUMNS
+    return _IMAGE_COLUMNS
+
+
+def _column(col: _Column, rows: Sequence[Row]) -> Json | None:
+    raw = [v for r in rows if (v := col.value(r)) is not None]
+    here = [v for r in rows if r["status"] == STATUS_ACCEPTED and (v := col.value(r)) is not None]
+    removed = [
+        v for r in rows if r["status"] != STATUS_ACCEPTED and (v := col.value(r)) is not None
+    ]
+    if not here and not raw:
+        return None
+    if len(set(raw)) <= 1:
+        bins = None  # one value: a line, not a chart (SCR-03 v2 frame E: all 32 × 32)
+    else:
+        edges = nice_edges(min(raw), max(raw))
+        bins = [
+            {"low": edges[i], "high": edges[i + 1], "raw": a, "here": b}
+            for i, (a, b) in enumerate(
+                zip(histogram(raw, edges), histogram(here, edges), strict=True)
+            )
+        ]
+    return {
+        "key": col.key,
+        "label": col.label,
+        "unit": col.unit,
+        "raw_label": "raw" if col.raw_too else "with a value",
+        "raw": summary(raw),
+        "here": summary(here),
+        "removed": summary(removed),
+        "bins": bins,
+    }
+
+
+def _funnel(rows: Sequence[Row], lineage: Sequence[Step]) -> list[Json]:
+    decided: dict[str, Counter[tuple[str, str]]] = defaultdict(Counter)
+    for row in rows:
+        if row["status"] != STATUS_ACCEPTED:
+            stage = str(row["decided_at_stage"] or "")
+            decided[stage][(str(row["reason_code"] or ""), str(row["status"]))] += 1
+    steps: list[Json] = []
+    rows_in = len(rows)
+    for index, step in enumerate(lineage):
+        reasons = sorted(decided.get(step.stage, Counter()).items(), key=lambda kv: (-kv[1], kv[0]))
+        removed = [
+            {"reason_code": code, "status": status, "rows": n} for (code, status), n in reasons
+        ]
+        out = rows_in - sum(n for _key, n in reasons)
+        parts: dict[str, int] | None = None
+        if step.stage == "split" and index == len(lineage) - 1:
+            counted = Counter(
+                str(r["split"]) for r in rows if r["status"] == STATUS_ACCEPTED and r["split"]
+            )
+            parts = {name: counted.get(name, 0) for name in ("train", "val", "test")}
+        steps.append(
+            {
+                "stage": step.stage,
+                "version_id": step.version_id,
+                "rows_in": rows_in,
+                "removed": removed,
+                "rows_out": out,
+                "parts": parts,
+            }
+        )
+        rows_in = out
+    return steps
+
+
+def distributions(rows: Sequence[Row], *, dtype: str | None, lineage: Sequence[Step]) -> Json:
+    """The funnel from raw to the version, then each column raw against here (UI-2.2)."""
+    accepted = [r for r in rows if r["status"] == STATUS_ACCEPTED]
+    columns = [c for col in _columns_for(dtype) if (c := _column(col, rows)) is not None]
+    classes: list[Json] | None = None
+    if any(r.get("label") for r in accepted):
+        by: dict[str, Counter[str]] = defaultdict(Counter)
+        for r in accepted:
+            if r.get("label"):
+                by[str(r["label"])][str(r.get("split") or "all")] += 1
+        classes = [
+            {
+                "label": label,
+                "train": c.get("train", 0),
+                "val": c.get("val", 0),
+                "test": c.get("test", 0),
+                "rows": sum(c.values()),
+            }
+            for label, c in sorted(by.items(), key=lambda kv: (-sum(kv[1].values()), kv[0]))
+        ]
+    formats = Counter(str(r.get("format")) for r in rows if r.get("format"))
+    markers: Json = {}
+    for step in lineage:
+        if step.stage == "filter" and "clip_threshold" in step.config:
+            markers["clip_score"] = step.config["clip_threshold"]
+    token_cut: Json | None = None
+    with_tokens = [r for r in accepted if r.get("tokens")]
+    if with_tokens:
+        length = len(str(with_tokens[0]["tokens"]).split())
+        cut = sum(1 for r in with_tokens if int(r.get("token_count") or 0) > length)
+        token_cut = {"length": length, "cut": cut, "rows": len(with_tokens)}
+    return {
+        "row_count": len(rows),
+        "accepted": len(accepted),
+        "removed": len(rows) - len(accepted),
+        "funnel": _funnel(rows, lineage),
+        "columns": columns,
+        "classes": classes,
+        "formats": dict(sorted(formats.items())),
+        "markers": markers,
+        "token_cut": token_cut,
+    }
+
+
+# ---------------------------------------------------------------- diff (DATA-3.5)
+
+_WORDING = "reason_detail"
+_IGNORED = {"row_key", _WORDING}
+_SHOWN_LIMIT = 200
+
+
+def _config_diff(a: Sequence[Step], b: Sequence[Step]) -> list[Json]:
+    """Settings that differ, stage by stage along both lineages."""
+    by_a = {s.stage: s for s in a}
+    by_b = {s.stage: s for s in b}
+    out: list[Json] = []
+    for stage in [s.stage for s in a] + [s.stage for s in b if s.stage not in by_a]:
+        sa, sb = by_a.get(stage), by_b.get(stage)
+        if sa is None or sb is None:
+            out.append(
+                {
+                    "stage": stage,
+                    "field": None,
+                    "a": "present" if sa else "absent",
+                    "b": "present" if sb else "absent",
+                }
+            )
+            continue
+        for key in sorted(set(sa.config) | set(sb.config)):
+            va, vb = sa.config.get(key), sb.config.get(key)
+            if va != vb and not key.startswith("continues_"):
+                out.append({"stage": stage, "field": key, "a": va, "b": vb})
+    return out
+
+
+def _field_group(field: str) -> str:
+    """Fields shown together in "changed, by field"."""
+    if field in ("derived_sha256", "derived_width", "derived_height"):
+        return "derived size and file"
+    if field in ("sha256", "size_bytes", "format", "width", "height", "phash"):
+        return "content"
+    return field
+
+
+def diff(
+    a_rows: Iterable[Row],
+    b_rows: Iterable[Row],
+    *,
+    a_steps: Sequence[Step],
+    b_steps: Sequence[Step],
+) -> Json:
+    """Rows added, removed and changed from A to B, matched by ``row_key`` (DATA-3.5).
+
+    A row is *changed* when its status, reason code, content or a derived field differs
+    (the owner's answer at the low-fi, 2026-11-21); a row whose only difference is
+    ``reason_detail`` is counted on its own line as wording only. A field one side has
+    for no row (a label version's caption against a clean version) is listed once, not
+    per row.
+    """
+    a = {str(r["row_key"]): r for r in a_rows}
+    b = {str(r["row_key"]): r for r in b_rows}
+
+    def filled(rows: Mapping[str, Row], field: str) -> bool:
+        return any(r.get(field) is not None for r in rows.values())
+
+    only_a = [f for f in COLUMNS if f not in _IGNORED and filled(a, f) and not filled(b, f)]
+    only_b = [f for f in COLUMNS if f not in _IGNORED and filled(b, f) and not filled(a, f)]
+    compared = [f for f in COLUMNS if f not in _IGNORED and f not in only_a and f not in only_b]
+    changed: list[Json] = []
+    by_field: Counter[str] = Counter()
+    wording: list[Json] = []
+    same = 0
+    for key in sorted(a.keys() & b.keys()):
+        ra, rb = a[key], b[key]
+        fields = [f for f in compared if ra.get(f) != rb.get(f)]
+        if fields:
+            for group in {_field_group(f) for f in fields}:
+                by_field[group] += 1
+            if len(changed) < _SHOWN_LIMIT:
+                changed.append(
+                    {
+                        "row_key": key,
+                        "fields": [{"field": f, "a": ra.get(f), "b": rb.get(f)} for f in fields],
+                    }
+                )
+        elif ra.get(_WORDING) != rb.get(_WORDING):
+            if len(wording) < _SHOWN_LIMIT:
+                wording.append({"row_key": key, "a": ra.get(_WORDING), "b": rb.get(_WORDING)})
+            by_field["__wording"] += 1
+        else:
+            same += 1
+    wording_count = by_field.pop("__wording", 0)
+    changed_count = sum(
+        1 for k in a.keys() & b.keys() if any(a[k].get(f) != b[k].get(f) for f in compared)
+    )
+    return {
+        "stages_differ": a_steps[-1].stage != b_steps[-1].stage if a_steps and b_steps else False,
+        "config_diff": _config_diff(a_steps, b_steps),
+        "added": len(b.keys() - a.keys()),
+        "removed": len(a.keys() - b.keys()),
+        "changed": changed_count,
+        "wording_only": wording_count,
+        "same": same,
+        "by_field": dict(sorted(by_field.items(), key=lambda kv: (-kv[1], kv[0]))),
+        "only_in_a": only_a,
+        "only_in_b": only_b,
+        "changed_rows": changed,
+        "wording_rows": wording,
+        "shown_limit": _SHOWN_LIMIT,
+    }

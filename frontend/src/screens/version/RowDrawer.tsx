@@ -1,7 +1,7 @@
 // SCR-03 regions 8 and 9 (frame B): one row, every manifest field; for a duplicate, its
 // group side by side with the kept row marked and the pHash differences highlighted.
 // j / k move to the next row without closing; Esc closes.
-import { useRows } from "../../api/queries";
+import { useCluster, useRows } from "../../api/queries";
 import { copy } from "../../components/states";
 import { Drawer } from "../../components/Drawer";
 import { Button, Icon, Kbd, StatePill } from "../../components/ui";
@@ -101,6 +101,58 @@ function Group({ versionId, row, threshold, onOpenRow }: {
   );
 }
 
+/** "sc 1e4b": a semantic cluster's short name, from its ID (DATA-2.3). */
+export function clusterName(id: string): string {
+  return `sc ${id.slice(0, 4)}`;
+}
+
+function Cluster({ versionId, row, onOpenRow }: { versionId: string; row: Row; onOpenRow: (key: string) => void }) {
+  const cluster = useCluster(versionId, row.semantic_cluster_id ?? null);
+  const members = cluster.data?.rows ?? [];
+  const shown = [row, ...members.filter((m) => m.row_key !== row.row_key)].slice(0, 2);
+  const pair = cluster.data?.pairs.find((p) => shown.length === 2 && [p.a, p.b].includes(shown[0]?.row_key ?? "") && [p.a, p.b].includes(shown[1]?.row_key ?? ""));
+  const oneGroup = (cluster.data?.split_groups.length ?? 0) === 1;
+  return (
+    <>
+      <div className="group-head">
+        <b>Semantic cluster</b>
+        <span className="scchip">{clusterName(row.semantic_cluster_id ?? "")}</span>· {members.length || "…"} rows
+      </div>
+      <div className="pair">
+        {shown.map((m) => (
+          <div key={m.row_key} className="card-img">
+            <Photo row={m} />
+            <span className="mono">{m.row_key}</span>
+            <span>{m.status}{m.split ? ` · ${m.split}` : ""}</span>
+          </div>
+        ))}
+      </div>
+      {pair ? (
+        <div className="simline">
+          similarity <span className="dist">{pair.similarity === null ? "–" : pair.similarity.toFixed(3)}</span>
+          {pair.phash_distance !== null ? ` · pHash ${String(pair.phash_distance)} bits apart` : ""}
+          {oneGroup && members.some((m) => m.split_group) ? <> · <b style={{ color: "var(--text-primary)" }}>one split group</b> (DATA-4.8)</> : null}
+        </div>
+      ) : null}
+      {members.length > 2 ? (
+        <p className="foot-note">
+          {members.length - 2} more in this cluster:{" "}
+          {members.filter((m) => !shown.includes(m)).map((m) => (
+            <button type="button" key={m.row_key} className="linkish mono" onClick={() => { onOpenRow(m.row_key); }}>
+              {m.row_key}{" "}
+            </button>
+          ))}
+        </p>
+      ) : null}
+      <p className="foot-note">
+        {row.status === "accepted"
+          ? "Every member stays accepted: a semantic cluster is detected, not removed (ADR-0013 rule 3)."
+          : "This member was removed as a semantic duplicate (semantic_action: remove)."}
+      </p>
+    </>
+  );
+}
+
 export function RowDrawer({ versionId, row, threshold, onClose, onMove, onOpenRow }: {
   versionId: string;
   row: Row;
@@ -142,7 +194,9 @@ export function RowDrawer({ versionId, row, threshold, onClose, onMove, onOpenRo
       <span className="sr-only" aria-live="polite">
         {row.row_key}, {row.status}
       </span>
-      {row.dup_group_id ? (
+      {row.semantic_cluster_id && row.dup_kind !== "exact" && row.dup_kind !== "near" ? (
+        <Cluster versionId={versionId} row={row} onOpenRow={onOpenRow} />
+      ) : row.dup_group_id ? (
         <Group versionId={versionId} row={row} threshold={threshold} onOpenRow={onOpenRow} />
       ) : (
         <div className="card-img single">

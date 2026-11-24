@@ -31,6 +31,10 @@
 - **What it holds (rule 6)** is the Redis key `stratal:inference:loaded`, set before the weights are read; weights are read under the lineage's retention lock.
 - **A waiting job (rule 5)** names itself in `stratal:gpu:wanted` while `gpu_lease` polls; the service checks every second and gives the lease back.
 
+## Memory moved in M11 (2026-11-22, K12)
+
+- **`inference` 1.0 → 1.25 GB and `worker-gpu` 3.5 → 3.25 GB**, as the owner decided at M11's kickoff (K12): the service now serves classical tables and texts as well as images (REG-1.4, ADR-0019), and `worker-gpu`'s measured peaks (1.6 GB training, 2.2 GB labelling) leave room. The sum of the limits is unchanged. Both peaks are measured again in the phase-2 acceptance run.
+
 ## Alternatives
 
 | Option | Why not |

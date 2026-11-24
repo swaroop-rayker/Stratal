@@ -232,7 +232,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    mem_limit: 3500m  # 1 GB went to inference (ADR-0016 rule 7); peak measured 1.6 GB training, 2.2 GB labelling
+    mem_limit: 3250m  # M11 (K12): 0.25 GB more to inference; peaks measured 1.6 GB training, 2.2 GB labelling (ADR-0016)
 
   inference:
     # REG-1.4, ADR-0016: holds at most one model and serves the API's /predict. The
@@ -261,7 +261,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    mem_limit: 1000m
+    mem_limit: 1250m  # M11 (K12): tables and texts are served too (REG-1.4); the sum of limits is unchanged
     restart: unless-stopped
 
 volumes:

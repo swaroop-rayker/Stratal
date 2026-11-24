@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-11 v2 comparison and Try it — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.select { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--fs-12); color: var(--text-primary); }
+.select svg.i { width: 12px; height: 12px; color: var(--text-secondary); } .select.is-disabled { opacity: .45; }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 40px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); }
+.pill.cancelled { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 400px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; } .toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.modal { width: 460px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; } .modal > header svg.i { color: var(--danger); }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); } .modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); max-width: 40ch; }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.grp { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-07 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.phead { display: flex; align-items: center; gap: var(--sp-3); } .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.t tr.sec td .count { margin-left: var(--sp-1); }
+.now { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.now .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.now .stg { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.now .progress { width: 72px; }
+.now.err .code { color: var(--danger); font-family: var(--font-mono); }
+.now.muted { color: var(--text-muted); }
+.now svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.t td.acts-cell { width: 120px; text-align: right; }
+.toasts { position: absolute; right: var(--sp-4); bottom: calc(28px + var(--sp-4)); z-index: var(--z-toast); }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+
+/* ============================================================================ SCR-11 (tokens only)
+   Data-viz categorical 1–5 copied unchanged from design system v1. */
+:root { --cat-1: #5aa9f5; --cat-2: #f29e4c; --cat-3: #3cc4b4; --cat-4: #e58ad6; --cat-5: #a3d35c; }
+[data-theme="light"] { --cat-1: #1f6fc4; --cat-2: #b0560a; --cat-3: #0b7d70; --cat-4: #a8348f; --cat-5: #4d7a12; }
+.pill.paused { --c: var(--state-paused); }
+.vbase { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); color: var(--text-secondary); border: var(--bw) solid var(--border-strong); }
+.latest { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); margin-left: var(--sp-1); }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); } .phead .sub .mono { color: var(--text-secondary); }
+.phead h1 .mono { font-family: var(--font-mono); }
+.cols { display: grid; grid-template-columns: 1fr 340px; gap: var(--sp-3); min-height: 0; }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.card h2 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.card h2 .num { font: var(--fs-13) var(--font-mono); color: var(--text-primary); font-weight: var(--fw-regular); }
+.stackbar { display: flex; height: 12px; border-radius: var(--r-xs); overflow: hidden; background: var(--surface-sunken); border: var(--bw) solid var(--border); }
+.stackbar i { display: block; height: 100%; background: var(--c); }
+.parts { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.parts > span:nth-child(even) { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--text-primary); }
+.parts i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); margin-right: var(--sp-2); }
+.parts .ok { color: var(--success); }
+.note2 { font-size: var(--fs-12); color: var(--text-muted); margin: 0; } .note2 .mono { color: var(--text-secondary); }
+.drop { border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); height: 64px; display: grid; place-items: center; color: var(--text-secondary); font-size: var(--fs-12); }
+.pred { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font: var(--fs-12) var(--font-mono); }
+.pred b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.thumb { width: 64px; height: 64px; border-radius: var(--r-sm); background: repeating-linear-gradient(45deg, var(--surface-raised) 0 6px, var(--border) 6px 7px); flex: none; }
+.weights-gone { color: var(--text-muted); }
+.pinbtn { background: none; border: 0; color: var(--text-muted); cursor: pointer; padding: 2px; } .pinbtn.on { color: var(--text-primary); }
+.pinbtn svg.i { width: 14px; height: 14px; } .pinbtn.on svg.i { fill: currentColor; }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 480px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); display: flex; flex-direction: column; z-index: var(--z-drawer); }
+.dhead { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); } .dhead h2 { margin: 0; font: var(--fw-semibold) var(--fs-16) var(--font-mono); }
+.dbody { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-13); }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); } .kv > span:nth-child(odd) { color: var(--text-secondary); } .kv .mono { color: var(--text-primary); }
+.code { font: var(--fs-12)/1.6 var(--font-mono); background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-sm); padding: var(--sp-2) var(--sp-3); white-space: pre; color: var(--text-secondary); margin: 0; }
+.callout { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--text-muted); font-size: var(--fs-12); color: var(--text-secondary); }
+.callout.busy { border-left-color: var(--danger); background: var(--danger-soft); }
+.typeconfirm { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-3); font-size: var(--fs-12); }
+.typeconfirm .input { height: var(--h-md); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); padding: 0 var(--sp-2); display: flex; align-items: center; font: var(--fs-13) var(--font-mono); color: var(--text-primary); }
+.t td.m2 { font-family: var(--font-mono); font-size: var(--fs-12); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Contrast rules approved at G3 since the v1 mockups (in the built app). */
+[data-theme="light"] .pill { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.err { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+[data-theme="dark"] .t tr[aria-selected=true] .pill, [data-theme="dark"] .t tr.is-hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }
+
+/* ============================================================================ data-viz (design system v1: categorical 1, as SCR-10) */
+:root { --cat-1: #5aa9f5; }
+[data-theme="light"] { --cat-1: #1f6fc4; }
+/* ============================================================================ SCR-11 task metrics (EVAL-1.2), tokens only */
+.tm { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); border: var(--bw) solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+.tm > .h { display: flex; align-items: center; gap: var(--sp-2); }
+.tm > .h h3 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); color: var(--text-primary); }
+.tm .sub { font-size: var(--fs-11); color: var(--text-secondary); }
+.tm .t td.r, .tm .t th.r { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tm .t td.dimrow { color: var(--text-secondary); }
+.tm .note2 { margin: 0; font-size: var(--fs-11); color: var(--text-secondary); }
+.f1 { display: grid; grid-template-columns: 92px 1fr 40px; gap: 3px var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.f1 .bar { height: 8px; border-radius: var(--r-xs); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.f1 .bar > i { display: block; height: 100%; width: var(--p); background: var(--cat-1); }
+.f1 span:nth-child(3n) { text-align: right; color: var(--text-primary); }
+.cm { display: grid; grid-template-columns: 74px repeat(10, minmax(0, 1fr)); gap: 1px; font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; }
+.cm > span { height: 22px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+.cm > span.rh { justify-content: flex-start; color: var(--text-secondary); overflow: hidden; white-space: nowrap; }
+.cm > span.ch { font-size: 10px; color: var(--text-muted); }
+.cm > span.v { background: color-mix(in srgb, var(--cat-1) var(--a), var(--surface)); color: var(--text-primary); }
+.cm > span.v.hi { font-weight: var(--fw-semibold); }
+.cm > span.is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
+.tip { align-self: flex-start; padding: 4px 8px; border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); font-size: var(--fs-11); color: var(--text-primary); box-shadow: var(--shadow-2); }
+.conf { display: grid; grid-template-columns: 1fr 1fr 64px 64px; gap: 2px var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.conf b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.conf .r { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.badge.once { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+[data-theme="light"] .badge.once { color: color-mix(in srgb, var(--accent) 85%, var(--text-primary)); }
+.drawer.wide { width: 560px; }
+.split-frames { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: flex-start; }
+.split-frames .drawer { position: static; height: auto; box-shadow: none; border: var(--bw) solid var(--border); border-radius: var(--r-md); }
+
+/* ============================================================================ from SCR-09 v2 (approved hi-fi): callouts and form fields, unchanged */
+.callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid; border-left-width: var(--bw); font-size: var(--fs-12); color: var(--text-primary); background: var(--surface); border-color: var(--border); }
+.callout svg.i { margin-top: 2px; flex: none; }
+.callout.ok { border-color: color-mix(in srgb, var(--success) 45%, transparent); background: var(--success-soft); } .callout.ok svg.i { color: var(--success); }
+.callout.err { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .callout.err svg.i { color: var(--danger); }
+.callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .callout.info svg.i { color: var(--info); }
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font: var(--fw-medium) var(--fs-11) var(--font-mono); color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.field.error > small { color: var(--danger); display: flex; gap: var(--sp-1); align-items: center; }
+.input { height: 28px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; width: 100%; display: flex; align-items: center; }
+.input.ph { color: var(--text-muted); font-family: var(--font-ui); font-style: italic; }
+.field.error .input { border-color: var(--danger); }
+.textarea { min-height: 72px; padding: var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font-size: var(--fs-13); }
+.facts { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.facts b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.badge.once, .badge.best { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+[data-theme="light"] .badge.best { color: color-mix(in srgb, var(--accent) 85%, var(--text-primary)); }
+[data-theme="light"] .callout.err b, [data-theme="light"] .callout.info b { color: var(--text-primary); }
+
+/* ============================================================================ SCR-11 v2 comparison (EVAL-1.3), tokens only */
+.cmp th .vid { display: block; font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); text-transform: none; letter-spacing: 0; }
+.cmp th .lin { display: block; font: var(--fs-11) var(--font-ui); color: var(--text-secondary); text-transform: none; letter-spacing: 0; margin-top: 2px; }
+.cmp td.r { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.cmp td.r.lead { font-weight: var(--fw-semibold); }
+.cmp td.r .badge { margin-left: var(--sp-1); vertical-align: 1px; }
+.cmp td .of { color: var(--text-secondary); font-size: var(--fs-11); margin-left: var(--sp-1); font-weight: var(--fw-regular); }
+.cmp td.lab { color: var(--text-secondary); }
+.cmp td.lab b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.cmp td.dim { color: var(--text-secondary); }
+.cmp .t td { height: 36px; }
+.cmp .t td:first-child { width: 220px; }
+.cmp .t th + th, .cmp .t td + td { border-left: var(--bw) solid var(--border); }
+.ci { display: grid; grid-template-columns: 124px 1fr 52px; gap: 6px var(--sp-3); align-items: center; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.ci .row { position: relative; height: 22px; background: linear-gradient(to right, var(--border) 1px, transparent 1px) 0 0 / 25% 100% repeat-x; border-right: var(--bw) solid var(--border); }
+.ci .w { position: absolute; top: 10px; height: 2px; background: var(--cat-1); }
+.ci .w::before, .ci .w::after { content: ""; position: absolute; top: -4px; width: 2px; height: 10px; background: var(--cat-1); } .ci .w::before { left: 0; } .ci .w::after { right: 0; }
+.ci .d { position: absolute; top: 5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--cat-1); border: 2px solid var(--surface); }
+.ci .ax { display: flex; justify-content: space-between; font-size: var(--fs-11); color: var(--text-muted); }
+.ci .val { color: var(--text-primary); text-align: right; }
+.f1c .r .bar { display: inline-block; width: 56px; height: 8px; margin-left: var(--sp-2); vertical-align: middle; border-radius: var(--r-xs); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.f1c .r .bar > i { display: block; height: 100%; width: var(--p); background: var(--cat-1); }
+.chk { width: 14px; height: 14px; accent-color: var(--accent); margin: 0; vertical-align: middle; }
+.t tr.na td { color: var(--text-secondary); }
+.t tr.na td.id { color: var(--text-secondary); }
+.why { font-size: var(--fs-11); color: var(--text-secondary); }
+.answer { display: grid; grid-template-columns: 96px 1fr 48px; gap: 4px var(--sp-2); align-items: center; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.answer b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.answer .bar { height: 10px; border-radius: var(--r-xs); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.answer .bar > i { display: block; height: 100%; width: var(--p); min-width: 1px; background: var(--cat-1); }
+.answer span:nth-child(3n) { text-align: right; color: var(--text-primary); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2) var(--sp-3); }
+.served { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.toolrow { display: flex; align-items: center; gap: var(--sp-2); }
+.toolrow .sub2 { font-size: var(--fs-11); color: var(--text-secondary); }
+.drawer .t td { height: 34px; }
+.stack { display: flex; flex-direction: column; gap: var(--sp-3); }
+.colcard { width: 340px; }
+.pad { padding: var(--sp-4); }
+.hscroll { overflow: hidden; position: relative; }
+.hscroll::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 32px; background: linear-gradient(to right, transparent, var(--surface)); }
+/* In a selected or hovered row (accent-soft), the accent badge mixes toward text-primary, as pills do there (approved G3 rule). */
+[data-theme="dark"] .t tr[aria-selected=true] .badge.once, [data-theme="dark"] .t tr[aria-selected=true] .badge.best, [data-theme="dark"] .t tr.is-hover .badge.once, [data-theme="dark"] .t tr.is-hover .badge.best { color: color-mix(in srgb, var(--accent) 70%, var(--text-primary)); }
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+<symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9" stroke-width="2.2"/></symbol>
+<symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+<symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+<symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 16 16"><path d="M6 2.5h4M6.8 2.5v3.8L5 9h6L9.2 6.3V2.5M8 9v4.5"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-11 v2 — comparison, the parent, and Try it for tables and texts · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-11v2-lofi_v1.html</span>, approved 2026-11-20 with both of its questions) inside SCR-11's approved look, using only design system v1 tokens and components and the icons already in the set. The data is real unless marked: three networks tested on the wine split <span class="mono">ds_6448d354c9c6</span> (18 test rows), the CIFAR-10 versions on <span class="mono">ds_f8e67211dd94</span>, and a wine record and a caption answered by <span class="mono">POST /models/{version}/predict</span> on the live stack. Frame E's fine-tuned lineage and the scoring job in frame B are illustrative. One fix from the low-fi: <span class="mono">mv_50029d931e06</span>'s dot now sits at its accuracy, 0.944 (the low-fi drew it at 0.89). Open as <span class="mono">SCR-11v2_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>The comparison page uses SCR-11's page header and cards</b>, breadcrumb <i>Models › Compare</i>, with <i>Add or remove versions…</i> and a ghost <i>Copy link</i> at the right.</li>
+<li><b>Versions are table columns</b> headed by the version ID in mono and the lineage name in secondary text, with a vertical rule between columns so each version reads as one column.</li>
+<li><b>The best figure is semibold with the accent <i>best</i> badge</b>, SCR-10's badge for the best trial. Tied figures share it; when every version ties, no badge is shown. Accuracy's count ("17 of 18") and its Wilson interval sit beside and below it in secondary text.</li>
+<li><b>The interval chart is categorical 1</b>, as SCR-10 and the task metrics use for one series: a dot with whiskers per version on quarter gridlines, the figure at the right, and a <i>Table</i> view. Versions are told apart by their row labels, not by colour.</li>
+<li><b>The overlap sentence is an info callout</b> (SCR-09 v2's callout), because it explains rather than warns.</li>
+<li><b>F1 by class is the dense table</b> with categorical 1 mini bars beside each figure, sorted by spread, with the best marked as in the metrics table.</li>
+<li><b>The picker is a 560 px drawer</b> from the right, like the version drawer: native checkboxes in accent, versions grouped under their lineage with its ID, rows without test metrics in secondary text with the reason, <i>Score on test</i> as a small button with the play icon, and a scoring row as a <i>running</i> pill with its job. The footer counts the choice and holds <i>Compare N</i>.</li>
+<li><b>Try it stays in the lineage page's right-hand card.</b> A table record is two fields a row, labelled by column name in mono (cut with an ellipsis, the full name on hover), an empty field showing "empty: imputed" in italics. The answer is categorical 1 bars with the probability. The row's true label is an info callout with a check or a cross and the words "matches" or "differs", never colour alone.</li>
+<li><b>The parent across lineages</b> is a row in the version drawer with the lineage name and a neutral <i>another lineage</i> badge; <i>Fine-tuned into</i> lists the children. A lineage founded by a fine-tune shows an info callout with the branch icon under its title. <i>Fine-tune…</i> uses the branch icon among the drawer's actions.</li>
+<li><b>Design-system addition, for approval:</b> in dark, an accent badge (<i>computed once</i>, <i>best</i>) inside a selected or hovered table row mixes its text 70 % toward text-primary, as pills already do there (approved at an earlier Gate 3). It measured 4.31:1 on the selected row's accent tint; with the rule it passes. AA in both themes: 587 text elements each.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Three wine networks on one test split (dark)</h2>
+<div class="frame" id="frameA" style="height:920px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Data</div><div class="nav"><svg class="i"><use href="#i-db"/></svg>Datasets</div><div class="grp">Work</div><div class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models</div></nav>
+    <header class="top"><div class="crumbs"><b>Models</b><svg class="i"><use href="#i-chevron"/></svg><span>Compare</span></div><span class="spacer"></span><span class="jobind idle"><svg class="i"><use href="#i-clock"/></svg>Idle</span></header>
+    <main class="content">
+      <div class="phead"><h1>Compare on one test split</h1><span class="sub">3 versions · <span class="mono">EVAL-1.3</span></span><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-plus"/></svg>Add or remove versions…</button><button class="btn sm ghost">Copy link</button></div>
+      <section class="card"><h2><span class="n" style="position:static">1</span>Test split</h2>
+        <div class="facts"><span><b>wine</b> · ds_6448d354c9c6</span><span>test <b>18</b> rows</span><span>table · classification</span><span>3 classes: class_0, class_1, class_2</span></div>
+        <p class="note2">Every column below was scored on these 18 rows.</p></section>
+      <section class="card cmp"><h2><span class="n" style="position:static">2</span>Metrics <span class="sub" style="font-weight:400;font-size:var(--fs-11);color:var(--text-secondary)">test split</span></h2>
+        <div class="table-wrap"><table class="t"><caption class="sr-only">Test metrics by version</caption>
+          <thead><tr><th scope="col">Metric</th><th scope="col"><span class="vid">mv_50029d931e06</span><span class="lin">wine_mlp · wine</span></th><th scope="col"><span class="vid">mv_83c38a0d9774</span><span class="lin">my_model · wine</span></th><th scope="col"><span class="vid">mv_310c2f892167</span><span class="lin">tabular_mlp · wine</span></th></tr></thead>
+          <tbody>
+            <tr><td><b>accuracy</b></td><td class="r">0.944<span class="of">17 of 18</span></td><td class="r lead">1.000<span class="of">18 of 18</span><span class="badge best">best</span></td><td class="r lead">1.000<span class="of">18 of 18</span><span class="badge best">best</span></td></tr>
+            <tr><td class="lab">95 % interval (Wilson)</td><td class="r dim">0.742 – 0.990</td><td class="r dim">0.824 – 1.000</td><td class="r dim">0.824 – 1.000</td></tr>
+            <tr><td><b>macro F1</b></td><td class="r">0.949</td><td class="r lead">1.000<span class="badge best">best</span></td><td class="r lead">1.000<span class="badge best">best</span></td></tr>
+            <tr class="sec"><td colspan="4">About each version</td></tr>
+            <tr><td class="lab">Kind</td><td>network (graph)</td><td>network (graph)</td><td>network (graph)</td></tr>
+            <tr><td class="lab">Parameters</td><td class="r">836</td><td class="r">18,691</td><td class="r">3,075</td></tr>
+            <tr><td class="lab">Trained</td><td class="m2">2026-11-20 12:46 · <a>job_0091</a></td><td class="m2">2026-11-20 05:49 · <a>job_0075</a></td><td class="m2">2026-11-19 18:07 · <a>job_0065</a></td></tr>
+            <tr><td class="lab">Weights</td><td>present</td><td>present</td><td>present</td></tr>
+            <tr><td class="lab">Parent</td><td class="dim">its lineage's base</td><td class="dim">its lineage's base</td><td class="dim">its lineage's base</td></tr>
+          </tbody></table></div></section>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)">
+        <section class="card"><h2><span class="n" style="position:static">3</span>Accuracy with its 95 % interval<span class="spacer"></span><span class="group-btns" role="group" aria-label="View"><button class="btn sm" aria-pressed="true">Chart</button><button class="btn sm">Table</button></span></h2>
+          <div class="ci" role="img" aria-label="Accuracy intervals: mv_50029d931e06 0.944 (0.742 to 0.990); mv_83c38a0d9774 1.000 (0.824 to 1.000); mv_310c2f892167 1.000 (0.824 to 1.000)">
+            <span>mv_50029d931e06</span><div class="row"><span class="w" style="left:48.4%;width:49.6%"></span><span class="d" style="left:88.9%"></span></div><span class="val">0.944</span>
+            <span>mv_83c38a0d9774</span><div class="row"><span class="w" style="left:64.8%;width:35.2%"></span><span class="d" style="left:100%"></span></div><span class="val">1.000</span>
+            <span>mv_310c2f892167</span><div class="row"><span class="w" style="left:64.8%;width:35.2%"></span><span class="d" style="left:100%"></span></div><span class="val">1.000</span>
+            <span></span><div class="ax"><span>0.50</span><span>0.625</span><span>0.75</span><span>0.875</span><span>1.00</span></div><span></span>
+          </div>
+          <div class="callout info"><svg class="i"><use href="#i-info"/></svg><span><b>The intervals overlap.</b> With 18 test rows one mistake moves accuracy by 0.056, so this split cannot tell these three apart. A larger test split would.</span></div></section>
+        <section class="card cmp f1c"><h2><span class="n" style="position:static">4</span>F1 by class<span class="sub" style="font-weight:400;font-size:var(--fs-11);color:var(--text-secondary)">largest spread first</span></h2>
+          <div class="table-wrap"><table class="t"><caption class="sr-only">F1 by class and version</caption>
+            <thead><tr><th scope="col">Class</th><th scope="col" class="r">mv_50029d931e06</th><th scope="col" class="r">mv_83c38a0d9774</th><th scope="col" class="r">mv_310c2f892167</th></tr></thead>
+            <tbody>
+              <tr><td>class_0</td><td class="r">0.923<span class="bar" aria-hidden="true"><i style="--p:92%"></i></span></td><td class="r lead">1.000<span class="bar" aria-hidden="true"><i style="--p:100%"></i></span></td><td class="r lead">1.000<span class="bar" aria-hidden="true"><i style="--p:100%"></i></span></td></tr>
+              <tr><td>class_1</td><td class="r">0.923<span class="bar" aria-hidden="true"><i style="--p:92%"></i></span></td><td class="r lead">1.000<span class="bar" aria-hidden="true"><i style="--p:100%"></i></span></td><td class="r lead">1.000<span class="bar" aria-hidden="true"><i style="--p:100%"></i></span></td></tr>
+              <tr><td>class_2</td><td class="r">1.000<span class="bar" aria-hidden="true"><i style="--p:100%"></i></span></td><td class="r">1.000<span class="bar" aria-hidden="true"><i style="--p:100%"></i></span></td><td class="r">1.000<span class="bar" aria-hidden="true"><i style="--p:100%"></i></span></td></tr>
+            </tbody></table></div>
+          <p class="note2">Best in semibold; class_2 is a tie, so none. Each version's confusion matrix: <a>open its drawer</a>.</p></section>
+      </div>
+    </main>
+    <footer class="status"><div class="m"><span class="sq" style="--res:var(--res-cpu)"></span>CPU <b>3%</b></div><div class="m"><span class="sq" style="--res:var(--res-ram)"></span>RAM <b>3.4</b><small>/ 9.7 GB</small></div><div class="m"><span class="sq" style="--res:var(--res-gpu)"></span>GPU <b>0%</b></div><div class="m"><span class="sq" style="--res:var(--res-vram)"></span>VRAM <b>0.4</b><small>/ 6.0 GB</small></div><div class="m"><span class="sq" style="--res:var(--res-temp)"></span><b>41</b><small>°C</small></div><div class="m conn"><span class="live"><span class="pulse"></span>live</span></div></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Test split</td><td>The split version every column was scored on: dataset, test rows, task, classes</td><td><span class="mono">GET /versions/{id}</span></td><td>static</td></tr>
+<tr><td><span class="n">2</span></td><td>Metrics</td><td>The task's test metrics per version, accuracy's count and Wilson interval, the best per row; facts about each version (REG-1.1)</td><td><span class="mono">GET /models/compare?split=&amp;v=</span> <i>planned</i>: each version's <span class="mono">metrics.detail.test</span>, lineage and config; the interval computed by the API</td><td>static</td></tr>
+<tr><td><span class="n">3</span></td><td>Interval chart</td><td>Accuracy as a dot with its 95 % interval, one row per version, with a table view; the overlap sentence when any two intervals overlap</td><td>same</td><td>static</td></tr>
+<tr><td><span class="n">4</span></td><td>F1 by class</td><td>Per-class F1 side by side, sorted by spread, at most 20 classes</td><td>same (<span class="mono">per_class_f1</span>)</td><td>static</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div id="lightA"></div>
+
+<!-- ===================================================================== B -->
+<h2>B · Choosing the versions: wine, and CIFAR-10 with <i>Score on test</i></h2>
+<div class="split-frames">
+  <aside class="drawer wide" aria-label="Add or remove versions, wine">
+    <div class="dhead"><h2 style="font-family:var(--font-ui)">Add or remove versions</h2><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="dbody">
+      <div class="facts"><span><b>wine</b> · ds_6448d354c9c6</span><span>test <b>18</b> rows</span></div>
+      <div class="table-wrap"><table class="t"><caption class="sr-only">Versions tested on ds_6448d354c9c6</caption>
+        <thead><tr><th scope="col" style="width:32px"></th><th scope="col">Version</th><th scope="col" class="r">Test acc</th><th scope="col">Weights</th><th scope="col">Trained</th></tr></thead>
+        <tbody>
+          <tr class="sec"><td colspan="5">wine_mlp · wine</td></tr>
+          <tr aria-selected="true"><td><input type="checkbox" class="chk" checked aria-label="mv_50029d931e06"></td><td class="id">mv_50029d931e06</td><td class="r">0.944</td><td>present</td><td class="m2">11-20 12:46</td></tr>
+          <tr class="sec"><td colspan="5">my_model · wine</td></tr>
+          <tr aria-selected="true"><td><input type="checkbox" class="chk" checked aria-label="mv_83c38a0d9774"></td><td class="id">mv_83c38a0d9774</td><td class="r">1.000</td><td>present</td><td class="m2">11-20 05:49</td></tr>
+          <tr><td><input type="checkbox" class="chk" aria-label="mv_5eb26c36a35a"></td><td class="id">mv_5eb26c36a35a</td><td class="r">1.000</td><td class="weights-gone">deleted</td><td class="m2">11-20 05:48</td></tr>
+          <tr><td><input type="checkbox" class="chk" aria-label="mv_872a4187b5e5"></td><td class="id">mv_872a4187b5e5</td><td class="r">0.944</td><td class="weights-gone">deleted</td><td class="m2">11-20 05:48</td></tr>
+          <tr class="sec"><td colspan="5">tabular_mlp · wine</td></tr>
+          <tr aria-selected="true"><td><input type="checkbox" class="chk" checked aria-label="mv_310c2f892167"></td><td class="id">mv_310c2f892167</td><td class="r">1.000</td><td>present</td><td class="m2">11-19 18:07</td></tr>
+        </tbody></table></div>
+      <p class="note2">Versions whose weights were deleted keep their metrics, so they can still be compared (REG-2.7).</p>
+      <div class="toolrow"><span class="sub2">3 chosen · 2 to 6</span><span class="spacer"></span><button class="btn sm ghost">Cancel</button><button class="btn sm primary">Compare 3</button></div>
+    </div>
+  </aside>
+  <aside class="drawer wide" aria-label="Add or remove versions, CIFAR-10">
+    <div class="dhead"><h2 style="font-family:var(--font-ui)">Add or remove versions</h2><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="dbody">
+      <div class="facts"><span><b>cifar10</b> · ds_f8e67211dd94</span><span>test <b>5,963</b> rows</span></div>
+      <div class="table-wrap"><table class="t"><caption class="sr-only">Versions on ds_f8e67211dd94</caption>
+        <thead><tr><th scope="col" style="width:32px"></th><th scope="col">Version</th><th scope="col" class="r">Test acc</th><th scope="col">Test metrics</th></tr></thead>
+        <tbody>
+          <tr class="sec"><td colspan="4">small_cnn · cifar10 · <span class="mono" style="text-transform:none;letter-spacing:0">ml_319245b543d4</span></td></tr>
+          <tr aria-selected="true"><td><input type="checkbox" class="chk" checked aria-label="mv_a4a0fb846812"></td><td class="id">mv_a4a0fb846812</td><td class="r">0.810</td><td><span class="badge once">computed once</span></td></tr>
+          <tr class="na"><td><input type="checkbox" class="chk" disabled aria-label="mv_e80834ce01b0, not scored"></td><td class="id">mv_e80834ce01b0</td><td class="r">–</td><td><span class="pill running"><span class="pulse"></span>Scoring · job_0104</span></td></tr>
+          <tr class="na"><td><input type="checkbox" class="chk" disabled aria-label="mv_359e979462ab, not scored"></td><td class="id">mv_359e979462ab</td><td class="r">–</td><td><button class="btn sm"><svg class="i"><use href="#i-play"/></svg>Score on test</button></td></tr>
+          <tr class="sec"><td colspan="4">small_cnn · cifar10 · <span class="mono" style="text-transform:none;letter-spacing:0">ml_7d806d9897fa</span></td></tr>
+          <tr class="na"><td><input type="checkbox" class="chk" disabled aria-label="mv_a014046ec3b5, not scored"></td><td class="id">mv_a014046ec3b5</td><td class="r">–</td><td><button class="btn sm"><svg class="i"><use href="#i-play"/></svg>Score on test</button></td></tr>
+          <tr class="na"><td><input type="checkbox" class="chk" disabled aria-label="mv_2a7c0b4c8b72, cannot be scored"></td><td class="id">mv_2a7c0b4c8b72</td><td class="r">–</td><td class="why">weights deleted: cannot be scored</td></tr>
+          <tr class="sec"><td colspan="4">mlp · cifar10</td></tr>
+          <tr class="na"><td><input type="checkbox" class="chk" disabled aria-label="mv_e56a61b2e5af, not scored"></td><td class="id">mv_e56a61b2e5af</td><td class="r">–</td><td><button class="btn sm"><svg class="i"><use href="#i-play"/></svg>Score on test</button></td></tr>
+        </tbody></table></div>
+      <p class="note2">No test metrics: trained before M10. <i>Score on test</i> runs the test split through the version once (<span class="mono">test_eval</span>); a version with test metrics is never scored again (HPO-1.4).</p>
+      <div class="toolrow"><span class="sub2">1 chosen · choose at least 2</span><span class="spacer"></span><button class="btn sm ghost">Cancel</button><button class="btn sm primary is-disabled" disabled>Compare</button></div>
+    </div>
+  </aside>
+</div>
+<p class="cap">Two lineages share the name <i>small_cnn · cifar10</i> (M8's reference model and the graph), so each group header adds its lineage ID. The scoring row's pill and job are illustrative. <i>Compare…</i> on the registry list first asks for the dataset and its split version, as the <i>Train a model</i> drawer's step 1.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Try it with a table record: wine_mlp · wine, and a refused record</h2>
+<div class="split-frames">
+  <section class="card colcard" aria-label="Try it">
+    <h2><span class="n" style="position:static">5</span>Try it<span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Fill from a test row</button></h2>
+    <p class="note2">One record: 13 features from the table schema; the target is left out.</p>
+    <div class="grid2">
+      <div class="field"><label title="alcohol">alcohol</label><span class="input">14.06</span></div>
+      <div class="field"><label title="malic_acid">malic_acid</label><span class="input">1.63</span></div>
+      <div class="field"><label title="ash">ash</label><span class="input">2.28</span></div>
+      <div class="field"><label title="alcalinity_of_ash">alcalinity_of_ash</label><span class="input">16.0</span></div>
+      <div class="field"><label title="magnesium">magnesium</label><span class="input">126.0</span></div>
+      <div class="field"><label title="total_phenols">total_phenols</label><span class="input">3.0</span></div>
+      <div class="field"><label title="flavanoids">flavanoids</label><span class="input">3.17</span></div>
+      <div class="field"><label title="nonflavanoid_phenols">nonflavanoid_phenols</label><span class="input">0.24</span></div>
+      <div class="field"><label title="proanthocyanins">proanthocyanins</label><span class="input">2.1</span></div>
+      <div class="field"><label title="color_intensity">color_intensity</label><span class="input">5.65</span></div>
+      <div class="field"><label title="hue">hue</label><span class="input">1.09</span></div>
+      <div class="field"><label title="od280/od315_of_diluted_wines">od280/od315_of_diluted_wines</label><span class="input">3.71</span></div>
+      <div class="field"><label title="proline">proline</label><span class="input">780.0</span></div>
+    </div>
+    <div class="toolrow"><span class="sub2">from <span class="mono">wine.csv#0000021</span></span><span class="spacer"></span><button class="btn sm ghost">Clear</button><button class="btn sm primary">Predict</button></div>
+    <div class="answer" role="status" aria-label="Prediction"><b>class_0</b><span class="bar" aria-hidden="true"><i style="--p:100%"></i></span><span>1.000</span><span>class_1</span><span class="bar" aria-hidden="true"><i style="--p:0%"></i></span><span>0.000</span><span>class_2</span><span class="bar" aria-hidden="true"><i style="--p:0%"></i></span><span>0.000</span></div>
+    <div class="callout info"><svg class="i"><use href="#i-check"/></svg><span>This row's label: <b>class_0</b> · matches</span></div>
+    <span class="served">Served on the GPU · cold start 11.3 s · 13.0 s</span>
+  </section>
+  <section class="card colcard" aria-label="Try it, refused">
+    <h2>Try it · refused<span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Fill from a test row</button></h2>
+    <div class="grid2">
+      <div class="field error"><label>alcohol</label><span class="input">strong</span><small><svg class="i"><use href="#i-alert"/></svg>'strong' is not a finite number</small></div>
+      <div class="field"><label>malic_acid</label><span class="input ph">empty: imputed</span></div>
+      <div class="field"><label>ash</label><span class="input ph">empty: imputed</span></div>
+      <div class="field"><label>alcalinity_of_ash</label><span class="input">16.0</span></div>
+    </div>
+    <div class="callout err"><svg class="i"><use href="#i-alert"/></svg><span><b>The record does not fit this model's table.</b> <span class="mono">wrong_input</span> · 1 field. Fix it and predict again.</span></div>
+    <p class="note2">An empty field is sent as null and imputed as in training: a number becomes the train split's median, a category the encoder's unknown slot.</p>
+    <div style="border-top:var(--bw) solid var(--border);padding-top:var(--sp-2)" class="stack">
+      <b style="font-size:var(--fs-12)">Other tasks</b>
+      <div class="answer"><b>progression</b><span></span><span>152.3</span></div>
+      <p class="note2">Regression: the value, named by the target column (illustrative figure on diabetes). k-means: "cluster 2". PCA: its components. DBSCAN and HDBSCAN show the API's <span class="mono">not_servable</span> reason instead of the form.</p>
+    </div>
+  </section>
+  <section class="card colcard" aria-label="Try it, text">
+    <h2><span class="n" style="position:static">6</span>Try it · text<span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Fill from a test row</button></h2>
+    <p class="note2">lstm_text · coco10k-captions. Tokenized like its train split: its vocabulary, L = 16.</p>
+    <div class="textarea">A man riding a wave on top of a surfboard.</div>
+    <div class="toolrow"><span class="served">11 tokens · 0 unknown · not cut</span><span class="spacer"></span><button class="btn sm primary">Predict</button></div>
+    <div class="answer" role="status" aria-label="Prediction"><b>person</b><span class="bar" aria-hidden="true"><i style="--p:91.7%"></i></span><span>0.917</span><span>surfboard</span><span class="bar" aria-hidden="true"><i style="--p:3.5%"></i></span><span>0.035</span><span>kite</span><span class="bar" aria-hidden="true"><i style="--p:1.4%"></i></span><span>0.014</span><span>motorcycle</span><span class="bar" aria-hidden="true"><i style="--p:0.4%"></i></span><span>0.004</span><span>umbrella</span><span class="bar" aria-hidden="true"><i style="--p:0.3%"></i></span><span>0.003</span></div>
+    <p class="note2">Top 5 of 78 classes.</p>
+    <span class="served">Served on the GPU · cold start 1.2 s · 2.2 s</span>
+  </section>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">5</span></td><td>Try it, record</td><td>A field per feature from the table schema; the answer by task; the row's true label when filled from a test row; the served line; field errors from a refusal</td><td><span class="mono">GET /versions/{id}</span> (its table schema), <span class="mono">GET /versions/{id}/rows?split=test</span>, <span class="mono">POST /models/{version}/predict</span> with <span class="mono">record</span></td><td>on Predict</td></tr>
+<tr><td><span class="n">6</span></td><td>Try it, text</td><td>A text box; how the text was read (tokens, unknown words, cut at L); the top five classes</td><td><span class="mono">POST /models/{version}/predict</span> with <span class="mono">text</span>; the response's new <span class="mono">input: {tokens, unknown, truncated_at}</span></td><td>on Predict</td></tr>
+</table>
+<p class="cap">The answer is announced politely (<span class="mono">role="status"</span>); a refusal is an alert. Below 1280 px Try it is the lineage page's third tab, as built.</p>
+
+<!-- ===================================================================== E -->
+<h2>E · A lineage founded by a fine-tune, and its version's drawer <span class="badge">illustrative</span></h2>
+<div class="frame" style="height:560px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Data</div><div class="nav"><svg class="i"><use href="#i-db"/></svg>Datasets</div><div class="grp">Work</div><div class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-grid"/></svg>Models</div></nav>
+    <header class="top"><div class="crumbs"><b>Models</b><svg class="i"><use href="#i-chevron"/></svg><span class="mono">small_cnn · cifar10-vehicles</span></div></header>
+    <main class="content">
+      <div class="phead"><h1>small_cnn · cifar10-vehicles</h1><span class="sub">classification · 4 classes</span></div>
+      <div class="callout info" style="max-width:640px"><svg class="i"><use href="#i-branch"/></svg><span><span class="n" style="position:static">7</span> Founded by fine-tuning <a class="mono">mv_a014046ec3b5</a> from <b>small_cnn · cifar10</b>, head reset for 4 classes. Its base is that run's starting weights.</span></div>
+      <div class="stack" style="max-width:620px"><span class="skeleton" style="height:40px;width:100%"></span><span class="skeleton" style="height:40px;width:100%"></span><span class="skeleton" style="height:40px;width:100%"></span></div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+  <aside class="drawer wide" role="dialog" aria-label="mv_7b2e09c4d1a6">
+    <div class="dhead"><h2>mv_7b2e09c4d1a6</h2><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>Trained</span><span class="latest">latest</span><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="dbody">
+      <div class="kv">
+        <span>Dataset version</span><span class="mono">ds_c1907e5a3b28</span>
+        <span>Job</span><span class="mono">job_0110</span>
+        <span>Parent</span><span><a class="mono">mv_a014046ec3b5</a> in <b>small_cnn · cifar10</b> <span class="badge">another lineage</span></span>
+        <span>Started as</span><span>fine-tune: head reset, 8 layers frozen (n1 … n12)</span>
+        <span>Fine-tuned into</span><span style="color:var(--text-secondary)">none yet</span>
+        <span>Retention</span><span>latest (REG-2.2)</span>
+      </div>
+      <section class="tm" aria-label="Task metrics"><div class="h"><h3>Task metrics</h3><span class="badge">classification</span></div><div class="stack"><span class="skeleton" style="width:100%;height:60px"></span></div></section>
+      <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap"><span class="n" style="position:static">8</span><button class="btn sm"><svg class="i"><use href="#i-pin"/></svg>Pin</button><button class="btn sm">Try it</button><button class="btn sm"><svg class="i"><use href="#i-branch"/></svg>Fine-tune…</button><button class="btn sm"><svg class="i"><use href="#i-grid"/></svg>Compare on this test split</button></div>
+      <p class="note2"><i>Fine-tune…</i> shows for a trained network version with its weights; a classical version has none; one whose weights were deleted shows <i>Re-train</i> instead (REG-2.7). On the parent's drawer, <i>Fine-tuned into</i> lists this version with its lineage, and the retention preview names it while it keeps the parent (ADR-0015 Addendum A).</p>
+    </div>
+  </aside>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">7</span></td><td>Founded by</td><td>For a lineage whose base came from a fine-tune: the parent, its lineage and the head reset</td><td><span class="mono">GET /models/{lineage}</span>: the base's note and its first version's parent</td><td>static</td></tr>
+<tr><td><span class="n">8</span></td><td>Parent and actions</td><td>The parent with its lineage when another; the versions fine-tuned from this one; <i>Fine-tune…</i> (→ SCR-09 v2, <span class="mono">?init_from=</span>) and <i>Compare on this test split</i></td><td><span class="mono">GET /model-versions/{id}</span>: <span class="mono">parent</span> with lineage, <span class="mono">children</span> <i>planned</i></td><td>static</td></tr>
+</table>
+
+<!-- ===================================================================== F -->
+<h2>F · Empty, loading and error</h2>
+<div class="split-frames">
+  <section class="card" style="width:400px"><div class="state"><svg class="i"><use href="#i-grid"/></svg><b>Pick at least two versions</b><p>They must be tested on one split. wine <span class="mono">ds_6448d354c9c6</span> has 5.</p><button class="btn sm primary">Choose versions</button></div></section>
+  <section class="card" style="width:400px" aria-busy="true"><span class="skeleton" style="width:60%;height:18px"></span><span class="skeleton" style="width:100%;height:36px"></span><span class="skeleton" style="width:100%;height:36px"></span><span class="skeleton" style="width:100%;height:36px"></span><span class="note2">Loading 3 versions…</span></section>
+  <section class="card" style="width:400px"><div class="state err"><svg class="i"><use href="#i-alert"/></svg><b>These versions were not tested on one split</b><p><span class="mono">validation_error</span> · <span class="mono">mv_a4a0fb846812</span> was tested on <span class="mono">ds_f8e67211dd94</span>, not <span class="mono">ds_6448d354c9c6</span>.</p><button class="btn sm">Remove it</button></div></section>
+</div>
+<p class="cap">At 1024 px the metrics table keeps versions as columns and scrolls sideways with the metric names pinned; the interval chart and F1 by class stack below it. Try it's record form keeps two fields a row in the narrow tab.</p>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>The metrics and F1 tables have captions and real column headers (the version IDs); "best" is a word in the cell, so neither weight nor colour carries it alone.</li>
+<li>The interval chart is an image with a full text label, and <i>Table</i> swaps it for a table of version, accuracy, low and high.</li>
+<li>The picker's checkboxes are named by version; a disabled one's name says why. <i>Score on test</i> announces the queued job.</li>
+<li>Try it's fields are labelled by column name (the full name also as the title when cut); a refused field gets <span class="mono">aria-invalid</span> and its message as the description.</li>
+</ul>
+</div>
+<script>
+(function () {
+  var a = document.getElementById('frameA'), slot = document.getElementById('lightA');
+  var c = a.cloneNode(true); c.id = 'frameA-light'; c.setAttribute('data-theme', 'light');
+  c.querySelectorAll('.n').forEach(function (n) { n.remove(); });
+  slot.replaceWith(c);
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>

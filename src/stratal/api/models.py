@@ -72,6 +72,34 @@ def list_models(
     return _page(store.list_lineages(session, state=state, task=task, q=q), cursor, limit)
 
 
+# Before /models/{lineage_id}, which would otherwise take "compare" for a lineage ID.
+@router.get("/models/compare/candidates", response_model=schemas.CompareCandidates)
+def compare_candidates(
+    session: Db,
+    split: Annotated[str, Query(description="The split version the versions were tested on.")],
+) -> Json:
+    """Every trained version on a split, newest first, with its main test metric, or why it
+    has none and whether it can be scored on test once (EVAL-1.3, SCR-11 v2 frame B)."""
+    from stratal.db.engine import get_engine
+    from stratal.registry import compare
+
+    return compare.candidates(session, get_engine(), get_settings().data_dir, split)
+
+
+@router.get("/models/compare", response_model=schemas.Comparison)
+def compare_versions(
+    session: Db,
+    split: Annotated[str, Query(description="The split version every version was tested on.")],
+    v: Annotated[list[str], Query(description="2 to 6 version IDs, in column order.")],
+) -> Json:
+    """Two to six versions on one test split, side by side (EVAL-1.3): the task's test
+    metrics, accuracy's Wilson 95 % interval, the best per metric, and per-class F1."""
+    from stratal.db.engine import get_engine
+    from stratal.registry import compare
+
+    return compare.compare(session, get_engine(), get_settings().data_dir, split, v)
+
+
 @router.get("/models/{lineage_id}", response_model=schemas.ModelLineageDetail)
 def get_model(
     lineage_id: str,
@@ -127,6 +155,19 @@ def unpin_version(version_id: str, session: Db, bus: Redis) -> Json:
     with session.begin():
         store.unpin(session, version_id)
     return _version(session, bus, version_id)
+
+
+@router.post("/model-versions/{version_id}/score-test", status_code=202, response_model=schemas.Job)
+def score_version(version_id: str, session: Db, enqueue: Queue, bus: Redis) -> Json:
+    """Score on test, once, a trained network version that has no test metrics (EVAL-1.3;
+    the owner's exception to K8). ``409`` if it has them, is being scored, is classical,
+    or its weights were deleted (``weights_deleted``)."""
+    with session.begin():
+        job, first = job_service.create_score_job(session, version_id)
+        view = job_service.job_view(session, job)
+    enqueue(first)
+    job_service.after_commit(bus, job.id)
+    return view
 
 
 @router.post("/model-versions/{version_id}/retrain", status_code=202, response_model=schemas.Job)

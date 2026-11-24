@@ -11,18 +11,21 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from stratal.api import schemas
+from stratal.build.spec import Memory
 from stratal.core.bus import LIVE_GLOBAL, Bus
-from stratal.core.errors import ValidationFailed
+from stratal.core.errors import NotFound, ValidationFailed
 from stratal.core.settings import get_settings
 from stratal.db.engine import get_engine
-from stratal.db.models import Event as EventRow
 from stratal.db.models import (
+    Dataset,
     Job,
+    ModelLineage,
     ProcessSample,
     ProcessSample1m,
     ResourceSample,
     ResourceSample1m,
 )
+from stratal.db.models import Event as EventRow
 from stratal.hpo.config import StudyRequest
 from stratal.mon.events import Event, Level
 from stratal.mon.store import insert_events
@@ -86,6 +89,7 @@ def event_view(row: EventRow) -> Json:
         "reason": row.reason,
         "suggested_action": row.suggested_action,
         "attempt": row.attempt,
+        "caused_by": str(row.caused_by) if row.caused_by is not None else None,
     }
 
 
@@ -157,6 +161,128 @@ def create_job(request: JobRequest, session: Db, enqueue: Queue, bus: Redis) -> 
     enqueue(first)
     job_service.after_commit(bus, view["id"])
     return view
+
+
+class FineTuneCheck(BaseModel):
+    """One compatibility rule between a fine-tune's parent and its split (ADR-0014
+    Addendum A rule 4), with both values."""
+
+    rule: str
+    ok: bool
+    parent: str
+    here: str
+    message: str
+    code: str
+
+
+class LineagePlace(BaseModel):
+    id: str
+    name: str
+    joins: bool
+    """True when the run joins an existing lineage; false when it founds one."""
+
+
+class FreezeProblem(BaseModel):
+    loc: list[str | int]
+    msg: str
+    code: str
+
+
+class TrainValidation(BaseModel):
+    """What ``POST /jobs`` would make of a network's run, without making it (RUN-1.10,
+    ADR-0014 Addendum A rule 12)."""
+
+    parent_version_id: str | None
+    checks: list[FineTuneCheck]
+    """Every compatibility rule for a fine-tune; empty for a run from fresh weights."""
+    lineage: LineagePlace | None
+    freeze_problems: list[FreezeProblem]
+    trainable_parameters: int | None
+    frozen_parameters: int
+    memory: Memory | None
+    """The builder's estimate (ADR-0017 rule 7), gradients and optimizer state counted for
+    trainable parameters only; ``None`` for a reference model."""
+
+
+@router.post("/jobs/validate", tags=["jobs"], response_model=TrainValidation)
+def validate_train(request: TrainRequest, session: Db) -> TrainValidation:
+    """Check a network's run as ``POST /jobs`` would, and create nothing (RUN-1.10). A
+    fine-tune's mismatches come back in ``checks`` and ``freeze_problems``, all at once;
+    any other problem is the same ``422`` as ``POST /jobs``."""
+    from stratal.build.io import graph_report, version_io
+    from stratal.data import registry
+    from stratal.registry import store
+    from stratal.train import finetune
+
+    if request.config is None:
+        raise ValidationFailed(
+            "Only a network's run is validated here; a classical model always starts fresh.",
+            suggested_action="Send 'config', not 'classical'.",
+            errors=[{"loc": ["classical"], "msg": "not validated here", "code": "invalid"}],
+        )
+    config = request.config
+    try:
+        version = registry.get_version(session, request.dataset_version)
+    except NotFound as exc:
+        raise ValidationFailed(
+            f"dataset_version {request.dataset_version!r} is not a known dataset version.",
+            suggested_action="List versions with GET /datasets/{slug}/versions and use one.",
+            errors=[{"loc": ["dataset_version"], "msg": "unknown version", "code": "not_found"}],
+        ) from exc
+    fresh = config.model_copy(update={"init_from": None, "reset_head": False, "freeze": []})
+    job_service.check_network(session, version, fresh)
+    engine, data_dir = get_engine(), get_settings().data_dir
+    optimizer = (
+        "adam" if config.optimizer == "adam" else "sgd_momentum" if config.momentum > 0 else "sgd"
+    )
+    report = (
+        graph_report(engine, data_dir, config.model.graph, version.version_id, optimizer)
+        if config.model.graph is not None
+        else None
+    )
+    checks: list[FineTuneCheck] = []
+    problems: list[FreezeProblem] = []
+    if config.init_from is not None:
+        fine = finetune.check(session, engine, data_dir, config=config, version=version)
+        checks = [FineTuneCheck(**vars(c)) for c in fine.checks]
+        lineage = LineagePlace(id=fine.lineage_id, name=fine.lineage_name, joins=fine.joins)
+        problems = [FreezeProblem(**p) for p in finetune.freeze_problems(config, report)]
+    else:
+        io = version_io(engine, data_dir, version.version_id)
+        dataset = session.get(Dataset, version.dataset_id)
+        slug = dataset.slug if dataset is not None else "?"
+        lineage_id, _ = store.lineage_key(
+            model_spec=config.model.identity(),
+            dataset_slug=slug,
+            input_shape=io.input_shape.dims if io.input_shape is not None else (),
+            classes=list(io.classes),
+        )
+        existing = session.get(ModelLineage, lineage_id)
+        lineage = LineagePlace(
+            id=lineage_id,
+            name=existing.name if existing is not None else f"{config.model.display} · {slug}",
+            joins=existing is not None,
+        )
+    frozen = (
+        finetune.frozen_parameters(report, config.freeze)
+        if report is not None and not problems
+        else 0
+    )
+    total = report.total_parameters if report is not None else None
+    memory = (
+        finetune.trainable_memory(report.memory, total or 0, frozen)
+        if report is not None and report.memory is not None
+        else None
+    )
+    return TrainValidation(
+        parent_version_id=config.init_from,
+        checks=checks,
+        lineage=lineage,
+        freeze_problems=problems,
+        trainable_parameters=total - frozen if total is not None else None,
+        frozen_parameters=frozen,
+        memory=memory,
+    )
 
 
 @router.get("/jobs", tags=["jobs"], response_model=schemas.JobList)

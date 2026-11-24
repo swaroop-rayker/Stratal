@@ -92,9 +92,11 @@ class ProcessReporter(threading.Thread):
         self._interval_s = interval_s
         # Not "_stop": threading.Thread uses that name itself.
         self._halt = threading.Event()
+        self._cpu = probes.ProcessCpu(os.getpid())
 
     def sample(self) -> dict[str, Any]:
         torch = probes.torch_stats()
+        cores = self._cpu()
         return {
             "ts": utc_now().isoformat(),
             "job_id": self._job_id,
@@ -103,6 +105,7 @@ class ProcessReporter(threading.Thread):
             "torch_allocated_mb": round(torch[0], 2) if torch else None,
             "torch_reserved_mb": round(torch[1], 2) if torch else None,
             "torch_max_allocated_mb": round(torch[2], 2) if torch else None,
+            "cpu_cores": round(cores, 3) if cores is not None else None,
         }
 
     def report(self) -> None:

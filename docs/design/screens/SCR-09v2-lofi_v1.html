@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-09 v2 fine-tuning — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.btn.primary.off { background: var(--soft); color: var(--ink-3); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; background: #fff; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); } .pill.bad { border-width: 2px; border-color: var(--ink); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 8px; height: 28px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); } .t tr.hover td { background: #f7f7f7; }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 30px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.cols { display: grid; grid-template-columns: 1fr 360px; gap: 12px; min-height: 0; align-items: start; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.kvs { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px; } .kvs span:nth-child(even) { font-family: var(--mono); text-align: right; }
+.f { display: grid; grid-template-columns: 110px 1fr; gap: 2px 8px; align-items: center; font-size: 12px; }
+.f label { font-family: var(--mono); color: var(--ink-2); font-size: 11px; }
+.f .in { border: 1px solid var(--line); border-radius: 4px; height: 24px; display: flex; align-items: center; padding: 0 8px; background: #fff; }
+.f .in.chg { border-width: 2px; }
+.f .hint { grid-column: 2; font-size: 10px; color: var(--ink-3); }
+.form3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 18px; }
+.meter { position: relative; height: 16px; border: 1px solid var(--ink-3); border-radius: 3px; display: flex; overflow: hidden; }
+.meter i { display: block; height: 100%; border-right: 1px solid #fff; }
+.meter .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.callout { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--fill); font-size: 12px; }
+.callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.check { display: grid; grid-template-columns: 18px 150px 1fr; gap: 3px 8px; font-size: 12px; align-items: baseline; }
+.check .ok { font-weight: 700; } .check .x { font-weight: 700; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 2px; vertical-align: middle; text-align: center; font: 700 10px/10px system-ui; }
+.box.on::after { content: "✓"; }
+.box.dis { border-color: var(--soft); background: var(--fill); }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.toggle i { width: 28px; height: 16px; border: 1.5px solid var(--ink-2); border-radius: 8px; position: relative; display: inline-block; }
+.toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--ink-3); }
+.toggle.on i { background: var(--ink-2); } .toggle.on i::after { left: 14px; background: #fff; }
+.split { display: flex; height: 10px; border: 1px solid var(--ink-3); border-radius: 3px; overflow: hidden; }
+.split i { display: block; height: 100%; }
+.pop { position: absolute; background: #fff; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.14); padding: 8px; z-index: 6; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-09 v2 — Fine-tuning a trained version · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: RUN-1.10 (AC1–AC3), with REG-1.1 and REG-2.8 for the parent</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> SCR-09 (approved v2), Start from region</span><span>Route: <span class="mono">/runs/new?init_from=mv_…</span></span><span>Decisions: M11 kickoff K9, K11</span><span>2026-11-20</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-09 (faint where unchanged). Blue numbers are annotations. The data is real unless marked: the lineage <span class="mono">small_cnn · cifar10</span> (<span class="mono">ml_7d806d9897fa</span>) and its trained version <span class="mono">mv_a014046ec3b5</span> from <span class="mono">job_0057</span>, 30 epochs on the split <span class="mono">ds_f8e67211dd94</span>, val accuracy 0.840 and val loss 0.700. The per-layer parameter counts add up to the model's 288,746. Frame B's <span class="mono">cifar10-vehicles</span> dataset is <b>illustrative</b>: no second labelled-images dataset exists yet.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Two ways in.</b> <i>Fine-tune…</i> on a trained version's row and drawer on SCR-11 opens this page with <span class="mono">?init_from=mv_…</span>. On SCR-09 itself, the <i>Start from</i> card becomes a choice: <i>Fresh weights</i> (today's behaviour, the lineage's base) or <i>A trained version</i>, which lists the versions of this model.</li>
+<li><b>With a trained version the architecture is the parent's.</b> The Model card names the parent and locks the spec; <i>Edit in builder</i> is replaced by one sentence saying why (changed layers could not take its weights). Only the head can change, by resetting it.</li>
+<li><b>The Start from card checks compatibility in words</b>, one line per rule against the chosen split: dataset type, input shape, output (classes), and for tables the columns after encoding, for texts the vocabulary. Each line is ✓ or ✗ with both values. Under it, one sentence says where the version will be registered: it <i>joins</i> the parent's lineage, or <i>founds</i> a new one with its parent in another lineage (K9).</li>
+<li><b>Reset head is a toggle shown with every trained version</b>, off by default. When the classes differ it is required: the output line is ✗ and <i>Start run</i> is disabled until it is on. Resetting re-initialises only the locked output node (RUN-1.10.AC3). A different input shape cannot be fixed this way, so it has no toggle: it says a new model is needed.</li>
+<li><b>Freezing is a list of the layers that have weights</b>, in graph order, by node ID, type, output shape and parameters, each with a checkbox and <i>Freeze up to here</i>. A total says how many parameters will train. A frozen BatchNorm also keeps its running statistics (it stays in eval mode, K9), and the list says so once. The head cannot be frozen while it is being reset; freezing every layer is refused ("nothing would train").</li>
+<li><b>The training form is prefilled from the parent's run</b> and marked as such, as <i>Start again with N</i> does (SCR-09 v1, frame C). Nothing is changed for you; one hint under <span class="mono">learning_rate</span> says fine-tuning often uses a smaller one. The optimizer and schedule start fresh (K9).</li>
+<li><b>The VRAM check counts gradients and optimizer state for trainable parameters only</b>, so freezing lowers it. The builder's estimate gains that input (ADR-0017 rule 7, recorded in the RUN-1.10 addendum).</li>
+<li><b>"What will happen" names the epoch-0 check:</b> one validation pass before step 1, logged as epoch 0, and on the parent's own split it should equal the parent's val loss (RUN-1.10.AC1). It also says the parent is now protected from retention while this version keeps its weights (REG-2.8).</li>
+<li><b>Refusals on the Start from card, not as toasts:</b> a version whose weights were deleted (with <i>Re-train</i>, REG-2.7), an input shape mismatch, a text vocabulary mismatch, and a classical model (classical models always start fresh). The server's refusal before the run lands on the same card, naming the mismatch (AC3).</li>
+<li><b>In a study</b>, <span class="mono">init_from</span> and the freeze list are fixed for every trial: the search space shows them as one locked row, and they have no <i>Tune</i> toggle (K9).</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Fine-tuning <span class="mono">mv_a014046ec3b5</span> on its own split, first two blocks frozen</h2>
+<div class="frame" style="height:1340px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav on">Models</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Models</b> / small_cnn · cifar10 / Fine-tune</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><b>New training run</b><span class="k">fine-tuning mv_a014046ec3b5</span></div>
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card"><h3><span class="n in">1</span>Model</h3>
+            <div style="display:flex;gap:18px;font-size:12px;align-items:center"><span><b class="mono">small_cnn</b> <span class="k">the parent's architecture</span></span><span class="mono">288,746 parameters</span><span class="muted">The layers are fixed by the parent's weights; only the head can be reset (below).</span></div></div>
+          <div class="card"><h3><span class="n in">2</span>Data</h3>
+            <div style="display:flex;gap:18px;font-size:12px;align-items:center"><span class="select">cifar10 · <span class="mono">ds_f8e67211dd94</span> ▾</span><span class="mono">train 47,704 · val 5,963 · test 5,963</span><span class="muted">labelled images · 10 classes · 3×32×32</span></div>
+            <div class="muted" style="font-size:11px">Any split of the same dataset type can be chosen; the checks in Start from follow it.</div></div>
+          <div class="card"><h3><span class="n in">3</span>Start from <span class="spacer"></span><span class="group"><span class="btn sm">Fresh weights</span><span class="btn sm on">A trained version</span></span></h3>
+            <div style="display:flex;gap:12px;align-items:center;font-size:12px"><span class="select" style="height:28px"><b class="mono">mv_a014046ec3b5</b> · small_cnn · cifar10 · val acc 0.840 · job_0057 ▾</span><span class="muted">weights present · 1.2 MB</span></div>
+            <div class="check">
+              <span class="ok">✓</span><span>Dataset type</span><span>labelled images, as the parent's</span>
+              <span class="ok">✓</span><span>Input shape</span><span class="mono">3×32×32 = 3×32×32</span>
+              <span class="ok">✓</span><span>Output</span><span>10 classes, the same list in the same order</span>
+            </div>
+            <div style="display:flex;gap:16px;align-items:center;font-size:12px"><span class="toggle"><i></i> Reset the head</span><span class="muted">Re-initialises only the output node (<span class="mono">output</span>, linear 128 → 10). Not needed here.</span></div>
+            <div class="callout">Registers as a new version of <b class="mono">small_cnn · cifar10</b>, with <span class="mono">mv_a014046ec3b5</span> as its parent. While it keeps its weights, retention will not delete the parent (REG-2.8).</div>
+          </div>
+          <div class="card"><h3><span class="n in">4</span>Freeze layers <span class="muted" style="font-weight:400;font-size:11px">frozen layers keep their weights and, for BatchNorm, their running statistics</span><span class="spacer"></span><span class="btn sm ghost">Clear</span></h3>
+            <table class="t">
+              <tr><th style="width:30px"></th><th>Node</th><th>Layer</th><th>Output</th><th class="r">Parameters</th><th></th></tr>
+              <tr class="on"><td><span class="box on"></span></td><td class="m">n1</td><td>conv2d 3→32, 3×3</td><td class="m">32×32×32</td><td class="r m">864</td><td></td></tr>
+              <tr class="on"><td><span class="box on"></span></td><td class="m">n2</td><td>batch_norm</td><td class="m">32×32×32</td><td class="r m">64</td><td></td></tr>
+              <tr class="on"><td><span class="box on"></span></td><td class="m">n4</td><td>conv2d 32→32, 3×3</td><td class="m">32×32×32</td><td class="r m">9,216</td><td></td></tr>
+              <tr class="on"><td><span class="box on"></span></td><td class="m">n5</td><td>batch_norm</td><td class="m">32×32×32</td><td class="r m">64</td><td></td></tr>
+              <tr class="on"><td><span class="box on"></span></td><td class="m">n8</td><td>conv2d 32→64, 3×3</td><td class="m">64×16×16</td><td class="r m">18,432</td><td></td></tr>
+              <tr class="on"><td><span class="box on"></span></td><td class="m">n9</td><td>batch_norm</td><td class="m">64×16×16</td><td class="r m">128</td><td></td></tr>
+              <tr class="on"><td><span class="box on"></span></td><td class="m">n11</td><td>conv2d 64→64, 3×3</td><td class="m">64×16×16</td><td class="r m">36,864</td><td></td></tr>
+              <tr class="on"><td><span class="box on"></span></td><td class="m">n12</td><td>batch_norm</td><td class="m">64×16×16</td><td class="r m">128</td><td></td></tr>
+              <tr class="hover"><td><span class="box"></span></td><td class="m">n15</td><td>conv2d 64→128, 3×3</td><td class="m">128×8×8</td><td class="r m">73,728</td><td><span class="btn sm ghost">Freeze up to here</span></td></tr>
+              <tr><td><span class="box"></span></td><td class="m">n16</td><td>batch_norm</td><td class="m">128×8×8</td><td class="r m">256</td><td></td></tr>
+              <tr><td><span class="box"></span></td><td class="m">n18</td><td>conv2d 128→128, 3×3</td><td class="m">128×8×8</td><td class="r m">147,456</td><td></td></tr>
+              <tr><td><span class="box"></span></td><td class="m">n19</td><td>batch_norm</td><td class="m">128×8×8</td><td class="r m">256</td><td></td></tr>
+              <tr><td><span class="box"></span></td><td class="m">output</td><td>linear 128 → 10 <span class="k">head</span></td><td class="m">10</td><td class="r m">1,290</td><td></td></tr>
+            </table>
+            <div style="font-size:12px"><b class="mono">222,986</b> of 288,746 parameters will train · <span class="mono">65,760</span> frozen in 8 layers. <span class="muted">ReLU, pooling and the global average pool have no weights and are not listed.</span></div>
+          </div>
+          <div class="card"><h3><span class="n in">5</span>Training <span class="muted" style="font-weight:400;font-size:11px">prefilled from the parent's run, job_0057</span></h3>
+            <div class="form3">
+              <div class="f"><label>epochs</label><span class="in">30</span></div>
+              <div class="f"><label>batch_size</label><span class="in">128</span></div>
+              <div class="f"><label>learning_rate</label><span class="in">0.001</span><span class="hint">Fine-tuning often uses a smaller rate, e.g. 10× lower</span></div>
+              <div class="f"><label>optimizer</label><span class="in">adam ▾</span><span class="hint">Starts fresh: the parent's state is not loaded</span></div>
+              <div class="f"><label>schedule</label><span class="in">cosine ▾</span></div>
+              <div class="f"><label>seed</label><span class="in">0</span></div>
+            </div>
+            <div class="muted" style="font-size:11px">Device, the rest of the form and <i>Tune with a study</i> as in SCR-09 v1 (not redrawn).</div></div>
+        </div>
+        <div class="card" style="position:sticky;top:0">
+          <h3><span class="n in">6</span>VRAM check</h3>
+          <div class="meter"><i style="width:3%;background:var(--ink-2)"></i><i style="width:4%;background:var(--ink-3)"></i><span class="cap" style="left:85%"></span></div>
+          <div style="font-size:11px;display:flex;justify-content:space-between" class="muted"><span>0</span><span>cap 5.1 GB ▲</span><span>6 GB</span></div>
+          <div class="kvs"><span>Weights (all layers)</span><span>1.2 MB</span><span>Gradients, Adam (222,986 trainable)</span><span>2.7 MB</span><span>Activations × 128 (estimate)</span><span>0.35 GB</span><span>CUDA context</span><span>0.09 GB</span><span><b>Total</b></span><span><b>0.44 GB</b></span></div>
+          <div class="pill">✓ Fits under the cap</div>
+          <div style="border-top:1px solid var(--soft);padding-top:8px;font-size:12px;display:flex;flex-direction:column;gap:6px">
+            <span>Starts from <b class="mono">mv_a014046ec3b5</b>'s weights, 8 layers frozen.</span>
+            <span><span class="n in">7</span><b>Epoch 0:</b> one validation pass before step 1. On this split it should equal the parent's val loss, <b class="mono">0.700</b> (RUN-1.10.AC1).</span>
+            <span>Then <b>30 epochs</b> of 373 steps on the GPU queue, checkpointing every epoch and every 5 min.</span>
+          </div>
+          <span class="btn primary" style="justify-content:center">Start run →</span>
+          <span class="muted" style="font-size:11px">Opens the run's live view (SCR-04).</span>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 3% · RAM 3.1 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Model</td><td>The parent's spec, locked, with its parameters</td><td><span class="mono">GET /model-versions/{id}</span> (its config's <span class="mono">model</span>)</td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Data</td><td>The chosen split; changing it re-runs the checks in 3</td><td><span class="mono">GET /versions/{id}</span></td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Start from</td><td>Fresh weights or a trained version; the version picker; the compatibility lines; <i>Reset the head</i>; where it will register and the parent's protection</td><td><span class="mono">GET /models/{lineage}</span>; the checks from a validate call <span class="mono">POST /jobs/validate</span> <i>planned</i> (or the 422 of <span class="mono">POST /jobs</span>), named in the RUN-1.10 addendum</td><td>as fields change</td></tr>
+<tr><td><span class="num">4</span></td><td>Freeze layers</td><td>The spec's layers with weights, by node ID; the trainable total</td><td>the spec and validate's per-node parameters (<span class="mono">POST /model-specs/validate</span>)</td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Training</td><td>The train form (UI-2.3), prefilled from the parent's resolved config</td><td><span class="mono">GET /config/schemas/train</span>; the parent's <span class="mono">config</span></td><td>–</td></tr>
+<tr><td><span class="num">6</span></td><td>VRAM check</td><td>As v1, with gradients and optimizer state for trainable parameters only</td><td>validate's <span class="mono">memory</span> with the freeze list</td><td>as fields change</td></tr>
+<tr><td><span class="num">7</span></td><td>What will happen</td><td>The epoch-0 validation and the parent's val loss to compare with; then the run</td><td>the parent's <span class="mono">metrics.val_loss</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Another dataset with other classes: the head must be reset <span class="k">illustrative dataset</span></h2>
+<div class="frame w1024" style="height:430px">
+  <div style="padding:16px;display:flex;gap:16px;align-items:flex-start">
+    <div class="card" style="width:480px"><h3>Start from · before</h3>
+      <div style="font-size:12px">Split <span class="mono">cifar10-vehicles · ds_…</span> (4 classes)</div>
+      <div class="check">
+        <span class="ok">✓</span><span>Dataset type</span><span>labelled images</span>
+        <span class="ok">✓</span><span>Input shape</span><span class="mono">3×32×32 = 3×32×32</span>
+        <span class="x">✗</span><span><b>Output</b></span><span><b>10 classes in the parent, 4 here</b> (airplane, automobile, ship, truck)</span>
+      </div>
+      <div class="callout bad"><b>The head does not fit this split.</b> Turn on <i>Reset the head</i> to re-initialise the output node for 4 classes; every other layer keeps the parent's weights.</div>
+      <div class="toggle"><i></i> Reset the head</div>
+      <span class="btn primary off" style="justify-content:center">Start run →</span>
+      <span class="muted" style="font-size:11px">Disabled: the output does not fit.</span>
+    </div>
+    <div class="card" style="width:480px"><h3>Start from · head reset</h3>
+      <div class="check">
+        <span class="ok">✓</span><span>Dataset type</span><span>labelled images</span>
+        <span class="ok">✓</span><span>Input shape</span><span class="mono">3×32×32 = 3×32×32</span>
+        <span class="ok">✓</span><span>Output</span><span>reset: linear 128 → 4, new weights (516 parameters)</span>
+      </div>
+      <div class="toggle on"><i></i> Reset the head</div>
+      <div class="callout">Founds a new lineage, <b class="mono">small_cnn · cifar10-vehicles</b>, whose first version has <span class="mono">mv_a014046ec3b5</span> (in <span class="mono">small_cnn · cifar10</span>) as its parent.</div>
+      <div style="font-size:12px">In the freeze list the head row reads <span class="mono">output · linear 128 → 4 · reset</span> with its checkbox disabled: <span class="muted">a reset head must train.</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption">The class list is compared by name and order, so the same 10 names in another order also count as different and need a reset. The epoch-0 line becomes "validation before step 1: no parent's value to compare, the head is new".</p>
+
+<!-- ===================================================================== C -->
+<h2>C · Refusals on the Start from card</h2>
+<div class="frame" style="height:360px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="card"><h3>Weights deleted</h3>
+      <div style="font-size:12px"><span class="mono">mv_2a7c0b4c8b72</span> · small_cnn · cifar10 · val acc 0.839</div>
+      <div class="callout bad"><b>Its weights were deleted by retention</b> (job_0058). Its config and metrics are kept, so it can be trained again; the result can then be fine-tuned. <span class="btn sm">Re-train it</span></div></div>
+    <div class="card"><h3>Input shape differs</h3>
+      <div class="check"><span class="x">✗</span><span><b>Input shape</b></span><span><b class="mono">3×32×32 in the parent, 3×64×64 here</b></span></div>
+      <div class="callout bad"><b>This version cannot take another input size.</b> Resetting the head changes only the output. Build a model for 3×64×64 on SCR-08, or choose a 32×32 split. <span class="btn sm">Open the builder</span></div></div>
+    <div class="card"><h3>Text: another vocabulary</h3>
+      <div style="font-size:12px"><span class="mono">mv_2eb4cd656334</span> · lstm_text · coco10k-captions, trained on <span class="mono">ds_53f72c42aa5a</span></div>
+      <div class="check"><span class="x">✗</span><span><b>Vocabulary</b></span><span><b>this split's tokens come from another vocabulary</b> <span class="muted">(fitted on its own train split)</span>: token IDs would mean different words</span></div>
+      <div class="callout bad">Fine-tune a text model only on a split tokenized with the parent's vocabulary. <span class="muted">Tables likewise need the same columns after encoding; the parent's fitted preprocessing is reused (K9).</span></div></div>
+    <div class="card"><h3>Classical model</h3>
+      <div style="font-size:12px">Model: <b>Classical</b> · random forest</div>
+      <div class="callout"><b>Classical models always start fresh.</b> Starting from a trained version is for networks (RUN-1.10). <span class="muted">The Start from card shows only this line in Classical mode.</span></div></div>
+  </div>
+</div>
+<p class="caption">Each refusal names both values, as AC3 asks. The same text comes back from the server's 422 if the page's check is bypassed, and lands on this card.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · Choosing a version: the picker</h2>
+<div class="frame w1024" style="height:300px">
+  <div style="padding:16px;position:relative;height:100%">
+    <div class="card" style="width:720px"><h3>Start from <span class="spacer"></span><span class="group"><span class="btn sm">Fresh weights</span><span class="btn sm on">A trained version</span></span></h3>
+      <div class="select" style="height:28px;width:420px">Choose a version of small_cnn ▾</div></div>
+    <div class="pop" style="left:28px;top:94px;width:700px">
+      <table class="t">
+        <tr><th>Version</th><th>Lineage</th><th>Trained on</th><th class="r">Val acc</th><th>Weights</th><th>Trained</th></tr>
+        <tr class="on"><td class="m">mv_a014046ec3b5</td><td>small_cnn · cifar10</td><td class="m">ds_f8e67211dd94</td><td class="r m">0.840</td><td>present</td><td class="m">2026-11-19 13:26</td></tr>
+        <tr class="off"><td class="m">mv_2a7c0b4c8b72</td><td>small_cnn · cifar10</td><td class="m">ds_f8e67211dd94</td><td class="r m">0.839</td><td>deleted</td><td class="m">2026-11-19 13:18</td></tr>
+      </table>
+      <div class="muted" style="font-size:11px;margin-top:6px">Trained versions of this model, from any lineage, newest first; bases and partial runs are not listed. A deleted one stays visible, greyed, and opens frame C's card.</div>
+    </div>
+  </div>
+</div>
+<p class="caption">"This model" means the same spec without its label (ADR-0017 rule 1), from any lineage: the same graph fine-tuned on another dataset shows here too. The picker names lineages by ID on hover, because names can repeat: M8's reference <span class="mono">small_cnn</span> (<span class="mono">ml_319245b543d4</span>, also called <i>small_cnn · cifar10</i>, with <span class="mono">mv_a4a0fb846812</span> from the M10 study) is a different spec, so its versions are listed only when that reference model is the one being trained. A reference model has no node IDs; its freeze list uses its top-level module names instead (to confirm in the RUN-1.10 addendum).</p>
+
+<!-- ===================================================================== E -->
+<h2>E · In a study: fixed for every trial</h2>
+<div class="frame w1024" style="height:200px">
+  <div style="padding:16px">
+    <div class="card" style="width:900px"><h3>Tune with a study · search space</h3>
+      <table class="t">
+        <tr><th>Field</th><th>Values</th><th>Scale</th><th></th></tr>
+        <tr><td class="m">learning_rate</td><td class="m">1e-5 … 1e-3</td><td>log</td><td><span class="btn sm ghost">Remove</span></td></tr>
+        <tr class="off"><td class="m">init_from · freeze</td><td><span class="mono">mv_a014046ec3b5</span> · 8 layers frozen <span class="k">fixed</span></td><td>–</td><td class="muted">Every trial starts from it; not tunable</td></tr>
+      </table></div>
+  </div>
+</div>
+
+<!-- ===================================================================== F -->
+<h2>F · Loading, error, and 1024 px</h2>
+<div class="frame w1024" style="height:400px">
+  <div class="shell rail"><aside class="side"></aside><header class="top"><span><b>Models</b> / Fine-tune</span></header>
+    <section class="content" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start">
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px"><span class="skel" style="width:220px;height:18px"></span><span class="skel" style="height:60px"></span><span class="skel" style="height:110px"></span><span class="muted" style="font-size:11px">Loading mv_a014046ec3b5…</span></div>
+      <div class="empty err" style="height:150px"><div><b>That version was not found</b><p style="margin:6px 0"><span class="mono">model_version_not_found</span> · <span class="mono">mv_a014046ec3b9</span> is not in the registry. Check the link, or pick a version.</p><span class="btn sm">Fresh weights instead</span> <span class="btn sm">Open the registry</span></div></div>
+      <div class="card" style="grid-column:1 / 3"><div style="display:flex;align-items:center;gap:10px;font-size:12px"><span class="pill">✓ 0.44 GB of 5.1 GB</span><span>from <span class="mono">mv_a014046ec3b5</span> · 222,986 trainable</span><span class="spacer"></span><span class="btn primary">Start run →</span></div></div>
+    </section><footer class="status"></footer></div>
+</div>
+<p class="caption">At 1024 px the right-hand column folds into the footer bar, as in v1, and the bar adds the parent and the trainable count. The freeze table drops its Output column.</p>
+</main>
+</body>
+</html>

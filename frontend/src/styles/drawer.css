@@ -39,3 +39,51 @@
 .menu-pop [data-disabled] { opacity: .45; cursor: not-allowed; }
 .drawer .field > label { display: flex; gap: var(--sp-2); align-items: center; }
 .drawer .st-form > .rjsf { display: contents; } /* live: rjsf's wrapper must not break the two-column grid */
+
+/* The Train a model drawer (SCR-09 v2, mockup SCR-09v2_v1 frames A–C, G, H). Tokens only.
+   live: the drawer's own .body holds the step bar, the scrolling steps and their footer, since
+   the footer's buttons depend on the step. */
+.drawer.train-drawer .body { padding: 0; gap: 0; overflow: hidden; }
+.train-steps { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.train-steps .stepbar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-secondary); }
+.train-steps .stepbar .st2 { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.train-steps .stepbar .st2 i { display: inline-grid; place-items: center; font: var(--fw-semibold) var(--fs-11)/1 var(--font-ui); font-style: normal; width: 18px; height: 18px; border-radius: var(--r-pill); border: var(--bw) solid var(--border-strong); color: var(--text-secondary); }
+.train-steps .stepbar .st2 i svg.i { width: 10px; height: 10px; }
+.train-steps .stepbar .st2[aria-current=step] { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.train-steps .stepbar .st2[aria-current=step] i { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.train-steps .stepbar .st2.done i { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); }
+.train-steps .stepbar > svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.train-steps .steps-body { flex: 1; overflow: auto; padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); font-size: var(--fs-13); color: var(--text-secondary); }
+.train-steps .steps-foot { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-top: var(--bw) solid var(--border); }
+.train-steps .field { display: flex; flex-direction: column; gap: var(--sp-1); }
+.train-steps .field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); }
+.train-steps .field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.train-steps select.select { height: var(--h-md); width: 100%; font-size: var(--fs-13); color: var(--text-primary); }
+.vfacts { display: grid; grid-template-columns: 108px 1fr; gap: var(--sp-1) var(--sp-3); margin: 0; padding: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); font-size: var(--fs-12); }
+.vfacts dt { color: var(--text-secondary); }
+.vfacts dd { margin: 0; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.chosen { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.chosen b, .chosen .mono { color: var(--text-primary); font-weight: var(--fw-medium); }
+.kinds { display: flex; flex-direction: column; gap: var(--sp-2); border: 0; margin: 0; padding: 0; min-width: 0; }
+.kinds legend { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); margin-bottom: var(--sp-2); padding: 0; }
+.kc { display: grid; grid-template-columns: 16px 1fr; gap: 2px var(--sp-3); padding: var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
+.kc input { accent-color: var(--accent); width: 14px; height: 14px; margin: 3px 0 0; }
+.kc b { font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--text-primary); display: flex; align-items: center; gap: var(--sp-2); }
+.kc .what { grid-column: 2; font-size: var(--fs-12); color: var(--text-secondary); }
+.kc .to { grid-column: 2; display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-12); color: var(--text-muted); }
+.kc .to svg.i { width: 12px; height: 12px; }
+.kc:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.kc:has(input:checked) .to { color: var(--text-secondary); }
+.kc:has(input:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.kc[aria-disabled=true] { cursor: not-allowed; border-style: dashed; background: transparent; }
+.kc[aria-disabled=true] b { color: var(--text-secondary); }
+.kc[aria-disabled=true] input { opacity: .45; }
+.kc .why { grid-column: 2; display: flex; gap: var(--sp-1); align-items: flex-start; font-size: var(--fs-12); color: var(--text-secondary); }
+.kc .why svg.i { width: 12px; height: 12px; margin-top: 2px; color: var(--text-muted); }
+.train-steps .callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid; font-size: var(--fs-12); color: var(--text-primary); }
+.train-steps .callout svg.i { margin-top: 2px; flex: none; }
+.train-steps .callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .train-steps .callout.info svg.i { color: var(--info); }
+.train-steps .callout.warn { border-color: color-mix(in srgb, var(--warning) 50%, transparent); background: var(--warning-soft); } .train-steps .callout.warn svg.i { color: var(--warning); }
+/* SCR-09 v2: the chosen kind on the Model card. */
+.kindtag { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); font: var(--fw-medium) var(--fs-12) var(--font-ui); color: var(--text-primary); }
+.kindtag svg.i { width: 12px; height: 12px; color: var(--text-secondary); }

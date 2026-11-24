@@ -754,6 +754,43 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **Also:** TPE is seeded per process from the study's seed and the trials already asked, so a new process continues the draws rather than repeating them; Optuna's storage opens under an advisory lock, so two studies can start at once.
 - **Why:** A process waiting hours for trials would hold one of two CPU slots (rule 5). A trial as an ordinary training job keeps checkpoints, pause, thermal pause and out-of-memory handling without a second copy. Keeping trial weights out of the registry keeps the registry to models someone chose.
 
+## M11: dashboards, monitoring completion, phase-2 acceptance
+
+**Fine-tuning a trained version** (RUN-1.10, REG-2.8; ADR-0014 and ADR-0015 Addendum A, approved 2026-11-20)
+- **What:** `init_from`, `reset_head` and `freeze` in the train config; checks against the split in `stratal.train.finetune`, run by the API and again by the stage; `POST /jobs/validate`; the parent's weights loaded before the lineage is found; an epoch-0 validation; retention holding parents of queued runs and of versions with weights.
+- **How:** The three fields are left out of a fresh run's serialization, so no earlier config hash changes. The stage loads the parent with every key checked, drops the head's keys when it is reset (the seeded head stays), sets `requires_grad = False` on frozen nodes, leaves them out of the optimizer and holds them in eval mode through `_train_mode`. A lineage founded by a fine-tune saves the starting weights as its base. On SCR-09 the checks come from `POST /jobs/validate`, so every mismatch shows at once; SCR-04 draws epoch 0 as the start of the validation curves, not as an epoch done.
+- **Why:** The config hash is the run's identity (NFR-4), and the start changes the result. Checking in the API gives the refusal before a job exists (AC3); checking again in the stage covers a parent that lost its weights in between. Holding frozen layers in eval mode is what makes AC2 hold for BatchNorm, whose statistics are buffers, not parameters. Retention's old rule (any child holds a parent) would have kept every fine-tuned-from version forever, since metadata is never deleted.
+
+**Comparing versions and Score on test** (EVAL-1.3, REG-1.4; SCR-11 v2, approved 2026-11-20)
+- **What:** `stratal.registry.compare` (candidates on a split; two to six versions side by side with Wilson intervals, the best per metric and an overlap flag); a `score_test` job reusing the `test_eval` stage for one version; a text's token facts in the predict response; `children` and `founded_from` in the registry's details. On SCR-11: `/models/compare`, its picker, Try it for records and texts, the parent and children in the version drawer.
+- **How:** Only versions whose `dataset_version_id` is the split and that have `test_*` metrics are compared, by the API, so the page cannot mix splits. The interval is EVAL-1.1's `wilson_interval` over `round(accuracy × rows)`. Score on test copies the study's single test evaluation but keys on the version, with `SELECT … FOR UPDATE` and a check for existing test metrics, so it writes at most once. Try it's table form takes its columns and kinds from the split's test rows, which leave the target out.
+- **Why:** K8 limits comparison to one split and adds no new evaluation, except scoring pre-M10 versions once, as approved with the low-fi; reusing `test_eval` keeps one scoring path. The interval is the point of the page on small splits: wine's 18 test rows cannot tell 0.944 from 1.000.
+
+**Alerts and diagnostics** (MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4; [ADR-0020](decisions/ADR-0020-alerts-and-diagnostics.md), accepted 2026-11-22; built 2026-11-22, see its As built section)
+- **What:** Four alerts (`vram_high`, `ram_high`, `gpu_hot`, `no_progress`) linked to their actions; three diagnostics for a GPU stage with the GPU under 30 %; typed load and unload events with PyTorch's and the card's figures; two runs overlaid by running time or epoch.
+- **How:** Resource alerts are a pure state machine run by the sampler on each sample (5 s hold, once per crossing, re-armed below a lower point; `gpu_hot` at the resume limit). Alerts, clearings and diagnostics are events; `events.caused_by` holds the alert's `event_uid` on the action, and `insert_events` links a `gpu_oom` or `host_oom_killed` failure to a recent alert of its job. The job's reporter adds `cpu_cores`; the watchdog diagnoses each running GPU stage over 30 s with the same pure function the API uses.
+- **Why:** The sampler already has the figures, so alerts cost no query and are not late. One column on events records the cause, as K4 asks, without a second record of what events already hold. OC-12 needs the job's own CPU, since a saturated loader core is about 6 % of the machine.
+
+**Semantic duplicates in the label stage** (DATA-2.3, DATA-4.8; [ADR-0013](decisions/ADR-0013-semantic-duplicates.md), built 2026-11-22)
+- **What:** `semantic_clusters` (cosine links at 0.90, union-find, clusters of two or more) on the accepted rows' CLIP vectors; `semantic_cluster_id` on each member; rule 2b of `group_for_split` joins a cluster into one split group.
+- **How:** The label stage keeps each image's vector as a `clip_image_embedding` derivation while scoring and encodes the images scored before M11 once; the links are blocked matrix products on the GPU (20,000 × 512 in 6.4 s), every pair in Python without PyTorch. Older manifests read the new column as null.
+- **Why:** The vectors exist only in the label stage (ADR-0013 rule 1). Keeping them as derivations makes a rerun cluster without encoding again. On coco10k the real run found 93 clusters, 261 rows, the largest 22.
+
+**A version's profile and the diff of two** (UI-2.2, DATA-3.5, UI-2.1; SCR-03 v2, K10)
+- **What:** `stratal.data.profile`: the funnel from raw to a version and each column raw against here; the diff of two versions by `row_key`; the models trained on a version; a cluster's pairs.
+- **How:** One manifest is enough for the funnel, because every version holds every row with the stage that decided it (INV-06). The API caches profiles by version ID in its process. A row is changed for its status, reason code, content or a derived field; `reason_detail` alone is wording only; a field one side lacks is listed once.
+- **Why:** K10 asked for computing on request from manifests and caching by ID; versions never change, so the cache never goes stale. The wording rule is the owner's answer at the low-fi: otherwise a one-row change read as 60.
+
+**Every estimator in SCR-09's list** (ML-1.1, DATA-5.5; SCR-09's estimator-list addendum, approved 2026-11-22)
+- **What:** SCR-09's Classical select lists every estimator in groups (the split's task, the ones that ignore the target, the ones for the other task), disabled with their reason when the split or a study cannot use them; a line under it names those and why; *Turn on* waits for a supervised estimator.
+- **How:** One grouping in `RunScreen.tsx` from each estimator's `tasks` (`GET /ml/estimators/schema`) and the split's task; a native select with option groups and disabled options, described by the line (`aria-describedby`); *Turn on* `aria-disabled` with its reason while an estimator that ignores the target is selected, whose fields then have no Tune toggles.
+- **Why:** A hidden choice read as a missing feature (the owner's report: no logistic regression, on a regression split), and filtering the list under a selection let the select and the form disagree (E-017). The *Train a model* drawer already shows a kind it cannot use, greyed, with the reason.
+
+**Trends across past runs** (MON-4.5; SCR-13's History tab, G2 approved 2026-11-22 and 2026-11-24)
+- **What:** `stratal.mon.history`: rate in the stage's own unit counting work done, time across attempts (per epoch for training), notes on unusual runs, groups of like runs; `GET /system/history`; SCR-13's History tab with a lane of points per figure and the runs table.
+- **How:** Training groups by the spec's structure hash (labels left out), dataset and batch; `label` by captioner and batch; other stages are one group. A label run's rate is captions computed ÷ running time, so reused captions do not inflate it; a training run's is its moving average of steps a second times the batch. Running time comes from the job's transitions, so a run that lost its worker counts both attempts.
+- **Why:** A rate or a peak compares only within one kind of work, and only like with like: the owner's choice of one stage at a time and the latest run's group. Counting from transitions makes a resumed run show what it cost (phase 2's killed run C: 11.0 s an epoch against 6.4).
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.
@@ -788,6 +825,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **What:** The `api` service does not install or import PyTorch.
 - **How:** Separate dependency groups for api, CPU worker and GPU worker.
 - **Why:** It keeps the API small in memory and makes it impossible for the API to load a model by accident.
+
+**Model kind chosen after the split** (ML-1.1, BUILD-1.3, UI-2.1; SCREENS.md v3)
+- **What:** One *Train a model* drawer, shared by SCR-11, SCR-03 and SCR-09, picks the version first and then the kinds it allows; SCR-09 receives the kind instead of switching it.
+- **How:** The kind travels in the URL (`/runs/new?version=…&kind=network|classical`; `?from=` and `?study=` imply theirs); without one SCR-09 opens the drawer. Allowed kinds come from the existing `GET /dataset-types` and the version's ends from `POST /model-specs/validate`; no API change.
+- **Why:** A classical model needed a network built and thrown away first, because the switch lived only on the builder's path.
 
 ## Process
 

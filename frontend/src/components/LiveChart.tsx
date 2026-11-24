@@ -24,7 +24,7 @@ function tokens(names: string[]): Record<string, string> {
   return Object.fromEntries(names.map((n) => [n, style.getPropertyValue(n).trim()]));
 }
 
-function useTheme(): string | null {
+export function useTheme(): string | null {
   const [theme, setTheme] = useState(() => document.documentElement.getAttribute("data-theme"));
   useEffect(() => {
     const observer = new MutationObserver(() => {

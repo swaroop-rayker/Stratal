@@ -1,6 +1,6 @@
 # ADR-0015 — Model registry and weight retention
 
-**Status:** Accepted by the owner on 2026-11-17, as proposed (M8).
+**Status:** Accepted by the owner on 2026-11-17, as proposed (M8). Addendum A (parents of fine-tuned versions) accepted by the owner on 2026-11-20 ("Approve both").
 
 ## Context
 
@@ -41,3 +41,40 @@
 - With default settings a lineage holds at most two weight files plus one checkpoint per active run.
 - "Re-train" reproduces a deleted version's inputs exactly; its metrics match within NFR-4's tolerance, not exactly.
 - Retention needs the inference service to report what it has loaded (ADR-0016).
+
+## Addendum A — Parents of fine-tuned versions (RUN-1.10, REG-2.8), proposed 2026-11-20
+
+**Status:** Accepted by the owner on 2026-11-20 ("Approve both"), as proposed, with ADR-0014's Addendum A (M11, kickoff K3 and K9).
+
+### Context
+
+- From M11 a run can start from a trained version (`init_from`, ADR-0014 Addendum A). Its version's parent can then be a trained version, possibly in another lineage, rather than its lineage's base.
+- REG-2.8 says retention never deletes weights "in use by a running/queued job" or "the parent of an existing adapter/fine-tune". The owner's K9 reads the second as: a version is protected while it is the parent of a version that has weights.
+- As built, two gaps and one difference:
+  - **In use** is read from version rows whose job is active (`retention.in_use`). A fine-tune job that is queued, or a deep study between trials, has no version row yet, so its `init_from` is not protected.
+  - **The parent rule** blocks a version with *any* child row (`policy.plan_lineage`, `children`). Metadata is never deleted (REG-2.7), so a version fine-tuned from even once would be kept forever. That is stricter than K9.
+  - The children are already found across lineages, which a cross-lineage parent needs.
+
+### Decision
+
+1. **A version's parent** is its run's `init_from` when given, otherwise its lineage's base (rule 1 as before). The parent may be in another lineage.
+2. **In use, widened (REG-2.8a).** On top of today's reasons, a version is in use when it is:
+   - the `init_from` of a train job that is queued, running, paused or stalled, read from the job's stage config, so it holds before the job has a version row;
+   - the `init_from` of a deep study that is running, read from the study's base, so it holds between trials.
+3. **Parent rule, as K9 (REG-2.8b).** A version is blocked as a parent while at least one child has weights: `present`, `deleting`, or a `partial` child, whose weights are its run's checkpoint. A child whose weights are deleted no longer holds its parent. The refusal names the children that hold it, as now.
+4. **Re-training a fine-tuned version (REG-2.7).** *Re-train* repeats the version's exact config, `init_from` included. If the parent's weights are gone too, the re-train is refused with `weights_deleted`, naming the parent, and the action says to re-train the parent first. A version re-trained that way matches within NFR-4's tolerance, not exactly, as every re-train does (Consequences, above).
+5. **A lineage founded by a fine-tune** has the run's starting weights as its base (ADR-0014 Addendum A rule 6). A base is never deleted (rule 4), so that lineage's own runs never need the parent again. Its first version still names the parent, which rule 3 then protects only while that version keeps its weights.
+
+### Alternatives
+
+| Option | Why not |
+|---|---|
+| Keep today's rule (any child protects its parent) | Every fine-tuned-from version would be kept forever, since metadata is never deleted; disk use would grow with no way to free it |
+| Delete a parent freely once its job ends | A child's *Re-train* and a queued fine-tune would find no weights; REG-2.8 forbids it |
+| Pin the parent automatically | Pins are the owner's own choice (REG-2.5); an automatic pin would outlive its reason |
+
+### Consequences
+
+- `retention.in_use` and the facts given to `policy.plan_lineage` change; no schema change. The dry run (REG-2.9) shows the new reasons, e.g. "in use: job_0103 starts from it" and "parent of mv_… (weights present)".
+- `test_REG_2_8_*` gains: a queued fine-tune's parent is blocked before the job starts; a parent whose only child's weights were deleted is deleted; a cross-lineage parent is blocked. `test_RUN_1_10_*` covers rule 4's refusal.
+- With the default `keep_intermediate = 0`, fine-tuning the latest version and training again leaves the parent deletable once the child that holds it is gone.

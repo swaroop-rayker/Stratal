@@ -1,7 +1,9 @@
 """Settings stored in the database and edited on SCR-14 (OC-9; docs/API.md §3.10).
 
-Two sections: ``training`` (checkpoint interval and the watchdog's limits; RUN-1.3,
-RUN-1.6, RUN-1.7) and ``retention`` (REG-2.3, REG-2.4, REG-2.10). Values are
+Three sections: ``training`` (checkpoint interval and the watchdog's limits; RUN-1.3,
+RUN-1.6, RUN-1.7), ``retention`` (REG-2.3, REG-2.4, REG-2.10) and ``monitoring``
+(sampling intervals, alert thresholds and the diagnostics' disk figure; MON-2.2,
+MON-2.6, MON-3.2; ADR-0020 rule 14). Values are
 checked against each section's schema; a field's problem comes back as a
 ``422 validation_error`` whose ``errors[].loc`` names it (SCR-14 frame D).
 
@@ -119,10 +121,30 @@ def _training_section(session: Db, bus: Bus) -> Json:
     }
 
 
+def _monitoring_section(session: Db) -> Json:
+    values = limits.read_monitoring(session, get_settings())
+    return {
+        "name": "monitoring",
+        "title": "Monitoring",
+        "requirements": ["MON-2.2", "MON-2.6", "MON-3.2"],
+        "values": values.model_dump(mode="json"),
+        "schema": limits.MonitoringValues.model_json_schema(),
+        "version": limits.monitoring_version(values),
+        "lineages": None,
+        "context": None,
+    }
+
+
 @router.get("/settings", response_model=schemas.SettingsList)
 def get_settings_sections(session: Db, bus: Redis) -> Json:
     """Each section's values, its JSON schema and a version to send back when saving."""
-    return {"sections": [_training_section(session, bus), _retention_section(session)]}
+    return {
+        "sections": [
+            _training_section(session, bus),
+            _retention_section(session),
+            _monitoring_section(session),
+        ]
+    }
 
 
 def _validated[M: BaseModel](model: type[M], values: dict[str, Any]) -> M:
@@ -152,7 +174,7 @@ def _validated[M: BaseModel](model: type[M], values: dict[str, Any]) -> M:
 class SaveSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    section: Literal["retention", "training"]
+    section: Literal["retention", "training", "monitoring"]
     values: dict[str, Any]
     version: str = Field(description="The section's version as read; a stale one is refused.")
     confirm: str | None = Field(
@@ -166,6 +188,8 @@ def save_settings(body: SaveSettings, session: Db, enqueue: Queue, bus: Redis) -
     ``409 confirmation_required`` with ``plan`` if saving would delete weights."""
     if body.section == "training":
         return _save_training(body, session, bus)
+    if body.section == "monitoring":
+        return _save_monitoring(body, session)
     new = _validated(retention.RetentionValues, body.values)
     queued = None
     with session.begin():
@@ -221,4 +245,21 @@ def _save_training(body: SaveSettings, session: Db, bus: Bus) -> Json:
             )
         limits.write(session, new, slowdown_c=_slowdown(bus))
         section = _training_section(session, bus)
+    return {"section": section, "job_id": None}
+
+
+def _save_monitoring(body: SaveSettings, session: Db) -> Json:
+    """The sampler reads its intervals within 30 s and the alerts their thresholds within
+    5 s; nothing is deleted, so nothing asks first."""
+    new = _validated(limits.MonitoringValues, body.values)
+    with session.begin():
+        current = limits.read_monitoring(session, get_settings())
+        if limits.monitoring_version(current) != body.version:
+            raise Conflict(
+                "The monitoring settings changed since they were read.",
+                suggested_action="Reload the settings and make the change again.",
+                extensions={"version": limits.monitoring_version(current)},
+            )
+        limits.write_monitoring(session, new)
+        section = _monitoring_section(session)
     return {"section": section, "job_id": None}

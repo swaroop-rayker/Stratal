@@ -121,6 +121,8 @@ class Event(_Model):
     reason: str | None
     suggested_action: str | None
     attempt: int | None
+    caused_by: str | None = None
+    """The ``event_uid`` of the alert that caused this event (MON-2.7, ADR-0020)."""
 
 
 class EventList(_Model):
@@ -297,6 +299,8 @@ class Row(BaseModel):
     split: str | None = None
     split_group: str | None = None
     split_stratum: str | None = None
+    semantic_cluster_id: str | None = None
+    """M11 (DATA-2.3): the semantic cluster an accepted row is in."""
 
 
 class RowPage(_Model):
@@ -370,6 +374,8 @@ class ProcessSample(_Model):
     torch_allocated_mb: float | None
     torch_reserved_mb: float | None
     torch_max_allocated_mb: float | None
+    cpu_cores: float | None = None
+    """The job's process tree's CPU, in cores (MON-3.2)."""
 
 
 class Telemetry(_Model):
@@ -616,9 +622,20 @@ class LineageRetention(_Model):
     last_run: RetentionLastRun | None
 
 
+class FoundedFrom(_Model):
+    """The version a lineage's first fine-tune started from, in another lineage (RUN-1.10)."""
+
+    version_id: str
+    lineage_id: str
+    lineage_name: str
+    reset_head: bool
+
+
 class ModelLineageDetail(ModelLineage):
     versions: list[ModelVersion]
     retention: LineageRetention
+    founded_from: FoundedFrom | None = None
+    """Set when the lineage was founded by fine-tuning a version of another lineage."""
 
 
 class ModelVersionDetail(ModelVersion):
@@ -631,6 +648,15 @@ class ModelVersionDetail(ModelVersion):
     weights_deleted_at: str | None
     study_id: str | None = None
     """The HPO study whose best trial this version is (M10, HPO-1.4), else null."""
+    children: list["VersionChild"] = []
+    """Versions started from this one (RUN-1.10), in any lineage, newest first."""
+
+
+class VersionChild(_Model):
+    id: str
+    lineage_id: str
+    lineage_name: str
+    weights_status: WeightsStatus
 
 
 # -- retention and settings (REG-2; API.md §3.9, §3.10) ---------------------------
@@ -726,7 +752,7 @@ class TrainingContext(_Model):
 
 
 class SettingsSection(_Model):
-    name: Literal["retention", "training"]
+    name: Literal["retention", "training", "monitoring"]
     title: str
     requirements: list[str]
     values: Json
@@ -776,9 +802,89 @@ class Prediction(_Model):
     """k-means: the record's cluster."""
     components: list[float] | None = None
     """PCA: the record's projection."""
+    input: "TextInput | None" = None
+    """For a text: how it was read (M11, REG-1.4, SCR-11 v2 question 2)."""
     load_ms: float | None
     """Time to load the model, when this request loaded it."""
     total_ms: float
+
+
+class TextInput(_Model):
+    tokens: int
+    """Words and punctuation marks the text was split into, before cutting."""
+    unknown: int
+    """Tokens not in the version's vocabulary, read as the unknown token."""
+    truncated_at: int | None
+    """L, when the text had more tokens and was cut there; null when it was not cut."""
+
+
+# ------------------------------------------------------------------ comparison (M11, EVAL-1.3)
+
+
+class CompareSplit(_Model):
+    version_id: str
+    dataset: str
+    dataset_type: str | None
+    test_rows: int | None
+    task: str | None
+    classes: list[str]
+
+
+class CompareCandidate(_Model):
+    """A trained version on the split: compared if it has test metrics; scored once if not."""
+
+    id: str
+    lineage_id: str
+    lineage_name: str
+    test_metric: str | None
+    test_value: float | None
+    weights_status: WeightsStatus
+    trained_at: str | None
+    study_id: str | None
+    scoring_job_id: str | None
+    """A queued or running Score on test job for it."""
+    can_score: bool
+    why_not: str | None
+    """Why it has no test metrics and cannot be scored, in words."""
+
+
+class CompareCandidates(_Model):
+    split: CompareSplit
+    items: list[CompareCandidate]
+
+
+class CompareVersion(_Model):
+    id: str
+    lineage_id: str
+    lineage_name: str
+    kind: Literal["network", "classical"]
+    model: str
+    parameters: int | None
+    trained_at: str | None
+    job_id: str | None
+    weights_status: WeightsStatus
+    parent_version_id: str | None
+    parent_is_base: bool
+    study_id: str | None
+    metrics: dict[str, float]
+    """The task's test metrics (EVAL-1.2): accuracy and macro_f1, or mse, rmse, mae and r2."""
+    correct: int | None
+    """Classification: test rows right, accuracy × rows."""
+    accuracy_low: float | None
+    accuracy_high: float | None
+    """Accuracy's Wilson 95 % interval (EVAL-1.1's function)."""
+    per_class_f1: dict[str, float]
+
+
+class Comparison(_Model):
+    """Two to six versions on one test split, side by side (EVAL-1.3)."""
+
+    split: CompareSplit
+    versions: list[CompareVersion]
+    best: dict[str, list[str]]
+    """Per metric, the versions with the best value (ties share it); empty when all tie."""
+    overlap: bool
+    """True when any two accuracy intervals overlap: the split cannot tell them apart."""
 
 
 # ------------------------------------------------------------------ studies (M10, HPO-1.5)
@@ -852,3 +958,398 @@ class StudyTrial(_Model):
 
 class StudyTrialList(_Model):
     items: list[StudyTrial]
+
+
+ModelVersionDetail.model_rebuild()
+Prediction.model_rebuild()
+
+
+# -- system monitor (SCR-13; MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4; ADR-0020) -------
+
+
+class RangePoint(_Model):
+    """One time bucket's mean of the machine samples (SCR-13's lanes)."""
+
+    ts: str
+    minute_average: bool
+    """From the one-minute averages kept beyond the raw retention (NFR-12)."""
+    cpu_percent: float | None
+    ram_used_mb: float | None
+    ram_total_mb: float | None
+    gpu_util_percent: float | None
+    vram_used_mb: float | None
+    vram_total_mb: float | None
+    gpu_temp_c: float | None
+    disk_read_mb_s: float | None
+
+
+class RangeStage(_Model):
+    name: str
+    status: str
+    started_at: str | None
+    finished_at: str | None
+
+
+class RangeJob(_Model):
+    job_id: str
+    kind: str
+    state: str
+    started_at: str | None
+    finished_at: str | None
+    stages: list[RangeStage]
+
+
+class TelemetryRange(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    from_: str = Field(alias="from")
+    to: str
+    bucket_s: float
+    points: list[RangePoint]
+    jobs: list[RangeJob]
+    """Jobs that ran in the range, with their stages (the jobs strip)."""
+
+
+class AlertThresholds(_Model):
+    vram_percent: float
+    ram_percent: float
+    pause_c: float
+    resume_c: float
+    stall_s: float
+
+
+class SystemAlert(_Model):
+    code: str
+    """``vram_high``, ``ram_high``, ``gpu_hot`` or ``no_progress``."""
+    firing: bool
+    fired: Event
+    cleared: Event | None
+    actions: list[Event]
+    """Events that record this alert in ``caused_by``: a pause, a resume, ``stalled``, a
+    linked out-of-memory failure."""
+    lasted_s: float | None
+
+
+class SystemAlerts(_Model):
+    items: list[SystemAlert]
+    thresholds: AlertThresholds
+
+
+class DiagnosticObserved(_Model):
+    samples: int
+    gpu_percent: float | None
+    cpu_cores: float | None
+    """The job's process tree, in cores (OC-12)."""
+    capacity_cores: float
+    """``1 + loader_workers``, at most the logical CPUs."""
+    loader_workers: int
+    disk_read_mb_s: float
+
+
+class DiagnosticThresholds(_Model):
+    gpu_low_percent: float
+    cpu_saturated_share: float
+    disk_mb_s: float
+
+
+class DiagnosisText(_Model):
+    code: str
+    message: str
+    reason: str
+    suggested_action: str
+
+
+class DiagnosticLive(_Model):
+    job_id: str
+    stage: str
+    queue: Literal["cpu", "gpu"]
+    expected: list[str]
+    """MON-3's main resource: ``gpu``, ``cpu``, ``disk``, ``ram``."""
+    running_for_s: float
+    observed: DiagnosticObserved
+    thresholds: DiagnosticThresholds
+    diagnosis: DiagnosisText | None
+
+
+class DiagnosticPast(_Model):
+    fired: Event
+    cleared: Event | None
+    lasted_s: float | None
+
+
+class SystemDiagnostics(_Model):
+    live: list[DiagnosticLive]
+    logical_cpus: int
+    items: list[DiagnosticPast]
+
+
+class OverlayMachinePoint(_Model):
+    x: float
+    """Seconds spent running, or the epoch reached (``align``)."""
+    gpu_util_percent: float | None
+    vram_used_mb: float | None
+    gpu_temp_c: float | None
+    cpu_percent: float | None
+    ram_used_mb: float | None
+    minute_average: bool
+
+
+class OverlayProcessPoint(_Model):
+    x: float
+    rss_mb: float | None
+    torch_allocated_mb: float | None
+    cpu_cores: float | None
+
+
+class OverlaySummary(_Model):
+    seconds_per_epoch: float | None
+    gpu_mean_percent: float | None
+    vram_peak_mb: float | None
+    torch_allocated_peak_mb: float | None
+    rss_mean_mb: float | None
+    cpu_cores_mean: float | None
+    gpu_temp_max_c: float | None
+
+
+class OverlaySide(_Model):
+    job_id: str
+    kind: str
+    state: str
+    label: str
+    started_at: str | None
+    running_s: float
+    epochs: int | None
+    machine: list[OverlayMachinePoint]
+    process: list[OverlayProcessPoint]
+    summary: OverlaySummary
+
+
+class JobOverlay(_Model):
+    align: Literal["time", "epoch"]
+    common_epochs: int | None
+    epoch_unavailable: str | None
+    """Why the two cannot be aligned by epoch, when they cannot."""
+    a: OverlaySide
+    b: OverlaySide
+
+
+class HistoryStage(_Model):
+    stage: str
+    queue: str
+    runs: int
+    """Completed runs, not counting stages reused from the cache."""
+    reused: int
+    last_at: str | None
+
+
+class HistoryGroup(_Model):
+    key: str
+    label: str
+    runs: int
+
+
+class HistoryPeaks(_Model):
+    vram_used_mb: float | None
+    torch_allocated_mb: float | None
+    ram_used_mb: float | None
+    gpu_temp_c: float | None
+    rss_mb: float | None
+
+
+class HistoryRun(_Model):
+    job_id: str
+    kind: str
+    started_at: str | None
+    group: str
+    reused: bool
+    """The whole stage came from the cache."""
+    attempts: int
+    running_s: float | None
+    epochs: int | None
+    time: float | None
+    rate: float | None
+    items: int | None
+    """For ``label``: the images it labelled; ``computed`` of them were captioned here."""
+    computed: int | None
+    peaks: HistoryPeaks
+    notes: list[str]
+    """Codes: paused, resumed, fine_tune, pruned, reused_work, peaks_missing."""
+
+
+class SystemHistory(_Model):
+    stages: list[HistoryStage]
+    stage: str | None
+    queue: str | None
+    rate_unit: str | None
+    """None when the stage has no rate."""
+    time_unit: Literal["s", "s/epoch"]
+    groups: list[HistoryGroup]
+    group: str | None
+    """The group shown; None for all groups."""
+    n: int
+    runs: list[HistoryRun]
+    """Newest first, at most ``n``."""
+
+
+# -- SCR-03 v2: distributions, diff, models trained on a version, clusters (M11) -----------
+
+
+class FiveNumbers(_Model):
+    n: int
+    min: float
+    p10: float
+    median: float
+    p90: float
+    max: float
+    mean: float
+
+
+class HistBin(_Model):
+    low: float
+    high: float
+    raw: int
+    here: int
+
+
+class ColumnProfile(_Model):
+    key: str
+    label: str
+    unit: str
+    raw_label: str
+    """``raw`` (every row) or ``with a value`` (a column a later stage adds)."""
+    raw: FiveNumbers | None
+    here: FiveNumbers | None
+    removed: FiveNumbers | None
+    bins: list[HistBin] | None
+    """Shared bins; null when every row has one value."""
+
+
+class RemovedReason(_Model):
+    reason_code: str
+    status: str
+    rows: int
+
+
+class FunnelStep(_Model):
+    stage: str
+    version_id: str
+    rows_in: int
+    removed: list[RemovedReason]
+    rows_out: int
+    parts: dict[str, int] | None
+
+
+class ClassCounts(_Model):
+    label: str
+    train: int
+    val: int
+    test: int
+    rows: int
+
+
+class TokenCut(_Model):
+    length: int
+    cut: int
+    rows: int
+
+
+class Distributions(_Model):
+    version_id: str
+    stage: str
+    dtype: str | None
+    row_count: int
+    accepted: int
+    removed: int
+    funnel: list[FunnelStep]
+    columns: list[ColumnProfile]
+    classes: list[ClassCounts] | None
+    formats: dict[str, int]
+    markers: dict[str, Any]
+    """Thresholds to draw on a column, e.g. the filter's ``clip_score``."""
+    token_cut: TokenCut | None
+
+
+class VersionRef(_Model):
+    version_id: str
+    stage: str
+    created_at: str | None
+
+
+class ConfigChange(_Model):
+    stage: str
+    field: str | None
+    """Null when the stage is in one lineage only."""
+    a: Any
+    b: Any
+
+
+class DiffField(_Model):
+    field: str
+    a: Any
+    b: Any
+
+
+class DiffRow(_Model):
+    row_key: str
+    fields: list[DiffField]
+
+
+class WordingRow(_Model):
+    row_key: str
+    a: str | None
+    b: str | None
+
+
+class VersionDiff(_Model):
+    a: VersionRef
+    b: VersionRef
+    stages_differ: bool
+    config_diff: list[ConfigChange]
+    added: int
+    removed: int
+    changed: int
+    wording_only: int
+    same: int
+    by_field: dict[str, int]
+    only_in_a: list[str]
+    only_in_b: list[str]
+    changed_rows: list[DiffRow]
+    wording_rows: list[WordingRow]
+    shown_limit: int
+
+
+class ModelMetric(_Model):
+    split: Literal["test", "val"]
+    name: str
+    value: float
+
+
+class TrainedModel(_Model):
+    id: str
+    lineage_id: str
+    lineage_name: str
+    state: str
+    kind: Literal["run", "fine-tune", "study", "classical"]
+    parent_version_id: str | None
+    metric: ModelMetric | None
+    weights_status: str
+    trained_at: str | None
+    study_id: str | None
+
+
+class VersionModels(_Model):
+    items: list[TrainedModel]
+
+
+class ClusterPair(_Model):
+    a: str
+    b: str
+    similarity: float | None
+    phash_distance: int | None
+
+
+class SemanticClusterView(_Model):
+    cluster_id: str
+    rows: list[Row]
+    pairs: list[ClusterPair]
+    split_groups: list[str]

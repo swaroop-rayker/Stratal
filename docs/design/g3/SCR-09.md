@@ -65,3 +65,126 @@
 ## Tests
 
 `frontend/src/screens/build/Builder.test.tsx` (SCR-09 study part): `test_HPO_1_1_a_marker_is_refused_on_its_row_by_the_fields_own_rules`, `test_HPO_1_1_the_vram_check_takes_the_widest_layer_in_the_space`, `test_HPO_1_1_tuning_a_field_starts_a_study_with_its_marker`, `test_HPO_1_1_a_refused_marker_from_the_server_lands_on_its_row`.
+
+# SCR-09 v2 training entry (M11) — Gate 3 comparison
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-09v2_v1.html`](../screens/SCR-09v2_v1.html), G2 approved 2026-11-20, frames A–D, G and H (the training entry). Fine-tuning (frames E, F and the study row in G, RUN-1.10) is not built yet and has its own Gate 3 |
+| Built | `frontend/src/screens/build/TrainDrawer.tsx` (new), `RunScreen.tsx`, `BuilderScreen.tsx`, `models/ModelsScreen.tsx`, `version/VersionScreen.tsx`; styles appended to `drawer.css`. Routes: `/runs/new?version=…&kind=network\|classical`; without a kind SCR-09 opens the drawer |
+| Checked | 2026-11-20, live on the running stack. The pane was about 600 px wide, so the drawer filled most of it: content, behaviour and contrast were checked through the page. SCR-11 → wine `ds_6448d354c9c6` → Classical → SCR-09 classical (keyboard only: arrow, Enter); SCR-03 on cifar10 `ds_f8e67211dd94` (Classical disabled with its reason) → *Open the builder* with both selects filled; coco20k `ds_005e3e700ee8` (nothing trainable); coco10k-captions `ds_53f72c42aa5a` (tokenize); SCR-03 on `ds_499bfa2ee3d3` (clean_table, button disabled); `/runs/new?version=ds_98c3fdfd7edc` with no kind; *Train again…* from `job_0066` (diabetes) → *Change…* → Classical with the warning |
+| Status | **Approved by the owner on 2026-11-20** ("Approved"), with the listed differences |
+
+## Fixed during the check
+
+1. The breadcrumb read *Models › Build › New run* on a classical run; it is now *Models › New run* (frame D).
+2. An untrainable type's reason read "Image–caption pairs is not trained…"; now "are" (frame C).
+3. Opened with no kind, the drawer's primary button read *Use Classical* and choosing Network stayed on SCR-09; it now reads *Set up the run* / *Open the builder* and Network goes to the builder, as on SCR-11.
+
+## Differences from the mockup
+
+1. **The drawer has the built drawer's header**, with the <kbd>Esc</kbd> hint beside the close button, as every built drawer has.
+2. **Network's line of text names the type's families** ("Layers you stack in the builder (MLP), or a template. GPU or CPU, with a VRAM check.") for every type; the mockup had a shorter tabular wording mentioning the Tabular MLP template.
+3. **The current kind in *Change…* keeps the usual description with a *current* badge**; frame G's card said "tabular_mlp, 5 layers, from job_0066" instead. The warning under the kinds names the job.
+4. **Step 1's summary line in step 2** includes the stage (`split`, `tokenize`) and the input → output, also on wine (frame C's wine card showed only the class count).
+5. **The facts box shows *Classes* only up to six classes** (wine's three are listed; cifar10's ten are not).
+6. **"No version to train on yet" uses the shared empty state** with the info icon; *Continue the pipeline* opens the *Start pipeline* drawer in place of this one.
+7. **SCR-03's *Train a model…* is also in the narrow layout's *More* menu**, disabled there off a trainable stage.
+8. **Fine-tuning is not built** (frames E and F, the fixed study row): it waits for RUN-1.10's backend (`init_from`), so SCR-11 has no *Fine-tune…* yet and SCR-09's Start from card is unchanged.
+
+## Accessibility
+
+- **Contrast:** every text element passes AA in both themes, measured after a 3 s wait on switching: drawer step 1 22 elements, step 2 19–22 (wine, cifar10, coco20k, with the warning), SCR-09 classical 55, SCR-09 from `job_0066` 100.
+- **Keyboard:** focus moves into the drawer and is trapped; the kinds are native radios in one fieldset, so the arrow keys move between allowed kinds and skip a disabled one; Enter outside a button or select presses the primary button; Esc closes and returns focus to the opener (*Choose…* when SCR-09 opened the drawer itself). A disabled kind's reason is text inside its label, so it is read with the radio. SCR-03's disabled button stays focusable with its reason in `aria-describedby`.
+
+## Tests
+
+`frontend/src/screens/build/TrainEntry.test.tsx`: `test_UI_2_1_a_tabular_split_reaches_classical_mode_without_the_builder`, `test_UI_2_1_a_non_tabular_split_shows_classical_disabled_with_its_reason`, `test_UI_2_1_runs_new_without_a_kind_opens_the_drawer_at_step_2`, `test_UI_2_1_change_to_classical_warns_that_the_draft_network_is_left_behind`. Frontend checks pass in `frontend-tools`: typecheck, lint (one existing warning elsewhere), Vitest 100/100, build.
+
+---
+
+# M11 — Fine-tuning (RUN-1.10), Gate 3
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-09v2_v1.html`](../screens/SCR-09v2_v1.html), G2 approved 2026-11-20: frames E and F, and the fixed study row of frame G |
+| Built | `frontend/src/screens/build/FineTune.tsx` (new: the Start from and Freeze layers cards, the validate and picker hooks), `RunScreen.tsx`, `StudyParts.tsx`, `models/VersionDrawer.tsx` (*Fine-tune…*, the parent), `job/Training.tsx` (epoch 0); styles appended to `scr09.css`. Route `/runs/new?init_from=mv_…` |
+| Checked | 2026-11-21, live on the running stack with the rebuilt images. Fine-tuned `mv_a014046ec3b5` (`small_cnn · cifar10`) from SCR-09, layers `n1`–`n12` frozen, 3 epochs on the GPU: `job_0106` registered `mv_7f950100ab48`. Epoch 0 gave val loss 0.7004, the parent's 0.7004 (AC1); the 24 frozen tensors, BatchNorm statistics included, are identical to the parent's on disk and the rest changed (AC2); retention now blocks the parent ("parent of mv_7f950100ab48, still with weights"). The pane was about 800 px wide, so the page was one column; content, behaviour and contrast were checked through the page |
+| Status | **Approved by the owner on 2026-11-21** ("Approved"), with the listed differences |
+
+## Screenshots (in `SCR-09/`)
+
+| File | Shows |
+|---|---|
+| `live-E-fine-tune-start-from-freeze-dark.jpg` | Start from with the parent, its three checks, *Reset the head* and the lineage callout; Freeze layers with `n1`–`n12` frozen |
+| `live-E-fine-tune-vram-plan-dark.jpg` | The VRAM check *trainable only* (weights 1.1 MB, gradients and Adam for 222,986 trainable 2.6 MB, total 449 MB) and the plan with epoch 0 against 0.700 |
+
+## Fixed during the check
+
+1. SCR-11's version drawer called every parent "(base)". It now looks the parent up: a base keeps "(base)"; a trained parent is a link to its drawer, with its lineage and an *another lineage* badge when it is in another one (SCR-11 v2's frame E, built here because fine-tuning makes it visible).
+2. Retention's blocked reason read "which keep their weights" for one child; it now reads "parent of mv_…, still with weights".
+3. The freeze table now drops its Output column below 1280 px, as frame E's caption says.
+
+## Differences from the mockup
+
+1. **The version picker is a native select**, each option naming the version, its lineage, val accuracy, job, and "weights deleted" where so; frame F drew it as an open table. It is keyboard-native and lists versions of the same spec from every lineage, newest first.
+2. **The Data card's split is two selects** (dataset, then version, of the parent's type only), as on SCR-08 and the *Train a model* drawer; frame E drew one select.
+3. **The layer column describes the spec's own fields**, e.g. "conv2d 32 filters, 3×3", not "conv2d 3→32": a node's input channels are inferred, not in the spec.
+4. **The Output column shows the builder's shape text** ("image 32×32×32").
+5. **Sizes use the app's units** (1.1 MB, 2.6 MB, 449 MB), as the rest of SCR-09; the mockup's figures were rounded by hand (1.2 MB, 2.7 MB, 0.44 GB).
+6. **An OK Output line names the classes** ("10 classes (airplane, automobile, …), the same list in the same order").
+7. **A blocked start says why** under the plan: "Start is disabled until every check passes."
+8. **The fixed study row** sits at the end of the search-space table, so it appears once a field is tuned; the Start from callout also says "Every trial starts from it; it is not tunable".
+9. **SCR-04 draws epoch 0 as the start of the validation curves**, not as an epoch in the strip, so a 3-epoch run shows 3 epochs. Not in the mockup; the log shows the epoch-0 line with the parent's value.
+10. **SCR-11's *Fine-tune…*** sits in the version drawer's action row after *Try it*, for a trained network version with its weights (decision 1 of the low-fi). The rest of SCR-11 v2 has its own Gate 3.
+
+## Accessibility
+
+- **Contrast:** every text element passes AA in both themes, measured after a 3 s wait on switching: the fine-tune page 187 (188 with rows frozen), the weights-deleted parent 114, with a study on 200, SCR-11's version drawer 184.
+- **Keyboard:** Tab reaches *Fresh weights* / *A trained version*, the picker, *Reset the head* (focus ring on the toggle), then each row's checkbox and its *Freeze up to here*, which is visible when focused or hovered; the head's checkbox is disabled while the head is reset. The checks have words and an icon each, never colour alone.
+
+## Tests
+
+- `frontend/src/screens/build/FineTune.test.tsx`: `test_RUN_1_10_init_from_prefills_from_the_parent_and_lists_its_checks`, `test_RUN_1_10_AC3_other_classes_block_the_start_until_the_head_is_reset`, `test_RUN_1_10_AC2_freezing_sends_node_ids_and_counts_what_trains`, `test_RUN_1_10_a_parent_without_weights_offers_re_train_and_blocks_the_start`.
+- `frontend/src/screens/job/Training.test.tsx`: `test_RUN_1_10_a_fine_tunes_epoch_0_is_the_val_curves_start_not_an_epoch_done`.
+- Backend: `tests/integration/test_M11_fine_tune.py` (11 tests: AC1, AC2, AC3 with a reset head, another input shape, the parent rules, freezing and reference models, `POST /jobs/validate`, a table's preprocessing, a text's vocabulary, a study's start, retention) and `tests/unit/test_RUN_1_10_config.py` (8).
+
+# M11 — The estimator list (addendum), Gate 3
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-09v2-estimators_v1.html`](../screens/SCR-09v2-estimators_v1.html), G2 approved 2026-11-22, on the owner's report the same day: "There is no logistic regression option in classical model creation" |
+| Built | `frontend/src/screens/build/RunScreen.tsx` (the grouped list, the line naming what is ruled out, *Turn on* waiting for a supervised estimator); styles appended to `scr09.css`; tests in `TrainEntry.test.tsx` |
+| Checked | 2026-11-22, live on the running stack (the Vite dev server) at a 1280 px viewport, on diabetes `ds_de5f2ad338c9` (regression) and wine `ds_6448d354c9c6` (classification, 3 classes) |
+| Status | **Approved by the owner on 2026-11-22** ("Approved"), with the six listed differences |
+
+## Screenshots (in `SCR-09/`)
+
+| File | Shows |
+|---|---|
+| `live-estimators-diabetes-dark.jpg` | Diabetes: `random_forest · Random forest` selected, and the line naming `logistic_regression` and `naive_bayes`, with the hint to use `linear`, `ridge` or `lasso` |
+| `live-estimators-kmeans-no-study-dark.jpg` | Wine with `kmeans` selected: the line for `linear`, `ridge` and `lasso`; k-means's fields without Tune toggles; *Turn on* disabled, its reason under the heading |
+
+The open list is the browser's own and does not appear in page screenshots, so it was read from the page. On diabetes: *For regression* (8), *Any table · ignores the target* (4), and *Not for this split* with `logistic_regression` and `naive_bayes`, disabled, "— classification only". On wine: *For classification* (7), the same four, and `linear`, `ridge` and `lasso`, disabled, "— regression only". With a study on, the four that ignore the target read "— not in a study" and are disabled.
+
+## Fixed during the check
+
+1. The study's reason squeezed the card's heading onto two lines at 1280 px, where the card is narrower than the mockup's frame. The reason now takes a second row of the header, under the heading, with *Turn on* beside the heading.
+
+## Differences from the mockup
+
+1. **A reason follows its option after a dash** ("logistic_regression · Logistic regression — classification only"); frame A drew it right-aligned. A native option is one line of text.
+2. **The select and its options use the UI font**, as SCR-09's select always has; the mockup drew them in mono.
+3. **The select is 46ch wide**, enough for its longest choice, so at 1280 px the sentence beside it wraps underneath; in the mockup's wider frame it sat beside it.
+4. **The study's reason is on a second row of its header** (fixed during the check, above); frame C drew it on the heading's row, right-aligned.
+5. **K-means's fields have no Tune toggles while it is selected**, since a study cannot start on it; frame C did not draw the form. A Tune toggle on its fields used to turn the study on, the same path as E-017.
+6. **Numbers and files:** the bug is E-017, not E-016 as the mockup's test list says (E-016 went to the raw-hex lint the same day), and the tests are in `TrainEntry.test.tsx`, beside the training entry's, not `Builder.test.tsx`. The approved mockup is left as approved.
+
+## Accessibility
+
+- **Contrast:** the line under the select, its estimator names and the study's reason pass AA in both themes: 8.07:1 in dark and 7.77:1 in light (text-secondary on surface), measured 3 s after switching the theme.
+- **Keyboard:** the select is the native one, and arrow keys skip disabled options: from `pca`, ArrowDown stays on `pca`, past `linear`, `ridge` and `lasso`. *Turn on* stays in the tab order with `aria-disabled`, and its reason is its description (`aria-describedby`); Enter and clicks do nothing. The select's description is the line under it.
+
+## Tests
+
+- `frontend/src/screens/build/TrainEntry.test.tsx`: `test_DATA_5_5_estimators_a_split_cannot_use_are_listed_disabled_with_their_reason`, `test_ML_1_1_logistic_regression_is_offered_on_a_classification_split`, `test_DATA_5_5_turning_a_study_on_never_changes_the_selected_estimator` (E-017's guard). All three fail against the screen as it was before; with the change, the full Vitest suite passes (127), with the typecheck, the lint and the build.

@@ -88,6 +88,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Train
+         * @description Check a network's run as ``POST /jobs`` would, and create nothing (RUN-1.10). A
+         *     fine-tune's mismatches come back in ``checks`` and ``freeze_problems``, all at once;
+         *     any other problem is the same ``422`` as ``POST /jobs``.
+         */
+        post: operations["validate_train_api_v1_jobs_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}": {
         parameters: {
             query?: never;
@@ -490,6 +512,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/versions/{version_id}/distributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Version Distributions
+         * @description The funnel from raw to this version, then each column raw (every row) against here
+         *     (accepted rows) and the removed rows (UI-2.2, K10).
+         */
+        get: operations["version_distributions_api_v1_versions__version_id__distributions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/versions/{version_id}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Version Diff
+         * @description This version (B) against another version of the same dataset (A), rows matched by
+         *     ``row_key`` (DATA-3.5, K10). Any two versions of one dataset can be compared; when
+         *     their stages differ, ``stages_differ`` says so.
+         */
+        get: operations["version_diff_api_v1_versions__version_id__diff_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/versions/{version_id}/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Version Models
+         * @description Model versions trained on this version, by lineage, with their main metric and the
+         *     split it is on: test once scored, else validation (UI-2.1, SCR-03 v2 frame D).
+         */
+        get: operations["version_models_api_v1_versions__version_id__models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/versions/{version_id}/clusters/{cluster_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Semantic Cluster
+         * @description A semantic cluster's members, the CLIP similarity and pHash distance of each pair,
+         *     and their split (DATA-2.3, DATA-4.8; SCR-03 v2 frame C).
+         */
+        get: operations["semantic_cluster_api_v1_versions__version_id__clusters__cluster_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system": {
         parameters: {
             query?: never;
@@ -566,6 +673,140 @@ export interface paths {
          * @description Each stage's default config, as a pipeline would resolve it with no overrides.
          */
         get: operations["config_defaults_api_v1_config_defaults_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/telemetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Telemetry Range
+         * @description The machine over a range for SCR-13's lanes: at most ``max_points`` time buckets,
+         *     each the mean of its samples. Beyond the raw retention the one-minute averages are
+         *     used and the point says so (NFR-12). With the jobs that ran in the range and their
+         *     stages, for the jobs strip. Default: the last hour.
+         */
+        get: operations["telemetry_range_api_v1_telemetry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System Alerts
+         * @description Alerts fired in the range, newest first, each with its clearing and the actions it
+         *     caused (pause, stalled, a failure with its suggested batch). Default: the last hour.
+         */
+        get: operations["system_alerts_api_v1_system_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System Diagnostics
+         * @description *Now*: every running stage's expected resource and what was observed over the last
+         *     30 s, with the diagnosis the watchdog would give; *Earlier*: past diagnoses in the
+         *     range, with how long each lasted.
+         */
+        get: operations["system_diagnostics_api_v1_system_diagnostics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System Models
+         * @description Model loads and unloads in the range, newest first, with PyTorch's and the card's
+         *     VRAM before and after in ``metrics`` (``allocated_mb_*``, ``reserved_mb_*``,
+         *     ``card_used_mb_*``).
+         */
+        get: operations["system_models_api_v1_system_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Jobs
+         * @description Two jobs' resource curves on one axis (MON-4.4, K7): by time spent running (pauses
+         *     and queueing removed), or by epoch for two training runs, over the epochs both ran.
+         *     ``epoch_unavailable`` says why epoch alignment cannot be used, when it cannot.
+         */
+        get: operations["compare_jobs_api_v1_system_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System History
+         * @description The last ``n`` completed runs of one stage in one group of like runs (MON-4.5): the
+         *     rate in the stage's own unit, running time across attempts (per epoch for training) and
+         *     the MON-2.5 peaks. Without ``stage``, the most recently run stage; without ``group``, the
+         *     latest run's group; ``group=all`` for every group. Stages reused from the cache are left
+         *     out unless ``reused``.
+         */
+        get: operations["system_history_api_v1_system_history_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -721,6 +962,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models/compare/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Candidates
+         * @description Every trained version on a split, newest first, with its main test metric, or why it
+         *     has none and whether it can be scored on test once (EVAL-1.3, SCR-11 v2 frame B).
+         */
+        get: operations["compare_candidates_api_v1_models_compare_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Versions
+         * @description Two to six versions on one test split, side by side (EVAL-1.3): the task's test
+         *     metrics, accuracy's Wilson 95 % interval, the best per metric, and per-class F1.
+         */
+        get: operations["compare_versions_api_v1_models_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/models/{lineage_id}": {
         parameters: {
             query?: never;
@@ -803,6 +1086,28 @@ export interface paths {
          *     will delete it.
          */
         delete: operations["unpin_version_api_v1_model_versions__version_id__pin_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-versions/{version_id}/score-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Score Version
+         * @description Score on test, once, a trained network version that has no test metrics (EVAL-1.3;
+         *     the owner's exception to K8). ``409`` if it has them, is being scored, is classical,
+         *     or its weights were deleted (``weights_deleted``).
+         */
+        post: operations["score_version_api_v1_model_versions__version_id__score_test_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1150,6 +1455,19 @@ export interface components {
              */
             type: "add";
         };
+        /** AlertThresholds */
+        AlertThresholds: {
+            /** Vram Percent */
+            vram_percent: number;
+            /** Ram Percent */
+            ram_percent: number;
+            /** Pause C */
+            pause_c: number;
+            /** Resume C */
+            resume_c: number;
+            /** Stall S */
+            stall_s: number;
+        };
         /**
          * Attention
          * @description Multi-head self-attention, from scratch (BUILD-1.8).
@@ -1227,6 +1545,19 @@ export interface components {
              */
             eps: number;
         };
+        /** ClassCounts */
+        ClassCounts: {
+            /** Label */
+            label: string;
+            /** Train */
+            train: number;
+            /** Val */
+            val: number;
+            /** Test */
+            test: number;
+            /** Rows */
+            rows: number;
+        };
         /**
          * ClassicalConfig
          * @description A classical model's run (ML-1.1, ML-1.2). It runs on the CPU queue (ADR-0019 rule 15).
@@ -1251,6 +1582,147 @@ export interface components {
                 [key: string]: components["schemas"]["Distribution"];
             } | null;
         };
+        /** ClusterPair */
+        ClusterPair: {
+            /** A */
+            a: string;
+            /** B */
+            b: string;
+            /** Similarity */
+            similarity: number | null;
+            /** Phash Distance */
+            phash_distance: number | null;
+        };
+        /** ColumnProfile */
+        ColumnProfile: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Unit */
+            unit: string;
+            /** Raw Label */
+            raw_label: string;
+            raw: components["schemas"]["FiveNumbers"] | null;
+            here: components["schemas"]["FiveNumbers"] | null;
+            removed: components["schemas"]["FiveNumbers"] | null;
+            /** Bins */
+            bins: components["schemas"]["HistBin"][] | null;
+        };
+        /**
+         * CompareCandidate
+         * @description A trained version on the split: compared if it has test metrics; scored once if not.
+         */
+        CompareCandidate: {
+            /** Id */
+            id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /** Lineage Name */
+            lineage_name: string;
+            /** Test Metric */
+            test_metric: string | null;
+            /** Test Value */
+            test_value: number | null;
+            /**
+             * Weights Status
+             * @enum {string}
+             */
+            weights_status: "present" | "deleting" | "weights_deleted";
+            /** Trained At */
+            trained_at: string | null;
+            /** Study Id */
+            study_id: string | null;
+            /** Scoring Job Id */
+            scoring_job_id: string | null;
+            /** Can Score */
+            can_score: boolean;
+            /** Why Not */
+            why_not: string | null;
+        };
+        /** CompareCandidates */
+        CompareCandidates: {
+            split: components["schemas"]["CompareSplit"];
+            /** Items */
+            items: components["schemas"]["CompareCandidate"][];
+        };
+        /** CompareSplit */
+        CompareSplit: {
+            /** Version Id */
+            version_id: string;
+            /** Dataset */
+            dataset: string;
+            /** Dataset Type */
+            dataset_type: string | null;
+            /** Test Rows */
+            test_rows: number | null;
+            /** Task */
+            task: string | null;
+            /** Classes */
+            classes: string[];
+        };
+        /** CompareVersion */
+        CompareVersion: {
+            /** Id */
+            id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /** Lineage Name */
+            lineage_name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "network" | "classical";
+            /** Model */
+            model: string;
+            /** Parameters */
+            parameters: number | null;
+            /** Trained At */
+            trained_at: string | null;
+            /** Job Id */
+            job_id: string | null;
+            /**
+             * Weights Status
+             * @enum {string}
+             */
+            weights_status: "present" | "deleting" | "weights_deleted";
+            /** Parent Version Id */
+            parent_version_id: string | null;
+            /** Parent Is Base */
+            parent_is_base: boolean;
+            /** Study Id */
+            study_id: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: number;
+            };
+            /** Correct */
+            correct: number | null;
+            /** Accuracy Low */
+            accuracy_low: number | null;
+            /** Accuracy High */
+            accuracy_high: number | null;
+            /** Per Class F1 */
+            per_class_f1: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * Comparison
+         * @description Two to six versions on one test split, side by side (EVAL-1.3).
+         */
+        Comparison: {
+            split: components["schemas"]["CompareSplit"];
+            /** Versions */
+            versions: components["schemas"]["CompareVersion"][];
+            /** Best */
+            best: {
+                [key: string]: string[];
+            };
+            /** Overlap */
+            overlap: boolean;
+        };
         /**
          * Concat
          * @description Join inputs along the channel axis of images, the feature axis otherwise.
@@ -1261,6 +1733,17 @@ export interface components {
              * @enum {string}
              */
             type: "concat";
+        };
+        /** ConfigChange */
+        ConfigChange: {
+            /** Stage */
+            stage: string;
+            /** Field */
+            field: string | null;
+            /** A */
+            a: unknown;
+            /** B */
+            b: unknown;
         };
         /** Conv2d */
         Conv2d: {
@@ -1433,6 +1916,83 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** DiagnosisText */
+        DiagnosisText: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Reason */
+            reason: string;
+            /** Suggested Action */
+            suggested_action: string;
+        };
+        /** DiagnosticLive */
+        DiagnosticLive: {
+            /** Job Id */
+            job_id: string;
+            /** Stage */
+            stage: string;
+            /**
+             * Queue
+             * @enum {string}
+             */
+            queue: "cpu" | "gpu";
+            /** Expected */
+            expected: string[];
+            /** Running For S */
+            running_for_s: number;
+            observed: components["schemas"]["DiagnosticObserved"];
+            thresholds: components["schemas"]["DiagnosticThresholds"];
+            diagnosis: components["schemas"]["DiagnosisText"] | null;
+        };
+        /** DiagnosticObserved */
+        DiagnosticObserved: {
+            /** Samples */
+            samples: number;
+            /** Gpu Percent */
+            gpu_percent: number | null;
+            /** Cpu Cores */
+            cpu_cores: number | null;
+            /** Capacity Cores */
+            capacity_cores: number;
+            /** Loader Workers */
+            loader_workers: number;
+            /** Disk Read Mb S */
+            disk_read_mb_s: number;
+        };
+        /** DiagnosticPast */
+        DiagnosticPast: {
+            fired: components["schemas"]["Event"];
+            cleared: components["schemas"]["Event"] | null;
+            /** Lasted S */
+            lasted_s: number | null;
+        };
+        /** DiagnosticThresholds */
+        DiagnosticThresholds: {
+            /** Gpu Low Percent */
+            gpu_low_percent: number;
+            /** Cpu Saturated Share */
+            cpu_saturated_share: number;
+            /** Disk Mb S */
+            disk_mb_s: number;
+        };
+        /** DiffField */
+        DiffField: {
+            /** Field */
+            field: string;
+            /** A */
+            a: unknown;
+            /** B */
+            b: unknown;
+        };
+        /** DiffRow */
+        DiffRow: {
+            /** Row Key */
+            row_key: string;
+            /** Fields */
+            fields: components["schemas"]["DiffField"][];
+        };
         /** DiskOrphan */
         DiskOrphan: {
             /** Path */
@@ -1493,6 +2053,36 @@ export interface components {
             below: number;
             /** Above */
             above: number;
+        };
+        /** Distributions */
+        Distributions: {
+            /** Version Id */
+            version_id: string;
+            /** Stage */
+            stage: string;
+            /** Dtype */
+            dtype: string | null;
+            /** Row Count */
+            row_count: number;
+            /** Accepted */
+            accepted: number;
+            /** Removed */
+            removed: number;
+            /** Funnel */
+            funnel: components["schemas"]["FunnelStep"][];
+            /** Columns */
+            columns: components["schemas"]["ColumnProfile"][];
+            /** Classes */
+            classes: components["schemas"]["ClassCounts"][] | null;
+            /** Formats */
+            formats: {
+                [key: string]: number;
+            };
+            /** Markers */
+            markers: {
+                [key: string]: unknown;
+            };
+            token_cut: components["schemas"]["TokenCut"] | null;
         };
         /** Dropout */
         Dropout: {
@@ -1566,6 +2156,8 @@ export interface components {
             suggested_action: string | null;
             /** Attempt */
             attempt: number | null;
+            /** Caused By */
+            caused_by?: string | null;
         };
         /** EventList */
         EventList: {
@@ -1590,6 +2182,42 @@ export interface components {
             /** Total */
             total: number | null;
         };
+        /**
+         * FineTuneCheck
+         * @description One compatibility rule between a fine-tune's parent and its split (ADR-0014
+         *     Addendum A rule 4), with both values.
+         */
+        FineTuneCheck: {
+            /** Rule */
+            rule: string;
+            /** Ok */
+            ok: boolean;
+            /** Parent */
+            parent: string;
+            /** Here */
+            here: string;
+            /** Message */
+            message: string;
+            /** Code */
+            code: string;
+        };
+        /** FiveNumbers */
+        FiveNumbers: {
+            /** N */
+            n: number;
+            /** Min */
+            min: number;
+            /** P10 */
+            p10: number;
+            /** Median */
+            median: number;
+            /** P90 */
+            p90: number;
+            /** Max */
+            max: number;
+            /** Mean */
+            mean: number;
+        };
         /** Flatten */
         Flatten: {
             /**
@@ -1611,6 +2239,46 @@ export interface components {
              * @description Folder as the workers see it, e.g. /sources/coco10k.
              */
             path: string;
+        };
+        /**
+         * FoundedFrom
+         * @description The version a lineage's first fine-tune started from, in another lineage (RUN-1.10).
+         */
+        FoundedFrom: {
+            /** Version Id */
+            version_id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /** Lineage Name */
+            lineage_name: string;
+            /** Reset Head */
+            reset_head: boolean;
+        };
+        /** FreezeProblem */
+        FreezeProblem: {
+            /** Loc */
+            loc: (string | number)[];
+            /** Msg */
+            msg: string;
+            /** Code */
+            code: string;
+        };
+        /** FunnelStep */
+        FunnelStep: {
+            /** Stage */
+            stage: string;
+            /** Version Id */
+            version_id: string;
+            /** Rows In */
+            rows_in: number;
+            /** Removed */
+            removed: components["schemas"]["RemovedReason"][];
+            /** Rows Out */
+            rows_out: number;
+            /** Parts */
+            parts: {
+                [key: string]: number;
+            } | null;
         };
         /** GELU */
         GELU: {
@@ -1723,6 +2391,82 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** HistBin */
+        HistBin: {
+            /** Low */
+            low: number;
+            /** High */
+            high: number;
+            /** Raw */
+            raw: number;
+            /** Here */
+            here: number;
+        };
+        /** HistoryGroup */
+        HistoryGroup: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Runs */
+            runs: number;
+        };
+        /** HistoryPeaks */
+        HistoryPeaks: {
+            /** Vram Used Mb */
+            vram_used_mb: number | null;
+            /** Torch Allocated Mb */
+            torch_allocated_mb: number | null;
+            /** Ram Used Mb */
+            ram_used_mb: number | null;
+            /** Gpu Temp C */
+            gpu_temp_c: number | null;
+            /** Rss Mb */
+            rss_mb: number | null;
+        };
+        /** HistoryRun */
+        HistoryRun: {
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /** Started At */
+            started_at: string | null;
+            /** Group */
+            group: string;
+            /** Reused */
+            reused: boolean;
+            /** Attempts */
+            attempts: number;
+            /** Running S */
+            running_s: number | null;
+            /** Epochs */
+            epochs: number | null;
+            /** Time */
+            time: number | null;
+            /** Rate */
+            rate: number | null;
+            /** Items */
+            items: number | null;
+            /** Computed */
+            computed: number | null;
+            peaks: components["schemas"]["HistoryPeaks"];
+            /** Notes */
+            notes: string[];
+        };
+        /** HistoryStage */
+        HistoryStage: {
+            /** Stage */
+            stage: string;
+            /** Queue */
+            queue: string;
+            /** Runs */
+            runs: number;
+            /** Reused */
+            reused: number;
+            /** Last At */
+            last_at: string | null;
+        };
         /** Interval */
         Interval: {
             /** Estimate */
@@ -1806,6 +2550,20 @@ export interface components {
             counts: {
                 [key: string]: number;
             };
+        };
+        /** JobOverlay */
+        JobOverlay: {
+            /**
+             * Align
+             * @enum {string}
+             */
+            align: "time" | "epoch";
+            /** Common Epochs */
+            common_epochs: number | null;
+            /** Epoch Unavailable */
+            epoch_unavailable: string | null;
+            a: components["schemas"]["OverlaySide"];
+            b: components["schemas"]["OverlaySide"];
         };
         /** JobStage */
         JobStage: {
@@ -1955,6 +2713,15 @@ export interface components {
             descendants: components["schemas"]["Version"][];
             /** In Progress */
             in_progress: components["schemas"]["ExtendingJob"][];
+        };
+        /** LineagePlace */
+        LineagePlace: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Joins */
+            joins: boolean;
         };
         /** LineagePlan */
         LineagePlan: {
@@ -2162,6 +2929,7 @@ export interface components {
             /** Versions */
             versions: components["schemas"]["ModelVersion"][];
             retention: components["schemas"]["LineageRetention"];
+            founded_from?: components["schemas"]["FoundedFrom"] | null;
         };
         /** ModelLineageList */
         ModelLineageList: {
@@ -2169,6 +2937,18 @@ export interface components {
             items: components["schemas"]["ModelLineage"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** ModelMetric */
+        ModelMetric: {
+            /**
+             * Split
+             * @enum {string}
+             */
+            split: "test" | "val";
+            /** Name */
+            name: string;
+            /** Value */
+            value: number;
         };
         /**
          * ModelSpec
@@ -2306,6 +3086,11 @@ export interface components {
             weights_deleted_at: string | null;
             /** Study Id */
             study_id?: string | null;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["VersionChild"][];
         };
         /** Node */
         Node: {
@@ -2333,6 +3118,73 @@ export interface components {
             shape_text: string | null;
             /** Parameters */
             parameters: number | null;
+        };
+        /** OverlayMachinePoint */
+        OverlayMachinePoint: {
+            /** X */
+            x: number;
+            /** Gpu Util Percent */
+            gpu_util_percent: number | null;
+            /** Vram Used Mb */
+            vram_used_mb: number | null;
+            /** Gpu Temp C */
+            gpu_temp_c: number | null;
+            /** Cpu Percent */
+            cpu_percent: number | null;
+            /** Ram Used Mb */
+            ram_used_mb: number | null;
+            /** Minute Average */
+            minute_average: boolean;
+        };
+        /** OverlayProcessPoint */
+        OverlayProcessPoint: {
+            /** X */
+            x: number;
+            /** Rss Mb */
+            rss_mb: number | null;
+            /** Torch Allocated Mb */
+            torch_allocated_mb: number | null;
+            /** Cpu Cores */
+            cpu_cores: number | null;
+        };
+        /** OverlaySide */
+        OverlaySide: {
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /** State */
+            state: string;
+            /** Label */
+            label: string;
+            /** Started At */
+            started_at: string | null;
+            /** Running S */
+            running_s: number;
+            /** Epochs */
+            epochs: number | null;
+            /** Machine */
+            machine: components["schemas"]["OverlayMachinePoint"][];
+            /** Process */
+            process: components["schemas"]["OverlayProcessPoint"][];
+            summary: components["schemas"]["OverlaySummary"];
+        };
+        /** OverlaySummary */
+        OverlaySummary: {
+            /** Seconds Per Epoch */
+            seconds_per_epoch: number | null;
+            /** Gpu Mean Percent */
+            gpu_mean_percent: number | null;
+            /** Vram Peak Mb */
+            vram_peak_mb: number | null;
+            /** Torch Allocated Peak Mb */
+            torch_allocated_peak_mb: number | null;
+            /** Rss Mean Mb */
+            rss_mean_mb: number | null;
+            /** Cpu Cores Mean */
+            cpu_cores_mean: number | null;
+            /** Gpu Temp Max C */
+            gpu_temp_max_c: number | null;
         };
         /**
          * PipelineRequest
@@ -2503,6 +3355,7 @@ export interface components {
             cluster?: number | null;
             /** Components */
             components?: number[] | null;
+            input?: components["schemas"]["TextInput"] | null;
             /** Load Ms */
             load_ms: number | null;
             /** Total Ms */
@@ -2538,6 +3391,8 @@ export interface components {
             torch_reserved_mb: number | null;
             /** Torch Max Allocated Mb */
             torch_max_allocated_mb: number | null;
+            /** Cpu Cores */
+            cpu_cores?: number | null;
         };
         /** RNN */
         RNN: {
@@ -2585,6 +3440,58 @@ export interface components {
              */
             nonlinearity: "tanh" | "relu";
         };
+        /** RangeJob */
+        RangeJob: {
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /** State */
+            state: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Stages */
+            stages: components["schemas"]["RangeStage"][];
+        };
+        /**
+         * RangePoint
+         * @description One time bucket's mean of the machine samples (SCR-13's lanes).
+         */
+        RangePoint: {
+            /** Ts */
+            ts: string;
+            /** Minute Average */
+            minute_average: boolean;
+            /** Cpu Percent */
+            cpu_percent: number | null;
+            /** Ram Used Mb */
+            ram_used_mb: number | null;
+            /** Ram Total Mb */
+            ram_total_mb: number | null;
+            /** Gpu Util Percent */
+            gpu_util_percent: number | null;
+            /** Vram Used Mb */
+            vram_used_mb: number | null;
+            /** Vram Total Mb */
+            vram_total_mb: number | null;
+            /** Gpu Temp C */
+            gpu_temp_c: number | null;
+            /** Disk Read Mb S */
+            disk_read_mb_s: number | null;
+        };
+        /** RangeStage */
+        RangeStage: {
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+        };
         /** ReLU */
         ReLU: {
             /**
@@ -2605,6 +3512,15 @@ export interface components {
             rows: number;
             /** Share */
             share: number;
+        };
+        /** RemovedReason */
+        RemovedReason: {
+            /** Reason Code */
+            reason_code: string;
+            /** Status */
+            status: string;
+            /** Rows */
+            rows: number;
         };
         /** Report */
         Report: {
@@ -2978,6 +3894,8 @@ export interface components {
             split_group?: string | null;
             /** Split Stratum */
             split_stratum?: string | null;
+            /** Semantic Cluster Id */
+            semantic_cluster_id?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -3010,7 +3928,7 @@ export interface components {
              * Section
              * @enum {string}
              */
-            section: "retention" | "training";
+            section: "retention" | "training" | "monitoring";
             /** Values */
             values: {
                 [key: string]: unknown;
@@ -3025,6 +3943,17 @@ export interface components {
              * @description The token of the plan shown by a confirmation_required reply.
              */
             confirm?: string | null;
+        };
+        /** SemanticClusterView */
+        SemanticClusterView: {
+            /** Cluster Id */
+            cluster_id: string;
+            /** Rows */
+            rows: components["schemas"]["Row"][];
+            /** Pairs */
+            pairs: components["schemas"]["ClusterPair"][];
+            /** Split Groups */
+            split_groups: string[];
         };
         /** SettingsLineage */
         SettingsLineage: {
@@ -3061,7 +3990,7 @@ export interface components {
              * Name
              * @enum {string}
              */
-            name: "retention" | "training";
+            name: "retention" | "training" | "monitoring";
             /** Title */
             title: string;
             /** Requirements */
@@ -3508,6 +4437,58 @@ export interface components {
             /** Stall Timeout S */
             stall_timeout_s: number;
         };
+        /** SystemAlert */
+        SystemAlert: {
+            /** Code */
+            code: string;
+            /** Firing */
+            firing: boolean;
+            fired: components["schemas"]["Event"];
+            cleared: components["schemas"]["Event"] | null;
+            /** Actions */
+            actions: components["schemas"]["Event"][];
+            /** Lasted S */
+            lasted_s: number | null;
+        };
+        /** SystemAlerts */
+        SystemAlerts: {
+            /** Items */
+            items: components["schemas"]["SystemAlert"][];
+            thresholds: components["schemas"]["AlertThresholds"];
+        };
+        /** SystemDiagnostics */
+        SystemDiagnostics: {
+            /** Live */
+            live: components["schemas"]["DiagnosticLive"][];
+            /** Logical Cpus */
+            logical_cpus: number;
+            /** Items */
+            items: components["schemas"]["DiagnosticPast"][];
+        };
+        /** SystemHistory */
+        SystemHistory: {
+            /** Stages */
+            stages: components["schemas"]["HistoryStage"][];
+            /** Stage */
+            stage: string | null;
+            /** Queue */
+            queue: string | null;
+            /** Rate Unit */
+            rate_unit: string | null;
+            /**
+             * Time Unit
+             * @enum {string}
+             */
+            time_unit: "s" | "s/epoch";
+            /** Groups */
+            groups: components["schemas"]["HistoryGroup"][];
+            /** Group */
+            group: string | null;
+            /** N */
+            n: number;
+            /** Runs */
+            runs: components["schemas"]["HistoryRun"][];
+        };
         /** Tanh */
         Tanh: {
             /**
@@ -3522,6 +4503,19 @@ export interface components {
             resource: components["schemas"]["ResourceSample"][];
             /** Process */
             process: components["schemas"]["ProcessSample"][];
+        };
+        /** TelemetryRange */
+        TelemetryRange: {
+            /** From */
+            from: string;
+            /** To */
+            to: string;
+            /** Bucket S */
+            bucket_s: number;
+            /** Points */
+            points: components["schemas"]["RangePoint"][];
+            /** Jobs */
+            jobs: components["schemas"]["RangeJob"][];
         };
         /** TemperatureHigh */
         TemperatureHigh: {
@@ -3578,6 +4572,24 @@ export interface components {
             /** Description */
             description?: string | null;
             spec?: components["schemas"]["GraphSpec"] | null;
+        };
+        /** TextInput */
+        TextInput: {
+            /** Tokens */
+            tokens: number;
+            /** Unknown */
+            unknown: number;
+            /** Truncated At */
+            truncated_at: number | null;
+        };
+        /** TokenCut */
+        TokenCut: {
+            /** Length */
+            length: number;
+            /** Cut */
+            cut: number;
+            /** Rows */
+            rows: number;
         };
         /**
          * TrainConfig
@@ -3664,6 +4676,22 @@ export interface components {
              * @default 1
              */
             readonly algorithm_version: number;
+            /**
+             * Init From
+             * @description Start from this trained version's weights instead of the lineage's base (RUN-1.10, ADR-0014 Addendum A). The model must be that version's.
+             */
+            init_from?: string | null;
+            /**
+             * Reset Head
+             * @description With init_from: re-initialise only the locked output layer, so a split with other classes can be fine-tuned (RUN-1.10.AC3).
+             * @default false
+             */
+            reset_head: boolean;
+            /**
+             * Freeze
+             * @description With init_from: graph node IDs (or 'head') whose weights stay as the parent's; they are held in eval mode, so BatchNorm statistics stay too (RUN-1.10.AC2).
+             */
+            freeze?: string[];
         };
         /**
          * TrainRequest
@@ -3684,6 +4712,50 @@ export interface components {
             config?: components["schemas"]["TrainConfig"] | null;
             /** @description A classical model's run on a tabular split (ML-1.1, ADR-0019 rule 15); it runs on the CPU queue. Give this or 'config'. */
             classical?: components["schemas"]["ClassicalConfig"] | null;
+        };
+        /**
+         * TrainValidation
+         * @description What ``POST /jobs`` would make of a network's run, without making it (RUN-1.10,
+         *     ADR-0014 Addendum A rule 12).
+         */
+        TrainValidation: {
+            /** Parent Version Id */
+            parent_version_id: string | null;
+            /** Checks */
+            checks: components["schemas"]["FineTuneCheck"][];
+            lineage: components["schemas"]["LineagePlace"] | null;
+            /** Freeze Problems */
+            freeze_problems: components["schemas"]["FreezeProblem"][];
+            /** Trainable Parameters */
+            trainable_parameters: number | null;
+            /** Frozen Parameters */
+            frozen_parameters: number;
+            memory: components["schemas"]["Memory"] | null;
+        };
+        /** TrainedModel */
+        TrainedModel: {
+            /** Id */
+            id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /** Lineage Name */
+            lineage_name: string;
+            /** State */
+            state: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "run" | "fine-tune" | "study" | "classical";
+            /** Parent Version Id */
+            parent_version_id: string | null;
+            metric: components["schemas"]["ModelMetric"] | null;
+            /** Weights Status */
+            weights_status: string;
+            /** Trained At */
+            trained_at: string | null;
+            /** Study Id */
+            study_id: string | null;
         };
         /**
          * TrainingContext
@@ -3777,6 +4849,20 @@ export interface components {
             /** Created At */
             created_at: string;
         };
+        /** VersionChild */
+        VersionChild: {
+            /** Id */
+            id: string;
+            /** Lineage Id */
+            lineage_id: string;
+            /** Lineage Name */
+            lineage_name: string;
+            /**
+             * Weights Status
+             * @enum {string}
+             */
+            weights_status: "present" | "deleting" | "weights_deleted";
+        };
         /** VersionCounts */
         VersionCounts: {
             /** Base */
@@ -3786,12 +4872,68 @@ export interface components {
             /** Trained */
             trained: number;
         };
+        /** VersionDiff */
+        VersionDiff: {
+            a: components["schemas"]["VersionRef"];
+            b: components["schemas"]["VersionRef"];
+            /** Stages Differ */
+            stages_differ: boolean;
+            /** Config Diff */
+            config_diff: components["schemas"]["ConfigChange"][];
+            /** Added */
+            added: number;
+            /** Removed */
+            removed: number;
+            /** Changed */
+            changed: number;
+            /** Wording Only */
+            wording_only: number;
+            /** Same */
+            same: number;
+            /** By Field */
+            by_field: {
+                [key: string]: number;
+            };
+            /** Only In A */
+            only_in_a: string[];
+            /** Only In B */
+            only_in_b: string[];
+            /** Changed Rows */
+            changed_rows: components["schemas"]["DiffRow"][];
+            /** Wording Rows */
+            wording_rows: components["schemas"]["WordingRow"][];
+            /** Shown Limit */
+            shown_limit: number;
+        };
         /** VersionList */
         VersionList: {
             /** Items */
             items: components["schemas"]["Version"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** VersionModels */
+        VersionModels: {
+            /** Items */
+            items: components["schemas"]["TrainedModel"][];
+        };
+        /** VersionRef */
+        VersionRef: {
+            /** Version Id */
+            version_id: string;
+            /** Stage */
+            stage: string;
+            /** Created At */
+            created_at: string | null;
+        };
+        /** WordingRow */
+        WordingRow: {
+            /** Row Key */
+            row_key: string;
+            /** A */
+            a: string | null;
+            /** B */
+            b: string | null;
         };
     };
     responses: never;
@@ -3946,6 +5088,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Job"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_train_api_v1_jobs_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrainRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainValidation"];
                 };
             };
             /** @description Validation Error */
@@ -4507,6 +5682,9 @@ export interface operations {
                 reason_code?: string | null;
                 split?: ("train" | "val" | "test") | null;
                 dup_group_id?: string | null;
+                semantic_cluster_id?: string | null;
+                /** @description Only rows in a semantic cluster (DATA-2.3). */
+                semantic?: boolean | null;
                 /** @description Row-key substring. */
                 q?: string | null;
                 limit?: number;
@@ -4623,6 +5801,134 @@ export interface operations {
             };
         };
     };
+    version_distributions_api_v1_versions__version_id__distributions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Distributions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    version_diff_api_v1_versions__version_id__diff_get: {
+        parameters: {
+            query: {
+                /** @description The other version, A. */
+                with: string;
+            };
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionDiff"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    version_models_api_v1_versions__version_id__models_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionModels"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    semantic_cluster_api_v1_versions__version_id__clusters__cluster_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+                cluster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SemanticClusterView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     system_api_v1_system_get: {
         parameters: {
             query?: never;
@@ -4714,6 +6020,208 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    telemetry_range_api_v1_telemetry_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                max_points?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelemetryRange"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    system_alerts_api_v1_system_alerts_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                job_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemAlerts"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    system_diagnostics_api_v1_system_diagnostics_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemDiagnostics"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    system_models_api_v1_system_models_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_jobs_api_v1_system_compare_get: {
+        parameters: {
+            query: {
+                a: string;
+                b: string;
+                align?: "time" | "epoch";
+                max_points?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOverlay"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    system_history_api_v1_system_history_get: {
+        parameters: {
+            query?: {
+                stage?: string | null;
+                queue?: string | null;
+                group?: string | null;
+                n?: number;
+                reused?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -5018,6 +6526,72 @@ export interface operations {
             };
         };
     };
+    compare_candidates_api_v1_models_compare_candidates_get: {
+        parameters: {
+            query: {
+                /** @description The split version the versions were tested on. */
+                split: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompareCandidates"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_versions_api_v1_models_compare_get: {
+        parameters: {
+            query: {
+                /** @description The split version every version was tested on. */
+                split: string;
+                /** @description 2 to 6 version IDs, in column order. */
+                v: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comparison"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_model_api_v1_models__lineage_id__get: {
         parameters: {
             query?: {
@@ -5164,6 +6738,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelVersionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    score_version_api_v1_model_versions__version_id__score_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
                 };
             };
             /** @description Validation Error */

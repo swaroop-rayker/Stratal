@@ -4,8 +4,10 @@
 import { useRef, useState } from "react";
 
 import { ApiError, api, call } from "../../api/client";
+import { useVersion } from "../../api/queries";
 import { type Prediction, usePredict } from "../../api/registry";
 import { Badge, Button, Icon } from "../../components/ui";
+import { RecordTry, TextTry } from "./TryValues";
 
 function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -23,7 +25,10 @@ function toBase64(file: File): Promise<string> {
 export function servedText(result: Prediction): string {
   const device = result.device === "gpu" ? "GPU" : "CPU";
   const why = result.fallback_reason ? `: ${result.fallback_reason}` : "";
-  return `Served on the ${device}${why} · ${String(Math.round(result.total_ms))} ms`;
+  // A cold start says so, and times over a second read in seconds (SCR-11 v2, frame C).
+  const cold = result.load_ms ? ` · cold start ${(result.load_ms / 1000).toFixed(1)} s` : "";
+  const total = result.total_ms >= 1000 ? `${(result.total_ms / 1000).toFixed(1)} s` : `${String(Math.round(result.total_ms))} ms`;
+  return `Served on the ${device}${why}${cold} · ${total}`;
 }
 
 export function TryIt({ versionId, datasetVersion }: { versionId: string | null; datasetVersion: string | null }) {
@@ -58,6 +63,10 @@ export function TryIt({ versionId, datasetVersion }: { versionId: string | null;
 
   const result = predict.data;
   const refused = predict.error instanceof ApiError ? predict.error.problem : null;
+  // M11 (SCR-11 v2, frames C and D): a table takes a record, a text a text box.
+  const dtype = useVersion(datasetVersion ?? "", datasetVersion !== null).data?.dtype;
+  if (versionId !== null && dtype === "tabular") return <RecordTry versionId={versionId} datasetVersion={datasetVersion} />;
+  if (versionId !== null && dtype === "labelled_text") return <TextTry versionId={versionId} datasetVersion={datasetVersion} />;
   return (
     <section className="card" aria-label="Try it">
       <h2>

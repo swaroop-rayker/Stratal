@@ -24,6 +24,8 @@ KIND_PHASH = "phash"
 KIND_PREPROCESS = "preprocess"
 KIND_CAPTION = "caption"
 KIND_CLIP_SCORE = "clip_score"
+KIND_CLIP_IMAGE = "clip_image_embedding"
+"""An image's CLIP vector as float16 base64, for semantic clusters (DATA-2.3, ADR-0013 rule 2)."""
 
 
 def params_hash(params: Mapping[str, Any]) -> str:

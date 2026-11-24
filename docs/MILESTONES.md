@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). M9 merged 2026-11-19 (the model builder: graph specs checked in plain Python, compiled to PyTorch, templates; SCR-08 and SCR-09 through G3; BUILD-1.8 written by the agent at the owner's request). M10 merged 2026-11-20 (tables and texts, classical ML, EVAL-1.2's task metrics, HPO with Optuna; SCR-09's study part, SCR-10 and SCR-11's task metrics through G3; EVAL-1.2 written by the agent at the owner's request, K1). G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
+| Status | M0 merged 2026-11-14. M1 merged 2026-11-14. M2 merged 2026-11-15. M3 merged 2026-11-15 (DATA-2.1 and DATA-2.2 written by the agent at the owner's request; OC-5 threshold 8). M4 merged 2026-11-15 (all four owner units written by the agent at the owner's request; Florence-2 `<CAPTION>`; CLIP threshold 0.2). M5 merged 2026-11-16 (DATA-4 drafted, and its units and the EVAL-1.1 statistics written, by the agent at the owner's request; DATA-4.8 moved to M7). M6 merged 2026-11-17 (SCR-01 to SCR-07 slice, each through G3; two contrast rules added to the design system). M7 merged 2026-11-17: phase 1 accepted on a measured 20,000-image run, tagged `phase-1`; DATA-2.3 and DATA-4.8 moved to M11. M8 merged 2026-11-19 (training runtime, registry, retention and inference; SCR-07 v2, SCR-04 v2, SCR-11 and SCR-14 through G3; RUN-1.4 and RUN-1.5 written by the agent at the owner's request). M9 merged 2026-11-19 (the model builder: graph specs checked in plain Python, compiled to PyTorch, templates; SCR-08 and SCR-09 through G3; BUILD-1.8 written by the agent at the owner's request). M10 merged 2026-11-20 (tables and texts, classical ML, EVAL-1.2's task metrics, HPO with Optuna; SCR-09's study part, SCR-10 and SCR-11's task metrics through G3; EVAL-1.2 written by the agent at the owner's request, K1). M11 merged 2026-11-24: phase 2 accepted (the Small CNN template trained through the API on CIFAR-10, test 83.97 % and 84.00 % with one seed), tagged `phase-2`; MON-4.5 built; the phase-3 plan (M12–M13) approved. G0 and G1 approved 2026-11-15; G2 passed for every phase-1 screen (SCR-01 to SCR-06, SCR-07 slice) 2026-11-15. Phase-2 plan (M8–M11) approved 2026-11-17 |
 | Planning style | Phases 1 and 2 (M0–M11) are planned in detail; phase 2's detail was approved on 2026-11-17. Phases 3–5 (M12–M15) are outlined and get detailed, with the owner's approval, when the previous phase closes |
 
 ## Rules
@@ -28,10 +28,10 @@
 | M8 | Training runtime and registry | 2 | L | Done 2026-11-19 |
 | M9 | Model builder | 2 | L | Done 2026-11-19 |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
-| M11 | Dashboards and monitoring completion | 2 | L | Not started (detailed, approved 2026-11-17) |
+| M11 | Dashboards and monitoring completion | 2 | L | Done 2026-11-24 |
 | M11b | Tabular transforms | 2 | M | Not started (added at the owner's request 2026-11-19; outline) |
-| M12 | LLM serving and RAG | 3 | L | Outline |
-| M13 | Router, tools, caption refinement | 3 | L | Outline |
+| M12 | LLM serving and RAG | 3 | L | Detailed, approved 2026-11-22 |
+| M13 | Router, tools, caption refinement | 3 | L | Detailed, approved 2026-11-22 |
 | M14 | Text→image and LoRA | 4 | L | Outline |
 | M15 | Translation, chat UI, polish | 5 | L | Outline |
 
@@ -598,7 +598,24 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Size** L · **Branch** `m11-phase2-acceptance` · **Serves** MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, UI-2.1, UI-2.2, EVAL-1.3, DATA-3.5, RUN-1.10; DATA-2.3 and DATA-4.8 (phase 1, P2, moved from M7); the phase-2 done-definition
 
-**Before starting:** G2 for SCR-13, SCR-03 v2 and SCR-11 v2 approved. The alerts and diagnostics add work to `monitor`, so NFR-11 is measured again here.
+**Decided by the owner at M11's kickoff (2026-11-20, "Accept all twelve"):**
+
+| # | Decision |
+|---|---|
+| K1 | DATA-2.3 and DATA-4.8 are written by the agent (ADR-0012's log). The threshold is proposed from a measurement on coco10k in `worker-gpu`: planted crops of one image against unrelated pairs and against pairs of one category; for each candidate threshold the clusters, the rows in them and the largest cluster (union-find chains pairs, so a low threshold can merge a large share of the rows and upset the split's proportions). If that happens, an ADR-0013 amendment is proposed rather than a workaround |
+| K2 | DATA-4.8.AC1's "one scene from different angles" is a synthetic pair: two overlapping crops of one COCO photo, one warped in perspective, checked far apart by pHash and close by CLIP. No download. The owner may add two of their own photos of one scene under `sources/` for a live check |
+| K3 | A new ADR-0020, alerts and diagnostics (MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4); RUN-1.10 as an addendum to ADR-0014 and ADR-0015. Each is approved before what it covers is built |
+| K4 | Alerts are evaluated in `monitor` (NFR-13: if it crashes, alerts stop and jobs go on). Temperature pauses (RUN-1.6), no progress marks the job stalled (RUN-1.7), VRAM > 90 % and RAM > 85 % warn only; an out-of-memory failure after a VRAM warning is linked to it (the smaller-batch action, RUN-1.5). An alert fires after 5 s over its threshold, once per crossing, and re-arms 5 points below it. With no job running it is stored without one and shown on SCR-13. An action records the alert that caused it (a schema change, DATA_MODEL.md) |
+| K5 | `process_samples` gains the job process's CPU in cores (a migration). `monitor` compares each running stage's expected resource (the MON-3 table) with what it observes over 30 s; three first rules for a GPU stage with the GPU under 30 %: the job's CPU saturated → data loading is the bottleneck, increase DataLoader workers; high disk reads → disk is the bottleneck; everything low → small batches or waiting on synchronisation. A diagnostic is a WARN event with its reason and action (in SCR-04's log), and SCR-13 has a panel for them |
+| K6 | MON-3.3 shows PyTorch's allocated memory (the process's own) and, beside it, the card's NVML figure |
+| K7 | MON-4.4 aligns two runs by time since start with pauses removed; two training runs can also be aligned by epoch |
+| K8 | EVAL-1.3 compares only versions tested on the same split version, across lineages, classical and network alike; others are greyed with the reason. No new evaluation jobs in M11, with one exception approved with SCR-11 v2's low-fi on 2026-11-20: *Score on test* runs the `test_eval` stage once for a version with weights and no test metrics (trained before M10); a version with test metrics is never scored again, so HPO-1.4's "computed once" holds. Accuracy with a Wilson 95 % interval, per-class F1 side by side. No paired test (it needs per-item predictions, which are not stored) |
+| K9 | RUN-1.10: the new version joins the lineage its key gives (same spec, dataset, shape and classes: the same lineage; otherwise a new one whose parent is in another). Retention protects any version that is the parent of a version with weights. Layers are frozen by spec node ID, and a frozen layer is in eval mode, so its BatchNorm statistics stay too. The optimizer starts fresh. One validation pass before the first step, logged as epoch 0 (AC1). Tables reuse the parent's fitted preprocessing; texts are refused unless the vocabulary is identical, naming the mismatch; classical models are refused; in a study `init_from` is a fixed field, not tunable |
+| K10 | UI-2.2's distributions and DATA-3.5's diff are computed by the API from the manifests on request, cached by version ID. The diff compares two versions of one dataset by `row_key`; "changed" names the fields that differ. DATA-3.5 and MON-4.5 (P2) stay "if time" |
+| K11 | G2 order: SCR-09 v2 (fine-tuning form), SCR-11 v2 (comparison, the parent, *Try it* for table records and texts, M10's open point 2), SCR-03 v2 (distributions, diff, semantic clusters, models trained from the version: UI-2.1's training part), SCR-13. Low-fi, then hi-fi, one screen at a time. SCR-14's monitoring section and SCR-04's alert and diagnostic lines are addenda checked at G3 without a mockup |
+| K12 | `inference` 1.0 → 1.25 GB and `worker-gpu` 3.5 → 3.25 GB (the sum stays 9,024 MiB; both peaks checked in the acceptance run). Phase-2 acceptance: the Small CNN template on the CIFAR-10 split, 10 epochs, through the API with the spec SCR-08 produces (SCR-08 itself checked at the demo); NFR-1 and NFR-2 during training; NFR-4 by two runs with one seed, test accuracy within 1 percentage point; NFR-5 by killing the worker mid-run, at most 10 minutes lost; a README section. NFR-11 rerun with `-Bench`, after asking for a quiet machine. M10's open point 3 (a study's stage duration on SCR-04) fixed as BUG8 with `test_BUG8_*`; open point 4 (the pruning test that failed once) watched in every `check.ps1 -Gpu`. No new dependency is expected; any that arises is asked for first |
+
+**Before starting:** G2 for SCR-09 v2 (RUN-1.10), SCR-13, SCR-03 v2 and SCR-11 v2 approved. The alerts and diagnostics add work to `monitor`, so NFR-11 is measured again here.
 
 **Scope**
 
@@ -610,30 +627,49 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - Semantic duplicates (DATA-2.3) and each cluster kept in one split group (DATA-4.8), as [ADR-0013](decisions/ADR-0013-semantic-duplicates.md) sets out. Written by the agent at the owner's request (2026-11-17); the similarity threshold is proposed from a measurement on coco10k and chosen by the owner (as OC-5). Clusters shown on SCR-03.
 - Three or more models on one test split, side by side (EVAL-1.3), on SCR-11.
 - Fine-tuning a built model (RUN-1.10, added at the owner's request on 2026-11-19): `init_from` a registered version, optional frozen layers, `reset_head` for a different class count; the parent recorded and protected by retention. Its form joins SCR-09 (a G2 revision of SCR-09 before M11's screens) and the parent shows on SCR-11.
+- **Choosing the model kind after the split** (UI change for ML-1.1, BUILD-1.3, UI-2.1; requested by the owner on 2026-11-20, "it should be decided after selection of the split or dataset"; draft, the details below await the owner's approval at G1). No requirement changes.
+  - *Today.* The only way into SCR-09 is SCR-11's *Build a model…*, then SCR-08 (networks only: a table gets just the Tabular MLP template), then *Continue to training*; SCR-09's *Network | Classical* switch appears only there. A classical model therefore needs a network built first and thrown away, and a direct `/runs/new` without a version shows no switch at all. This happened because classical models joined SCR-09 in M10 (approved with its study part's low-fi, 2026-11-19) while M9's entry path, written for networks, stayed as it was.
+  - *Proposed.* One entry, *Train a model…*, on SCR-11 (replacing *Build a model…*) and on SCR-03 for a split version. Step 1: the dataset and its split version, with its type and task. Step 2: the kinds that split allows, each in a line: *Network* (build or start from a template → SCR-08) for every trainable type; *Classical* (estimator → SCR-09 in classical mode, no builder) for tables only, shown greyed with "Classical models train on tables" otherwise, so the reason is visible.
+  - SCR-09 receives the kind already chosen: the switch becomes the chosen kind with *Change…*, which goes back to step 2 and says when a network spec would be left behind. `/runs/new?version=` without a kind opens step 2. SCR-08's dataset selects are filled from step 1.
+  - Steps 1 and 2 as a drawer shared by SCR-11 and SCR-03, like the *Start pipeline* drawer, not a new screen (the owner may choose a screen at G1). *Train again…* on a lineage and *Start a run from this configuration* on SCR-10 keep going straight to SCR-09.
+  - Gates: a G1 revision (SCREENS.md: SCR-03, SCR-08, SCR-09 and SCR-11's actions; Flow 4's steps 1–3), then its G2 folded into SCR-09 v2, the first in K11's order, and its G3 with SCR-09 v2.
+- **Every estimator in SCR-09's Classical list** (UI change for ML-1.1 and DATA-5.5; asked for by the owner on 2026-11-22, "There is no logistic regression option in classical model creation", then "propose this small fix in the current milestone"; its G2 addendum and its Gate 3 approved by the owner the same day). No requirement changes.
+  - *Today.* The list shows only the estimators that fit the split's task, as approved with SCR-09's study part (`design/screens/SCR-09hpo_v1.html`, frame B). On diabetes, a regression split, `logistic_regression` and `naive_bayes` are missing with no reason given, which reads as a missing feature; on breast-cancer and wine they are offered. Checking this found a bug: turning a study on with `kmeans`, `dbscan`, `hdbscan` or `pca` selected removes it from the list, and the select then shows `logistic_regression` while the sentence beside it and the form are still k-means's.
+  - *Proposed* (`design/screens/SCR-09v2-estimators_v1.html`). Every estimator stays listed, in groups: the split's task, *Any table · ignores the target*, and *Not for this split*, whose options are disabled with "classification only" or "regression only". Each option reads name · title. One line under the select names what is ruled out and why. With a study on, the four that ignore the target are disabled ("not in a study"), and *Turn on* is disabled, with its reason, while one of them is selected. Still the native select; no API change.
+  - Gates: a G2 addendum to SCR-09 v2 (one hi-fi mockup; the layout does not change, so no low-fi), then its G3. The bug is logged as E-017 when fixed.
 - UI-2.1 completed: models and training runs join datasets and pipeline jobs in the dashboard.
 - The phase-2 acceptance run, measured, with a README section; phase 3 (M12, M13) detailed for approval.
 
 **Done when**
 
-- [ ] `test_MON_2_6_*`: each alert fires in a simulated test
-- [ ] `test_MON_2_7_*`: an alert and its action are shown together in the event log
-- [ ] `test_MON_3_2_*`: the diagnostic fires in a simulated slow-loader test
-- [ ] `test_MON_3_3_*`: an unload event shows VRAM before and after
-- [ ] `test_MON_4_4_*`: two runs' curves overlay
-- [ ] `test_MON_4_5_*` (P2, if time): trends shown for the last N jobs
-- [ ] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included
-- [ ] `test_UI_2_2_*`: charts for any dataset version
-- [ ] `test_EVAL_1_3_*`: three or more models compared in one view
-- [ ] `test_RUN_1_10_*`: a run from a version starts at its weights and records it as parent; frozen layers are unchanged; a shape mismatch is refused unless the head is reset
-- [ ] `test_DATA_3_5_*` (P2, if time): the diff lists the changes correctly
-- [ ] `test_DATA_2_3_*` (P2): cropped variants are grouped together and a report is generated
-- [ ] 👤 `test_DATA_4_8_*` (P2): two photos of one scene from different angles land in the same split (written by the agent at the owner's request)
-- [ ] G3 for SCR-13, SCR-03 v2 and SCR-11 v2
-- [ ] Phase-2 acceptance (`tests/acceptance`): a CNN built on SCR-08, trained on a dataset version, test metrics on SCR-11; NFR-1, NFR-2, NFR-4 and NFR-5 measured for training
-- [ ] `test_NFR_11_*` rerun with alerts and diagnostics on
-- [ ] Meta-test green: every phase-2 P0 (32) has a passing ID-named test
-- [ ] M12–M13 detailed and approved by the owner
-- [ ] Owner's OK to merge; tag `phase-2`
+- [x] ADR-0020 (alerts and diagnostics) approved (K3) (2026-11-22, "Approve as proposed", with both recommendations: `gpu_hot` re-arms at the resume limit; the thermal pause waits for the 5 s hold)
+- [x] The RUN-1.10 addendum to ADR-0014 and ADR-0015 approved (K3) (both Addendum A, 2026-11-20, "Approve both")
+- [x] G1 revision for choosing the model kind after the split approved (SCREENS.md, Flow 4); its G2 approved with SCR-09 v2 (G1 v3 and G2 approved 2026-11-20)
+- [x] G2 for SCR-09 v2, SCR-11 v2, SCR-03 v2 and SCR-13 approved, in that order (K11) (SCR-09 v2 and SCR-11 v2 passed 2026-11-20, SCR-03 v2 2026-11-21, SCR-13 2026-11-22)
+- [x] Semantic-duplicate threshold chosen by the owner from the coco10k measurement (K1) (2026-11-21: **0.90**, the recommendation of spike S-10, `docs/spikes/S-10-semantic-threshold.md`; DATA-4.8.AC1's pair: two 90 % opposite-corner crops, one warped 6 %)
+- [x] `test_MON_2_6_*`: each alert fires in a simulated test (2026-11-22: `test_MON_2_6_alert_rules.py`, 7 unit tests of the state machine; `test_M11_monitoring.py`, each alert stored once with its job or without one, and the thresholds as a settings section)
+- [x] `test_MON_2_7_*`: an alert and its action are shown together in the event log (2026-11-22: `test_M11_monitoring.py`, heat pause and resume recording the alert, an out-of-memory failure linked to a VRAM alert, no progress and `stalled`; Vitest `System.test.tsx`; SCR-04's log names the alert)
+- [x] `test_MON_3_2_*`: the diagnostic fires in a simulated slow-loader test (2026-11-22: `test_MON_3_2_diagnose.py`, 6 unit tests; `test_M11_monitoring.py`, planted slow-loader samples give `diag_data_loading` once, cleared when the GPU is busy)
+- [x] `test_MON_3_3_*`: an unload event shows VRAM before and after (2026-11-22: `test_MON_3_3_load_events.py`; live on SCR-13, Florence-2-base 0.44 → 0.00 GB)
+- [x] `test_MON_4_4_*`: two runs' curves overlay (2026-11-22: `test_M11_monitoring.py`, by time with a pause removed and by epoch; Vitest; live on `job_0030` and `job_0051`)
+- [x] `test_MON_4_5_*` (P2, if time): trends shown for the last N jobs (2026-11-24: `test_MON_4_5_history.py`, 8 unit tests of the rules; `test_M11_history.py`, 2 integration tests through the API, with a lost worker's two attempts and stages reused from the cache; Vitest, 3 in `System.test.tsx`; live on the dev database: the 8 runs of `small_cnn · cifar10 · batch 128` as in the mockup. G2 approved 2026-11-22 and 2026-11-24; Gate 3 approved 2026-11-24, `docs/design/g3/SCR-13.md`)
+- [x] `test_UI_2_1_*`: datasets, lineage and jobs with live metrics render real data, training included (2026-11-22: the training part, models trained on a version, in `test_M11_profile.py` and Vitest `test_UI_2_1_models_trained_on_a_version_with_the_split_named`; live on CIFAR-10's split, 17 versions; datasets, lineage and jobs since M6 and M8)
+- [x] `test_UI_2_1_*` (training entry, Vitest): a tabular split reaches SCR-09's classical mode without SCR-08; a non-tabular split shows *Classical* greyed with its reason; SCR-09 opened without a kind goes to step 2; G3 passed with SCR-09 v2 (the entry's G3 approved 2026-11-20; fine-tuning's G3 follows with RUN-1.10)
+- [x] `test_UI_2_2_*`: charts for any dataset version (2026-11-22: `test_M11_profile.py`, the funnel and raw against here on a pipeline's split; Vitest `VersionV2.test.tsx`; live on coco10k's split, every figure as in the mockup)
+- [x] `test_EVAL_1_3_*`: three or more models compared in one view (2026-11-21: `test_M11_compare.py`, three networks scored on one split with Wilson intervals, refusals and Score on test; Vitest `Compare.test.tsx`. Live: wine's three networks (0.944, 1.000, 1.000 on 18 rows, intervals overlapping) and CIFAR-10's three after Score on test, `job_0108`. Gate 3 for SCR-11 v2 approved 2026-11-21)
+- [x] `test_RUN_1_10_*`: a run from a version starts at its weights and records it as parent; frozen layers are unchanged; a shape mismatch is refused unless the head is reset (2026-11-21: `test_M11_fine_tune.py`, 11 tests, and `test_RUN_1_10_config.py`, 8; Vitest `FineTune.test.tsx`. Live on the GPU, `job_0106` fine-tuned `mv_a014046ec3b5` with `n1`–`n12` frozen: epoch 0 val loss 0.7004 = the parent's 0.7004, the 24 frozen tensors unchanged on disk, registered `mv_7f950100ab48` with its parent. Gate 3 for SCR-09's fine-tuning approved 2026-11-21)
+- [x] `test_DATA_3_5_*` (P2, if time): the diff lists the changes correctly (2026-11-22: `test_M11_profile.py`, a changed row, a wording-only row and the config change; live on coco10k's two preprocess versions: 1 changed, 59 wording only)
+- [x] `test_DATA_2_3_*` (P2): cropped variants are grouped together and a report is generated (2026-11-22: `test_DATA_2_3_semantic_clusters.py`, 13 unit tests, also in the GPU worker; `test_M11_semantic.py`, a pipeline job: a scene's stripes, crop and checkerboard in one cluster, the report in the label version's counts)
+- [x] 👤 `test_DATA_4_8_*` (P2): two photos of one scene from different angles land in the same split (written by the agent at the owner's request; 2026-11-22: the checkerboard view, more than 12 bits from the stripes by pHash, lands in their split and split group in `test_M11_semantic.py`; rule 2b in `test_DATA_2_3_semantic_clusters.py`)
+- [x] G3 for SCR-13, SCR-03 v2 and SCR-11 v2 (SCR-11 v2 approved 2026-11-21, SCR-13 with SCR-04's and SCR-14's addenda 2026-11-22, SCR-03 v2 2026-11-22)
+- [x] Phase-2 acceptance (`tests/acceptance`): a CNN built on SCR-08, trained on a dataset version, test metrics on SCR-11; NFR-1, NFR-2, NFR-4 and NFR-5 measured for training (2026-11-22: `test_M11_phase2_acceptance.py`, both tests passed; the Small CNN template on CIFAR-10, 10 epochs: test 83.97 % and 84.00 % with one seed; PyTorch peak 422 MB; RAM 4.26 GB; a killed worker lost 35 s; README, Phase-2 acceptance)
+- [x] `test_NFR_11_*` rerun with alerts and diagnostics on (2026-11-22, on a quiet machine: runtime +0.35 %, the monitor at 1.54 % of the machine; M7 measured +0.02 % and 1.58 %)
+- [x] `test_BUG8_*`: a study job's stage duration on SCR-04 covers all its steps, not the last (M10's open point 3) (2026-11-22: each step's claim reset the stage's start; a running job's next step keeps it. `test_BUG8_study_duration.py` fails without the fix)
+- [x] `inference` at 1.25 GB and `worker-gpu` at 3.25 GB, both peaks measured in the acceptance run (K12) (limits set 2026-11-22 in `compose.yaml`; peaks in the acceptance run: `worker-gpu` 2.08 GiB, `inference` 851 MiB serving on the GPU)
+- [x] Meta-test green: every phase-2 P0 (32) has a passing ID-named test (2026-11-22: `test_NFR_9_every_phase_2_p0_requirement_has_a_named_test`; the suites green in M11: dev unit 510 and integration 154, the GPU worker's PyTorch tests 98, the CPU worker's scikit-learn tests 33 and 7, Vitest 23 files)
+- [x] `test_DATA_5_5_*` and `test_ML_1_1_*` (SCR-09's estimator list; its G2 addendum approved 2026-11-22): on diabetes, `logistic_regression` and `naive_bayes` are listed disabled with their reason and named under the select; on wine, `linear`, `ridge` and `lasso` likewise; with a study on, the four that ignore the target are disabled and *Turn on* waits for a supervised estimator, so turning a study on never changes the selection (E-017); its G3 approved (2026-11-22: three Vitest tests in `TrainEntry.test.tsx`, which fail against the screen before the fix; checked live on diabetes and wine; Gate 3 approved by the owner with six differences, `design/g3/SCR-09.md`)
+- [x] M12–M13 detailed and approved by the owner (2026-11-22, "yes I do approve"; the decisions stay open until M12's kickoff)
+- [x] Owner's OK to merge; tag `phase-2` ("Yes, merge and push", 2026-11-24)
 
 ## M11b — Tabular transforms
 
@@ -658,6 +694,180 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - [ ] G3 for SCR-15 and SCR-03's column view
 - [ ] Demo: drop a column of the wine table, change one column's kind, set an encoding, train on the result, and trace it back to raw on SCR-03
 - [ ] Owner's OK to merge
+
+---
+
+## Phase 3 in detail (M12–M13)
+
+| | |
+|---|---|
+| Status | **Approved by the owner on 2026-11-22** ("yes I do approve"). The decisions below are still open: they are put to the owner at M12's kickoff (M13's open points at M13's), and until then each recommendation is only a recommendation. M11b still comes before M12, as planned |
+| Done when (SPEC §2) | Chat answers grounded in the corpus, with citations; the router picks the correct model |
+| Requirements | All 12 phase-3 requirements: 4 P0 (LLM-1.1, LLM-2.1, LLM-2.2, LLM-3.1), 5 P1 (DATA-5.3, LLM-2.3, LLM-2.4, LLM-3.2, LABEL-1.6) and 3 P2 (LLM-4.1, LLM-5.1, LABEL-1.7), plus NFR-6. NFR-1, NFR-2, NFR-7 and NFR-8 are checked again for the new services. Each requirement stays in the milestone the outline gave it; nothing is added or dropped |
+
+### Decisions needed before M12 starts
+
+Each has a recommendation; none is taken until the owner decides. Decision 1 is taken from spike S-11's report.
+
+1. **The LLM (LLM-1.1).** One to three billion parameters, 4-bit, under a licence that needs no acceptance (R-20).
+   - (a) **Qwen3-1.7B**, Apache 2.0, about 1.1 GB as a 4-bit GGUF file. Trained for tool calls and JSON output; its "thinking" mode is switched off for chat, where it would spend NFR-6's first-token budget.
+   - (b) **SmolLM3-3B**, Apache 2.0, about 1.9 GB. Stronger answers at 3 B, but more VRAM and, for M13's QLoRA, more host memory.
+   - *Recommended:* measure both in S-11 and choose from its report, as S-06 did for the captioner. Not proposed: Llama 3.2 3B (its licence must be accepted) and anything over 3 B.
+2. **Where Ollama's model comes from (NFR-7, NFR-8).** By default Ollama downloads from its own registry. *Recommended:* the GGUF file joins the allow-list (`stratal.pretrained`, a new role `llm`, pinned by SHA-256 at a Hugging Face commit) and is fetched by `models pull`, like Florence-2. Ollama builds its model from that local file, and its container sits on a Compose network with no route out, so it cannot reach a registry at all. The alternative, pulling by tag from Ollama's registry and recording the digest, is simpler but adds a second download path to configure and check.
+3. **The GPU between Ollama, inference and jobs (ADR-0006, R-18).** Ollama keeps its model in VRAM outside PyTorch and knows nothing of the lease. *Recommended:* the `inference` service acts as Ollama's adapter.
+   - It takes the lease before Ollama loads, and counts the LLM as its one GPU model (ADR-0016 rule 2).
+   - It gives the GPU back as it does today, after 60 s idle or at once when a job is waiting (ADR-0016 rule 5): it tells Ollama to unload (`keep_alive: 0`) and checks on the card (NVML) that the memory came back before releasing the lease.
+   - While a job holds the lease, chat is refused with `gpu_busy`, naming the job, as `/predict` does for models over 50 M parameters. On the CPU a 1–3 B model would miss NFR-6 several times over and need 2–3 GB of RAM.
+   - Alternatives: Ollama falling back to the CPU (slow, and memory the budget does not have); a fixed VRAM share for Ollama beside jobs (it breaks RUN-1.4's one large model and NFR-1's margin).
+4. **Embeddings (LLM-2.1, LLM-2.4).** *Recommended:* `BAAI/bge-small-en-v1.5` (MIT, 33 M parameters, 384 dimensions, about 130 MB) through sentence-transformers, which SPEC §7.2 names. Questions are embedded on the CPU in `inference`, beside CLIP's text tower for image search (already pulled), so a question never waits for the GPU or unloads the LLM. Chunks are embedded on the CPU worker by the `index` stage. Alternative: `all-MiniLM-L6-v2` (Apache 2.0, about 90 MB), a little weaker at retrieval.
+5. **The corpus (LLM-2.1).**
+   - (a) *Recommended:* **Stratal's own documentation** (SPEC, the design documents, DECISIONS, ERRORS, RISKS, the ADRs and the spike reports): about 0.8 MB of Markdown, 117,000 words. A script copies a snapshot into `sources/stratal-docs`; `docs/learning/` is left out. No download. You know the content, so questions are quick to write and answers quick to check, and M13's assistant can answer questions about the project.
+   - (b) A public corpus, such as part of Simple English Wikipedia: a download, and answers nobody here can check quickly.
+6. **The question set (LLM-2.2, LLM-2.3).** About 50 questions the corpus answers, each labelled with the document and section that answers it, and 15 it cannot answer, for the abstention.
+   - Labels name sections, not chunks, so index versions with different chunk sizes are compared on the same set: a retrieved chunk is a hit when it overlaps the labelled section.
+   - (a) You write it. (b) *Recommended:* I draft it from the corpus and you check every question and label before the first measurement. Either way it is then frozen as a versioned file, and each hit@k report names its version.
+   - The abstention threshold is yours, chosen from the measured relevance of both groups (as OC-5).
+7. **What an index is (LLM-2.2, DATA-3).** *Recommended:* a corpus is a dataset like any other, run as `ingest → clean → chunk → index`.
+   - Each index is therefore a version, with DATA-3.2's identity from its content and config (chunk size and overlap, the embedding model and its revision), and "hit@5 per index version" is per version ID.
+   - `chunk` writes one row per chunk: its text, document, section path and offsets. `index` keeps each vector as a derivation and the FAISS index as a blob named in the manifest's metadata, as `tokenize` names its vocabulary. FAISS's file holds no code, so NFR-8 holds.
+   - Lineage traces a citation back to its source file, and corpora and indexes appear on SCR-02 and SCR-03 without a new screen. This replaces DATA_MODEL §9's outline tables `corpora` and `rag_indexes`.
+   - Alternative: those tables, and a screen of their own (SCR-16; SCR-15 is proposed for M11b).
+8. **Reports on screen (LLM-2.2, LABEL-1.7).** *Recommended:* hit@k is a report kind on SCR-06, per index version (hit@1, hit@5 and the questions missed), and M13's raw-against-refined caption comparison is another. That places what SCREENS.md §4 lists as "not yet placed".
+9. **Chat on screen before phase 5.** UI-1.1 (the chat UI) is phase 5, but phase 3 is done when chat answers are grounded and cited. *Recommended:* a phase-3 slice of SCR-12, as CL-04 gave phase 1 a slice of phase 2. M12 builds manual mode with *LLM* and *RAG*: citations, abstentions, image-search results, and each answer's route, latency and speed. M13 adds *Auto* (the router) and its fallback messages. UI-1.1's test stays owed in phase 5, when every model type exists; SPEC §2 gains the slice in a change-log entry (CL-18). Alternative: no chat screen before phase 5, with phase 3 shown through the API.
+10. **Memory (NFR-2, ADR-0007).** The running set's limits sum to 9,024 MiB, NFR-2's 9 GB. `ollama` needs a limit, and `inference` grows by the embedding model and CLIP's text tower. The measured peaks are well inside today's limits (`worker-gpu` at 2.08 GiB against its 3.25 GB limit in phase 2's acceptance; the VM's whole use 4.26 GB). *Recommended:* S-11 measures `ollama` and `inference` under load, and ADR-0021 rebalances the limits from those figures, keeping the 9 GB sum. If they do not fit, changing NFR-2 comes back to you as a requirement change.
+11. **Readings to confirm (proposed OC-13 to OC-15).**
+    - **NFR-6:** with the GPU free and the model loaded, 19 of 20 queries meet each target: the first token in under 2 s for 10 chat queries, the whole answer in under 8 s for 10 RAG queries. The first query after a load (a cold start of a few seconds) is reported separately. While a job holds the GPU, chat is refused (decision 3), so NFR-6 does not apply.
+    - **LLM-2.1's "correct source chunks":** on the question set, at least 90 % of the answers whose retrieval found the labelled section cite a chunk of it, and no answer cites a chunk it was not given.
+    - **LLM-2.4's "relevant images":** your judgement of the top 10 for "dogs at night" on coco10k, beside an automated test on planted images.
+12. **Owner units (👤).** No phase-3 requirement is marked 👤 in SPEC. Under §9.1's "scoring, evaluation", two could be yours: hit@k with the section-overlap rule (LLM-2.2, M12) and the statistics of the caption comparison (LABEL-1.7, M13). The abstention threshold is yours in any case (decision 6). Say which you will write; anything you hand to me gets its stub and strict expected-failure tests first, as before (ADR-0012).
+
+### Open points for M13's kickoff
+
+Recommendations are given now so the plan is complete; they are decided at M13's kickoff.
+
+- **The router (LLM-3.1).** *Recommended:* one rule first (a request with an image goes to the captioner), then the LLM classifies the rest into LLM, RAG, image generation or translation, with its answer constrained to a JSON schema; no training data is needed. Alternative: an embedding classifier trained on a second labelled set (milliseconds per request, but another set to write). Image generation (phase 4) and translation (phase 5) are classified now and answered with a clear `route_unavailable` (LLM-3.2), so routing is measured on all five routes.
+- **The router's 50 labelled requests:** 10 per route, written like the question set (decision 6).
+- **Fallbacks (LLM-3.2):** RAG that cannot retrieve answers from the LLM alone and says so; an LLM that is down or times out gives a clear error with its reason; a failed caption gives its error. Every fallback is named in the answer.
+- **The assistant's tools (LLM-4.1, P2):** read-only (runs, configs, metrics, versions, studies). No tool starts, cancels or deletes anything.
+- **Caption refinement (LABEL-1.6):** an optional `refine` stage after `filter`, calling Ollama under the GPU lease as `label` uses Florence-2. The output is constrained to the schema and checked by its Pydantic model; the raw caption is kept; a row whose output fails twice is kept with a reason. Results are cached per caption, so a resume redoes nothing (as LABEL-1.2). Pipelines that do not ask for it are unchanged.
+- **QLoRA (LLM-5.1, P2).**
+  - Data: (a) databricks-dolly-15k (CC BY-SA 3.0, about 13 MB, a download), general instructions; or (b) pairs made from LABEL-1.6's output, with no download, though the adapter then mostly learns the format of its own refinements.
+  - Libraries: *recommended*, PEFT and bitsandbytes inside Stratal's training runtime, so the run checkpoints, pauses and reports like any other. TRL's `SFTTrainer` and accelerate (SPEC §7.2) bring the `datasets` library and a training loop of their own.
+  - QLoRA trains from the model's safetensors checkpoint (about 3.5 GB for Qwen3-1.7B, 6 GB for SmolLM3-3B), not from the GGUF file.
+  - Spike S-12 first: bitsandbytes on the image's CUDA version, the 4-bit load within `worker-gpu`'s memory limit, VRAM and step time at a sequence length of 512.
+  - The adapter is registered with only its own weights, its base as parent (REG-2.8). Serving it in chat waits for phase 4's adapters (REG-1.3).
+
+### Architecture to settle first
+
+Each ADR is written at the start of its milestone and approved before anything it covers is built.
+
+| ADR | Covers | Milestone |
+|---|---|---|
+| ADR-0021 LLM serving | Ollama from pinned GGUF files with no route out (decision 2); `inference` as its adapter: the lease, unloads checked on the card, `gpu_busy`, a waiting job (decision 3); the CPU models beside the GPU model (decision 4); chat streamed over SSE from `api`; each request and its latency stored (DATA_MODEL §9's `chat_sessions` and `inference_requests`); the memory limits from S-11 (ADR-0007 revised, decision 10) | M12 |
+| ADR-0022 Corpora and retrieval | DATA-5.3's two types; `chunk` and `index` (decision 7); exact search with FAISS's `IndexFlatIP` (a corpus of a few thousand chunks needs no approximate index); the prompt and its citations; hit@k with section labels; the abstention rule; image search over the `clip_image_embedding` vectors (LLM-2.4) | M12 |
+| ADR-0023 Router, fallbacks and tools | The LangGraph graph in `api` (a classify node, a node per route, fallback edges); `api` gains LangGraph but still no ML library, since the models stay in `inference` and `ollama`; `route_unavailable`; the read-only tools; the `refine` stage | M13 |
+| ADR-0014 Addendum B | QLoRA as a kind of training run: a 4-bit base, LoRA adapters, the instruction pairs' adapter (DATA-5.3), checkpoints of the adapter only, held-out loss | M13 |
+
+### Spikes
+
+- **S-11 — Which LLM, and what serving it costs (M12, first).** Both candidate files in Ollama on the RTX 4050: load time; time to first token and tokens/s for a short chat and for a RAG-sized prompt of about 2,000 tokens; VRAM on the card; the container's `memory.peak`; the card back at baseline after an unload. The CPU figures for the record. JSON validity on 50 COCO captions with LABEL-1.6's schema, and a dozen routing requests. `inference`'s memory with the embedding model and CLIP's text tower loaded. Decides: the model (decision 1), the memory limits (decision 10), and whether NFR-6 is reachable as read in decision 11.
+- **S-12 — Does QLoRA fit (M13, before LLM-5.1).** As in the QLoRA open point. Decides whether LLM-5.1 runs locally, and its batch and sequence length.
+
+### New dependencies
+
+Each is named in SPEC §7.2 and added only when its milestone needs it. Every download is asked for first, with its source and size.
+
+| Package or file | For | Milestone | Where |
+|---|---|---|---|
+| Ollama's image, at a pinned version (several GB with its CUDA runtimes) | LLM-1.1 | M12 | the new `ollama` service (SPEC CL-07) |
+| Two 4-bit GGUF files for S-11 (about 1.1 and 1.9 GB); the one not chosen is deleted | LLM-1.1 | M12 | data volume, through `models pull` |
+| sentence-transformers; bge-small-en-v1.5 (about 130 MB) | LLM-2.1 | M12 | `gpu` and `ml-cpu` extras |
+| faiss-cpu (about 30 MB) | LLM-2.1, LLM-2.4 | M12 | `gpu` and `ml-cpu` extras |
+| LangGraph, with langchain-core | LLM-3.1 | M13 | `api` |
+| PEFT, bitsandbytes (about 100 MB) | LLM-5.1 | M13 | `gpu` extra |
+| The chosen LLM's safetensors checkpoint (3.5 to 6 GB) | LLM-5.1 | M13 | data volume |
+| databricks-dolly-15k (about 13 MB), if chosen | LLM-5.1 | M13 | `sources/` |
+
+Not planned: LangChain itself and langchain-community (the RAG chain is four steps of our own: embed, search, prompt, cite); TRL and accelerate (the QLoRA open point); vLLM (SPEC §7.6); PyMuPDF (the corpus is Markdown); an HTTP client library (the standard library's, which `api` already uses to call `inference`). No npm package is expected.
+
+### Design gates for phase 3
+
+| Gate | Deliverable | Starts | Unblocks |
+|---|---|---|---|
+| G1 revision | SCREENS.md v4: SCR-12's phase-3 slice (decision 9); corpora, chunks and indexes on SCR-02 and SCR-03; the two reports on SCR-06 (decision 8); Flow 5 step by step | M12 kickoff | phase-3 G2 |
+| G2 | SCR-12 in manual mode (chat, RAG with citations and abstention, image search); SCR-03 for a corpus's chunks; SCR-06's retrieval report | alongside M12 | M12's screens |
+| G2 | SCR-12's Auto mode, fallbacks and the assistant's answers; refined captions on SCR-03; the caption comparison on SCR-06 | alongside M12 | M13's screens |
+| G3 | Each screen compared with its mockup, contrast and keyboard checked | in the milestone that builds it | – |
+
+## M12 — LLM serving and RAG
+
+**Size** L · **Branch** `m12-llm-rag` · **Serves** LLM-1.1, LLM-2.1, LLM-2.2, LLM-2.3, LLM-2.4, DATA-5.3, NFR-6; NFR-1, NFR-7 and NFR-8 for the new service; MON-3.3 for the LLM's loads and unloads
+
+**Before starting:** M11b merged; S-11's downloads approved and its report delivered; decisions 1 to 12; ADR-0021 and ADR-0022 approved; the G1 revision approved.
+
+**Scope**
+
+- Spike S-11, then the owner's choice of model.
+- The `ollama` service (a pinned image, the GPU, no route out), with its model built from the pulled file; `inference` as its adapter (decision 3); load and unload events with the card's figures (MON-3.3; Ollama has no PyTorch figure, and the event says so).
+- Chat: `POST /chat` in `api`, streamed over SSE through `inference` from Ollama. Each request is stored with its route, model, device, time to first token, total time and tokens/s, and emits MON-3's Inference messages ("Loading LLM (cold start 3.2 s)", "Generating 128 tokens").
+- DATA-5.3: the text-corpus type (TXT and Markdown, one row per document) and the instruction-pairs type (JSONL: instruction, optional input, output), each with its schema and reasons for bad rows; the pairs' adapter to the model's chat format, tested on a sample (M13's QLoRA uses it).
+- The corpus pipeline `ingest → clean → chunk → index` (decision 7): chunks cut at headings, then by size with overlap; vectors computed on the CPU worker; one FAISS index per version.
+- RAG (LLM-2.1): the question's top k chunks in a prompt with numbered sources; the answer's citations mapped back to chunk, document and section; a citation of a chunk the model was not given is removed and logged.
+- hit@k (LLM-2.2): the question set (decision 6) and a retrieval report per index version (decision 8).
+- Abstention (LLM-2.3): below the owner's threshold the answer is "I don't know", with the nearest source and its relevance.
+- Image search (LLM-2.4): a text's CLIP vector against a labelled version's `clip_image_embedding` vectors; the nearest images shown in chat.
+- Screens: SCR-12 in manual mode; SCR-03 for corpora and chunks; SCR-06's retrieval report.
+
+**Done when**
+
+- [ ] S-11 report delivered and the model chosen; decisions 1 to 12 recorded; ADR-0021 and ADR-0022 approved
+- [ ] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry
+- [ ] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading
+- [ ] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index
+- [ ] `test_LLM_2_3_*`: out-of-corpus questions get an abstention
+- [ ] `test_LLM_2_4_*`: planted images are found from their text; live, "dogs at night" on coco10k, judged by the owner
+- [ ] `test_DATA_5_3_*`: samples of both types validate, bad rows are rejected with reasons, and the pairs' adapter gives the chat format
+- [ ] `test_NFR_6_*`: 20 queries measured, as read in decision 11
+- [ ] `test_NFR_7_*` and `test_NFR_8_*` extended: chat and RAG with every outbound connection refused; the model file pinned by hash
+- [ ] `test_BUG6_*` extended: after the adapter's unload the card is back at its baseline, and a queued training job gets the GPU
+- [ ] G3 for M12's screens
+- [ ] Demo: ingest the documentation, build two index versions with different chunk sizes and read their hit@5 on SCR-06; ask SCR-12 questions with citations, and one it must decline; search "dogs at night"; start a training run and watch chat give the GPU back
+- [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS; learning notes)
+- [ ] Owner's OK to merge
+
+## M13 — Router, tools, caption refinement
+
+**Size** L · **Branch** `m13-router-tools` · **Serves** LLM-3.1, LLM-3.2, LLM-4.1 (P2), LLM-5.1 (P2), LABEL-1.6, LABEL-1.7 (P2); MON-3.1's Inference row for routed requests; the phase-3 done-definition
+
+**Before starting:** M13's open points decided at its kickoff; ADR-0023 and ADR-0014 Addendum B approved; G2 for M13's screens approved.
+
+**Scope**
+
+- The router (LLM-3.1) in `api` with LangGraph; image generation and translation answer `route_unavailable` until phases 4 and 5; the 50 labelled requests.
+- Fallbacks (LLM-3.2), each simulated in a test.
+- The suite assistant (LLM-4.1, P2), with read-only tools.
+- Caption refinement (LABEL-1.6), the `refine` stage; raw and refined captions compared by CLIP score (LABEL-1.7, P2), a report on SCR-06.
+- QLoRA (LLM-5.1, P2): spike S-12, then a training run with a 4-bit base and LoRA adapters; held-out loss against the base.
+- Screens: SCR-12's Auto mode and fallbacks; refined captions on SCR-03; the comparison report.
+- The phase-3 acceptance run, measured, with a README section; phase 4 (M14) detailed for approval.
+
+**Done when**
+
+- [ ] M13's open points decided; ADR-0023 and ADR-0014 Addendum B approved
+- [ ] `test_LLM_3_1_*`: at least 45 of the 50 labelled requests routed correctly
+- [ ] `test_LLM_3_2_*`: each simulated model failure gives its fallback or a clear error
+- [ ] `test_LLM_4_1_*` (P2): "best F1 on dataset v3?" answered from metadata, matching the registry
+- [ ] `test_LLM_5_1_*` (P2): held-out loss after QLoRA is below the base's
+- [ ] `test_LABEL_1_6_*`: every refined caption validates against the schema, and the raw caption is kept
+- [ ] `test_LABEL_1_7_*` (P2): the comparison report is generated
+- [ ] `test_MON_3_1_*` extended: a routed request emits MON-3's Inference messages ("Request r_918 → router → captioner")
+- [ ] Phase-3 acceptance (`tests/acceptance`): on the live stack, the question set answered with citations (decision 11) and the 50 requests routed (LLM-3.1); NFR-1, NFR-2 and NFR-6 measured during chat and refinement; README section
+- [ ] Meta-test green: every phase-3 P0 (4) has a passing ID-named test
+- [ ] G3 for M13's screens
+- [ ] Demo: in Auto mode, a corpus question, a general one, an image to caption and a translation (`route_unavailable`); Ollama stopped, and its fallback; refine coco1k's captions and read the comparison; ask the assistant for the best F1 on a dataset
+- [ ] Docs updated (learning notes)
+- [ ] M14 detailed and approved by the owner
+- [ ] Owner's OK to merge; tag `phase-3`
 
 ---
 

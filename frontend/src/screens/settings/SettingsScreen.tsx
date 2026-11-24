@@ -50,13 +50,13 @@ export function without<T>(record: Record<string, T>, key: string): Record<strin
 
 /** Client-side checks, from the schema's ranges plus SCR-14's cross-field rules. The API
  * checks again; its 422 replaces these. */
-export function fieldErrors(section: "training" | "retention", values: Values, schema: { properties?: Record<string, Prop> }, slowdown: number | null): Record<string, string> {
+export function fieldErrors(section: "training" | "retention" | "monitoring", values: Values, schema: { properties?: Record<string, Prop> }, slowdown: number | null): Record<string, string> {
   const errors: Record<string, string> = {};
   for (const [name, prop] of Object.entries(schema.properties ?? {})) {
     const value = values[name];
-    if (prop.type !== "integer") continue;
-    if (typeof value !== "number" || !Number.isInteger(value)) {
-      errors[name] = "A whole number is needed.";
+    if (prop.type !== "integer" && prop.type !== "number") continue;
+    if (typeof value !== "number" || (prop.type === "integer" && !Number.isInteger(value))) {
+      errors[name] = prop.type === "integer" ? "A whole number is needed." : "A number is needed.";
       continue;
     }
     if (prop.minimum !== undefined && value < prop.minimum) errors[name] = `At least ${String(prop.minimum)}.`;
@@ -70,6 +70,13 @@ export function fieldErrors(section: "training" | "retention", values: Values, s
     }
     if (typeof pause === "number" && typeof resume === "number" && resume > pause - RESUME_GAP && !errors["thermal_resume_c"]) {
       errors["thermal_resume_c"] = `Must be at most ${String(pause - RESUME_GAP)}: ${String(RESUME_GAP)} °C below thermal_pause_c (${String(pause)}).`;
+    }
+  }
+  if (section === "monitoring") {
+    const active = values["sample_interval_active_s"];
+    const idle = values["sample_interval_idle_s"];
+    if (typeof active === "number" && typeof idle === "number" && idle < active && !errors["sample_interval_idle_s"]) {
+      errors["sample_interval_idle_s"] = `At least ${String(active)}: the active interval.`;
     }
   }
   return errors;
@@ -130,7 +137,8 @@ function NumberField({ name, prop, value, saved, error, onChange, children, tool
           value={text(value ?? "")}
           onChange={(event) => {
             const text = event.target.value.trim();
-            onChange(/^-?\d+$/.test(text) ? Number(text) : text);
+            const pattern = prop.type === "number" ? /^-?\d+(\.\d+)?$/ : /^-?\d+$/;
+            onChange(pattern.test(text) ? Number(text) : text);
           }}
         />
         <small id={helpId}>
@@ -276,6 +284,71 @@ function TrainingSection({ section, draft, setDraft, onSaved, onConflict }: {
             { section: "training", values: draft, version: section.version },
             {
               onSuccess: () => { onSaved("Training saved. The watchdog uses it from its next check."); },
+              onError: (error) => { if (error instanceof ApiError && error.problem.code === "conflict") onConflict(); },
+            },
+          );
+        }}
+      />
+    </section>
+  );
+}
+
+/** SCR-14's M11 section (ADR-0020 rule 14): sampling intervals (MON-2.2), the alert
+ * thresholds (MON-2.6, OC-7) and the diagnostics' disk figure (MON-3.2). */
+function MonitoringSection({ section, draft, setDraft, onSaved, onConflict }: {
+  section: SettingsSection;
+  draft: Values;
+  setDraft: (values: Values) => void;
+  onSaved: (message: string) => void;
+  onConflict: () => void;
+}) {
+  const save = useSaveSettings();
+  const props = (section.schema as { properties?: Record<string, Prop> }).properties ?? {};
+  const local = fieldErrors("monitoring", draft, { properties: props }, null);
+  const errors = { ...local, ...serverErrors(save.error) };
+  const list = changes(section.values, draft);
+  const field = (name: string, extra?: ReactNode) => (
+    <NumberField
+      key={name}
+      name={name}
+      prop={props[name] ?? {}}
+      value={draft[name]}
+      saved={section.values[name]}
+      error={errors[name]}
+      onChange={(value) => { save.reset(); setDraft({ ...draft, [name]: value }); }}
+    >
+      {extra}
+    </NumberField>
+  );
+  return (
+    <section className="sec" id="monitoring" aria-labelledby="h-monitoring">
+      <header>
+        <h2 id="h-monitoring">Monitoring</h2>
+        <span className="req">{section.requirements.join(" · ")}</span>
+      </header>
+      {field("sample_interval_active_s", <span>The sampler reads it within 30 s.</span>)}
+      {field("sample_interval_idle_s")}
+      {field("vram_alert_percent", <span>Of the card's total (NVML), OC-7. An alert fires after 5 s above it and re-arms 5 points below.</span>)}
+      {field("ram_alert_percent", <span>Of the WSL VM's memory, OC-7.</span>)}
+      {field("disk_bottleneck_mb_s", <span>A first guess, checked on the phase-2 acceptance run (ADR-0020 rule 8).</span>)}
+      <div className="rules-note">
+        <Icon name="info" />
+        <span>Fixed, not settings: the 5 s hold and the 30 s diagnostic window (ADR-0020). The temperature limits are in Training.</span>
+      </div>
+      {save.error instanceof ApiError && save.error.problem.code !== "validation_error" && save.error.problem.code !== "conflict" ? (
+        <ErrorState error={save.error} title="Monitoring was not saved" />
+      ) : null}
+      <SaveBar
+        title="Monitoring"
+        list={list}
+        problems={Object.keys(errors).length}
+        busy={save.isPending}
+        onDiscard={() => { save.reset(); setDraft(section.values); }}
+        onSave={() => {
+          save.mutate(
+            { section: "monitoring", values: draft, version: section.version },
+            {
+              onSuccess: () => { onSaved("Monitoring saved. Alerts use it within 5 s, the sampler within 30 s."); },
               onError: (error) => { if (error instanceof ApiError && error.problem.code === "conflict") onConflict(); },
             },
           );
@@ -567,7 +640,7 @@ export function SettingsScreen() {
       ) : (
         <div className="cols">
           <nav className="index" aria-label="Sections">
-            {(["training", "retention"] as const).map((name) => (
+            {(["training", "retention", "monitoring"] as const).map((name) => (
               <a key={name} href={`#${name}`} aria-current={current === name ? "true" : undefined}>
                 {byName[name]?.title ?? name}
                 {unsaved(name) ? (
@@ -578,9 +651,6 @@ export function SettingsScreen() {
                 ) : null}
               </a>
             ))}
-            <a aria-disabled="true" title="Monitoring thresholds arrive with M11" onClick={(event) => { event.preventDefault(); }} href="#monitoring">
-              Monitoring<span className="badge">M11</span>
-            </a>
             <a href="#appearance" aria-current={current === "appearance" ? "true" : undefined}>Appearance</a>
           </nav>
           <div className="secs">
@@ -600,6 +670,15 @@ export function SettingsScreen() {
                 setDraft={(values) => { setDrafts((d) => ({ ...d, retention: values })); }}
                 onSaved={(message) => { saved("retention", message); }}
                 onConflict={() => { setStale("retention"); }}
+              />
+            ) : null}
+            {byName["monitoring"] ? (
+              <MonitoringSection
+                section={byName["monitoring"]}
+                draft={draftOf("monitoring")}
+                setDraft={(values) => { setDrafts((d) => ({ ...d, monitoring: values })); }}
+                onSaved={(message) => { saved("monitoring", message); }}
+                onConflict={() => { setStale("monitoring"); }}
               />
             ) : null}
             <AppearanceSection />

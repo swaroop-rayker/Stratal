@@ -653,6 +653,8 @@ class StudyTestConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     study_id: str | None = None
+    model_version_id: str | None = None
+    """Score on test (M11, EVAL-1.3, K8's exception): one version without test metrics."""
 
 
 def _run_test_eval(run: StageRun) -> StageResult:

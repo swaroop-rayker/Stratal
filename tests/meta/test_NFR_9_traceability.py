@@ -98,3 +98,24 @@ def test_NFR_9_test_ids_refer_to_real_requirements() -> None:
     unknown = sorted({m.group(1) for name in _test_names() if (m := pattern.match(name))} - known)
 
     assert not unknown, f"tests name requirement IDs that are not in SPEC.md: {unknown}"
+
+
+def test_NFR_9_every_phase_2_p0_requirement_has_a_named_test() -> None:
+    """M11's acceptance check (MILESTONES.md, M11): no phase-2 P0 requirement without a
+    ``test_<ID>_*`` test. Whether they pass is checked by running the suite."""
+    requirements = _requirements()
+    names = _test_names()
+    phase_2_p0 = sorted(
+        r for r, (priority, phase) in requirements.items() if (priority, phase) == ("P0", "2")
+    )
+
+    untested = [
+        rid
+        for rid in phase_2_p0
+        if not any(
+            name.startswith(f"test_{rid.replace('-', '_').replace('.', '_')}_") for name in names
+        )
+    ]
+
+    assert len(phase_2_p0) == 32
+    assert not untested, f"phase-2 P0 requirements with no named test: {untested}"

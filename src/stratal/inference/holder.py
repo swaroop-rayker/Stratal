@@ -332,6 +332,8 @@ class ModelHolder:
                 if loaded.device == "gpu":
                     self._last_gpu_use = time.monotonic()
                 result = inputs.network_result(output, loaded.task, loaded.classes, loaded.prep)
+                if text is not None and loaded.vocab is not None:
+                    result["input"] = inputs.text_facts(text, loaded.vocab, loaded.length)
             return {
                 **result,
                 "version_id": loaded.version_id,

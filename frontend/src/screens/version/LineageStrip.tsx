@@ -5,6 +5,7 @@ import { Fragment, type ReactNode, useEffect, useRef } from "react";
 import { Link } from "react-router";
 
 import type { Schemas } from "../../api/client";
+import { Icon } from "../../components/ui";
 import { stagePercent } from "../../lib/format";
 import { nodeFact, type Version } from "./rows";
 
@@ -34,7 +35,13 @@ function Node({ v, current }: { v: Version; current: boolean }) {
 
 const Edge = () => <span className="edge" aria-hidden="true" />;
 
-export function LineageStrip({ lineage, current }: { lineage: Lineage; current: Version }) {
+export function LineageStrip({ lineage, current, models, onModels }: {
+  lineage: Lineage;
+  current: Version;
+  /** Models trained on this version (SCR-03 v2 frame D); null where none can be. */
+  models?: number | null;
+  onModels?: () => void;
+}) {
   const strip = useRef<HTMLElement>(null);
   // A long chain scrolls sideways: keep this version in view (frame I).
   useEffect(() => {
@@ -107,6 +114,11 @@ export function LineageStrip({ lineage, current }: { lineage: Lineage; current: 
         </Fragment>
       ))}
       {branch(current, true)}
+      {models !== null && models !== undefined ? (
+        <button type="button" className="endchip" onClick={onModels} aria-label={`${String(models)} models trained on this version: show them`}>
+          <Icon name="grid" />→ {models} {models === 1 ? "model" : "models"}
+        </button>
+      ) : null}
     </nav>
   );
 }

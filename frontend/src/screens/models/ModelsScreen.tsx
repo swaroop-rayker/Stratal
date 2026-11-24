@@ -1,6 +1,6 @@
 // SCR-11 frame A: every lineage, filterable by state (REG-1.2), task and name
 // (mockup docs/design/screens/SCR-11_v1.html, G2 approved 2026-11-17).
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { type Lineage, useLineages, useRegistryLive, type VersionState } from "../../api/registry";
@@ -8,6 +8,7 @@ import { EmptyState, ErrorState } from "../../components/states";
 import { Icon, Kbd, Skeleton } from "../../components/ui";
 import { bytes, clock, DASH } from "../../lib/format";
 import { useCrumbs, useShortcuts } from "../../shell/hooks";
+import { TrainDrawer } from "../build/TrainDrawer";
 import { metric, VersionLabel } from "./parts";
 
 const STATES: { value: VersionState | null; label: string }[] = [
@@ -37,6 +38,7 @@ export function ModelsScreen() {
   const all = useLineages(null, "");
   const shown = useLineages(state, q);
   const search = useRef<HTMLInputElement>(null);
+  const [training, setTraining] = useState(false);
   useShortcuts(useMemo(() => ({ "/": () => search.current?.focus() }), []));
 
   const counts = stateCounts(all.data?.items ?? []);
@@ -62,9 +64,14 @@ export function ModelsScreen() {
       <div className="phead">
         <h1>Models</h1>
         <span className="spacer" />
-        <button type="button" className="btn" onClick={() => { void navigate("/models/build"); }}>
+        {/* EVAL-1.3: versions side by side on one test split (SCR-11 v2). */}
+        <button type="button" className="btn" onClick={() => { void navigate("/models/compare"); }}>
+          <Icon name="grid" />
+          Compare…
+        </button>
+        <button type="button" className="btn" onClick={() => { setTraining(true); }}>
           <Icon name="plus" />
-          Build a model…
+          Train a model…
         </button>
       </div>
       {all.isPending ? (
@@ -78,9 +85,9 @@ export function ModelsScreen() {
           icon="grid"
           title="No models yet"
           action={
-            <button type="button" className="btn sm primary" disabled title="The model builder arrives in M9 (SCR-08)">
+            <button type="button" className="btn sm primary" onClick={() => { setTraining(true); }}>
               <Icon name="plus" />
-              Build a model
+              Train a model…
             </button>
           }
         >
@@ -186,6 +193,7 @@ export function ModelsScreen() {
           </div>
         </>
       )}
+      {training ? <TrainDrawer open onOpenChange={setTraining} /> : null}
     </div>
   );
 }

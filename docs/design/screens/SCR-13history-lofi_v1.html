@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-13 History tab — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. Shared with SCR-13-lofi_v1.html. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; background: #fff; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+.t td { padding: 0 8px; height: 30px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); }
+.t.wrap td { white-space: normal; height: auto; padding-top: 5px; padding-bottom: 5px; } .t.wrap td.m, .t.wrap td.r { white-space: nowrap; }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.ask { border: 2px solid var(--note); border-radius: 6px; padding: 10px 14px; background: #fff; max-width: 1280px; margin-top: 12px; } .ask li { color: var(--ink); margin: 4px 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 2px; vertical-align: middle; text-align: center; font: 700 10px/10px system-ui; } .box.on::after { content: "✓"; }
+.faint { opacity: .45; }
+.axis { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--ink-3); }
+.axis.pct { position: relative; height: 14px; } .axis.pct span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+
+/* History additions: lanes of points, one per run; the group's median dashed. */
+.lanes { display: grid; grid-template-columns: 150px 1fr; gap: 4px 10px; align-items: center; }
+.lanes .lab { font-size: 11px; color: var(--ink-2); line-height: 1.25; } .lanes .lab small { display: block; color: var(--ink-3); font-size: 10px; }
+svg.lane { width: 100%; height: 64px; display: block; background: var(--fill); border: 1px solid var(--soft); }
+svg.lane polyline { fill: none; stroke: var(--ink-3); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+svg.lane line.th { stroke: var(--ink-3); stroke-dasharray: 3 3; stroke-width: 1; vector-effect: non-scaling-stroke; }
+svg.lane line.med { stroke: var(--ink); stroke-dasharray: 8 4; stroke-width: 1; vector-effect: non-scaling-stroke; }
+svg.lane .p { fill: var(--ink-2); stroke: var(--ink-2); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+svg.lane .p.o { fill: #fff; }
+svg.lane .p.last { fill: var(--ink); stroke: var(--ink); }
+svg.lane text { font: 9px system-ui; fill: var(--ink-2); }
+svg.lane text.thl { fill: var(--ink-3); }
+.keys { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--ink-2); }
+.keys .sh { font-size: 12px; margin-right: 3px; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-13 — System monitor, <i>History</i> tab (MON-4.5) · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: MON-4.5 (P2: trends across past jobs), reading MON-2.5's peaks</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> SCR-13, <i>History</i></span><span>Route: <span class="mono">/system?tab=history&amp;stage=…&amp;group=…&amp;n=…</span></span><span>Sources: ADR-0020 rules 12 and 13; SCR-13's approved low-fi and hi-fi (2026-11-22)</span><span>2026-11-22</span></div>
+<p>Layout and hierarchy only. Blue numbers are annotations. The tab was named in SCR-13's approved mockups and is hidden in the build until it passes its gates. <b>The data is real</b>, from the dev database: frame A is every run of <span class="mono">train</span> on the GPU in one group, frame B every run of <span class="mono">label</span>, frame C the last 20 GPU training runs. Times are local. The header, side navigation and the other two tabs are SCR-13 as built.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>One stage at a time.</b> A <i>Stage</i> select lists every stage that has completed runs, newest first, with its queue and count (<span class="mono">train · GPU · 30 runs</span>). A rate or a peak only compares within one kind of work: images a second for <span class="mono">label</span> and samples a second for <span class="mono">train</span> share no axis.</li>
+<li><b>Like with like.</b> Within a stage, runs are grouped by what ran: for training, the model lineage and the batch size (<span class="mono">small_cnn · cifar10 · batch 128</span>); for a pipeline stage, its model and batch, or its config. The default group is the latest run's, since the question is usually "is this run like the ones before it?". <i>All groups</i> (frame C) puts every run against its own group's median, so different models share one axis.</li>
+<li><b>The last N runs, not a time range.</b> N is 10, 20 (the default), 50 or 100, and is a maximum: a group with fewer runs shows them all and says so. The header's range presets are hidden on this tab, which counts runs, not hours. Runs are evenly spaced, oldest on the left, with the days marked under the axis.</li>
+<li><b>Honest numbers.</b>
+  <ul>
+    <li><b>Rate</b> counts work done, not work reused, in the stage's own unit: samples a second for training (its moving average while training, the one its ETA uses, times the batch); captions computed a second for <span class="mono">label</span>; files for <span class="mono">ingest</span>; images for <span class="mono">clean</span> and <span class="mono">preprocess</span>. A run that reused everything has no rate and is drawn hollow (frame B).</li>
+    <li><b>Time</b> is running time across attempts, with pauses and queueing removed, as <i>Compare two jobs</i> aligns runs. For training it is shown per epoch, since runs have 3, 10 or 30 epochs. A resumed run therefore shows what it really cost.</li>
+    <li><b>Peaks</b> are the stage's MON-2.5 peaks: the card's VRAM, PyTorch's allocated memory, the VM's RAM and the temperature. The job's RSS stays in the table only: it counts the loader workers' shared memory once per worker (7.4 GB against a 3.25 GB container limit).</li>
+  </ul></li>
+<li><b>Each lane</b> draws the group's median as a dashed line with its value, and the thresholds where they exist: NFR-1's 5.5 GB, RAM 85 %, the 83 °C pause and the 75 °C resume. A run that paused, resumed after a lost worker, was pruned or was a fine-tune carries a short tag, so an outlier explains itself.</li>
+<li><b>The table under the lanes</b> is their text equivalent (accessibility), newest first and sortable by any column. A point or a row opens the job on SCR-04. Two ticked rows give <i>Compare these two</i>, which opens <i>Compare two jobs</i> with A and B.</li>
+<li><b>Live:</b> when a run of the chosen stage completes, it joins on the right through the existing global stream; once N is reached, the oldest leaves on the left. Nothing else moves.</li>
+</ol>
+</div>
+
+<div class="ask">
+<h3>Three questions this layout depends on</h3>
+<ol>
+<li><b>One stage at a time, or one row per job with all its stages?</b> I propose one stage at a time. One row per job answers "what did each job cost", but it cannot draw a trend, because its columns measure different things for different jobs.</li>
+<li><b>The default group: the latest run's configuration, or <i>All groups</i>?</b> I propose the latest run's. <i>All groups</i> stays one click away, and relative values are harder to read first thing.</li>
+<li><b>N = 20 by default?</b> Twenty points stay readable at 1024 px; 50 and 100 are for looking further back.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · History: <span class="mono">train</span> on the GPU, group <span class="mono">small_cnn · cifar10 · batch 128</span></h2>
+<div class="frame" style="height:1060px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div style="height:300px"></div><div class="nav on">System</div><div class="nav">Settings</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">System</b> / History</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><b>System</b><span class="spacer"></span><span class="pill">monitor · reporting · sampled 1 s ago</span></div>
+      <div class="group" style="align-self:flex-start"><span class="btn sm">Overview</span><span class="btn sm">Compare two jobs</span><span class="btn sm on">History</span></div>
+      <div style="display:flex;gap:10px;align-items:center;font-size:12px;flex-wrap:wrap">
+        <span class="n in">1</span><span class="muted">Stage</span><span class="select mono">train · GPU · 30 runs ▾</span>
+        <span class="n in">2</span><span class="muted">Group</span><span class="select mono">small_cnn · cifar10 · batch 128 · 8 runs ▾</span>
+        <span class="n in">3</span><span class="muted">Last</span><span class="group"><span class="btn sm">10</span><span class="btn sm on">20</span><span class="btn sm">50</span><span class="btn sm">100</span></span><span class="muted">runs</span>
+        <span class="spacer"></span><span class="muted" style="font-size:11px"><span class="box"></span> Include stages reused from the cache <i>(none for training)</i></span>
+      </div>
+
+      <div class="card">
+        <h3><span class="n in">4</span>Trends <span class="muted" style="font-weight:400">· all 8 runs of this group (N = 20 is a maximum) · oldest left · dashed: the group's median</span><span class="spacer"></span><span class="btn sm ghost">Table only</span></h3>
+        <div class="lanes">
+          <div class="lab">Rate<small>samples/s while training · median 10,681 · latest 10,543</small></div>
+          <svg class="lane" viewBox="0 0 900 64" preserveAspectRatio="none"><line class="med" x1="0" x2="900" y1="10.16" y2="10.16"/><polyline points="45,10.59 160.7,9.67 276.4,18.91 392.1,9.98 507.9,9.86 623.6,9.44 739.3,10.34 855,10.80"/><circle class="p" cx="45" cy="10.59" r="4"/><circle class="p" cx="160.7" cy="9.67" r="4"/><circle class="p" cx="276.4" cy="18.91" r="4"/><circle class="p" cx="392.1" cy="9.98" r="4"/><circle class="p" cx="507.9" cy="9.86" r="4"/><circle class="p" cx="623.6" cy="9.44" r="4"/><circle class="p" cx="739.3" cy="10.34" r="4"/><circle class="p last" cx="855" cy="10.80" r="4"/><text x="286" y="32">8,804 · fine-tune</text><text class="thl" x="4" y="60">0</text><text class="thl" x="4" y="10">12k</text></svg>
+          <div class="lab">Time per epoch<small>s, running time ÷ epochs · median 6.4 · latest 6.3</small></div>
+          <svg class="lane" viewBox="0 0 900 64" preserveAspectRatio="none"><line class="med" x1="0" x2="900" y1="42.14" y2="42.14"/><polyline points="45,41.91 160.7,43.79 276.4,7.16 392.1,40.06 507.9,42.42 623.6,29.31 739.3,42.50 855,42.39"/><circle class="p" cx="45" cy="41.91" r="4"/><circle class="p" cx="160.7" cy="43.79" r="4"/><circle class="p" cx="276.4" cy="7.16" r="4"/><circle class="p" cx="392.1" cy="40.06" r="4"/><circle class="p" cx="507.9" cy="42.42" r="4"/><circle class="p" cx="623.6" cy="29.31" r="4"/><circle class="p" cx="739.3" cy="42.50" r="4"/><circle class="p last" cx="855" cy="42.39" r="4"/><text x="170" y="58">paused once</text><text x="286" y="11">18.9 · fine-tune, 3 epochs</text><text x="633" y="27">11.0 · worker lost, resumed</text><text class="thl" x="4" y="60">0</text><text class="thl" x="4" y="10">20</text></svg>
+          <div class="lab">VRAM peak, card<small>GB of 6.0 · NFR-1 5.5 · median 0.76</small></div>
+          <svg class="lane" viewBox="0 0 900 64" preserveAspectRatio="none"><line class="th" x1="0" x2="900" y1="8.67" y2="8.67"/><text class="thl" x="790" y="7">NFR-1 5.5 GB</text><line class="med" x1="0" x2="900" y1="52.93" y2="52.93"/><polyline points="45,52.93 160.7,51.96 276.4,54.05 392.1,52.93 507.9,52.93 623.6,52.93 739.3,52.93 855,52.93"/><circle class="p" cx="45" cy="52.93" r="4"/><circle class="p" cx="160.7" cy="51.96" r="4"/><circle class="p" cx="276.4" cy="54.05" r="4"/><circle class="p" cx="392.1" cy="52.93" r="4"/><circle class="p" cx="507.9" cy="52.93" r="4"/><circle class="p" cx="623.6" cy="52.93" r="4"/><circle class="p" cx="739.3" cy="52.93" r="4"/><circle class="p last" cx="855" cy="52.93" r="4"/></svg>
+          <div class="lab">PyTorch allocated, peak<small>MB · median 149</small></div>
+          <svg class="lane" viewBox="0 0 900 64" preserveAspectRatio="none"><line class="med" x1="0" x2="900" y1="18.29" y2="18.29"/><polyline points="45,18.29 160.7,18.17 276.4,21.12 392.1,18.29 507.9,18.29 623.6,18.17 739.3,18.29 855,18.29"/><circle class="p" cx="45" cy="18.29" r="4"/><circle class="p" cx="160.7" cy="18.17" r="4"/><circle class="p" cx="276.4" cy="21.12" r="4"/><circle class="p" cx="392.1" cy="18.29" r="4"/><circle class="p" cx="507.9" cy="18.29" r="4"/><circle class="p" cx="623.6" cy="18.17" r="4"/><circle class="p" cx="739.3" cy="18.29" r="4"/><circle class="p last" cx="855" cy="18.29" r="4"/><text class="thl" x="4" y="60">0</text><text class="thl" x="4" y="10">200</text></svg>
+          <div class="lab">RAM peak, VM<small>GB of 9.7, everything running · 85 % line · median 4.25</small></div>
+          <svg class="lane" viewBox="0 0 900 64" preserveAspectRatio="none"><line class="th" x1="0" x2="900" y1="12.37" y2="12.37"/><text class="thl" x="820" y="10">85 %</text><line class="med" x1="0" x2="900" y1="35.46" y2="35.46"/><polyline points="45,37.83 160.7,35.23 276.4,32.06 392.1,35.75 507.9,35.70 623.6,35.46 739.3,35.46 855,35.41"/><circle class="p" cx="45" cy="37.83" r="4"/><circle class="p" cx="160.7" cy="35.23" r="4"/><circle class="p" cx="276.4" cy="32.06" r="4"/><circle class="p" cx="392.1" cy="35.75" r="4"/><circle class="p" cx="507.9" cy="35.70" r="4"/><circle class="p" cx="623.6" cy="35.46" r="4"/><circle class="p" cx="739.3" cy="35.46" r="4"/><circle class="p last" cx="855" cy="35.41" r="4"/></svg>
+          <div class="lab">Temperature, max<small>°C, 30–90 · pause 83, resume 75 · median 66</small></div>
+          <svg class="lane" viewBox="0 0 900 64" preserveAspectRatio="none"><line class="th" x1="0" x2="900" y1="10.53" y2="10.53"/><line class="th" x1="0" x2="900" y1="18.00" y2="18.00"/><text class="thl" x="806" y="9">pause 83</text><text class="thl" x="806" y="26">resume 75</text><line class="med" x1="0" x2="900" y1="26.40" y2="26.40"/><polyline points="45,29.20 160.7,23.60 276.4,42.27 392.1,29.20 507.9,26.40 623.6,26.40 739.3,26.40 855,23.60"/><circle class="p" cx="45" cy="29.20" r="4"/><circle class="p" cx="160.7" cy="23.60" r="4"/><circle class="p" cx="276.4" cy="42.27" r="4"/><circle class="p" cx="392.1" cy="29.20" r="4"/><circle class="p" cx="507.9" cy="26.40" r="4"/><circle class="p" cx="623.6" cy="26.40" r="4"/><circle class="p" cx="739.3" cy="26.40" r="4"/><circle class="p last" cx="855" cy="23.60" r="4"/></svg>
+          <div></div>
+          <div>
+            <div class="axis pct"><span style="left:5%">0055</span><span style="left:17.86%">0057</span><span style="left:30.71%">0106</span><span style="left:43.57%">0110</span><span style="left:56.43%">0112</span><span style="left:69.29%">0114</span><span style="left:82.14%">0116</span><span style="left:95%">0118</span></div>
+            <div class="axis pct"><span style="left:11.4%">19 Nov</span><span style="left:30.71%">21 Nov</span><span style="left:69.29%">22 Nov</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="n in">5</span>Runs <span class="muted" style="font-weight:400">· newest first · a row opens SCR-04</span><span class="spacer"></span><span class="btn sm off">Compare these two</span></h3>
+        <table class="t wrap">
+          <tr><th></th><th>Run</th><th>Started</th><th class="r">Epochs</th><th class="r">Time per epoch</th><th class="r">Rate, samples/s</th><th class="r">VRAM, card</th><th class="r">PyTorch</th><th class="r">RAM, VM</th><th class="r">Temp</th><th class="r">Job RSS</th><th>Note</th></tr>
+          <tr><td><span class="box"></span></td><td class="m">job_0118</td><td class="m">22 Nov 16:40</td><td class="r m">10</td><td class="r m">6.3 s</td><td class="r m">10,543</td><td class="r m">0.76 GB</td><td class="r m">149 MB</td><td class="r m">4.26 GB</td><td class="r m">69 °C</td><td class="r m muted">7.4 GB</td><td>phase-2 acceptance, run B</td></tr>
+          <tr><td><span class="box"></span></td><td class="m">job_0116</td><td class="m">22 Nov 16:38</td><td class="r m">10</td><td class="r m">6.3 s</td><td class="r m">10,642</td><td class="r m">0.76 GB</td><td class="r m">149 MB</td><td class="r m">4.25 GB</td><td class="r m">66 °C</td><td class="r m muted">7.6 GB</td><td>run A</td></tr>
+          <tr class="on"><td><span class="box"></span></td><td class="m">job_0114</td><td class="m">22 Nov 16:36</td><td class="r m">10</td><td class="r m">11.0 s</td><td class="r m">10,834</td><td class="r m">0.76 GB</td><td class="r m">149 MB</td><td class="r m">4.25 GB</td><td class="r m">66 °C</td><td class="r m muted">7.4 GB</td><td>run C: worker lost, resumed from its checkpoint; 2 attempts</td></tr>
+          <tr><td><span class="box"></span></td><td class="m">job_0112</td><td class="m">22 Nov 16:35</td><td class="r m">10</td><td class="r m">6.3 s</td><td class="r m">10,744</td><td class="r m">0.76 GB</td><td class="r m">149 MB</td><td class="r m">4.21 GB</td><td class="r m">66 °C</td><td class="r m muted">7.4 GB</td><td></td></tr>
+          <tr><td><span class="box"></span></td><td class="m">job_0110</td><td class="m">22 Nov 16:34</td><td class="r m">10</td><td class="r m">7.1 s</td><td class="r m">10,719</td><td class="r m">0.76 GB</td><td class="r m">149 MB</td><td class="r m">4.20 GB</td><td class="r m">63 °C</td><td class="r m muted">7.6 GB</td><td></td></tr>
+          <tr><td><span class="box"></span></td><td class="m">job_0106</td><td class="m">21 Nov 17:35</td><td class="r m">3</td><td class="r m">18.9 s</td><td class="r m">8,804</td><td class="r m">0.64 GB</td><td class="r m">139 MB</td><td class="r m">4.84 GB</td><td class="r m">49 °C</td><td class="r m muted">7.5 GB</td><td>fine-tune from <span class="mono">mv_a014046ec3b5</span></td></tr>
+          <tr><td><span class="box"></span></td><td class="m">job_0057</td><td class="m">19 Nov 18:53</td><td class="r m">30</td><td class="r m">5.8 s</td><td class="r m">10,785</td><td class="r m">0.86 GB</td><td class="r m">149 MB</td><td class="r m">4.29 GB</td><td class="r m">69 °C</td><td class="r m muted">7.3 GB</td><td>paused by you for 7 s</td></tr>
+          <tr><td><span class="box"></span></td><td class="m">job_0055</td><td class="m">19 Nov 18:47</td><td class="r m">10</td><td class="r m">6.5 s</td><td class="r m">10,588</td><td class="r m">0.76 GB</td><td class="r m">149 MB</td><td class="r m">3.84 GB</td><td class="r m">63 °C</td><td class="r m muted">7.3 GB</td><td></td></tr>
+        </table>
+      </div>
+    </section>
+    <footer class="status"><span>CPU 3%</span><span>RAM 3.4 / 9.7 GB</span><span>GPU 0%</span><span>VRAM 1.0 / 6.0 GB</span><span class="spacer"></span><span>● live</span></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Stage</td><td>Every stage and queue with completed runs, newest first, with its count; kept in the URL</td><td rowspan="5"><span class="mono">GET /system/history?stage=&amp;queue=&amp;group=&amp;n=&amp;reused=</span> <i>planned</i> (ADR-0020 rules 12 and 13). Computed on request from <span class="mono">job_stages</span> (peaks, rate, config), <span class="mono">job_transitions</span> (running time across attempts) and the registry's lineage names; no new table</td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Group</td><td>The groups of that stage, each with its count; the latest run's first; <i>All groups</i> last</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Last N</td><td>10, 20, 50 or 100 runs, a maximum; the reused-stages switch applies to pipeline stages only</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Trends</td><td>One lane per figure on one axis of runs: rate, time (per epoch for training), the card's VRAM, PyTorch's peak, the VM's RAM, the temperature; the median and the thresholds dashed; tags on unusual runs. A point's tooltip gives the run, when, and the figure; a click opens SCR-04</td><td>yes: a completed run joins on the right</td></tr>
+<tr><td><span class="num">5</span></td><td>Runs</td><td>The same figures as a table, plus the job's RSS and a note; sortable; two ticked rows open <i>Compare two jobs</i></td><td>yes, as region 4</td></tr>
+</table>
+<p class="caption">What it shows, for real: the group trains at 10,543 to 10,834 samples a second. The fine-tune, <span class="mono">job_0106</span>, ran at 8,804 and took 18.9 s an epoch: loading its parent and the epoch-0 pass weigh on 3 epochs. <span class="mono">job_0114</span>, phase-2 acceptance's killed run C, cost 11.0 s an epoch against the median's 6.4. The watchdog waited 30 s for a heartbeat from the lost worker, and the work since its last checkpoint was done again. Its rate stays normal, because the rate is measured while training. The card's VRAM stays at 0.76 GB, far under NFR-1's 5.5.</p>
+
+<!-- ===================================================================== B -->
+<h2>B · A pipeline stage: <span class="mono">label</span> on the GPU, group <span class="mono">Florence-2-base · batch 16</span></h2>
+<div class="frame" style="height:390px">
+  <div style="padding:14px 20px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;gap:10px;align-items:center;font-size:12px">
+      <span class="muted">Stage</span><span class="select mono">label · GPU · 8 runs ▾</span>
+      <span class="muted">Group</span><span class="select mono">Florence-2-base · batch 16 · 8 runs ▾</span>
+      <span class="muted">Last</span><span class="group"><span class="btn sm">10</span><span class="btn sm on">20</span><span class="btn sm">50</span><span class="btn sm">100</span></span>
+      <span class="spacer"></span><span style="font-size:11px"><span class="box"></span> Include stages reused from the cache (1)</span>
+    </div>
+    <div class="card">
+      <h3>Trends <span class="muted" style="font-weight:400">· all 8 runs · the other lanes as in frame A</span></h3>
+      <div class="lanes">
+        <div class="lab">Rate<small>captions computed/s · median 8.4 · hollow: every caption reused</small></div>
+        <svg class="lane" viewBox="0 0 900 64" preserveAspectRatio="none"><line class="med" x1="0" x2="900" y1="12.90" y2="12.90"/><polyline points="45,12.96 160.7,12.90 392.1,11.67 507.9,9.60 739.3,13.41"/><circle class="p" cx="45" cy="12.96" r="4"/><circle class="p" cx="160.7" cy="12.90" r="4"/><circle class="p o" cx="276.4" cy="56" r="4"/><circle class="p" cx="392.1" cy="11.67" r="4"/><circle class="p" cx="507.9" cy="9.60" r="4"/><circle class="p o" cx="623.6" cy="56" r="4"/><circle class="p" cx="739.3" cy="13.41" r="4"/><circle class="p o last" cx="855" cy="56" r="4"/><text x="286" y="50">reused</text><text x="633" y="50">reused</text><text x="800" y="44">reused captions; CLIP vectors computed</text><text class="thl" x="4" y="60">0</text><text class="thl" x="4" y="10">10</text></svg>
+        <div></div>
+        <div>
+          <div class="axis pct"><span style="left:5%">0006</span><span style="left:17.86%">0007</span><span style="left:30.71%">0012</span><span style="left:43.57%">0013</span><span style="left:56.43%">0017</span><span style="left:69.29%">0024</span><span style="left:82.14%">0026</span><span style="left:95%">0109</span></div>
+          <div class="axis pct"><span style="left:11.4%">15 Nov</span><span style="left:37.1%">16 Nov</span><span style="left:75.7%">17 Nov</span><span style="left:95%">22 Nov</span></div>
+        </div>
+      </div>
+    </div>
+    <table class="t wrap">
+      <tr><th>Run</th><th>Started</th><th>Dataset</th><th class="r">Images</th><th class="r">Captions computed</th><th class="r">Rate</th><th class="r">Running time</th><th class="r">VRAM, card</th><th class="r">PyTorch</th><th class="r">Temp</th></tr>
+      <tr><td class="m">job_0109</td><td class="m">22 Nov 15:52</td><td class="m">coco10k</td><td class="r m">9,932</td><td class="r m">0</td><td class="r m muted">–</td><td class="r m">141 s</td><td class="r m">0.74 GB</td><td class="r m">371 MB</td><td class="r m">44 °C</td></tr>
+      <tr><td class="m">job_0026</td><td class="m">17 Nov 16:47</td><td class="m">coco20k</td><td class="r m">19,843</td><td class="r m">9,917</td><td class="r m">8.3/s</td><td class="r m">1,192 s</td><td class="r m">4.20 GB</td><td class="r m">3,553 MB</td><td class="r m">74 °C</td></tr>
+      <tr><td class="m">job_0024</td><td class="m">17 Nov 15:30</td><td class="m">demo</td><td class="r m">1,500</td><td class="r m">0</td><td class="r m muted">–</td><td class="r m">13 s</td><td class="r m">0.22 GB</td><td class="r m muted">–</td><td class="r m">36 °C</td></tr>
+      <tr><td class="m">job_0017</td><td class="m">16 Nov 23:47</td><td class="m">demo</td><td class="r m">1,500</td><td class="r m">1,500</td><td class="r m">9.0/s</td><td class="r m">167 s</td><td class="r m">4.20 GB</td><td class="r m">3,553 MB</td><td class="r m">66 °C</td></tr>
+      <tr class="off"><td class="m" colspan="10">… job_0013 (coco10k, 6,949 computed, 8.6/s), job_0012 (coco1k, reused), job_0007 (coco2k, 8.4/s), job_0006 (coco1k, 8.4/s)</td></tr>
+    </table>
+  </div>
+</div>
+<p class="caption">Rate counts the work done: captions computed ÷ running time. The five runs that captioned sit at 8.3 to 9.0 a second (NFR-3's benchmark was 8.3). <span class="mono">job_0012</span>, <span class="mono">job_0024</span> and <span class="mono">job_0109</span> reused every caption, so they have no rate and sit hollow at the foot of the lane; <span class="mono">job_0109</span> still computed CLIP vectors for M11's semantic duplicates. <span class="mono">job_0025</span> reused the whole stage from the cache, in 1.8 s, and is hidden unless <i>Include stages reused from the cache</i> is ticked.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · <i>All groups</i>: the last 20 GPU training runs, each against its own group's median</h2>
+<div class="frame" style="height:250px">
+  <div style="padding:14px 20px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:10px;align-items:center;font-size:12px"><span class="muted">Stage</span><span class="select mono">train · GPU · 30 runs ▾</span><span class="muted">Group</span><span class="select mono">All groups · 20 runs ▾</span><span class="muted">Last</span><span class="group"><span class="btn sm">10</span><span class="btn sm on">20</span><span class="btn sm">50</span><span class="btn sm">100</span></span></div>
+    <div class="keys">
+      <span><span class="sh">●</span><span class="mono">small_cnn · cifar10 · batch 128</span> · 8 runs, median 10,681/s</span>
+      <span><span class="sh">○</span><span class="mono">small_cnn</span> (reference) · cifar10 · batch 128 · study <span class="mono">st_8293da6ebe0e</span>'s trials · 8, median 10,428/s</span>
+      <span><span class="sh">■</span><span class="mono">my_model · cifar10</span> · 1, 12,134/s</span>
+      <span><span class="sh">◆</span><span class="mono">my_model · wine</span> · 2, median 7,870/s, 2 steps an epoch</span>
+      <span><span class="sh">▲</span><span class="mono">lstm_text · coco10k-captions · batch 256</span> · 1, 54,950/s</span>
+    </div>
+    <div class="lanes">
+      <div class="lab">Rate, against the group's median<small>%, 70–120 · 100 % dashed</small></div>
+      <svg class="lane" viewBox="0 0 900 64" preserveAspectRatio="none"><line class="med" x1="0" x2="900" y1="26.40" y2="26.40"/>
+        <rect class="p" x="21.5" y="22.9" width="7" height="7"/>
+        <circle class="p" cx="69.7" cy="27.41" r="4"/><circle class="p" cx="114.5" cy="25.28" r="4"/>
+        <polygon class="p" points="159.2,21.4 164.2,30.4 154.2,30.4"/>
+        <polygon class="p" points="203.9,31.93 208.9,36.93 203.9,41.93 198.9,36.93"/><polygon class="p" points="248.7,10.87 253.7,15.87 248.7,20.87 243.7,15.87"/>
+        <circle class="p o" cx="293.4" cy="46.34" r="4"/><circle class="p o" cx="338.2" cy="26.96" r="4"/><circle class="p o" cx="382.9" cy="27.63" r="4"/><circle class="p o" cx="427.6" cy="25.62" r="4"/><circle class="p o" cx="472.4" cy="26.51" r="4"/><circle class="p o" cx="517.1" cy="26.29" r="4"/><circle class="p o" cx="561.8" cy="22.14" r="4"/><circle class="p o" cx="606.6" cy="25.73" r="4"/>
+        <circle class="p" cx="651.3" cy="46.11" r="4"/><circle class="p" cx="696.1" cy="25.95" r="4"/><circle class="p" cx="740.8" cy="25.73" r="4"/><circle class="p" cx="785.5" cy="24.83" r="4"/><circle class="p" cx="830.3" cy="26.85" r="4"/><circle class="p last" cx="875" cy="27.86" r="4"/>
+        <text x="300" y="58">82 % · the study's first trial</text><text x="610" y="58">82 % · fine-tune</text><text class="thl" x="4" y="60">70</text><text class="thl" x="4" y="10">120</text></svg>
+      <div></div>
+      <div>
+        <div class="axis pct"><span style="left:2.78%">0053</span><span style="left:7.74%">0055</span><span style="left:12.72%">0057</span><span style="left:17.69%">0067</span><span style="left:22.66%">0071</span><span style="left:27.63%">0073</span><span style="left:32.6%">0096</span><span style="left:37.58%">0097</span><span style="left:42.54%">0098</span><span style="left:47.51%">0099</span><span style="left:52.49%">0100</span><span style="left:57.46%">0101</span><span style="left:62.42%">0102</span><span style="left:67.4%">0103</span><span style="left:72.37%">0106</span><span style="left:77.34%">0110</span><span style="left:82.31%">0112</span><span style="left:87.28%">0114</span><span style="left:92.26%">0116</span><span style="left:97.22%">0118</span></div>
+        <div class="axis pct"><span style="left:10%">19 Nov</span><span style="left:47.5%">20 Nov</span><span style="left:72.37%">21 Nov</span><span style="left:87.3%">22 Nov</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">In <i>All groups</i> each lane shows a run against its own group's median (100 %), so models of very different speeds share one axis; the table and the tooltips keep the real values, and the shapes tell the groups apart without colour. The two dips are real: the study's first trial, <span class="mono">job_0096</span>, and the fine-tune, <span class="mono">job_0106</span>, both at 82 %. The wine runs swing by 9 % either way: wine trains in two steps an epoch, so its rate is mostly noise, as the key says.</p>
+
+<!-- ===================================================================== D -->
+<h2>D · States</h2>
+<div class="frame" style="height:330px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+    <div class="empty"><div><b>No job has completed yet.</b><p style="margin:6px 0">Runs appear here as jobs finish, one lane per figure.</p></div></div>
+    <div class="empty"><div><b>One run in this group so far: a trend needs two.</b><p style="margin:6px 0"><span class="mono">my_model · cifar10</span>: its figures are in the table.</p></div></div>
+    <div class="card"><h3>A stage with no rate</h3><div style="font-size:12px"><span class="mono">retention</span> has no rate: its lanes show running time and peaks.</div></div>
+    <div class="card"><h3>Peaks missing for a run</h3><div style="font-size:12px">"Machine peaks unavailable for <span class="mono">job_0094</span>: the monitor was not reporting (20 Nov, 17:56 to 18:37)." Its own RSS, from the job's reporter, is kept. The lanes leave a gap; the table says <i>unavailable</i>.</div></div>
+    <div class="empty err"><div><b>Could not load the history.</b><p style="margin:6px 0"><span class="mono">database_unavailable</span> · The database did not answer. Check that postgres is running.</p><span class="btn sm">Retry</span></div></div>
+    <div class="card"><h3>Loading</h3><div style="display:flex;flex-direction:column;gap:6px"><span class="skel" style="width:100%"></span><span class="skel" style="width:90%"></span><span class="skel" style="width:95%"></span><span class="skel" style="width:60%"></span></div></div>
+  </div>
+</div>
+<p class="caption">The <i>peaks missing</i> card is real: <span class="mono">job_0094</span>, a CPU trial of study <span class="mono">st_5869c7673960</span>, ran while the monitor was down, so its stage holds only the job's RSS. The error card is illustrative. At 1024 px the lanes keep their full width, the label column narrows to its first line, and the table folds Job RSS and Note into the row's tooltip. The monitor's health in the header matters less here: the tab reads stored summaries, so it works while the monitor is down.</p>
+</main>
+</body>
+</html>

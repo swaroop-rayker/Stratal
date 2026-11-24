@@ -5,7 +5,9 @@ import { join, relative } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const ALLOWED = new Set(["src/styles/tokens.css"]);
-const HEX = /#[0-9a-fA-F]{3,8}\b/g;
+// A CSS hex colour has 3, 4, 6 or 8 digits and never follows a word character: a record's
+// row key such as "wine.csv#0000021" (M10) is not a colour.
+const HEX = /(?<!\w)#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b/g;
 const SCANNED = /\.(css|ts|tsx|html)$/;
 
 function* files(dir) {

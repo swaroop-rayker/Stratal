@@ -182,7 +182,7 @@ Index: `(job_id, at)`.
 | `job_id` | text | yes | null for system events. Deliberately not a foreign key: an event must be storable whatever the state of its job row |
 | `stage`, `substage` | text | yes | |
 | `version_id` | text | yes | |
-| `type` | text | no | `stage_started`, `stage_progress`, `stage_completed`, `stage_failed`, `activity`, `alert`, `action`, `model_loaded`, `model_unloaded`, `job_state`, `system` |
+| `type` | text | no | `stage_started`, `stage_progress`, `stage_completed`, `stage_failed`, `activity`, `alert`, `action`, `model_loaded`, `model_unloaded`, `job_state`, `system`, `diagnostic` (M11) |
 | `level` | text | no | `DEBUG`, `INFO`, `WARN`, `ERROR` |
 | `step`, `total` | bigint | yes | |
 | `message` | text | no | plain language |
@@ -190,8 +190,11 @@ Index: `(job_id, at)`.
 | `reason` | text | yes | required for WARN and ERROR (check constraint) |
 | `suggested_action` | text | yes | required for WARN and ERROR (check constraint) |
 | `attempt` | integer | yes | |
+| `caused_by` | uuid | yes | M11 (MON-2.7, [ADR-0020](decisions/ADR-0020-alerts-and-diagnostics.md) rule 4): the `event_uid` of the alert that caused this event: an action (pause, resume, `stalled`), a linked out-of-memory failure, or a clearing. Not a foreign key: the writer knows the alert's uid before its row exists |
 
-Indexes: `(job_id, id)`; partial `(id) where level in ('WARN','ERROR')`; BRIN on `ts`.
+Indexes: `(job_id, id)`; partial `(id) where level in ('WARN','ERROR')`; BRIN on `ts`; partial `(caused_by) where caused_by is not null` (M11).
+
+**Alerts and diagnostics (M11, ADR-0020).** An alert is an `alert` event: a firing is WARN with `metrics` `{code, state: "fired", value, threshold, rearm_below}` (`code` is `vram_high`, `ram_high`, `gpu_hot` or `no_progress`); its clearing is INFO with `{code, state: "cleared", value}` and `caused_by`. A diagnosis is a `diagnostic` event, WARN with `{code, state: "fired", gpu_percent, cpu_cores, capacity_cores, loader_workers, disk_read_mb_s, samples}` (`code` is `diag_data_loading`, `diag_disk` or `diag_gpu_waiting`), cleared by an INFO one with `caused_by`. Model loads and unloads are `model_loaded` and `model_unloaded` events with `allocated_mb_*`, `reserved_mb_*`, `free_mb_*` and `card_used_mb_*` before and after (MON-3.3).
 
 ### 4.7 `resource_samples` (from the sampler)
 
@@ -222,6 +225,7 @@ Indexes: BRIN on `ts`; `(job_id, ts)`. GPU columns are nullable because a metric
 | `stage` | text, nullable | |
 | `rss_mb` | real | the job child and its children |
 | `torch_allocated_mb`, `torch_reserved_mb`, `torch_max_allocated_mb` | real, nullable | null until the process has initialized CUDA |
+| `cpu_cores` | real, nullable | M11 (MON-3.2, OC-12): CPU time of the job child and all its children per wall second since the previous sample, in cores; null in the first sample |
 
 Index: `(job_id, ts)`.
 
@@ -234,7 +238,7 @@ One-minute averages of the two sample tables, for samples older than the raw ret
 | `id`, `ts` | `ts` is the start of the minute |
 | `job_id`, `stage` | as in the raw table; one row per minute, job and stage |
 | `samples` | how many raw rows the row averages |
-| the raw table's numeric columns | averages; nullable ones stay null when every sample was null. `process_samples_1m.torch_max_allocated_mb` is the maximum |
+| the raw table's numeric columns | averages; nullable ones stay null when every sample was null. `process_samples_1m.torch_max_allocated_mb` is the maximum; `cpu_cores` (M11) is averaged |
 
 Not kept: `cpu_per_core` and `active_jobs`. `GET /jobs/{id}/telemetry` returns the averages alongside raw rows, with `cpu_per_core` empty and `active_jobs` null. Indexes: `resource_samples_1m` BRIN on `ts` and `(job_id, ts)`; `process_samples_1m` `(job_id, ts)`.
 
@@ -255,6 +259,7 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 |---|---|---|---|
 | `phash` | original file's `sha256` | `hash_size`, `algorithm_version` and the Pillow version | the hash, lowercase hex text |
 | `preprocess` | original file's `sha256` | the whole `PreprocessConfig` and the Pillow version | `{"sha256", "width", "height"}` of the copy; reused only if that blob still exists (INV-04) |
+| `clip_image_embedding` (M11) | preprocessed copy's `sha256` | CLIP model and revision, dtype, torch, transformers and Pillow versions | the image's CLIP vector, float16 base64 (about 1 KB), for the semantic clusters (ADR-0013 rule 2) |
 | `caption` | preprocessed copy's `sha256` | captioner name and revision, task, `max_new_tokens`, `num_beams`, dtype, the caption loop's `ALGORITHM_VERSION`, torch, transformers and Pillow versions | the caption text |
 | `clip_score` | SHA-256 of the copy's `sha256`, a newline and the caption | CLIP model and revision, dtype, the similarity's `ALGORITHM_VERSION`, library versions | the score, a number |
 
@@ -293,15 +298,15 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 | `lineage_id` | text | no | FK |
 | `state` | text | no | `base`, `partial` (its run is paused), `trained` (REG-1.2) |
 | `weights_status` | text | no | `present`, `deleting`, `weights_deleted` (NFR-15, REG-2.7) |
-| `parent_version_id` | text | yes | FK → `model_versions`; the version the run started from. In M8 every run starts from its lineage's base. Null for a base, and for runs registered by the backfill that did not start from it |
+| `parent_version_id` | text | yes | FK → `model_versions`; the version the run started from: its lineage's base, or since M11 the trained version in `config.init_from` (RUN-1.10), which may be in another lineage. Null for a base, and for runs registered by the backfill that did not start from it. Retention keeps a version while a version naming it as parent has weights, or a queued or running fine-tune or study starts from it (ADR-0015 Addendum A) |
 | `job_id` | text | yes | FK; the run that made it. A base records the run that created the lineage, so uniqueness is per run: partial unique index on `job_id` where `state <> 'base'` |
 | `dataset_version_id` | text | yes | FK; the exact data (REG-1.1) |
 | `config`, `config_hash` | jsonb, text | no | the run's resolved train config and its SHA-256 over canonical JSON (REG-1.1) |
 | `metrics` | jsonb | yes | the stage's final metrics; null while partial |
-| `history` | jsonb | yes | one entry per finished epoch |
+| `history` | jsonb | yes | one entry per finished epoch; a fine-tune's starts with epoch 0, its validation before step 1 (RUN-1.10.AC1) |
 | `weights_path` | text | yes | `registry/<lineage>/<version>`, relative to the data folder; null while partial (its weights are the run's checkpoint) |
 | `weights_bytes` | bigint | yes | both files |
-| `note` | text | yes | how it came to be, where that is unusual (a base's seed; a backfilled run without a parent) |
+| `note` | text | yes | how it came to be, where that is unusual (a base's seed; a lineage founded by a fine-tune, whose base is the run's starting weights; a backfilled run without a parent) |
 | `created_at`, `trained_at`, `weights_deleted_at` | timestamptz | mixed | a base has no `trained_at` |
 | `weights_deleted_by_job_id` | text | yes | FK → `jobs`; the retention job that deleted the weights (REG-2.9; added with retention, migration `19c70056c3ce`) |
 
@@ -315,7 +320,7 @@ Constraints: state and weights status check constraints; `present` needs a path 
 
 ### 4.13 `settings` (M8, OC-9, SCR-14)
 
-`section` (text, PK), `values` (jsonb), `updated_at`. One row per section of SCR-14 other than retention, which has its own table above. In M8 the only row is `training`: `{checkpoint_interval_min, thermal_pause_c, thermal_resume_c, stall_timeout_s}` (`stratal.runtime.limits.TrainingValues`). Until it is saved the environment's `STRATAL_THERMAL_PAUSE_C`, `STRATAL_THERMAL_RESUME_C` and `STRATAL_STALL_TIMEOUT_S` are the values, so a fresh install behaves as before. The watchdog reads it before every check; `checkpoint_interval_min` becomes `checkpoint_every_s` of new training runs that do not set it.
+`section` (text, PK), `values` (jsonb), `updated_at`. One row per section of SCR-14 other than retention, which has its own table above. In M8 the only row is `training`: `{checkpoint_interval_min, thermal_pause_c, thermal_resume_c, stall_timeout_s}` (`stratal.runtime.limits.TrainingValues`). Until it is saved the environment's `STRATAL_THERMAL_PAUSE_C`, `STRATAL_THERMAL_RESUME_C` and `STRATAL_STALL_TIMEOUT_S` are the values, so a fresh install behaves as before. The watchdog reads it before every check; `checkpoint_interval_min` becomes `checkpoint_every_s` of new training runs that do not set it. M11 adds `monitoring`: `{sample_interval_active_s, sample_interval_idle_s, vram_alert_percent, ram_alert_percent, disk_bottleneck_mb_s}` (`stratal.runtime.limits.MonitoringValues`; MON-2.2, MON-2.6, MON-3.2; ADR-0020 rule 14), the environment's values until saved; the alerts read it at most every 5 s, the sampler every 30 s.
 
 ### 4.14 `model_templates` (M9, BUILD-1.7, [ADR-0017](decisions/ADR-0017-model-spec.md) rule 9)
 
@@ -378,6 +383,7 @@ Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `belo
 | `text_group` | string | ingest | rows that must share a split (the captions of one image); null: the row is its own group |
 | `tokens` | string | tokenize | L token IDs as space-separated numbers (0 padding, 1 unknown); a string, because the version hash takes scalar values only (DATA-3.2) |
 | `token_count` | int32 | tokenize | the text's length in tokens before it was cut to L |
+| `semantic_cluster_id` | string | label | M11 (DATA-2.3, [ADR-0013](decisions/ADR-0013-semantic-duplicates.md)): the smallest original `sha256` of the semantic cluster an accepted row is in; null for a row in none. Rows with one ID join one split group (DATA-4.8). With `semantic_action: remove`, all but the cluster's first member are `duplicate` with `reason_code` `semantic_duplicate`, `dup_kind` `semantic`, `dup_group_id` the cluster ID and `dup_of` the kept row. Appended and nullable, so no earlier version ID changes; reading an older manifest gives null |
 
 All six are nullable and appended, so no earlier version's ID changed.
 

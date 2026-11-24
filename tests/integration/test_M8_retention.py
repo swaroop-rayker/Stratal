@@ -281,12 +281,15 @@ def test_REG_2_8_an_in_use_or_parent_version_is_blocked_and_logged(reg: Registry
     assert reg.versions(lineage)[first]["retention_action"] == "blocked"
 
     bus.set_inference_loaded(None)
-    with get_engine().begin() as connection:  # a fine-tune of `second` (REG-2.8b)
+    # A paused fine-tune of `second` (REG-2.8b): its weights are its run's checkpoint, so it
+    # holds its parent; a child whose weights are gone no longer would (ADR-0015 Addendum A
+    # rule 3, test_M11_fine_tune.py).
+    with get_engine().begin() as connection:
         connection.execute(
             text(
                 "INSERT INTO model_versions (id, lineage_id, state, weights_status, "
                 "parent_version_id, config, config_hash) VALUES ('mv_child0000000', :l, "
-                "'trained', 'weights_deleted', :p, '{}', 'x')"
+                "'partial', 'present', :p, '{}', 'x')"
             ),
             {"l": lineage, "p": second},
         )

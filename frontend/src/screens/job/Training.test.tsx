@@ -50,6 +50,14 @@ function trainJob(state: Job["state"], extra: Partial<Job> = {}): Job {
 }
 
 describe("SCR-04 v2 training", () => {
+  test("test_RUN_1_10_a_fine_tunes_epoch_0_is_the_val_curves_start_not_an_epoch_done", () => {
+    const zero = event({ substage: "validate", message: "Epoch 0, before training: val loss 0.7004", metrics: { epoch: 0, val_loss: 0.70038, val_accuracy: 0.84035, parent_val_loss: 0.70038 } });
+    const data = deriveTraining([zero, progress(10, 0.6), validate(1)]);
+
+    expect(data.baseline).toMatchObject({ epoch: 0, valLoss: 0.70038 });
+    expect(data.epochs.map((e) => e.epoch)).toEqual([1]);
+  });
+
   test("test_RUN_1_8_steps_epochs_checkpoints_pauses_and_the_benchmark_come_from_the_events", () => {
     const data = deriveTraining(run);
 

@@ -124,7 +124,7 @@ table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
 
 /* log viewer */
 .log { background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); font: var(--fs-12)/1.7 var(--font-mono); overflow: auto; max-height: 240px; }
-.log > div { display: grid; grid-template-columns: 96px 52px 84px 1fr; gap: var(--sp-3); padding: 0 var(--sp-3); white-space: nowrap; }
+.log > div { display: grid; grid-template-columns: 96px 52px 15ch 1fr; gap: var(--sp-3); padding: 0 var(--sp-3); white-space: nowrap; }
 .log > div:hover { background: var(--accent-soft); }
 .log .ts, .log .st { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .log .lv-INFO { color: var(--info); } .log .lv-WARN { color: var(--warning); } .log .lv-ERROR { color: var(--danger); } .log .lv-DEBUG { color: var(--text-muted); }
@@ -198,3 +198,6 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center
 [data-theme="light"] .badge.info { color: color-mix(in srgb, var(--info) 80%, var(--text-primary)); }
 [data-theme="light"] .badge.ok { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
 [data-theme="light"] .failure .kv > span:nth-child(odd) { color: var(--text-secondary); }
+/* Log stage column: sized for the longest stage name (train_classical, 15 characters in the
+   mono font); a longer one is cut with an ellipsis, its full name in the tooltip. */
+.log .st { overflow: hidden; text-overflow: ellipsis; }

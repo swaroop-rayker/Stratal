@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-09 v2 addendum, the estimator list — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.select { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--fs-12); color: var(--text-primary); }
+.select svg.i { width: 12px; height: 12px; color: var(--text-secondary); } .select.is-disabled { opacity: .45; }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 40px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); }
+.pill.cancelled { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 400px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; } .toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.modal { width: 460px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; } .modal > header svg.i { color: var(--danger); }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); } .modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); max-width: 40ch; }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.grp { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-07 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.phead { display: flex; align-items: center; gap: var(--sp-3); } .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.t tr.sec td .count { margin-left: var(--sp-1); }
+.now { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.now .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.now .stg { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.now .progress { width: 72px; }
+.now.err .code { color: var(--danger); font-family: var(--font-mono); }
+.now.muted { color: var(--text-muted); }
+.now svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.t td.acts-cell { width: 120px; text-align: right; }
+.toasts { position: absolute; right: var(--sp-4); bottom: calc(28px + var(--sp-4)); z-index: var(--z-toast); }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+
+
+/* ============================================================================ SCR-01 sidebar foot (approved v1, unchanged) */
+.side .foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.health { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.health svg.i { color: var(--success); }
+
+/* ============================================================================ form field (design-system preview, unchanged) */
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); display: flex; align-items: center; gap: var(--sp-2); }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.field.error > small { color: var(--danger); display: flex; gap: var(--sp-1); align-items: center; }
+.input { height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-13) var(--font-ui); width: 100%; display: flex; align-items: center; }
+.input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.field.error .input { border-color: var(--danger); }
+.badge.info { color: var(--info); background: var(--info-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; } .badge.ok { color: var(--success); background: var(--success-soft); border-color: transparent; }
+
+/* ============================================================================ SCR-14 (tokens only) */
+.pill.paused { --c: var(--state-paused); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.note2 { font-size: var(--fs-12); color: var(--text-muted); margin: 0; } .note2 .mono { color: var(--text-secondary); }
+.typeconfirm { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-3); font-size: var(--fs-12); }
+.typeconfirm .input { font: var(--fs-13) var(--font-mono); }
+.cols { display: grid; grid-template-columns: 168px 1fr; gap: var(--sp-5); min-height: 0; }
+.index { display: flex; flex-direction: column; gap: 2px; }
+.index a { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); text-decoration: none; }
+.index a[aria-current=true] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); }
+.index a[aria-disabled=true] { color: var(--text-muted); }
+.index a .count, .index a .badge { margin-left: auto; }
+.secs { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.sec { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); display: flex; flex-direction: column; }
+.sec > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.sec > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.sec > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.sec > header .aside { font-size: var(--fs-12); color: var(--text-secondary); }
+.frow { display: grid; grid-template-columns: 380px 1fr; gap: var(--sp-6); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); align-items: start; }
+.frow .input.num { width: 132px; }
+.frow .mod { display: flex; align-items: center; gap: var(--sp-2); }
+.applies { display: flex; flex-direction: column; gap: var(--sp-2); padding-top: 22px; font-size: var(--fs-12); color: var(--text-secondary); }
+.applies .badge svg.i { width: 11px; height: 11px; }
+.ctx { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ctx b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ctx .sq { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res-temp); margin-right: var(--sp-1); }
+.fixed { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-4); font-size: var(--fs-12); color: var(--text-secondary); }
+.fixed svg.i { color: var(--text-muted); margin-top: 2px; }
+.savebar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-top: var(--bw) solid var(--border); background: var(--surface-raised); border-radius: 0 0 var(--r-md) var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.savebar b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ovr { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); border-bottom: var(--bw) solid var(--border); }
+.ovr h3 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.t td .input { height: var(--h-sm); width: 72px; font-size: var(--fs-12); }
+.t td.dim { color: var(--text-secondary); }
+.t.dense td { height: 36px; }
+/* Contrast rules approved at G3 since the v1 mockups (in the built app). */
+[data-theme="light"] .pill { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.err { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.info { color: color-mix(in srgb, var(--info) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.warn { color: color-mix(in srgb, var(--warning) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.ok { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
+[data-theme="dark"] .t tr[aria-selected=true] .pill, [data-theme="dark"] .t tr.is-hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }
+
+/* ============================================================================ SCR-08 / SCR-09 (tokens only) */
+.pill.paused { --c: var(--state-paused); }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.dsbar { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.dsbar .ends { font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.bgrid { display: grid; grid-template-columns: 184px 1fr 312px; gap: var(--sp-3); min-height: 0; flex: 1; }
+.panel { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.panel > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); font-size: var(--fs-13); }
+.panel > header .spacer + * { font-weight: var(--fw-regular); }
+.palette { padding: var(--sp-2); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.pal-grp { margin: var(--sp-2) var(--sp-1) 2px; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.pal-grp:first-child { margin-top: 0; }
+.tile { display: flex; align-items: center; gap: var(--sp-2); height: 26px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border); border-radius: var(--r-sm); background: var(--surface-raised); font-size: var(--fs-12); color: var(--text-primary); }
+.tile svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.tile[aria-disabled=true] { background: transparent; border-style: dashed; color: var(--text-muted); }
+.pal-note { margin: var(--sp-1) var(--sp-1) 0; font-size: var(--fs-11); color: var(--text-muted); display: flex; gap: var(--sp-1); }
+.pal-note svg.i { width: 12px; height: 12px; margin-top: 2px; }
+.canvas { position: relative; flex: 1; background-color: var(--surface-sunken); background-image: radial-gradient(var(--border) 1px, transparent 1px); background-size: 16px 16px; overflow: hidden; }
+.canvas-tools { position: absolute; left: var(--sp-2); bottom: var(--sp-2); display: flex; gap: var(--sp-1); }
+.canvas-tools .btn { width: var(--h-sm); padding: 0; }
+.gn { position: absolute; width: 280px; height: 44px; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-1); font-size: var(--fs-12); }
+.gn > .h { display: flex; align-items: center; gap: var(--sp-2); height: 23px; padding: 0 var(--sp-2); line-height: 1; }
+.gn > .h .id { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.gn > .h .ty { color: var(--text-secondary); }
+.gn > .h .kv { color: var(--text-muted); font: var(--fs-11) var(--font-mono); }
+.gn > .f { display: flex; align-items: center; gap: var(--sp-2); height: 19px; padding: 0 var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.gn > .f .p { margin-left: auto; color: var(--text-muted); }
+.gn[aria-selected=true] { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-width) var(--accent-soft), var(--shadow-1); }
+.gn.lock { background: var(--surface); border-style: dashed; }
+.gn.lock:not(:has(.f)) > .h { height: 42px; }
+.gn.lock .h svg.i { color: var(--text-muted); }
+.gn.bad { border-color: var(--danger); }
+.gn.bad > .f { color: var(--danger); }
+.gn.muted { opacity: .6; }
+.gn .hd { position: absolute; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: var(--r-pill); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); }
+.gn .hd.in { top: -5px; } .gn .hd.out { bottom: -5px; }
+.gn .flag { margin-left: auto; color: var(--danger); display: inline-flex; }
+.edges { position: absolute; inset: 0; pointer-events: none; }
+.edges path { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+.edges path.on { stroke: var(--accent); stroke-width: 2; }
+.edges path.skip { stroke-dasharray: 0; }
+.edges text { font: var(--fs-11) var(--font-mono); fill: var(--text-muted); }
+.dropzone { position: absolute; width: 280px; height: 30px; border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; gap: var(--sp-2); color: var(--text-muted); font-size: var(--fs-12); }
+.insp { padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-3); overflow: hidden; }
+.insp .field > label .badge { margin-left: auto; }
+.insp .field .input { height: 28px; }
+.insp .io { display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.insp .io b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.inferred { color: var(--text-muted); font-style: italic; }
+.chk { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-13); }
+.chk i { width: 14px; height: 14px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-xs); background: var(--accent); display: inline-grid; place-items: center; }
+.chk i svg.i { width: 10px; height: 10px; color: var(--on-accent); stroke-width: 2.4; }
+.chk i.off { background: var(--surface-sunken); }
+.sumbar { white-space: nowrap; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.sumbar .big { font: var(--fw-semibold) var(--fs-14) var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.sumbar .sep { width: 1px; align-self: stretch; background: var(--border); }
+.mem { display: flex; height: 8px; width: 120px; flex: none; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-sunken); border: var(--bw) solid var(--border); }
+.mem i { display: block; height: 100%; }
+.mem i.w, .key.w::before { background: var(--accent); }
+.mem i.g, .key.g::before { background: var(--info); }
+.mem i.o, .key.o::before { background: var(--text-muted); }
+.key { white-space: nowrap; display: inline-flex; align-items: center; gap: var(--sp-1); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.key::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-xs); }
+.problems { background: var(--surface); border: var(--bw) solid color-mix(in srgb, var(--danger) 45%, transparent); border-radius: var(--r-md); }
+.problems > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+.problems > header svg.i { color: var(--danger); }
+.prob { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-12); border-bottom: var(--bw) solid var(--border); }
+.prob:last-child { border-bottom: 0; }
+.prob a { font-family: var(--font-mono); color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.prob .code { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted); white-space: nowrap; }
+.prob svg.i { color: var(--danger); margin-top: 2px; }
+.tpl { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+.tplc { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.tplc b { font-size: var(--fs-14); }
+.tplc p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); }
+.tplc .meta { display: flex; gap: var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 320px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+/* SCR-09 */
+.runcols { display: grid; grid-template-columns: 1fr 360px; gap: var(--sp-4); min-height: 0; align-items: start; }
+.cards { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); }
+.card > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.card > header h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.card > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.card > .b { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.card.collapsed > header { border-bottom: 0; color: var(--text-muted); }
+.facts { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.facts b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3) var(--sp-4); }
+.fset { display: flex; flex-direction: column; gap: var(--sp-2); }
+.fset > h3 { margin: 0; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.check { position: sticky; top: 0; }
+.vram { display: flex; flex-direction: column; gap: var(--sp-1); }
+.vbar { position: relative; height: 12px; border-radius: var(--r-sm); background: var(--surface-sunken); border: var(--bw) solid var(--border); display: flex; overflow: visible; }
+.vbar i { display: block; height: 100%; }
+.vbar i.fix { background: var(--res-vram); }
+.vbar i.act { background: color-mix(in srgb, var(--res-vram) 55%, var(--surface-sunken)); }
+.vbar i.ctx { background: var(--text-muted); }
+.vbar .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-primary); }
+.vscale { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.kv2 { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.kv2 span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.kv2 .tot { color: var(--text-primary); font-weight: var(--fw-semibold); border-top: var(--bw) solid var(--border); padding-top: 2px; }
+.callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid; font-size: var(--fs-12); color: var(--text-primary); }
+.callout svg.i { margin-top: 2px; flex: none; }
+.callout.ok { border-color: color-mix(in srgb, var(--success) 45%, transparent); background: var(--success-soft); } .callout.ok svg.i { color: var(--success); }
+.callout.warn { border-color: color-mix(in srgb, var(--warning) 50%, transparent); background: var(--warning-soft); } .callout.warn svg.i { color: var(--warning); }
+.callout.err { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .callout.err svg.i { color: var(--danger); }
+.callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .callout.info svg.i { color: var(--info); }
+.plan { font-size: var(--fs-12); color: var(--text-secondary); padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.plan b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.was { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+
+/* ============================================================================ data-viz (design system v1: categorical 1 and 2, as SCR-04 v2) */
+:root { --cat-1: #5aa9f5; --cat-2: #f29e4c; }
+[data-theme="light"] { --cat-1: #1f6fc4; --cat-2: #b0560a; }
+/* ============================================================================ SCR-10 / SCR-09 study (tokens only) */
+.pill.pruned { --c: var(--state-cancelled); }
+.badge.best { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+[data-theme="light"] .badge.best { color: color-mix(in srgb, var(--accent) 85%, var(--text-primary)); }
+.limits { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-6); font-size: var(--fs-12); color: var(--text-secondary); }
+.limits b { color: var(--text-primary); font: var(--fw-medium) var(--fs-13) var(--font-mono); font-variant-numeric: tabular-nums; }
+.limits .progress { width: 96px; margin-left: var(--sp-1); }
+.limits .muted { color: var(--text-muted); }
+.sgrid { display: grid; grid-template-columns: 1fr 380px; gap: var(--sp-3); min-height: 0; }
+.sgrid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); }
+.hist { display: block; width: 100%; height: 190px; }
+.hist .grid { stroke: var(--border); stroke-width: 1; }
+.hist .axis { font: var(--fs-11) var(--font-mono); fill: var(--text-muted); }
+.hist .best { fill: none; stroke: var(--cat-2); stroke-width: 2; }
+.hist .dot { fill: var(--cat-1); }
+.hist .hollow { fill: var(--surface); stroke: var(--cat-1); stroke-width: 1.5; }
+.hist .fail { stroke: var(--state-failed); stroke-width: 1.8; }
+.hist .med { fill: none; stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.hist .trial { fill: none; stroke: var(--cat-1); stroke-width: 2; }
+.legend2 { display: flex; flex-wrap: wrap; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); }
+.legend2 i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-pill); margin-right: var(--sp-1); vertical-align: middle; background: var(--cat-1); }
+.legend2 i.h { background: transparent; border: 1.5px solid var(--cat-1); }
+.legend2 i.l { width: 12px; height: 2px; border-radius: 0; background: var(--cat-2); }
+.legend2 i.m { width: 12px; height: 0; border-radius: 0; border-top: 1.5px dashed var(--text-muted); background: transparent; }
+.legend2 .x { color: var(--state-failed); font-weight: var(--fw-semibold); margin-right: var(--sp-1); }
+.imp { display: grid; grid-template-columns: 132px 1fr 44px; gap: var(--sp-2) var(--sp-3); align-items: center; font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.imp .bar { height: 10px; border-radius: var(--r-xs); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.imp .bar > i { display: block; height: 100%; width: var(--p); background: var(--cat-1); }
+.imp span:nth-child(3n) { text-align: right; color: var(--text-primary); }
+.once { display: flex; flex-direction: column; gap: var(--sp-2); }
+.once .big { font: var(--fw-semibold) var(--fs-24)/1.1 var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.placeholder { display: flex; gap: var(--sp-2); align-items: flex-start; font-size: var(--fs-12); color: var(--text-muted); }
+.placeholder svg.i { margin-top: 2px; }
+.t td .why { color: var(--text-muted); font-size: var(--fs-12); margin-left: var(--sp-1); }
+.t td .muted, .muted { color: var(--text-muted); }
+.t th .i { width: 12px; height: 12px; vertical-align: -2px; }
+.t td.p { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+.t td.p.best-col { color: var(--text-primary); }
+.drawer.wide { width: 520px; top: 0; bottom: 0; }
+.drawer .body { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.tune { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 6px; margin-left: auto; border: var(--bw) solid var(--border); border-radius: var(--r-sm); background: transparent; color: var(--text-muted); font: var(--fw-medium) var(--fs-11) var(--font-ui); cursor: pointer; }
+.tune svg.i { width: 12px; height: 12px; }
+.tune[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); }
+.field > label .badge + .tune { margin-left: auto; }
+.field.tuned .input { border-color: var(--accent); }
+.range { display: flex; gap: var(--sp-1); align-items: center; }
+.range .input { width: auto; flex: 1; min-width: 0; }
+.range .sep { color: var(--text-muted); font-size: var(--fs-12); }
+.range .select { height: var(--h-md); }
+.chips { display: flex; gap: var(--sp-1); align-items: center; flex-wrap: wrap; min-height: var(--h-md); padding: 0 var(--sp-1); border: var(--bw) solid var(--accent); border-radius: var(--r-sm); background: var(--surface-sunken); }
+.chip { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 6px; border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.chip svg.i { width: 10px; height: 10px; color: var(--text-muted); }
+.chip.add { border-style: dashed; color: var(--text-muted); font-family: var(--font-ui); }
+.sform { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--sp-3) var(--sp-4); }
+.field > label { flex-wrap: wrap; row-gap: 2px; }
+.t td .err-line { display: flex; gap: var(--sp-1); align-items: center; color: var(--danger); font-size: var(--fs-11); white-space: normal; }
+.t td .err-line svg.i { width: 11px; height: 11px; }
+.t tr.bad td { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--danger) 45%, transparent); }
+.t.space td { height: 36px; }
+.popover { width: 460px; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-3); }
+.popover > header { display: flex; gap: var(--sp-2); align-items: center; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+/* Highlighted rows: muted text uses text-secondary (approved at SCR-11's Gate 3); the grey pruned pill is lifted further. */
+.t tr.is-hover .why, .t tr[aria-selected=true] .why, .t tr.is-hover .muted, .t tr[aria-selected=true] .muted { color: var(--text-secondary); }
+[data-theme="dark"] .t tr[aria-selected=true] .pill.pruned, [data-theme="dark"] .t tr.is-hover .pill.pruned { color: color-mix(in srgb, var(--c) 45%, var(--text-primary)); }
+[data-theme="dark"] .pill.pruned { color: color-mix(in srgb, var(--c) 75%, var(--text-primary)); }
+
+/* ============================================================================ SCR-09 v2 addendum: the estimator list (tokens only) */
+.estrow { display: flex; gap: var(--sp-3); align-items: center; position: relative; }
+.estrow .select { height: var(--h-md); min-width: 300px; justify-content: space-between; font-family: var(--font-mono); }
+.ruled { display: flex; gap: var(--sp-2); align-items: flex-start; font-size: var(--fs-12); color: var(--text-secondary); max-width: 92ch; }
+.ruled svg.i { color: var(--text-muted); margin-top: 2px; }
+.nl { position: absolute; top: calc(var(--h-md) + 2px); left: 28px; z-index: var(--z-drawer); width: 440px; padding: var(--sp-1) 0; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); box-shadow: var(--shadow-3); font: var(--fs-12)/1.25 var(--font-mono); }
+.nl .og { padding: 6px var(--sp-3) 3px; font: var(--fw-semibold) var(--fs-12)/1.25 var(--font-ui); color: var(--text-primary); }
+.nl .op { display: flex; gap: var(--sp-2); align-items: baseline; padding: 4px var(--sp-3) 4px var(--sp-6); color: var(--text-primary); white-space: nowrap; }
+.nl .op .t2 { font-family: var(--font-ui); color: var(--text-secondary); }
+.nl .op.sel { background: var(--accent); color: var(--on-accent); } .nl .op.sel .t2 { color: var(--on-accent); }
+.nl .op.dis, .nl .op.dis .t2 { color: var(--text-muted); }
+.nl .op .why { margin-left: auto; font: var(--fs-11)/1.25 var(--font-ui); color: var(--text-muted); }
+.under { opacity: .35; }
+.study-off { display: flex; align-items: center; gap: var(--sp-3); margin-left: auto; }
+.study-off .why { font-size: var(--fs-12); color: var(--text-secondary); max-width: 52ch; text-align: right; }
+.btn[aria-disabled=true] { opacity: .45; cursor: not-allowed; }
+.cardhead-badge { display: inline-flex; align-items: center; gap: var(--sp-2); }
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+<symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9" stroke-width="2.2"/></symbol>
+<symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+<symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+<symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 16 16"><path d="M6 2.5h4M6.8 2.5v3.8L5 9h6L9.2 6.3V2.5M8 9v4.5"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M2 8h3l1.5-3 3 6L11 8h3"/></symbol>
+  <symbol id="i-keys" viewBox="0 0 16 16"><rect x="1.8" y="4" width="12.4" height="8" rx="1.5"/><path d="M4.5 6.7h.3M7 6.7h.3M9.5 6.7h.3M5 9.4h6"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 16 16"><path d="M2.5 4h2M7.5 4h6M2.5 8h7M12.5 8h1M2.5 12h4M9.5 12h4"/><circle cx="6" cy="4" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="8" cy="12" r="1.5"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-09 v2 addendum — the estimator list · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2 addendum</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Asked for by the owner on 2026-11-22: "There is no logistic regression option in classical model creation", then "propose this small fix in the current milestone". SCR-09's Classical mode lists only the estimators that fit the split's task, as approved with the study part (<span class="mono">SCR-09hpo_v1.html</span>, frame B: "The estimator list follows the task"). On diabetes, a regression table, <span class="mono">logistic_regression</span> and <span class="mono">naive_bayes</span> are therefore missing, with no word why, which reads as a missing feature (ML-1.1 names logistic regression). They are offered on breast-cancer and wine.</p>
+<p>Checking it found a bug as well. With <span class="mono">kmeans</span> selected (or <span class="mono">dbscan</span>, <span class="mono">hdbscan</span>, <span class="mono">pca</span>), turning the study on removes it from the list. The select then shows <span class="mono">logistic_regression</span>, while the sentence beside it and the parameter form are still k-means's.</p>
+<p>This addendum changes only the estimator select, one line under it, and the study's <i>Turn on</i> button. Everything else keeps its approved and built look, and the layout does not move, so there is no low-fi step. The data are real: diabetes <span class="mono">ds_de5f2ad338c9</span> (regression; train 354, val 44, test 44; 10 columns) and wine <span class="mono">ds_6448d354c9c6</span> (classification, 3 classes; train 142, val 18, test 18; 13 columns). The estimators and their tasks are <span class="mono">GET /ml/estimators/schema</span> as it is served today. Open as <span class="mono">SCR-09v2-estimators_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions to review</b>
+<ul>
+<li><b>Every estimator stays in the list,</b> in up to three groups: the split's task first (<i>For regression</i> or <i>For classification</i>), then <i>Any table · ignores the target</i> (<span class="mono">kmeans</span>, <span class="mono">dbscan</span>, <span class="mono">hdbscan</span>, <span class="mono">pca</span>), then <i>Not for this split</i>. The last group's options are disabled and say why: "classification only" or "regression only". It stays the native select, so the keyboard, type-ahead and screen readers work as they do now. A disabled option cannot be chosen, so DATA-5.5's "only compatible combinations" still holds.</li>
+<li><b>Each option reads name, then title:</b> <span class="mono">logistic_regression · Logistic regression</span>, so it can be found by either.</li>
+<li><b>A line under the select names what the split rules out, and why,</b> so the answer is there while the list is closed. It is absent when nothing is ruled out.</li>
+<li><b>With a study on, the four that ignore the target are disabled</b> with "not in a study", since a study scores each fold against the target (<span class="mono">cv_accuracy</span>, <span class="mono">cv_r2</span>). While one of them is selected, <i>Turn on</i> is disabled and says why. The list no longer changes under a selection, which fixes the bug above.</li>
+<li><b>Unchanged:</b> the default (<span class="mono">random_forest</span>), the order inside each group (the schema's), the API, the schemas and every requirement.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · diabetes, a regression split (dark)</h2>
+<div class="frame compact" style="height:152px">
+  <div style="padding:var(--sp-4)">
+    <section class="card"><header><h2>Model</h2><span class="req">ML-1.1 · ML-1.4</span><span class="badge">Classical</span><button class="btn sm ghost">Change…</button></header>
+      <div class="b">
+        <div class="estrow"><span class="select" aria-label="Estimator"><span>random_forest · Random forest</span><svg class="i"><use href="#i-down"/></svg></span><span>Random forest, after imputing, scaling and one-hot encoding fitted on the train split (ML-1.3).</span></div>
+        <div class="ruled"><span class="n" style="position:static;display:inline-block">2</span><svg class="i"><use href="#i-info"/></svg><span>Not for this split: <span class="mono">logistic_regression</span> and <span class="mono">naive_bayes</span>, which are classifiers; diabetes's target is a number. For a linear model, use <span class="mono">linear</span>, <span class="mono">ridge</span> or <span class="mono">lasso</span>.</span></div>
+      </div></section>
+  </div>
+</div>
+<p class="cap">Closed: the line under the select already answers "where is logistic regression?". Below, the same card with the list open.</p>
+<div class="frame compact" style="height:600px;margin-top:var(--sp-3)">
+  <div style="padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+    <section class="card"><header><h2>Model</h2><span class="req">ML-1.1 · ML-1.4</span><span class="badge">Classical</span><button class="btn sm ghost">Change…</button></header>
+      <div class="b">
+        <div class="estrow">
+          <span class="n" style="position:static;display:inline-block">1</span>
+          <span class="select" aria-label="Estimator" aria-expanded="true"><span>random_forest · Random forest</span><svg class="i"><use href="#i-down"/></svg></span>
+          <span>Random forest, after imputing, scaling and one-hot encoding fitted on the train split (ML-1.3).</span>
+          <div class="nl" role="listbox" aria-label="Estimator, the native list drawn open">
+            <div class="og">For regression</div>
+            <div class="op"><span>linear</span><span class="t2">Linear regression</span></div>
+            <div class="op"><span>ridge</span><span class="t2">Ridge regression</span></div>
+            <div class="op"><span>lasso</span><span class="t2">Lasso regression</span></div>
+            <div class="op"><span>svm</span><span class="t2">Support vector machine</span></div>
+            <div class="op"><span>decision_tree</span><span class="t2">Decision tree</span></div>
+            <div class="op sel" aria-selected="true"><span>random_forest</span><span class="t2">Random forest</span></div>
+            <div class="op"><span>gradient_boosting</span><span class="t2">Gradient boosting</span></div>
+            <div class="op"><span>knn</span><span class="t2">k nearest neighbours</span></div>
+            <div class="og">Any table · ignores the target</div>
+            <div class="op"><span>kmeans</span><span class="t2">k-means</span></div>
+            <div class="op"><span>dbscan</span><span class="t2">DBSCAN</span></div>
+            <div class="op"><span>hdbscan</span><span class="t2">HDBSCAN</span></div>
+            <div class="op"><span>pca</span><span class="t2">PCA</span></div>
+            <div class="og">Not for this split</div>
+            <div class="op dis" aria-disabled="true"><span>logistic_regression</span><span class="t2">Logistic regression</span><span class="why">classification only</span></div>
+            <div class="op dis" aria-disabled="true"><span>naive_bayes</span><span class="t2">Naive Bayes</span><span class="why">classification only</span></div>
+          </div>
+        </div>
+        <div class="ruled"><svg class="i"><use href="#i-info"/></svg><span>Not for this split: <span class="mono">logistic_regression</span> and <span class="mono">naive_bayes</span>, which are classifiers; diabetes's target is a number. For a linear model, use <span class="mono">linear</span>, <span class="mono">ridge</span> or <span class="mono">lasso</span>.</span></div>
+        <div class="fgrid under" aria-hidden="true">
+          <div class="field"><label><span class="mono">n_estimators</span><span class="badge">int</span></label><span class="input mono">100</span><small>1–2000 · default 100. Trees.</small></div>
+          <div class="field"><label><span class="mono">max_depth</span><span class="badge">int</span></label><span class="input mono"></span><small>1–100. Empty: unlimited.</small></div>
+          <div class="field"><label><span class="mono">min_samples_leaf</span><span class="badge">int</span></label><span class="input mono">1</span><small>1–10000 · default 1</small></div>
+        </div>
+      </div></section>
+    <section class="card"><header><h2>Data</h2><span class="req">BUILD-1.3</span></header><div class="b"><div class="facts"><span>diabetes · ds_de5f2ad338c9</span><span>val <b>44</b></span><span>test <b>44</b></span><span>train <b>354</b></span><span class="badge">regression</span><span>vector 10</span></div></div></section>
+  </div>
+</div>
+<p class="cap">The open list is drawn the way Chromium draws a native select with option groups: the group labels in bold, the options indented under them, the disabled ones dimmed. The browser draws the real list, so its look follows the browser and the theme. The selected estimator keeps its place in its group.</p>
+
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="n">1</span></td><td>Estimator select</td><td>Every estimator, grouped: the split's task, any table, and the ones this split cannot use, disabled with "classification only" or "regression only"; with a study on, the four that ignore the target are disabled with "not in a study". Each option reads name · title</td><td><span class="mono">GET /ml/estimators/schema</span> (each estimator's <span class="mono">tasks</span>); the split's task from <span class="mono">POST /model-specs/validate</span>, as the Data card reads it today. No API change</td><td>–</td></tr>
+<tr><td><span class="n">2</span></td><td>What is ruled out</td><td>One line naming the disabled estimators and the reason; absent when none is disabled</td><td>the same two</td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td><i>Turn on</i> (frame C)</td><td>Disabled while the selected estimator ignores the target, with the reason beside it</td><td>the selected estimator's <span class="mono">tasks</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · wine, a classification split, with a study on (light)</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame compact" style="height:540px">
+  <div style="padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+    <section class="card"><header><h2>Model</h2><span class="req">ML-1.1 · ML-1.4</span><span class="badge">Classical</span><button class="btn sm ghost">Change…</button></header>
+      <div class="b">
+        <div class="estrow">
+          <span class="select" aria-label="Estimator" aria-expanded="true"><span>random_forest · Random forest</span><svg class="i"><use href="#i-down"/></svg></span>
+          <span>Random forest, after imputing, scaling and one-hot encoding fitted on the train split (ML-1.3).</span>
+          <div class="nl" role="listbox" aria-label="Estimator, the native list drawn open" style="left:0">
+            <div class="og">For classification</div>
+            <div class="op"><span>logistic_regression</span><span class="t2">Logistic regression</span></div>
+            <div class="op"><span>svm</span><span class="t2">Support vector machine</span></div>
+            <div class="op"><span>decision_tree</span><span class="t2">Decision tree</span></div>
+            <div class="op sel" aria-selected="true"><span>random_forest</span><span class="t2">Random forest</span></div>
+            <div class="op"><span>gradient_boosting</span><span class="t2">Gradient boosting</span></div>
+            <div class="op"><span>knn</span><span class="t2">k nearest neighbours</span></div>
+            <div class="op"><span>naive_bayes</span><span class="t2">Naive Bayes</span></div>
+            <div class="og">Any table · ignores the target</div>
+            <div class="op dis" aria-disabled="true"><span>kmeans</span><span class="t2">k-means</span><span class="why">not in a study</span></div>
+            <div class="op dis" aria-disabled="true"><span>dbscan</span><span class="t2">DBSCAN</span><span class="why">not in a study</span></div>
+            <div class="op dis" aria-disabled="true"><span>hdbscan</span><span class="t2">HDBSCAN</span><span class="why">not in a study</span></div>
+            <div class="op dis" aria-disabled="true"><span>pca</span><span class="t2">PCA</span><span class="why">not in a study</span></div>
+            <div class="og">Not for this split</div>
+            <div class="op dis" aria-disabled="true"><span>linear</span><span class="t2">Linear regression</span><span class="why">regression only</span></div>
+            <div class="op dis" aria-disabled="true"><span>ridge</span><span class="t2">Ridge regression</span><span class="why">regression only</span></div>
+            <div class="op dis" aria-disabled="true"><span>lasso</span><span class="t2">Lasso regression</span><span class="why">regression only</span></div>
+          </div>
+        </div>
+        <div class="ruled"><svg class="i"><use href="#i-info"/></svg><span>Not for this split: <span class="mono">linear</span>, <span class="mono">ridge</span> and <span class="mono">lasso</span>, which predict a number; wine's target is a class. Not in a study: <span class="mono">kmeans</span>, <span class="mono">dbscan</span>, <span class="mono">hdbscan</span> and <span class="mono">pca</span>, which ignore the target a study scores against.</span></div>
+        <div class="fgrid under" aria-hidden="true">
+          <div class="field"><label><span class="mono">n_estimators</span><span class="badge">int</span></label><span class="input mono">100</span><small>1–2000 · default 100. Trees.</small></div>
+          <div class="field"><label><span class="mono">max_depth</span><span class="badge">int</span></label><span class="input mono"></span><small>1–100. Empty: unlimited.</small></div>
+          <div class="field"><label><span class="mono">min_samples_leaf</span><span class="badge">int</span></label><span class="input mono">1</span><small>1–10000 · default 1</small></div>
+        </div>
+      </div></section>
+    <section class="card"><header><h2>Data</h2><span class="req">BUILD-1.3</span></header><div class="b"><div class="facts"><span>wine · ds_6448d354c9c6</span><span>val <b>18</b></span><span>test <b>18</b></span><span>train <b>142</b></span><span class="badge">classification</span><span>3 classes · vector 13</span></div></div></section>
+    <section class="card"><header><h2>Tune with a study</h2><span class="req">HPO-1.1 · HPO-1.4</span><span class="spacer"></span><span class="pill completed"><svg class="i"><use href="#i-check"/></svg>on</span><button class="btn sm">Turn off</button></header></section>
+  </div>
+</div>
+</div>
+<p class="cap">With the study off, the four that ignore the target are enabled again, as today. On breast-cancer the list is the same as here, since it is a classification split too.</p>
+
+<!-- ===================================================================== C -->
+<h2>C · kmeans selected: the study cannot be turned on (dark)</h2>
+<div class="frame compact" style="height:250px">
+  <div style="padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+    <section class="card"><header><h2>Model</h2><span class="req">ML-1.1 · ML-1.4</span><span class="badge">Classical</span><button class="btn sm ghost">Change…</button></header>
+      <div class="b">
+        <div class="estrow">
+          <span class="select" aria-label="Estimator"><span>kmeans · k-means</span><svg class="i"><use href="#i-down"/></svg></span>
+          <span>k-means, after imputing, scaling and one-hot encoding fitted on the train split (ML-1.3).</span>
+        </div>
+        <div class="ruled"><svg class="i"><use href="#i-info"/></svg><span>Not for this split: <span class="mono">linear</span>, <span class="mono">ridge</span> and <span class="mono">lasso</span>, which predict a number; wine's target is a class.</span></div>
+      </div></section>
+    <section class="card"><header><h2>Tune with a study</h2><span class="req">HPO-1.1</span>
+      <span class="study-off"><span class="n" style="position:static;display:inline-block">3</span><span class="why" id="why-study">A study scores each fold against the target, and <span class="mono">kmeans</span> ignores it. Choose a supervised estimator to tune.</span><button class="btn sm" aria-disabled="true" aria-describedby="why-study">Turn on</button></span></header></section>
+  </div>
+</div>
+<p class="cap">Today this state is reached the other way round: turn the study on with <span class="mono">kmeans</span> selected and the select shows <span class="mono">logistic_regression</span>, while the sentence and the form are still k-means's. With this addendum the list never changes under a selection, and the study waits for a supervised estimator.</p>
+
+<h2>Accessibility notes</h2>
+<div class="changes">
+<ul>
+<li>It stays a native <span class="mono">&lt;select&gt;</span> with <span class="mono">&lt;optgroup label&gt;</span>. A disabled option's reason is part of its text, so a screen reader reads it with the option and announces it as unavailable. The reason is in words, not in the dimming alone.</li>
+<li>The line under the select is the select's description (<span class="mono">aria-describedby</span>), so it is read when the select takes focus.</li>
+<li><i>Turn on</i> uses <span class="mono">aria-disabled</span> rather than <span class="mono">disabled</span>, so it stays in the tab order and reads its reason, which is its description.</li>
+<li>Contrast: the reasons and the line use the text tokens (<span class="mono">--text-muted</span>, <span class="mono">--text-secondary</span>), which pass AA on <span class="mono">--surface</span> and <span class="mono">--surface-raised</span> in both themes. The browser draws the dimmed options of the real list itself; WCAG 1.4.3 exempts inactive controls.</li>
+</ul>
+</div>
+
+<h2>Tests, at Gate 3</h2>
+<div class="changes">
+<ul>
+<li>Vitest, <span class="mono">Builder.test.tsx</span>: <span class="mono">test_DATA_5_5_estimators_a_split_cannot_use_are_listed_disabled_with_their_reason</span> (diabetes and wine, with and without a study, the line under the select).</li>
+<li><span class="mono">test_ML_1_1_logistic_regression_is_offered_on_a_classification_split</span>.</li>
+<li>The bug's guard: <span class="mono">test_DATA_5_5_turning_a_study_on_never_changes_the_selected_estimator</span>, logged as E-016 in ERRORS.md.</li>
+</ul>
+</div>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body></html>

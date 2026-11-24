@@ -60,3 +60,42 @@ Frame F (every row rejected) does not exist on this machine. It is covered by `t
 ## Tests
 
 `frontend/src/screens/version/VersionScreen.test.tsx`: `test_DATA_3_3_*` (strip links back to raw, forks, the running child), `test_DATA_2_2_*` (pHash distance and differing digits), `test_UI_2_1_*` (every row rejected, unknown version). Rows inside the virtualised table are checked in the browser: jsdom has no layout, so the virtualiser renders none there.
+
+# M11 — SCR-03 v2: distributions, the diff, semantic clusters, models trained on a version (Gate 3)
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-03v2_v1.html`](../screens/SCR-03v2_v1.html), G2 approved 2026-11-21 |
+| Built | `frontend/src/screens/version/` (`Distributions`, `CompareVersions`, `ModelsTab`; the tile, filter and chip in `VersionScreen` and `RowsPanel`; the cluster in `RowDrawer`; the end chip in `LineageStrip`), `frontend/src/styles/scr03.css` (M11 section); API `GET /versions/{id}/distributions`, `/diff?with=`, `/models`, `/clusters/{id}`, rows `semantic` and `semantic_cluster_id` |
+| Checked | 2026-11-22, live at 1280 × 1000, dark and light, on the mockup's real data: coco10k's split `ds_3f6fcc420a27` (frame A), its preprocess versions `ds_f81d0d552a1a` and `ds_bad290a73446` (frame B), CIFAR-10's split `ds_f8e67211dd94` (frame D); and for frame C, coco10k labelled again by `job_0109` with the semantic clusters (`ds_859d0861ae19` → split `ds_ade1d41f91f5`): 93 clusters, 261 rows, the largest 22 |
+| Status | **Approved by the owner on 2026-11-22** ("Approved"), with the eight listed differences |
+
+## Screenshots (in `SCR-03/`)
+
+| File | Mockup frame | What it shows |
+|---|---|---|
+| `v2-live-A-funnel-dark.jpg` | A | The funnel row for row as the mockup: 10,000 → 60 `below_min_size` → 9,940 → 8 `near_duplicate` → 9,932 → 94 `clip_below_threshold` → 9,838, the split's parts 7,870 · 984 · 984 |
+| `v2-live-A-columns-dark.jpg` | A | Column cards: width's five numbers as the mockup (raw 150 / 427 / 640, here 263 / 428 / 640), file size and the preprocessed long side |
+| `v2-live-B-compare-dark.jpg` | B | `min_size 256 → 255` in the callout; 1 changed, 59 wording only, 9,940 the same; `000000471773.jpg` rejected → accepted |
+| `v2-live-C-cluster-dark.jpg` | C | Rows filtered to the semantic clusters with their chips; the drawer on S-10's pair `000000185291.jpg` and `000000452782.jpg`: similarity 0.981, pHash 22 bits apart, one split group |
+| `v2-live-D-models-dark.jpg` | D | 17 versions by lineage, "test 0.831", "study's best · computed once", folded lineages; the "→ 17 models" chip |
+
+## Differences from the mockup
+
+1. **Every column has its own card** with the histogram, the five numbers and the removed rows' line; the mockup grouped height, file size and preprocessed size in one table ("each has the histogram card of 2"). Bins are round numbers from the data (width 100–199, 200–299, …), not the mockup's 0–199 … 600–640.
+2. **The CLIP threshold is marked with ◂ on its bin's label**, and the mark line names it: "The filter's threshold, 0.2 (OC-5), cuts the left tail: 94 rows".
+3. **The removed rows' line is one sentence of figures** ("Removed · 162: median 640 px, from 150 to 640"), not a reading such as "the 60 rejected at ingest have a shorter side of 120–255 px".
+4. **The Compare picker is a native select**, and the changed rows list every differing column (`decided_at_stage`, `phash`, `derived_sha256`, `derived_width`, `derived_height`), long values shortened, where the mockup grouped "derived size". "Changed, by field" groups them as content and derived size and file.
+5. **The semantic tile reads "Semantic clusters · 93" with "261 rows · largest 22"**, and pressing it filters Rows like a status tile; the mockup's extra *All · In a semantic cluster* toolbar is not built, since the tile does the same.
+6. **The drawer shows two members side by side** and lists the rest as links; the similarity comes from the cached CLIP vectors (0.981 for S-10's pair, which S-10 measured at 0.985 on its own encoding).
+7. **The Models tab shows three versions per lineage before *Show***, and counts partial versions too (17 here, the mockup's 16).
+8. **The new tabs scroll inside the fixed-height page**, as Rows does.
+
+## Accessibility
+
+- AA in both themes: Rows with the cluster drawer 318 text elements, Distributions 358, Compare 375, Models 156; no failures.
+- A histogram is an image with every bin's two counts in its label, and its *Table* view lists them; the reason chips are buttons named by reason and count; the semantic tile is a toggle like the status tiles; the cluster chip carries its name in text.
+
+## Tests
+
+`frontend/src/screens/version/VersionV2.test.tsx` (4); `tests/integration/test_M11_profile.py` (3), `tests/integration/test_M11_semantic.py` (the pipeline and the cluster view); `tests/unit/test_DATA_2_3_semantic_clusters.py` (13).

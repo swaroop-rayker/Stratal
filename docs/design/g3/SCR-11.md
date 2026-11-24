@@ -76,3 +76,53 @@ Frame F's empty state ("No models yet") cannot be shown live without deleting th
 ## Tests
 
 `frontend/src/screens/models/TaskMetrics.test.tsx`: `test_EVAL_1_2_the_right_metric_set_appears_for_each_task`, `test_EVAL_1_2_the_matrix_follows_the_split_and_arrow_keys_move_between_cells`, `test_EVAL_1_2_a_study_test_is_marked_computed_once_and_many_classes_list_the_confusions`, `test_EVAL_1_2_a_version_without_metrics_says_why`.
+
+---
+
+# M11 — SCR-11 v2: comparison, Score on test, Try it for records and texts, the parent (Gate 3)
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-11v2_v1.html`](../screens/SCR-11v2_v1.html), G2 approved 2026-11-20, frames A–F, with both of the low-fi's questions approved (Score on test; a text's token facts) |
+| Built | `frontend/src/screens/models/CompareScreen.tsx` (new, route `/models/compare`), `TryValues.tsx` (new), `TryIt.tsx`, `VersionDrawer.tsx`, `LineageScreen.tsx`, `ModelsScreen.tsx`, `api/registry.ts`; styles appended to `scr11.css`. Backend `stratal.registry.compare`, `GET /models/compare`, `GET /models/compare/candidates`, `POST /model-versions/{id}/score-test`, the predict answer's `input`, `children` and `founded_from` |
+| Checked | 2026-11-21, live after the GPU was restored (E-012: `wsl --shutdown` and a Docker Desktop restart, with the owner's OK). Wine's three networks on `ds_6448d354c9c6`: 0.944 (17 of 18, 0.742–0.990), 1.000 and 1.000 (0.824–1.000), *best* shared, the overlap note. Score on test from the picker: `job_0108` scored `mv_a014046ec3b5` once on CIFAR-10's 5,963 test rows (accuracy 0.832), a second request refused `409`. CIFAR-10 compared three ways: the study's `mv_a4a0fb846812` 0.810 (0.800–0.820), the fine-tune `mv_7f950100ab48` 0.831 and its parent 0.832, whose intervals overlap. Try it: wine row `wine.csv#0000021` → `class_0` 1.000, its label matching; the caption → `person` 0.917, "11 tokens · 0 unknown · not cut". The pane was about 800 px wide |
+| Status | **Approved by the owner on 2026-11-21** ("Approved"), with the listed differences |
+
+## Screenshots (in `SCR-11/`)
+
+| File | Shows |
+|---|---|
+| `live-v2-A-compare-metrics-dark.jpg` | The wine comparison: split, metrics with counts, Wilson intervals and shared *best* |
+| `live-v2-A-compare-intervals-f1-dark.jpg` | The interval chart with the overlap note, and F1 by class |
+| `live-v2-B-picker-cifar10-dark.jpg` | The picker on CIFAR-10: lineages that share a name with their IDs, *computed once*, *Score on test*, deleted weights and why |
+| `live-v2-D-try-it-text-dark.jpg` | Try it with the caption: token facts, the top five classes, the served line |
+
+## Fixed during the check
+
+1. After a Score on test job finished, the picker still said "Scoring · job_0108": the registry views now refresh on `score_test` jobs as on training and retention.
+2. The overlap note said "cannot tell these three apart" when only two intervals overlapped, and "one mistake moves accuracy by 0.000" on 5,963 rows. It now names the versions that overlap when not all do, and gives the one-mistake figure only below 1,000 test rows.
+3. An answer's third row was misaligned (a CSS rule counted rows, not cells); values now have their own class.
+4. The picker's reason was cut at the drawer's edge; its column wraps.
+5. A table or text lineage's header read "13×undefined×undefined"; it joins the input's dimensions and says "1 value" for regression. A model under 100,000 parameters shows its exact count, not "0.00 M".
+6. The served line now gives the cold start and seconds, as frame C ("Served on the GPU · cold start 0.6 s · 803 ms").
+
+## Differences from the mockup
+
+1. **A table's fields come in the stored record's order** (alphabetical), from the split's test rows; the table's own column order is not exposed to the page.
+2. **A categorical field is a text box with suggestions** (the values in the test rows), not a list of the training categories plus "another value".
+3. **A regression answer is labelled "value"**, not by the target column's name, which the page cannot read.
+4. **The overlap note names the overlapping pairs** when not all intervals overlap (fix 2), and says the others differ by more than chance.
+5. **A tested version that is not a study's best says "from its run"** in the picker's test-metrics column.
+6. ***Compare…* on the registry opens the comparison page with a split chooser** (dataset, then split) in its empty state, rather than a separate step.
+7. **A fine-tune's parent in the comparison is its ID**, not "its lineage's base".
+8. **The lineage's founded-by callout and the drawer's *Fine-tuned into* row** are covered by tests (`test_M11_fine_tune.py`); no lineage on the live stack was founded by a fine-tune.
+
+## Accessibility
+
+- **Contrast:** every text element passes AA in both themes, measured after a 3 s wait on switching: the picker 87, wine's comparison 106 (112 in the Table view), CIFAR-10's two-way 111 and three-way 138, Try it's record form 33, the text with its answer 18.
+- **Keyboard and names:** the picker's checkboxes are named by version, a disabled one with its reason; the interval chart is an image with a full text label and a Table view; Try it's fields are labelled by column name, a refused one `aria-invalid` with its message as the description; answers are a polite status, refusals an alert.
+
+## Tests
+
+- Frontend: `frontend/src/screens/models/Compare.test.tsx` (8): three models in one view with intervals and *best*; a version tested elsewhere named and removable; the picker's Score on test and reasons; the overlap note naming only overlapping versions; per-class F1 by spread; a record from a test row with its label and imputation; a refused record's fields; a text's token facts.
+- Backend: `tests/integration/test_M11_compare.py` (3), `tests/unit/test_REG_1_4_text_facts.py` (2), lineage and children assertions in `test_M11_fine_tune.py`. Run in the GPU worker's image on 2026-11-21 with `test_M11_fine_tune.py`, the corrected `test_REG_2_8_an_in_use_or_parent_version_is_blocked_and_logged` and the torch unit tests: 33 passed (11 min).

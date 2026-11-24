@@ -2,6 +2,8 @@
 
 import io
 import os
+from collections import OrderedDict
+from collections.abc import Callable
 from pathlib import Path as FsPath
 from typing import Annotated, Any, Literal
 
@@ -13,11 +15,14 @@ from sqlalchemy import select
 
 from stratal.api import schemas
 from stratal.api.jobs import Db, Limit
-from stratal.core.errors import Conflict, NotFound
+from stratal.core.errors import Conflict, NotFound, ValidationFailed
 from stratal.core.settings import get_settings
-from stratal.data import browse, registry
-from stratal.db.models import Dataset
+from stratal.data import browse, profile, registry
+from stratal.db.models import Dataset, Derivation
+from stratal.label.semantic import cosine, unpack_vector
+from stratal.registry import store as model_store
 from stratal.storage.blobs import BlobStore
+from stratal.storage.derivations import KIND_CLIP_IMAGE
 from stratal.storage.manifest import select_rows
 
 router = APIRouter(tags=["datasets"])
@@ -108,6 +113,10 @@ def version_rows(
     reason_code: str | None = None,
     split: Literal["train", "val", "test"] | None = None,
     dup_group_id: str | None = None,
+    semantic_cluster_id: str | None = None,
+    semantic: Annotated[
+        bool | None, Query(description="Only rows in a semantic cluster (DATA-2.3).")
+    ] = None,
     q: Annotated[str | None, Query(max_length=200, description="Row-key substring.")] = None,
     limit: Limit = 50,
     cursor: str | None = None,
@@ -120,6 +129,7 @@ def version_rows(
         "reason_code": reason_code,
         "split": split,
         "dup_group_id": dup_group_id,
+        "semantic_cluster_id": semantic_cluster_id,
     }
     page = select_rows(
         path,
@@ -127,6 +137,7 @@ def version_rows(
         key_contains=q,
         after_key=cursor,
         limit=limit,
+        not_null=["semantic_cluster_id"] if semantic else [],
     )
     full = len(page.rows) == limit
     return {
@@ -203,3 +214,153 @@ def list_sources() -> Json:
         for p in folders
     ]
     return {"items": items, "next_cursor": None}
+
+
+# -- what a version holds, how two differ, models trained on it (SCR-03 v2) ------------
+
+_PROFILES: OrderedDict[tuple[str, ...], Json] = OrderedDict()
+_PROFILE_KEEP = 16
+"""Versions never change (K10), so their profiles are cached in this process by ID."""
+
+
+def _cached(key: tuple[str, ...], build: Callable[[], Json]) -> Json:
+    if key in _PROFILES:
+        _PROFILES.move_to_end(key)
+        return _PROFILES[key]
+    value = build()
+    _PROFILES[key] = value
+    while len(_PROFILES) > _PROFILE_KEEP:
+        _PROFILES.popitem(last=False)
+    return value
+
+
+def _steps(session: Db, version_id: str) -> list[profile.Step]:
+    steps: list[profile.Step] = []
+    current: str | None = version_id
+    while current is not None:
+        version = registry.get_version(session, current)
+        steps.append(profile.Step(version.version_id, version.stage, dict(version.config or {})))
+        current = version.parent_version_id
+    return steps[::-1]
+
+
+@router.get("/versions/{version_id}/distributions", response_model=schemas.Distributions)
+def version_distributions(version_id: str, session: Db) -> Json:
+    """The funnel from raw to this version, then each column raw (every row) against here
+    (accepted rows) and the removed rows (UI-2.2, K10)."""
+    version, path = registry.manifest_for(session, get_settings().data_dir, version_id)
+    steps = _steps(session, version_id)
+
+    def build() -> Json:
+        rows = profile.read_all(path)
+        return {
+            "version_id": version_id,
+            "stage": version.stage,
+            "dtype": version.dtype,
+            **profile.distributions(rows, dtype=version.dtype, lineage=steps),
+        }
+
+    return _cached(("dist", version_id), build)
+
+
+@router.get("/versions/{version_id}/diff", response_model=schemas.VersionDiff)
+def version_diff(
+    version_id: str,
+    session: Db,
+    with_: Annotated[str, Query(alias="with", description="The other version, A.")],
+) -> Json:
+    """This version (B) against another version of the same dataset (A), rows matched by
+    ``row_key`` (DATA-3.5, K10). Any two versions of one dataset can be compared; when
+    their stages differ, ``stages_differ`` says so."""
+    data_dir = get_settings().data_dir
+    b_version, b_path = registry.manifest_for(session, data_dir, version_id)
+    a_version, a_path = registry.manifest_for(session, data_dir, with_)
+    if a_version.dataset_id != b_version.dataset_id:
+        raise ValidationFailed(
+            f"{with_} and {version_id} belong to different datasets.",
+            suggested_action="Compare two versions of one dataset.",
+            errors=[
+                {"loc": ["query", "with"], "msg": "another dataset's version", "code": "dataset"}
+            ],
+        )
+    a_steps, b_steps = _steps(session, with_), _steps(session, version_id)
+
+    def build() -> Json:
+        body = profile.diff(
+            profile.read_all(a_path), profile.read_all(b_path), a_steps=a_steps, b_steps=b_steps
+        )
+        return {
+            "a": {
+                "version_id": with_,
+                "stage": a_version.stage,
+                "created_at": browse.iso(a_version.created_at),
+            },
+            "b": {
+                "version_id": version_id,
+                "stage": b_version.stage,
+                "created_at": browse.iso(b_version.created_at),
+            },
+            **body,
+        }
+
+    return _cached(("diff", with_, version_id), build)
+
+
+@router.get("/versions/{version_id}/models", response_model=schemas.VersionModels)
+def version_models(version_id: str, session: Db) -> Json:
+    """Model versions trained on this version, by lineage, with their main metric and the
+    split it is on: test once scored, else validation (UI-2.1, SCR-03 v2 frame D)."""
+    registry.get_version(session, version_id)
+    return {"items": model_store.trained_on(session, version_id)}
+
+
+@router.get(
+    "/versions/{version_id}/clusters/{cluster_id}", response_model=schemas.SemanticClusterView
+)
+def semantic_cluster(version_id: str, cluster_id: str, session: Db) -> Json:
+    """A semantic cluster's members, the CLIP similarity and pHash distance of each pair,
+    and their split (DATA-2.3, DATA-4.8; SCR-03 v2 frame C)."""
+    _, path = registry.manifest_for(session, get_settings().data_dir, version_id)
+    page = select_rows(path, equals={"semantic_cluster_id": cluster_id}, limit=200)
+    if not page.rows:
+        raise NotFound(f"No semantic cluster {cluster_id!r} in {version_id}.")
+    vectors = _vectors(
+        session, [str(r["derived_sha256"]) for r in page.rows if r.get("derived_sha256")]
+    )
+    pairs: list[Json] = []
+    for i, a in enumerate(page.rows):
+        for b in page.rows[i + 1 :]:
+            va, vb = (
+                vectors.get(str(a.get("derived_sha256"))),
+                vectors.get(str(b.get("derived_sha256"))),
+            )
+            phash = None
+            if a.get("phash") and b.get("phash"):
+                phash = (int(str(a["phash"]), 16) ^ int(str(b["phash"]), 16)).bit_count()
+            pairs.append(
+                {
+                    "a": a["row_key"],
+                    "b": b["row_key"],
+                    "similarity": None if va is None or vb is None else round(cosine(va, vb), 4),
+                    "phash_distance": phash,
+                }
+            )
+    return {
+        "cluster_id": cluster_id,
+        "rows": page.rows,
+        "pairs": pairs,
+        "split_groups": sorted({str(r["split_group"]) for r in page.rows if r.get("split_group")}),
+    }
+
+
+def _vectors(session: Db, shas: list[str]) -> dict[str, list[float]]:
+    """The cached CLIP vectors of these preprocessed copies, whatever the library versions
+    they were computed under (the API cannot know the GPU worker's)."""
+    found: dict[str, list[float]] = {}
+    for row in session.scalars(
+        select(Derivation).where(
+            Derivation.kind == KIND_CLIP_IMAGE, Derivation.input_hash.in_(shas)
+        )
+    ):
+        found.setdefault(row.input_hash, unpack_vector(str(row.value)))
+    return found

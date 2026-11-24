@@ -13,7 +13,7 @@ PyArrow objects do not leave it.
 
 import os
 from collections import Counter
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -70,6 +70,9 @@ _FIELDS: list[tuple[str, pa.DataType]] = [
     ("text_group", pa.string()),
     ("tokens", pa.string()),
     ("token_count", pa.int32()),
+    # M11 (DATA-2.3, ADR-0013): the semantic cluster an accepted row is in. Nullable and
+    # appended, as above.
+    ("semantic_cluster_id", pa.string()),
 ]
 SCHEMA: pa.Schema = pa.schema(
     [pa.field(name, kind, nullable=name != "row_key") for name, kind in _FIELDS]
@@ -166,11 +169,22 @@ def write_manifest(
 def iter_rows(
     path: Path, *, columns: list[str] | None = None, batch_size: int = 2000
 ) -> Iterator[Row]:
-    """Stream a manifest's rows in file order."""
+    """Stream a manifest's rows in file order.
+
+    A requested column that an older manifest lacks (one appended since, such as M11's
+    ``semantic_cluster_id``) comes back as null, as a column of the current schema would.
+    """
     parquet = pq.ParquetFile(path)
     try:
-        for batch in parquet.iter_batches(batch_size=batch_size, columns=columns):
-            yield from batch.to_pylist()
+        present = set(parquet.schema_arrow.names)
+        wanted = None if columns is None else [c for c in columns if c in present]
+        missing = [] if columns is None else [c for c in columns if c not in present]
+        for batch in parquet.iter_batches(batch_size=batch_size, columns=wanted):
+            rows = batch.to_pylist()
+            if missing:
+                for row in rows:
+                    row.update(dict.fromkeys(missing))
+            yield from rows
     finally:
         parquet.close()
 
@@ -189,12 +203,14 @@ def select_rows(
     key_contains: str | None = None,
     after_key: str | None = None,
     limit: int,
+    not_null: Sequence[str] = (),
 ) -> RowPage:
     """One page of rows, in ``row_key`` order, that match every filter (DATA-3.1, UI-2.1).
 
     ``equals`` maps column names to the value they must equal; ``key_contains``
     is a substring of ``row_key``; ``after_key`` is the cursor, the last key of
-    the previous page. The manifest is read whole: at 1 to 2 MB per 10,000 rows
+    the previous page; ``not_null`` names columns that must have a value. The
+    manifest is read whole: at 1 to 2 MB per 10,000 rows
     (DATA_MODEL.md §10) that is cheaper than streaming it in batches.
     """
     table = pq.read_table(path)
@@ -205,7 +221,13 @@ def select_rows(
         mask = condition if mask is None else pc.and_(mask, condition)
 
     for name, value in equals.items():
+        if name not in table.column_names:  # an older manifest: the column is all null
+            return RowPage(rows=[], matched=0)
         both(pc.equal(table[name], value))
+    for name in not_null:
+        if name not in table.column_names:
+            return RowPage(rows=[], matched=0)
+        both(pc.is_valid(table[name]))
     if key_contains:
         both(pc.match_substring(table["row_key"], key_contains))
     if mask is not None:
@@ -214,6 +236,17 @@ def select_rows(
     if after_key is not None:
         table = table.filter(pc.greater(table["row_key"], after_key))
     return RowPage(rows=table.slice(0, limit).to_pylist(), matched=matched)
+
+
+def read_all(path: Path) -> list[Row]:
+    """Every row of a manifest, with null for columns an older manifest lacks (SCR-03 v2's
+    distributions and diff read whole manifests: 1 to 2 MB per 10,000 rows)."""
+    table = pq.read_table(path)
+    rows: list[Row] = table.to_pylist()
+    missing = [c for c in COLUMNS if c not in table.column_names]
+    for row in rows:
+        row.update(dict.fromkeys(missing))
+    return rows
 
 
 def read_metadata(path: Path) -> dict[str, str]:

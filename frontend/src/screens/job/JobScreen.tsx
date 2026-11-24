@@ -120,6 +120,10 @@ function Header({ job, now, onCancel, device }: { job: Job; now: number; onCance
         </Button>
       ) : null}
       <span className="wide-action">
+        <Button size="sm" variant="ghost" onClick={() => void navigate(`/system?tab=compare&a=${job.id}`)}>
+          <Icon name="chart" />
+          Compare with…
+        </Button>
         <Button size="sm" variant="ghost" onClick={() => void copy(job.id)}>
           <Icon name="copy" />
           Copy ID

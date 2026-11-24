@@ -15,7 +15,7 @@ from stratal.core.logging import bind_job_context, get_logger
 from stratal.mon.emitter import Emitter
 from stratal.mon.eta import EtaEstimator
 from stratal.mon.events import Event, EventType, Level, MetricValue
-from stratal.mon.sink import Metrics
+from stratal.mon.sink import Metrics, SinkType
 
 log = get_logger("stratal.job")
 
@@ -150,8 +150,10 @@ class JobContext:
         metrics: Metrics | None = None,
         reason: str | None = None,
         suggested_action: str | None = None,
+        event_type: SinkType = "activity",
     ) -> None:
-        """An activity message, or a progress report when ``step`` is given.
+        """An activity message (or a model load or unload, ``event_type``), or a
+        progress report when ``step`` is given.
 
         Progress reports get throughput and ETA added (MON-1.5), measured on
         the monotonic clock.
@@ -165,7 +167,7 @@ class JobContext:
                 if estimate.eta_seconds is not None:
                     merged["eta_s"] = round(estimate.eta_seconds, 1)
         self.event(
-            "stage_progress" if step is not None else "activity",
+            "stage_progress" if step is not None else event_type,
             message,
             stage=stage,
             level=level,

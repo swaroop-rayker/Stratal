@@ -465,6 +465,32 @@ def lineage_detail(
             _version_row(v, latest_id=latest_id, pinned=pinned, job_states=job_states)
             for v in shown
         ],
+        "founded_from": _founded_from(session, lineage_id, versions),
+    }
+
+
+def _founded_from(
+    session: Session, lineage_id: str, versions: Sequence[ModelVersion]
+) -> dict[str, Any] | None:
+    """The other lineage's version this lineage's first fine-tune started from (RUN-1.10,
+    ADR-0014 Addendum A rule 6), or None for a lineage begun from fresh weights."""
+    own = {v.id for v in versions}
+    started = sorted(
+        (v for v in versions if v.parent_version_id and v.parent_version_id not in own),
+        key=lambda v: (v.created_at, v.id),
+    )
+    if not started:
+        return None
+    first = started[0]
+    parent = session.get(ModelVersion, first.parent_version_id)
+    if parent is None:
+        return None
+    lineage = session.get(ModelLineage, parent.lineage_id)
+    return {
+        "version_id": parent.id,
+        "lineage_id": parent.lineage_id,
+        "lineage_name": lineage.name if lineage is not None else "?",
+        "reset_head": bool((first.config or {}).get("reset_head")),
     }
 
 
@@ -497,6 +523,22 @@ def version_detail(session: Session, version_id: str) -> dict[str, Any]:
         "weights_path": version.weights_path,
         "weights_deleted_at": iso(version.weights_deleted_at),
         "study_id": version.study_id,
+        "children": [
+            {
+                "id": child.id,
+                "lineage_id": child.lineage_id,
+                "lineage_name": name,
+                "weights_status": child.weights_status,
+            }
+            for child, name in session.execute(
+                select(ModelVersion, ModelLineage.name)
+                .join(ModelLineage, ModelLineage.id == ModelVersion.lineage_id)
+                .where(ModelVersion.parent_version_id == version.id, ModelVersion.state != "base")
+                .order_by(ModelVersion.created_at.desc())
+            )
+        ]
+        if version.state != "base"  # every run starts from its base: only fine-tunes count
+        else [],
     }
 
 
@@ -525,3 +567,53 @@ def unpin(session: Session, version_id: str) -> ModelVersion:
     session.execute(delete(Pin).where(Pin.version_id == version_id))
     session.flush()
     return version
+
+
+def trained_on(session: Session, dataset_version_id: str) -> list[dict[str, Any]]:
+    """Model versions trained on a dataset version, newest first: each with its lineage,
+    how it was made, its main metric and the split that metric is on (test once scored,
+    else validation), and its weights (UI-2.1, SCR-03 v2 frame D)."""
+    rows = session.execute(
+        select(ModelVersion, ModelLineage.name)
+        .join(ModelLineage, ModelLineage.id == ModelVersion.lineage_id)
+        .where(
+            ModelVersion.dataset_version_id == dataset_version_id,
+            ModelVersion.state.in_(("trained", "partial")),
+        )
+        .order_by(ModelVersion.trained_at.desc().nulls_last(), ModelVersion.id)
+    ).all()
+    items: list[dict[str, Any]] = []
+    for version, lineage_name in rows:
+        metrics: dict[str, Any] = dict(version.metrics or {})
+        metric = None
+        for split in ("test", "val"):
+            for name in ("accuracy", "r2", "macro_f1", "loss"):
+                value = metrics.get(f"{split}_{name}")
+                if isinstance(value, int | float) and not isinstance(value, bool):
+                    metric = {"split": split, "name": name, "value": float(value)}
+                    break
+            if metric:
+                break
+        model: dict[str, Any] = dict((version.config or {}).get("model") or {})
+        kind = "run"
+        if version.study_id:
+            kind = "study"
+        elif (version.config or {}).get("init_from"):
+            kind = "fine-tune"
+        elif model.get("kind") == "sklearn":
+            kind = "classical"
+        items.append(
+            {
+                "id": version.id,
+                "lineage_id": version.lineage_id,
+                "lineage_name": lineage_name,
+                "state": version.state,
+                "kind": kind,
+                "parent_version_id": version.parent_version_id,
+                "metric": metric,
+                "weights_status": version.weights_status,
+                "trained_at": iso(version.trained_at),
+                "study_id": version.study_id,
+            }
+        )
+    return items

@@ -117,6 +117,9 @@ export interface RowFilters {
   reason_code?: string;
   split?: "train" | "val" | "test";
   dup_group_id?: string;
+  semantic_cluster_id?: string;
+  /** Only rows in a semantic cluster (DATA-2.3, SCR-03 v2). */
+  semantic?: boolean;
   q?: string;
 }
 
@@ -184,4 +187,51 @@ export function useGpuTemperature(): number | null {
     }, []),
   );
   return live ?? latest.data?.gpu_temp_c ?? null;
+}
+
+// -- SCR-03 v2 (M11): distributions, the diff, models trained on a version, a cluster -----
+
+/** The funnel and each column raw against here (UI-2.2); versions never change (K10). */
+export function useDistributions(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["versions", id, "distributions"],
+    queryFn: () => call(() => api.GET("/api/v1/versions/{version_id}/distributions", { params: { path: { version_id: id } } })),
+    enabled,
+    staleTime: Infinity,
+  });
+}
+
+/** This version (B) against another of its dataset (A), by row_key (DATA-3.5). */
+export function useVersionDiff(id: string, other: string | null) {
+  return useQuery({
+    queryKey: ["versions", id, "diff", other],
+    queryFn: () =>
+      call(() => api.GET("/api/v1/versions/{version_id}/diff", { params: { path: { version_id: id }, query: { with: other ?? "" } } })),
+    enabled: Boolean(other),
+    staleTime: Infinity,
+  });
+}
+
+/** Model versions trained on this version (UI-2.1, SCR-03 v2 frame D). */
+export function useVersionModels(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["versions", id, "models"],
+    queryFn: () => call(() => api.GET("/api/v1/versions/{version_id}/models", { params: { path: { version_id: id } } })),
+    enabled,
+  });
+}
+
+/** A semantic cluster's members and each pair's similarity (DATA-2.3, frame C). */
+export function useCluster(id: string, clusterId: string | null) {
+  return useQuery({
+    queryKey: ["versions", id, "cluster", clusterId],
+    queryFn: () =>
+      call(() =>
+        api.GET("/api/v1/versions/{version_id}/clusters/{cluster_id}", {
+          params: { path: { version_id: id, cluster_id: clusterId ?? "" } },
+        }),
+      ),
+    enabled: Boolean(clusterId),
+    staleTime: Infinity,
+  });
 }

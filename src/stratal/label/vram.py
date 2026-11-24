@@ -44,6 +44,8 @@ class VramReading:
     allocated_mb: float
     reserved_mb: float
     free_mb: float
+    card_used_mb: float | None = None
+    """Total minus free, the driver's count, other processes included (MON-3.3, K6)."""
 
 
 @dataclass(frozen=True)
@@ -105,7 +107,10 @@ class VramManager:
     def _read(self) -> VramReading:
         """Measure after queued GPU work has finished (E-008)."""
         self._gpu.synchronize()
-        return VramReading(self._gpu.allocated_mb(), self._gpu.reserved_mb(), self._gpu.free_mb())
+        free = self._gpu.free_mb()
+        return VramReading(
+            self._gpu.allocated_mb(), self._gpu.reserved_mb(), free, self._gpu.total_mb() - free
+        )
 
     def _release_cached(self) -> None:
         gc.collect()
@@ -151,8 +156,10 @@ class VramManager:
         self._sink.emit(
             stage=self._stage,
             message=f"Loaded {name} to GPU "
-            f"({(after.allocated_mb - before.allocated_mb) / 1024:.1f} GB, {seconds:.1f} s)",
+            f"({(after.allocated_mb - before.allocated_mb) / 1024:.1f} GB, {seconds:.1f} s): "
+            f"{_figures(before, after)}",
             metrics={**_metrics(before, after), "load_s": round(seconds, 2)},
+            event_type="model_loaded",
         )
         return model
 
@@ -179,28 +186,31 @@ class VramManager:
             freed = before.allocated_mb - after.allocated_mb
             self._sink.emit(
                 stage=self._stage,
-                message=f"Unloaded {name}: {freed / 1024:.2f} GB freed, "
-                "allocated VRAM back to its baseline",
+                message=f"Unloaded {name}: {_figures(before, after)}; "
+                f"{freed / 1024:.2f} GB freed, allocated VRAM back to its baseline",
                 metrics=metrics,
+                event_type="model_unloaded",
             )
         else:
             self._sink.emit(
                 stage=self._stage,
                 level="WARN",
-                message=f"Unloaded {name}, but {held:.0f} MB of VRAM is still allocated",
+                message=f"Unloaded {name}, but {held:.0f} MB of VRAM is still allocated: "
+                f"{_figures(before, after)}",
                 reason=f"{held:.0f} MB more is allocated than before {name} was loaded: "
                 "something still holds its tensors (BUG5).",
                 suggested_action="The process will be restarted to free it: a job's process "
                 "exits when its stage ends (ADR-0006 rules 1 and 6). Look for a reference "
                 "still kept to the model.",
                 metrics=metrics,
+                event_type="model_unloaded",
             )
         return UnloadReport(name, before, after, baseline.allocated_mb, returned)
 
 
 def _metrics(before: VramReading, after: VramReading) -> dict[str, MetricValue]:
     """VRAM before and after, from PyTorch and from the driver (MON-3.3)."""
-    return {
+    metrics: dict[str, MetricValue] = {
         "allocated_mb_before": round(before.allocated_mb, 1),
         "allocated_mb_after": round(after.allocated_mb, 1),
         "reserved_mb_before": round(before.reserved_mb, 1),
@@ -208,3 +218,15 @@ def _metrics(before: VramReading, after: VramReading) -> dict[str, MetricValue]:
         "free_mb_before": round(before.free_mb, 1),
         "free_mb_after": round(after.free_mb, 1),
     }
+    if before.card_used_mb is not None and after.card_used_mb is not None:
+        metrics["card_used_mb_before"] = round(before.card_used_mb, 1)
+        metrics["card_used_mb_after"] = round(after.card_used_mb, 1)
+    return metrics
+
+
+def _figures(before: VramReading, after: VramReading) -> str:
+    """ "VRAM 0.44 → 0.00 GB (PyTorch), card 4.9 → 1.1 GB" (MON-3.3.AC1, K6)."""
+    text = f"VRAM {before.allocated_mb / 1024:.2f} → {after.allocated_mb / 1024:.2f} GB (PyTorch)"
+    if before.card_used_mb is not None and after.card_used_mb is not None:
+        text += f", card {before.card_used_mb / 1024:.1f} → {after.card_used_mb / 1024:.1f} GB"
+    return text

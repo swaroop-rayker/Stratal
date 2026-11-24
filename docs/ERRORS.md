@@ -35,6 +35,26 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-017 — Turning a study on changed SCR-09's estimator under its form
+
+- **Date:** 2026-11-22
+- **Seen:** On SCR-09 in Classical mode, on wine's split with `kmeans` selected, *Turn on* (or a Tune toggle on one of k-means's fields) started a study, and `kmeans` left the estimator list. The select then showed `logistic_regression`, while the sentence beside it and the parameter form were still k-means's. Found while checking the owner's report that logistic regression was missing; it is offered only on classification splits, by design.
+- **Where:** M11, SCR-09 (`frontend/src/screens/build/RunScreen.tsx`); ML-1.1, DATA-5.5, HPO-1.1.
+- **Cause:** The list was filtered, and the estimators that ignore the target were dropped while a study was on. Dropping the selected one left the native select showing the first remaining option, while the page's state still held `kmeans`.
+- **Fix:** Every estimator stays listed, disabled with its reason when the split or a study rules it out. While an estimator that ignores the target is selected, *Turn on* is disabled with its reason and its fields have no Tune toggles (SCR-09's estimator-list addendum, approved 2026-11-22).
+- **Guard:** `test_DATA_5_5_turning_a_study_on_never_changes_the_selected_estimator` (Vitest, `frontend/src/screens/build/TrainEntry.test.tsx`).
+- **Status:** verified (the guard passes; checked live on wine's split, 2026-11-22)
+
+### E-016 — The raw-hex lint read a record's row key as a colour
+
+- **Date:** 2026-11-22
+- **Seen:** The full `check.ps1 -Gpu` before M11's merge stopped at its frontend step: `src/screens/models/Compare.test.tsx:121: raw colour #0000021`. The line holds the row key `wine.csv#0000021`, not a colour.
+- **Where:** M11, `frontend/scripts/no-raw-hex.mjs` (SPEC §9.6's rule against one-off colours), on SCR-11 v2's Try it test (REG-1.4). The test came in with SCR-11 v2 and had passed in Vitest, but no full check had run since.
+- **Cause:** The rule matched any `#` followed by 3 to 8 hex digits. A record's row key is `file#line` with the line zero-padded (M10, `stratal.data.tables`, `texts`), so any such key in the frontend's source or tests looked like a colour.
+- **Fix:** A CSS hex colour has 3, 4, 6 or 8 digits and never follows a word character, and the rule now requires both (commit `bc67edc`). Colours in quotes, after a colon, in brackets and in parentheses are still caught.
+- **Guard:** `check.ps1`'s frontend step: `npm run lint` scans the test that holds the row key.
+- **Status:** verified (`check.ps1`'s frontend step, 2026-11-22)
+
 ### E-015 — The pause toast named a step before the one the run paused at
 
 - **Date:** 2026-11-19

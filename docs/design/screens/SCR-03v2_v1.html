@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-03 v2 distributions, diff and clusters — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --cat-1: #5aa9f5; --cat-2: #f29e4c; --cat-3: #3cc4b4; --cat-4: #e58ad6; --cat-5: #a3d35c; --cat-6: #b79cff; --cat-7: #f0d264; --cat-8: #f4737b;
+  --seq-1: #1b2440; --seq-2: #27356a; --seq-3: #374a96; --seq-4: #4d64c0; --seq-5: #6f86e0; --seq-6: #9fb0f2; --seq-7: #d3dcfb;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --cat-1: #1f6fc4; --cat-2: #b0560a; --cat-3: #0b7d70; --cat-4: #a8348f; --cat-5: #4d7a12; --cat-6: #6a4fd8; --cat-7: #7d6300; --cat-8: #c2364a;
+  --seq-1: #e4e9fb; --seq-2: #c2cdf5; --seq-3: #9aabec; --seq-4: #7087de; --seq-5: #4d64c8; --seq-6: #3548a3; --seq-7: #222f72;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.tabs { display: flex; gap: var(--sp-1); border-bottom: var(--bw) solid var(--border); }
+.tab { padding: var(--sp-2) var(--sp-3); border: 0; background: none; color: var(--text-secondary); font: var(--fw-medium) var(--fs-13) var(--font-ui); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: var(--sp-2); align-items: center; }
+.tab[aria-selected=true] { color: var(--text-primary); border-bottom-color: var(--accent); }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t td { padding: 0 var(--sp-2); border-bottom: var(--bw) solid var(--border); height: 44px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); }
+.pill svg.i { width: 12px; height: 12px; }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.node { display: inline-flex; flex-direction: column; gap: 2px; min-width: 168px; padding: var(--sp-2) var(--sp-3); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-left: 3px solid var(--c, var(--accent)); border-radius: var(--r-md); box-shadow: var(--shadow-1); }
+.node small { font-size: var(--fs-11); color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.node b { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .node span { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-1); }
+.edge { width: 28px; height: 1px; background: var(--border-strong); position: relative; flex: none; }
+.edge::after { content: ""; position: absolute; right: 0; top: -3px; border: 3.5px solid transparent; border-left-color: var(--border-strong); }
+pre.code { margin: 0; background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); font: var(--fs-12)/1.6 var(--font-mono); }
+pre.code .k { color: var(--cat-6); } pre.code .s { color: var(--cat-5); } pre.code .n { color: var(--cat-2); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-8) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); max-width: 46ch; color: var(--text-secondary); }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.tip { position: absolute; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); box-shadow: var(--shadow-2); z-index: var(--z-tooltip); white-space: nowrap; }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; } .crumbs .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; } .progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-03 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.vhead { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.vhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); display: flex; align-items: center; gap: var(--sp-2); }
+.vhead .sub { color: var(--text-muted); font-size: var(--fs-12); margin-top: var(--sp-1); display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; } .vhead .sub .mono { color: var(--text-secondary); }
+.vhead .sub svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.stage-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.lineage { display: flex; align-items: center; padding: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.node.pending { --c: var(--state-running); border-style: dashed; background: transparent; box-shadow: none; }
+.node.done { --c: var(--state-completed); }
+.fork { display: flex; flex-direction: column; gap: var(--sp-2); } .fork .row { display: flex; align-items: center; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
+.stile { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c); border-radius: var(--r-md); text-align: left; cursor: pointer; }
+.stile:hover, .stile.is-hover { border-color: var(--border-strong); border-left-color: var(--c); }
+.stile[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); border-left-color: var(--c); }
+.stile .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.stile .k i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); }
+.stile .v { font: var(--fw-medium) var(--fs-20)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.stile .d { font-size: var(--fs-11); color: var(--text-muted); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.group-btns { display: inline-flex; }
+.group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.thumb { width: 32px; height: 32px; border-radius: var(--r-sm); border: var(--bw) solid var(--border); display: block; background: linear-gradient(135deg, var(--a, var(--seq-3)), var(--b, var(--seq-5))); }
+.rs { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-12); } .rs i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.rs.acc { --c: var(--success); } .rs.rej { --c: var(--danger); } .rs.dup { --c: var(--text-muted); } .rs.fil { --c: var(--warning); }
+.reason { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.muted { color: var(--text-muted); }
+.t td.hash { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); text-align: right; }
+.notice { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--warning-soft); border: var(--bw) solid color-mix(in srgb, var(--warning) 45%, transparent); font-size: var(--fs-12); }
+.notice svg.i { color: var(--warning); margin-top: 2px; }
+.kv { display: grid; grid-template-columns: 150px 1fr; gap: var(--sp-2) var(--sp-3); font-size: var(--fs-12); } .kv > span:nth-child(odd) { color: var(--text-muted); } .kv .mono { word-break: break-all; font-size: var(--fs-12); }
+h3.sec { margin: 0 0 var(--sp-2); font-size: var(--fs-12); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.reason-bar { display: inline-block; height: 6px; border-radius: var(--r-pill); background: var(--c); vertical-align: middle; }
+/* row drawer */
+.drawer { width: 540px; }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.drawer > header b { font: var(--fw-medium) var(--fs-14) var(--font-mono); }
+.drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); overflow: hidden; }
+.group-head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-secondary); }
+.group-head b { color: var(--text-primary); }
+.dist { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.card-img { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-12); }
+.photo { height: 190px; border-radius: var(--r-md); border: var(--bw) solid var(--border); background: radial-gradient(circle at 30% 35%, var(--cat-5) 0 16%, transparent 17%), radial-gradient(circle at 68% 60%, var(--cat-2) 0 13%, transparent 14%), linear-gradient(160deg, var(--seq-2), var(--seq-4)); position: relative; }
+.photo.kept { box-shadow: 0 0 0 2px var(--success); }
+.photo .tag { position: absolute; left: var(--sp-2); top: var(--sp-2); }
+.card-img .mono { font-size: var(--fs-12); color: var(--text-primary); } .card-img span { color: var(--text-secondary); } .card-img .hash { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.hash mark { background: var(--warning-soft); color: var(--warning); border-radius: var(--r-xs); }
+
+
+/* ============================================================================ SCR-03 v2 (M11), tokens only.
+   Callouts as SCR-09 v2 and SCR-11 v2 (approved); data-viz categorical 1 as SCR-10 and SCR-11. */
+:root { --cat-1: #5aa9f5; }
+[data-theme="light"] { --cat-1: #1f6fc4; }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.card > h2 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.card > h2 .sub2 { font-weight: var(--fw-regular); font-size: var(--fs-11); color: var(--text-secondary); }
+.note2 { font-size: var(--fs-12); color: var(--text-secondary); margin: 0; }
+.callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-primary); background: var(--surface); }
+.callout svg.i { margin-top: 2px; flex: none; }
+.callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .callout.info svg.i { color: var(--info); }
+.callout.err { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .callout.err svg.i { color: var(--danger); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.t.dense td { height: 32px; }
+.t td.r, .t th.r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t tr.here td { background: var(--accent-soft); }
+.t tr.here td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+.t td.lab { color: var(--text-secondary); }
+.t td.gone { color: var(--text-secondary); }
+/* the funnel's reason chips: a status dot, the code, the rows; they filter Rows */
+.chip { display: inline-flex; align-items: center; gap: var(--sp-1); height: 22px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-pill); background: var(--surface-raised); font: var(--fs-11) var(--font-mono); color: var(--text-primary); cursor: pointer; }
+.chip i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.chip b { font-weight: var(--fw-medium); }
+.chip.rej { --c: var(--danger); } .chip.dup { --c: var(--text-muted); } .chip.fil { --c: var(--warning); }
+.parts { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+/* histogram: raw as an outline, here filled (decision 3) */
+.hist { display: grid; grid-template-columns: 64px 1fr 110px; gap: 4px var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.hist .track { position: relative; height: 14px; }
+.hist .raw { position: absolute; left: 0; top: 0; bottom: 0; border: var(--bw) solid var(--text-secondary); border-radius: var(--r-xs); min-width: 1px; }
+.hist .here { position: absolute; left: 0; top: 3px; bottom: 3px; background: var(--cat-1); border-radius: var(--r-xs); min-width: 1px; }
+.hist .n { color: var(--text-primary); text-align: right; }
+.key { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); align-items: center; }
+.key i { display: inline-block; width: 14px; height: 8px; margin-right: var(--sp-1); vertical-align: middle; border-radius: var(--r-xs); }
+.key .k-raw { border: var(--bw) solid var(--text-secondary); } .key .k-here { background: var(--cat-1); }
+.mark-line { font-size: var(--fs-11); color: var(--text-secondary); }
+/* compare */
+.cmp-pick { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); flex-wrap: wrap; }
+.counts { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); }
+.counts > span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.counts > span:nth-child(odd) { color: var(--text-secondary); }
+.counts b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.arrow { color: var(--text-secondary); }
+/* semantic cluster tile and chip */
+.stile.sem { --c: var(--cat-1); }
+.scchip { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-11) var(--font-mono); color: var(--text-primary); background: color-mix(in srgb, var(--cat-1) 16%, transparent); border: var(--bw) solid color-mix(in srgb, var(--cat-1) 45%, transparent); }
+.simline { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.simline .dist { color: var(--text-primary); }
+/* lineage end chip */
+.endchip { display: inline-flex; align-items: center; gap: var(--sp-1); margin-left: var(--sp-3); height: 24px; padding: 0 var(--sp-2); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-pill); font-size: var(--fs-12); color: var(--text-primary); background: transparent; }
+.endchip svg.i { width: 12px; height: 12px; color: var(--text-secondary); }
+.split-frames { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: flex-start; }
+/* Secondary text on a selected surface uses text-secondary (design system, SCR-02 G3); a pressed tile measured 4.50:1 in light with text-muted. */
+.stile[aria-pressed=true] .d { color: var(--text-secondary); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M3.5 10.5h-1v-8h8v1"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><path d="M3.5 8h.3M8 8h.3M12.5 8h.3" stroke-width="2.4"/></symbol>
+  <!-- New in this mockup, same style -->
+  <symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-03 v2 — distributions, the diff, semantic clusters, models trained on a version · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Built on the approved low-fi wireframe (<span class="mono">SCR-03v2-lofi_v1.html</span>, approved 2026-11-21 with both of its questions) inside SCR-03's approved look: its header, lineage nodes, status tiles, tabs and duplicate-group drawer, unchanged. Only design system v1 tokens and components, and icons already in the set. The data is real unless marked: coco10k's split <span class="mono">ds_3f6fcc420a27</span> and its lineage, its two preprocess versions (ingest <span class="mono">min_size</span> 256 against 255), CIFAR-10's split <span class="mono">ds_f8e67211dd94</span> and its 16 trained versions. Frame C's rows are illustrative (no label version has clusters yet); its counts are spike S-10's at 0.90 and its pair is S-10's real pair. Open as <span class="mono">SCR-03v2_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>The new tabs sit in SCR-03's tab bar</b> in the order Rows, Reasons, Distributions, Compare, Models, Config. <i>Models</i> carries a count and appears only on a version models train on.</li>
+<li><b>The funnel is the dense table</b>, one row per stage, this version's row in the selected-row look. What a stage removed is a set of <b>reason chips</b>: a pill with the status's dot (rejected danger, duplicate muted, filtered warning, as the tiles), the code and the rows. A chip is a button that opens Rows filtered to that reason. A split's parts are a mono line.</li>
+<li><b>Histograms draw raw as an outline in text-secondary and here filled in categorical 1</b>, on shared bins, with a key above and both counts printed at the right of each bin, so neither colour nor shape is the only cue. Every histogram card has a <i>Table</i> toggle.</li>
+<li><b>The five-number tables</b> are dense tables with figures right-aligned in mono. <i>Here</i> takes the selected-row look; <i>removed</i> is one muted line saying what the removed rows have in common.</li>
+<li><b>Compare's header</b> is a select of the dataset's versions with a ghost <i>Swap</i>. The config difference is an info callout, with each changed setting as <span class="mono">name old → new</span>. Counts are a two-column list with <i>changed</i> in semibold. Changed rows are a table of field, A and B, using the row status dots. Wording-only rows are folded into one muted line with <i>Show</i>.</li>
+<li><b>The semantic-cluster tile</b> joins the four status tiles as a fifth, its left border in categorical 1, because a cluster is not a status. The row chip is a mono tag on a categorical-1 tint. The drawer reuses the duplicate group's head and side-by-side cards, with no <i>kept</i> ring, since every member stays accepted.</li>
+<li><b>The lineage strip ends with a dashed "→ 16 models" chip</b> with the grid icon, after the last node, which opens the Models tab.</li>
+<li><b>The Models tab is the dense table</b> grouped by lineage (section rows with the lineage ID where names repeat). The metric reads "test 0.831" or "val 0.839", so the split is always named. Deleted weights are in secondary text. <i>Compare on this test split</i> and <i>Train a model…</i> sit under the table.</li>
+<li><b>A pressed tile's secondary line is text-secondary</b>, the existing rule for secondary text on a selected surface (SCR-02 G3): with text-muted it measured 4.50:1 in light, too close to the limit.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Distributions on coco10k's split (dark)</h2>
+<div class="frame" id="frameA" style="height:1340px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets</div><div class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs</div><div class="nav"><svg class="i"><use href="#i-grid"/></svg>Models</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>coco10k</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_3f6fcc420a27</span></div><span class="spacer"></span><span class="jobind idle"><svg class="i"><use href="#i-check"/></svg>Idle</span></header>
+    <main class="content">
+      <div class="vhead"><div><h1>ds_3f6fcc420a27 <span class="stage-tag">split</span></h1><div class="sub">coco10k · made 16 Nov 19:31 by <span class="mono">job_0013</span><svg class="i"><use href="#i-check"/></svg> · from <span class="mono">ds_db6bcccdb054</span> (filter) · captions by <span class="mono">florence-2-base</span></div></div><span class="spacer"></span><button class="btn sm"><svg class="i"><use href="#i-branch"/></svg>Train a model…</button></div>
+      <div class="lineage" aria-label="Lineage"><div class="node done"><small>label</small><b>ds_047b184c1f70</b><span>9,932 captioned</span></div><span class="edge"></span><div class="node done"><small>filter</small><b>ds_db6bcccdb054</b><span>94 filtered</span></div><span class="edge"></span><div class="node done selected" aria-current="true"><small>split · this version</small><b>ds_3f6fcc420a27</b><span>7,870 · 984 · 984</span></div><span class="endchip"><svg class="i"><use href="#i-grid"/></svg>→ 0 models</span></div>
+      <div class="tiles"><button class="stile" style="--c:var(--success)"><span class="k"><i></i>Accepted</span><span class="v">9,838</span><span class="d">98.4%</span></button><button class="stile" style="--c:var(--danger)"><span class="k"><i></i>Rejected</span><span class="v">60</span><span class="d">at ingest · 1 reason</span></button><button class="stile" style="--c:var(--text-muted)"><span class="k"><i></i>Duplicate</span><span class="v">8</span><span class="d">0 exact · 8 near</span></button><button class="stile" style="--c:var(--warning)"><span class="k"><i></i>Filtered</span><span class="v">94</span><span class="d">CLIP below 0.2</span></button></div>
+      <div class="tabs" role="tablist"><span class="tab" role="tab">Rows <span class="count">10,000</span></span><span class="tab" role="tab">Reasons <span class="count">3</span></span><span class="tab" role="tab" aria-selected="true">Distributions</span><span class="tab" role="tab">Compare</span><span class="tab" role="tab">Config</span></div>
+      <section class="card"><h2><span class="n" style="position:static">1</span>From raw to this version <span class="sub2">rows each stage took in, removed and passed on · UI-2.2</span></h2>
+        <div class="table-wrap"><table class="t dense"><caption class="sr-only">Rows by stage from raw to this version</caption>
+          <thead><tr><th>Stage</th><th>Version</th><th class="r">In</th><th>Removed, by reason</th><th class="r">Out</th></tr></thead>
+          <tbody>
+            <tr><td>ingest</td><td class="id">ds_5c8d4e6a081b</td><td class="r">10,000</td><td><button class="chip rej"><i></i>below_min_size <b>60</b></button></td><td class="r">9,940</td></tr>
+            <tr><td>clean</td><td class="id">ds_3c8ee080a4c9</td><td class="r">9,940</td><td><button class="chip dup"><i></i>near_duplicate <b>8</b></button></td><td class="r">9,932</td></tr>
+            <tr><td>preprocess</td><td class="id">ds_f81d0d552a1a</td><td class="r">9,932</td><td class="lab">none</td><td class="r">9,932</td></tr>
+            <tr><td>label</td><td class="id">ds_047b184c1f70</td><td class="r">9,932</td><td class="lab">none · captions and CLIP scores added</td><td class="r">9,932</td></tr>
+            <tr><td>filter</td><td class="id">ds_db6bcccdb054</td><td class="r">9,932</td><td><button class="chip fil"><i></i>clip_below_threshold <b>94</b></button></td><td class="r">9,838</td></tr>
+            <tr class="here"><td><b>split</b></td><td class="id">ds_3f6fcc420a27</td><td class="r">9,838</td><td><span class="parts">train 7,870 · val 984 · test 984</span></td><td class="r">9,838</td></tr>
+          </tbody></table></div>
+        <p class="note2">162 of 10,000 rows (1.6 %) were removed. A reason opens Rows filtered to it.</p></section>
+      <div class="two">
+        <section class="card"><h2><span class="n" style="position:static">2</span>Width <span class="sub2">px</span><span class="spacer"></span><span class="group-btns" role="group" aria-label="View"><button class="btn sm" aria-pressed="true">Chart</button><button class="btn sm">Table</button></span></h2>
+          <div class="key"><span><i class="k-raw"></i>raw · 10,000</span><span><i class="k-here"></i>here · 9,838</span></div>
+          <div class="hist" role="img" aria-label="Width histogram, raw against here: 0–199 px 6 and 0; 200–299 24 and 17; 300–399 345 and 327; 400–499 1,743 and 1,727; 500–599 926 and 915; 600–640 6,956 and 6,852">
+            <span>0–199</span><div class="track"><span class="raw" style="width:0.1%"></span></div><span class="n">6 · 0</span>
+            <span>200–299</span><div class="track"><span class="raw" style="width:0.3%"></span><span class="here" style="width:0.2%"></span></div><span class="n">24 · 17</span>
+            <span>300–399</span><div class="track"><span class="raw" style="width:5%"></span><span class="here" style="width:4.7%"></span></div><span class="n">345 · 327</span>
+            <span>400–499</span><div class="track"><span class="raw" style="width:25.1%"></span><span class="here" style="width:24.8%"></span></div><span class="n">1,743 · 1,727</span>
+            <span>500–599</span><div class="track"><span class="raw" style="width:13.3%"></span><span class="here" style="width:13.2%"></span></div><span class="n">926 · 915</span>
+            <span>600–640</span><div class="track"><span class="raw" style="width:100%"></span><span class="here" style="width:98.5%"></span></div><span class="n">6,956 · 6,852</span>
+          </div>
+          <div class="table-wrap"><table class="t dense"><caption class="sr-only">Width, five numbers</caption>
+            <thead><tr><th></th><th class="r">min</th><th class="r">p10</th><th class="r">median</th><th class="r">p90</th><th class="r">max</th></tr></thead>
+            <tbody><tr><td>raw · 10,000</td><td class="r">150</td><td class="r">427</td><td class="r">640</td><td class="r">640</td><td class="r">640</td></tr>
+              <tr class="here"><td>here · 9,838</td><td class="r">263</td><td class="r">428</td><td class="r">640</td><td class="r">640</td><td class="r">640</td></tr></tbody></table></div>
+          <p class="note2">Removed · 162: the 60 rejected at ingest have a shorter side of 120–255 px (median 226).</p></section>
+        <section class="card"><h2>CLIP score <span class="sub2">caption against image · labelled rows</span></h2>
+          <div class="table-wrap"><table class="t dense"><caption class="sr-only">CLIP score, five numbers</caption>
+            <thead><tr><th></th><th class="r">min</th><th class="r">p10</th><th class="r">median</th><th class="r">p90</th><th class="r">max</th></tr></thead>
+            <tbody><tr><td>labelled · 9,932</td><td class="r">0.115</td><td class="r">0.258</td><td class="r">0.313</td><td class="r">0.364</td><td class="r">0.459</td></tr>
+              <tr class="here"><td>here · 9,838</td><td class="r">0.200</td><td class="r">0.261</td><td class="r">0.314</td><td class="r">0.364</td><td class="r">0.459</td></tr></tbody></table></div>
+          <p class="mark-line">The filter's threshold, <b class="mono">0.2</b> (OC-5), cuts the left tail: 94 rows. Its histogram draws the threshold as a marker, as SCR-06 does.</p>
+          <h2 style="margin:var(--sp-2) 0 0;font-size:var(--fs-13)">Caption length <span class="sub2">words</span></h2>
+          <div class="table-wrap"><table class="t dense"><caption class="sr-only">Caption length, five numbers</caption>
+            <thead><tr><th></th><th class="r">min</th><th class="r">p10</th><th class="r">median</th><th class="r">p90</th><th class="r">max</th></tr></thead>
+            <tbody><tr class="here"><td>here · 9,838</td><td class="r">6</td><td class="r">9</td><td class="r">11</td><td class="r">12</td><td class="r">17</td></tr></tbody></table></div></section>
+      </div>
+      <section class="card"><h2>Height, file size and preprocessed size <span class="sub2">each has the histogram card of 2</span></h2>
+        <div class="table-wrap"><table class="t dense"><caption class="sr-only">Other columns, five numbers</caption>
+          <thead><tr><th>Column</th><th>Rows</th><th class="r">min</th><th class="r">p10</th><th class="r">median</th><th class="r">p90</th><th class="r">max</th></tr></thead>
+          <tbody>
+            <tr><td>height (px)</td><td class="lab">raw · 10,000</td><td class="r">120</td><td class="r">375</td><td class="r">480</td><td class="r">640</td><td class="r">640</td></tr>
+            <tr class="here"><td></td><td>here · 9,838</td><td class="r">257</td><td class="r">375</td><td class="r">480</td><td class="r">640</td><td class="r">640</td></tr>
+            <tr><td>file size (KB)</td><td class="lab">raw · 10,000</td><td class="r">9.1</td><td class="r">83.9</td><td class="r">153.8</td><td class="r">246.7</td><td class="r">898.9</td></tr>
+            <tr class="here"><td></td><td>here · 9,838</td><td class="r">10.7</td><td class="r">84.5</td><td class="r">154.3</td><td class="r">247.0</td><td class="r">898.9</td></tr>
+            <tr class="here"><td>preprocessed long side (px)</td><td>here · 9,838</td><td class="r">300</td><td class="r">500</td><td class="r">640</td><td class="r">640</td><td class="r">640</td></tr>
+          </tbody></table></div>
+        <p class="note2">All 10,000 are JPEG, so format has no chart.</p></section>
+    </main>
+    <footer class="status"><div class="m"><span class="sq" style="--res:var(--res-cpu)"></span>CPU <b>3%</b></div><div class="m"><span class="sq" style="--res:var(--res-ram)"></span>RAM <b>3.1</b><small>/ 9.7 GB</small></div><div class="m"><span class="sq" style="--res:var(--res-gpu)"></span>GPU <b>0%</b></div><div class="m"><span class="sq" style="--res:var(--res-vram)"></span>VRAM <b>0.3</b><small>/ 6.0 GB</small></div><div class="m conn"><span class="live"><span class="pulse"></span>live</span></div></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Funnel</td><td>Each stage from raw to this version: rows in, removed by reason as chips, out; the split's parts</td><td><span class="mono">GET /versions/{id}/lineage</span>, each ancestor's <span class="mono">counts</span>; <span class="mono">GET /versions/{id}/stats</span></td><td>static</td></tr>
+<tr><td><span class="n">2</span></td><td>A column</td><td>Raw (the ingest version) against here (accepted rows): histogram on shared bins with both counts, five numbers, the removed rows in words</td><td><span class="mono">GET /versions/{id}/distributions</span> <i>planned</i>, cached by version ID (K10)</td><td>static</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div id="lightA"></div>
+
+<!-- ===================================================================== B -->
+<h2>B · Compare: coco10k's two preprocess versions</h2>
+<div class="frame" style="height:600px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>coco10k</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_bad290a73446</span></div></header>
+    <main class="content">
+      <div class="tabs" role="tablist"><span class="tab" role="tab">Rows <span class="count">10,000</span></span><span class="tab" role="tab">Reasons <span class="count">2</span></span><span class="tab" role="tab">Distributions</span><span class="tab" role="tab" aria-selected="true">Compare</span><span class="tab" role="tab">Config</span></div>
+      <section class="card"><h2><span class="n" style="position:static">3</span>Compare with<span class="spacer"></span></h2>
+        <div class="cmp-pick"><span>A</span><span class="select mono" style="height:var(--h-md);font-size:var(--fs-13)">ds_f81d0d552a1a · preprocess · 16 Nov 19:18<svg class="i"><use href="#i-down"/></svg></span><button class="btn sm ghost">Swap</button><span style="margin-left:var(--sp-3)">B, this version <span class="mono">ds_bad290a73446</span> · preprocess · 17 Nov 13:57</span></div>
+        <div class="callout info"><svg class="i"><use href="#i-info"/></svg><span><b>Their lineages differ at ingest:</b> <span class="mono">min_size 256 → 255</span>. Clean and preprocess have the same configs.</span></div></section>
+      <div style="display:grid;grid-template-columns:300px 1fr;gap:var(--sp-3)">
+        <section class="card"><h2><span class="n" style="position:static">4</span>Rows <span class="sub2">by row_key</span></h2>
+          <div class="counts"><span>added in B</span><span>0</span><span>removed in B</span><span>0</span><span><b>changed</b></span><span><b>1</b></span><span>reason wording only</span><span>59</span><span>the same</span><span>9,940</span></div>
+          <h2 style="margin-top:var(--sp-2)">Changed, by field</h2>
+          <div class="counts"><span>status</span><span>1</span><span>reason_code</span><span>1</span><span>decided_at_stage</span><span>1</span><span>derived size and file</span><span>1</span></div></section>
+        <section class="card"><h2><span class="n" style="position:static">5</span>Changed rows <span class="sub2">A → B</span></h2>
+          <div class="table-wrap"><table class="t dense"><caption class="sr-only">Changed rows, A and B</caption>
+            <thead><tr><th>Row</th><th>Field</th><th>A</th><th>B</th></tr></thead>
+            <tbody>
+              <tr><td class="id" rowspan="3" style="vertical-align:top;padding-top:var(--sp-2)">000000471773.jpg<br><span class="muted">255 × 600</span></td><td>status</td><td><span class="rs rej"><i></i>rejected</span></td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+              <tr><td>reason_code</td><td class="id">below_min_size</td><td class="id">–</td></tr>
+              <tr><td>derived size</td><td class="id">–</td><td class="id">255 × 600</td></tr>
+              <tr><td colspan="4" class="lab">59 rows: reason wording only ("below the minimum 256px" → "255px") <button class="btn sm ghost">Show</button></td></tr>
+            </tbody></table></div>
+          <p class="note2">A row opens its drawer on A or on B. Up to 200 changed rows are listed, then a count.</p></section>
+      </div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">3</span></td><td>The other version</td><td>A select of the dataset's versions (the parent preselected; any stage, said when they differ), Swap, and the config difference along both lineages</td><td><span class="mono">GET /datasets/{slug}/versions</span>; both lineages' configs</td><td>static</td></tr>
+<tr><td><span class="n">4</span></td><td>Counts</td><td>Added, removed, changed (status, reason code, content, derived), wording only, the same; changed by field; fields only one side has, once</td><td><span class="mono">GET /versions/{id}/diff?with=</span> <i>planned</i></td><td>static</td></tr>
+<tr><td><span class="n">5</span></td><td>Changed rows</td><td>Each row's changed fields, A and B; wording-only rows folded</td><td>same</td><td>static</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · Semantic clusters on a label version <span class="badge">illustrative rows</span></h2>
+<div class="frame" style="height:560px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>coco10k</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_… (label)</span></div></header>
+    <main class="content">
+      <div class="tiles" style="grid-template-columns:repeat(5,1fr)"><button class="stile" style="--c:var(--success)"><span class="k"><i></i>Accepted</span><span class="v">9,932</span><span class="d">captioned</span></button><button class="stile" style="--c:var(--danger)"><span class="k"><i></i>Rejected</span><span class="v">60</span><span class="d">at ingest</span></button><button class="stile" style="--c:var(--text-muted)"><span class="k"><i></i>Duplicate</span><span class="v">8</span><span class="d">8 near</span></button><button class="stile" style="--c:var(--warning)"><span class="k"><i></i>Filtered</span><span class="v">0</span><span class="d">no filter yet</span></button><button class="stile sem" aria-pressed="true"><span class="k"><i></i>Semantic clusters</span><span class="v">105</span><span class="d">290 rows · largest 22</span></button></div>
+      <div class="toolbar"><span class="group-btns" role="group" aria-label="Show"><button class="btn sm">All</button><button class="btn sm" aria-pressed="true">In a semantic cluster <span class="count">290</span></button></span></div>
+      <div class="table-wrap" style="max-width:640px"><table class="t dense"><caption class="sr-only">Rows in a semantic cluster</caption>
+        <thead><tr><th>Row</th><th>Status</th><th>Cluster</th><th>Caption</th></tr></thead>
+        <tbody>
+          <tr aria-selected="true"><td class="id">000000185291.jpg</td><td><span class="rs acc"><i></i>accepted</span></td><td><span class="scchip">sc 1e4b · 2</span></td><td class="lab">A man stands beside a cow at a show.</td></tr>
+          <tr><td class="id">000000452782.jpg</td><td><span class="rs acc"><i></i>accepted</span></td><td><span class="scchip">sc 1e4b · 2</span></td><td class="lab">People and a cow in an exhibition hall.</td></tr>
+          <tr><td class="id">000000412419.jpg</td><td><span class="rs acc"><i></i>accepted</span></td><td><span class="scchip">sc 33a0 · 2</span></td><td class="lab">A batter swings at a pitch.</td></tr>
+        </tbody></table></div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+  <aside class="drawer" role="dialog" aria-label="000000185291.jpg" style="position:absolute;top:48px;right:0;bottom:28px;background:var(--surface-raised);border-left:var(--bw) solid var(--border);box-shadow:var(--shadow-3);display:flex;flex-direction:column;width:500px">
+    <header><b>000000185291.jpg</b><span class="rs acc"><i></i>accepted</span><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="body">
+      <div class="group-head"><span class="n" style="position:static">6</span><b>Semantic cluster</b> <span class="scchip">sc 1e4b</span> · 2 rows · threshold 0.90 (S-10)</div>
+      <div class="pair">
+        <div class="card-img"><div class="photo" style="position:relative"></div><span class="mono">000000185291.jpg</span><span>accepted · train</span></div>
+        <div class="card-img"><div class="photo" style="position:relative"></div><span class="mono">000000452782.jpg</span><span>accepted · train</span></div>
+      </div>
+      <div class="simline">similarity <span class="dist">0.985</span> · pHash over 8 bits: not a near-duplicate · <b style="color:var(--text-primary)">one split group</b> (DATA-4.8)</div>
+      <p class="note2">Every member stays accepted: a semantic cluster is detected, not removed (ADR-0013 rule 3).</p>
+    </div>
+  </aside>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">6</span></td><td>Cluster</td><td>The tile (clusters, rows, largest), the filter, the row's chip, and in the drawer the members side by side with each pair's similarity and their shared split group</td><td>the version's <span class="mono">counts.semantic</span>; <span class="mono">GET /versions/{id}/rows?semantic=true</span> and <span class="mono">?semantic_cluster_id=</span> <i>planned</i></td><td>static</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · Models trained on CIFAR-10's split <span class="mono">ds_f8e67211dd94</span></h2>
+<div class="frame" style="height:800px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>cifar10</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_f8e67211dd94</span></div></header>
+    <main class="content">
+      <div class="lineage" aria-label="Lineage"><div class="node done"><small>preprocess</small><b>ds_bc4811eceb36</b><span>59,630 accepted</span></div><span class="edge"></span><div class="node done selected" aria-current="true"><small>split · this version</small><b>ds_f8e67211dd94</b><span>47,704 · 5,963 · 5,963</span></div><span class="endchip"><span class="n" style="position:static">7</span><svg class="i"><use href="#i-grid"/></svg>→ 16 models</span></div>
+      <div class="tabs" role="tablist"><span class="tab" role="tab">Rows</span><span class="tab" role="tab">Reasons</span><span class="tab" role="tab">Distributions</span><span class="tab" role="tab">Compare</span><span class="tab" role="tab" aria-selected="true">Models <span class="count">16</span></span><span class="tab" role="tab">Config</span></div>
+      <div class="table-wrap"><table class="t dense"><caption class="sr-only">Model versions trained on this version</caption>
+        <thead><tr><th>Version</th><th>Kind</th><th class="r">Metric</th><th>Weights</th><th>Trained</th></tr></thead>
+        <tbody>
+          <tr class="sec"><td colspan="5">small_cnn · cifar10 · <span class="mono" style="text-transform:none;letter-spacing:0">ml_7d806d9897fa</span></td></tr>
+          <tr><td class="id"><a>mv_7f950100ab48</a></td><td>fine-tune of mv_a014046ec3b5</td><td class="r">test 0.831</td><td>present</td><td class="id">21 Nov 17:36</td></tr>
+          <tr><td class="id"><a>mv_a014046ec3b5</a></td><td>run</td><td class="r">test 0.832</td><td>present</td><td class="id">19 Nov 18:56</td></tr>
+          <tr><td class="id"><a>mv_2a7c0b4c8b72</a></td><td>run</td><td class="r">val 0.839</td><td class="gone">deleted</td><td class="id">19 Nov 18:48</td></tr>
+          <tr class="sec"><td colspan="5">small_cnn · cifar10 · <span class="mono" style="text-transform:none;letter-spacing:0">ml_319245b543d4</span></td></tr>
+          <tr><td class="id"><a>mv_a4a0fb846812</a></td><td>study's best · <span class="badge">computed once</span></td><td class="r">test 0.810</td><td>present</td><td class="id">20 Nov 18:43</td></tr>
+          <tr><td class="id"><a>mv_359e979462ab</a></td><td>run</td><td class="r">val 0.843</td><td>present</td><td class="id">19 Nov 10:52</td></tr>
+          <tr><td class="id"><a>mv_e80834ce01b0</a></td><td>run</td><td class="r">val 0.844</td><td>present</td><td class="id">18 Nov 16:00</td></tr>
+          <tr><td class="id"><a>mv_c52659b5bd12</a></td><td>run</td><td class="r">val 0.672</td><td class="gone">deleted</td><td class="id">18 Nov 14:38</td></tr>
+          <tr><td class="id"><a>mv_23763657482f</a></td><td>run</td><td class="r">val 0.840</td><td class="gone">deleted</td><td class="id">18 Nov 11:01</td></tr>
+          <tr class="sec"><td colspan="5">my_model · cifar10</td></tr>
+          <tr><td class="id"><a>mv_0cfa1ce88a16</a></td><td>run</td><td class="r">val 0.536</td><td>present</td><td class="id">19 Nov 17:46</td></tr>
+          <tr class="sec"><td colspan="5">mlp · cifar10 · 7 versions</td></tr>
+          <tr><td class="id"><a>mv_e56a61b2e5af</a></td><td>run</td><td class="r">val 0.493</td><td>present</td><td class="id">19 Nov 00:09</td></tr>
+          <tr><td colspan="5" class="lab">6 more · val 0.493 to 0.498 · 5 with deleted weights <button class="btn sm ghost">Show</button></td></tr>
+        </tbody></table></div>
+      <div style="display:flex;gap:var(--sp-2)"><button class="btn sm"><svg class="i"><use href="#i-grid"/></svg>Compare on this test split</button><button class="btn sm"><svg class="i"><use href="#i-branch"/></svg>Train a model…</button></div>
+    </main>
+    <footer class="status"></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">7</span></td><td>Models</td><td>The "→ N models" chip on the lineage strip, and the tab: versions by lineage, kind, the metric with its split named, weights, trained</td><td><span class="mono">GET /models/compare/candidates?split=</span> (SCR-11 v2), extended with kind and validation metric <i>planned</i></td><td>on job changes</td></tr>
+</table>
+
+<!-- ===================================================================== E -->
+<h2>E · Other types, and states</h2>
+<div class="split-frames">
+  <section class="card" style="width:400px"><h2>Text <span class="sub2">coco10k-captions · tokenize</span></h2><p class="note2">Length in words, raw against here; on a tokenize version tokens per text and the share cut at L (16). Class counts per split.</p></section>
+  <section class="card" style="width:400px"><h2>Table <span class="sub2">wine · split</span></h2><p class="note2">Rows by status and split; the target: class counts per split, or a regression target's histogram. Per-column distributions come with M11b's column view.</p></section>
+  <section class="card" style="width:400px"><h2>Labelled images <span class="sub2">cifar10 · split</span></h2><p class="note2">Class counts per split as grouped bars with their figures; the image size is one line (all 32 × 32).</p></section>
+  <section class="card" style="width:400px"><div class="state"><svg class="i"><use href="#i-db"/></svg><b>Pick a version to compare with</b><p>coco10k has 9 versions.</p></div></section>
+  <section class="card" style="width:400px"><div class="state"><svg class="i"><use href="#i-check"/></svg><b>These two versions have the same rows</b><p>No row was added, removed or changed.</p></div></section>
+  <section class="card" style="width:400px"><div class="state err"><svg class="i"><use href="#i-alert"/></svg><b>The distributions could not be computed</b><p><span class="mono">version_data_missing</span> · the manifest is not on disk. Check the data volume, then try again.</p><button class="btn sm">Try again</button></div></section>
+  <section class="card" style="width:400px" aria-busy="true"><span class="skeleton" style="width:60%;height:18px"></span><span class="skeleton" style="width:100%;height:120px"></span><span class="skeleton" style="width:100%;height:60px"></span></section>
+</div>
+<p class="cap">At 1024 px the two column cards stack and the funnel's chips wrap; the tab bar scrolls sideways with the selected tab kept in view.</p>
+
+<h2>Accessibility notes for implementation</h2>
+<ul>
+<li>The funnel, five-number and Models tables have captions and headers; reason chips are buttons named by their reason and count.</li>
+<li>A histogram is an image with a full text label, and its Table view lists the bins; both counts are printed beside every bin.</li>
+<li>The semantic tile is a toggle button like the status tiles; the cluster chip's text carries the cluster, never its colour alone.</li>
+</ul>
+</div>
+<script>
+(function () {
+  var a = document.getElementById('frameA'), slot = document.getElementById('lightA');
+  var c = a.cloneNode(true); c.id = 'frameA-light'; c.setAttribute('data-theme', 'light');
+  c.querySelectorAll('.n').forEach(function (n) { n.remove(); });
+  slot.replaceWith(c);
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>

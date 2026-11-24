@@ -10,6 +10,7 @@ import { Button, Icon, Kbd, Skeleton } from "../../components/ui";
 import { bytes } from "../../lib/format";
 import { useShortcuts } from "../../shell/hooks";
 import { dims, imageHash, type Row, STATUS_CLASS, type Status, thumbUrl } from "./rows";
+import { clusterName } from "./RowDrawer";
 
 export const STATUSES: Status[] = ["accepted", "rejected", "duplicate", "filtered"];
 const ROW_HEIGHT = 44;
@@ -293,7 +294,10 @@ export function RowsPanel({ versionId, filters, setFilter, reasons, splits, labe
                     <td>
                       <Thumb row={row} />
                     </td>
-                    <td className="id">{row.row_key}</td>
+                    <td className="id">
+                      {row.row_key}
+                      {row.semantic_cluster_id ? <span className="scchip" title="Semantic cluster (DATA-2.3)">{clusterName(row.semantic_cluster_id)}</span> : null}
+                    </td>
                     <td>
                       <RowStatus status={row.status} />
                     </td>
