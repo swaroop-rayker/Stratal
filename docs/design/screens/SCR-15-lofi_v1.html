@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-15 transform editor — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. Same sheet as the earlier low-fi files. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; background: #fff; font-family: var(--mono); white-space: nowrap; }
+.select.bad { border: 2px solid var(--ink); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+.t th .sub { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.t td { padding: 0 8px; height: 28px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); }
+.t td.pin, .t th.pin { position: sticky; left: 0; background: #fff; border-right: 1px solid var(--line); } .t th.pin { background: var(--fill); }
+.t .chg { font-weight: 700; } .t .new { outline: 1.5px dashed var(--ink-2); outline-offset: -3px; }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.ask { border: 2px solid var(--note); border-radius: 6px; padding: 10px 14px; background: #fff; max-width: 1280px; margin-top: 12px; } .ask li { color: var(--ink); margin: 4px 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.callout { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--fill); font-size: 12px; } .callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.faint { opacity: .45; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 50%; vertical-align: middle; } .box.on { background: radial-gradient(var(--ink-2) 45%, transparent 50%); }
+
+/* SCR-15 specific (prefixed, as the screens are) */
+.tx-body { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 14px; flex: 1; min-height: 0; }
+.tx-ops { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.tx-op { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: #fff; }
+.tx-op.bad { border: 2px solid var(--ink); }
+.tx-op .hd { display: flex; align-items: center; gap: 6px; }
+.tx-op .no { font: 600 11px var(--mono); color: var(--ink-3); width: 18px; }
+.tx-op .fields { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 11px; padding-left: 24px; }
+.tx-op .fields label { font: 10px var(--mono); color: var(--ink-3); }
+.tx-op .eff { padding-left: 24px; font-size: 11px; color: var(--ink-3); }
+.tx-op .err { padding-left: 24px; font-size: 11px; color: var(--ink); font-weight: 600; }
+.tx-op .err::before { content: "✖ "; }
+.tx-grip { color: var(--ink-3); font-size: 11px; letter-spacing: -1px; }
+.tx-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.tx-chip { display: inline-flex; gap: 4px; align-items: center; height: 22px; padding: 0 6px; border: 1px solid var(--soft); border-radius: 4px; font: 11px var(--mono); white-space: nowrap; }
+.tx-chip.chg { border: 1.5px solid var(--ink-2); font-weight: 600; } .tx-chip.gone { text-decoration: line-through; color: var(--ink-3); border-style: dashed; }
+.tx-chip .tag { font: 9px system-ui; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+.tx-scroll { overflow: hidden; position: relative; border-right: 3px solid var(--soft); }
+.tx-menu { position: absolute; background: #fff; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.15); width: 380px; padding: 6px 0; z-index: 4; font-size: 12px; }
+.tx-menu .it { padding: 5px 12px; display: grid; grid-template-columns: 96px 1fr; gap: 8px; } .tx-menu .it b { font-family: var(--mono); font-size: 11px; } .tx-menu .it span { color: var(--ink-3); font-size: 11px; }
+.tx-menu .it.on { background: var(--fill-2); }
+.tx-menu .note { border-top: 1px solid var(--soft); margin-top: 4px; padding: 6px 12px 2px; font-size: 11px; color: var(--ink-2); }
+.tx-order { display: flex; flex-wrap: wrap; gap: 3px; padding-left: 24px; }
+.tx-order span { font: 10px var(--mono); border: 1px solid var(--line); border-radius: 3px; padding: 1px 4px; }
+.tx-run { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tx-radio { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-15 — Transform editor · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: DATA-7.1, DATA-7.2, DATA-7.3, DATA-7.4 (P2), DATA-7.5, UI-2.3</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> v4, SCR-15 (approved 2026-11-24)</span><span>Route: <span class="mono">/versions/:version_id/transform</span> (<span class="mono">?from=ds_…</span> to load a transform's operations)</span><span>Design: ADR-0019 Addendum B rules 25–33; M11b K2–K8</span><span>2026-11-24</span></div>
+<p>Layout and hierarchy only. Blue numbers are annotations. The data is the wine table's raw version <span class="mono">ds_b3f4ff09de8a</span> (ingest, 178 rows, 13 numeric features, target <span class="mono">cultivar</span>; <span class="mono">job_0061</span>), and the operations are Flow 6's demo. Row values are the real first rows of <span class="mono">sources/wine/wine.csv</span>; the per-operation lines and counts are what the stage's rules give on the first 50 of them (worked out by hand from the CSV, since the preview endpoint is not built yet). Frame C's refused operations are typed in on purpose to show the problems; their messages follow rule 26.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Two columns under one header.</b> The operations on the left (400 px), the result on the right: the resulting schema as chips, then the preview table. Editing on the left and reading on the right stay on screen together; nothing scrolls the page at 1280 × 800 except the operations list itself when it is long.</li>
+<li><b><i>Run</i> sits in the page header, on the right,</b> with its two choices before it as radio buttons, <i>Through clean and split</i> (default) and <i>Transform only</i> (open point 6a). <i>Reset</i> is a ghost button beside it. While there are problems, <i>Run</i> is disabled and the count beside it reads "2 problems", each a link to its card.</li>
+<li><b>An operation is a compact card:</b> its number, the <span class="mono">op</span> as a select, a ⋮ menu (<i>Move up</i>, <i>Move down</i>, <i>Duplicate</i>, <i>Remove</i>) and a drag grip; its fields on one line under it, generated from the schema; under them one grey line saying what it did on the sample. A refused operation gets a dark border and its message under the field the error's <span class="mono">loc</span> names.</li>
+<li><b>Column fields are selects of the columns at that step</b> (open point 6c: the preview's <span class="mono">steps</span>), so after the rename, step 4 offers <span class="mono">od280_od315</span>, not the old name. <span class="mono">drop</span> takes several columns as chips; <span class="mono">reorder</span> opens the full list with up and down buttons.</li>
+<li><b><i>Add operation</i> is a menu at the end of the list</b>, one line per type with what it does, and a note at its foot that scaling, imputation and target encoding are the model's (DATA-7.1.AC2). The P2 types <span class="mono">derive</span> and <span class="mono">filter</span> are listed only once built (SCREENS §1: unbuilt is hidden).</li>
+<li><b>The resulting schema is a line of chips</b>, one per column in order: name, kind, encoding when not the default, target marked. Changed columns are outlined, a dropped one struck through where it was. It answers "what will the model see" before reading rows.</li>
+<li><b>The preview is a dense table:</b> row key pinned on the left, then status and reason, then the resulting columns in order; the table scrolls sideways under the pinned key. Cells an operation changed are bold; a new or recast column's header says so under its name. Above it: "First 50 rows of 178 · 50 accepted", plainly the sample's counts.</li>
+<li><b><i>Later stages</i></b>, folded under the operations list, holds the clean and split settings (generated from their schemas, as in the <i>Start pipeline</i> drawer). It is greyed when <i>Transform only</i> is chosen.</li>
+</ol>
+</div>
+
+<div class="ask">
+<h3>One question this layout depends on</h3>
+<ol>
+<li><b>Which rows does the preview show?</b> Rule 32 says the first 50, and the AC1 test compares them with the stage's first rows. The wine CSV is sorted by cultivar, so its first 50 rows are all <span class="mono">class_0</span>: a <span class="mono">set_target</span> or a filter on the class would look odd in the preview. I propose keeping <b>the first 50</b>, as approved: simple, the same rows on every edit, and the header says "first 50 rows". The alternative is 50 rows spread evenly through the table (every 178 / 50th row), still fixed and still testable by row key, but a change to rule 32.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Populated: the demo's four operations on wine's raw version</h2>
+<div class="frame" style="height:800px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div class="nav">System</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / wine / ds_b3f4ff09de8a / Transform</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><span class="n in">1</span><b>Transform</b><span class="mono">ds_b3f4ff09de8a</span><span class="k">ingest</span><span class="muted">wine · 178 rows · 14 columns</span><span class="btn sm ghost">Open</span>
+        <span class="spacer"></span>
+        <span class="n in">2</span><span class="tx-run"><span class="tx-radio"><span class="box on"></span>Through clean and split</span><span class="tx-radio"><span class="box"></span>Transform only</span><span class="btn ghost">Reset</span><span class="btn primary">Run</span></span></div>
+      <div class="tx-body">
+        <div class="tx-ops">
+          <h3 style="display:flex;align-items:center;gap:6px"><span class="n in">3</span>Operations <span class="muted" style="font-weight:400">4 · applied in order</span></h3>
+          <div class="tx-op"><div class="hd"><span class="no">1</span><span class="select">drop ▾</span><span class="spacer"></span><span class="tx-grip">⠿</span><span class="btn sm ghost">⋮</span></div>
+            <div class="fields"><label>columns</label><span class="select">ash ✕ · + ▾</span></div>
+            <div class="eff">removes ash · 13 → 12 features</div></div>
+          <div class="tx-op"><div class="hd"><span class="no">2</span><span class="select">rename ▾</span><span class="spacer"></span><span class="tx-grip">⠿</span><span class="btn sm ghost">⋮</span></div>
+            <div class="fields"><label>from</label><span class="select">od280/od315_of_diluted_wines ▾</span><label>to</label><span class="select" style="width:110px">od280_od315</span></div>
+            <div class="eff">a name that is an identifier, so a formula can use it without col("…")</div></div>
+          <div class="tx-op"><div class="hd"><span class="no">3</span><span class="select">set_kind ▾</span><span class="spacer"></span><span class="tx-grip">⠿</span><span class="btn sm ghost">⋮</span></div>
+            <div class="fields"><label>column</label><span class="select">magnesium ▾</span><label>kind</label><span class="select">categorical ▾</span></div>
+            <div class="eff">numeric → categorical: 127.0 becomes "127" · 33 categories in the sample · 0 cast_failed</div></div>
+          <div class="tx-op"><div class="hd"><span class="no">4</span><span class="select">set_encoding ▾</span><span class="spacer"></span><span class="tx-grip">⠿</span><span class="btn sm ghost">⋮</span></div>
+            <div class="fields"><label>column</label><span class="select">magnesium ▾</span><label>encoding</label><span class="select">embedding ▾</span></div>
+            <div class="eff">the network's input block learns a vector per category; a classical model one-hot encodes it (rule 29)</div></div>
+          <span class="btn sm" style="align-self:flex-start"><span class="n in" style="margin:0">4</span>+ Add operation</span>
+          <div class="card" style="padding:6px 10px;display:block;font-size:12px"><span class="n in">5</span><b>▸ Later stages</b> <span class="muted">clean_table defaults · split 0.8 / 0.1 / 0.1, seed 0</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+          <div class="card"><h3><span class="n in">6</span>Resulting schema <span class="muted" style="font-weight:400;font-size:11px">13 columns · 12 features (11 numeric, 1 categorical) · target cultivar, 3 classes</span></h3>
+            <div class="tx-chips">
+              <span class="tx-chip">alcohol</span><span class="tx-chip">malic_acid</span><span class="tx-chip gone">ash</span><span class="tx-chip">alcalinity_of_ash</span>
+              <span class="tx-chip chg">magnesium <span class="tag">categorical · embedding</span></span><span class="tx-chip">total_phenols</span><span class="tx-chip">flavanoids</span><span class="tx-chip">nonflavanoid_phenols</span>
+              <span class="tx-chip">proanthocyanins</span><span class="tx-chip">color_intensity</span><span class="tx-chip">hue</span><span class="tx-chip chg">od280_od315 <span class="tag">renamed</span></span><span class="tx-chip">proline</span>
+              <span class="tx-chip" style="border-color:var(--ink-2)">cultivar <span class="tag">target · categorical</span></span>
+            </div></div>
+          <div class="card" style="flex:1;min-height:0"><h3><span class="n in">7</span>Preview <span class="muted" style="font-weight:400;font-size:11px">first 50 rows of 178 · 50 accepted · computed by the stage's own code</span><span class="spacer"></span><span class="muted" style="font-weight:400;font-size:11px">updated 0.2 s ago</span></h3>
+            <div class="tx-scroll">
+            <table class="t" style="width:1180px">
+              <tr><th class="pin">Row</th><th>Status</th><th>alcohol</th><th>malic_acid</th><th>alcalinity_of_ash</th><th>magnesium<span class="sub">categorical · embedding</span></th><th>total_phenols</th><th>flavanoids</th><th>nonflav…</th><th>proanth…</th><th>color_int…</th><th>hue</th><th>od280_od315<span class="sub">renamed</span></th><th>proline</th><th>cultivar<span class="sub">target</span></th></tr>
+              <tr><td class="pin m">wine.csv#0000001</td><td>accepted</td><td class="m r">14.23</td><td class="m r">1.71</td><td class="m r">15.6</td><td class="m chg">"127"</td><td class="m r">2.8</td><td class="m r">3.06</td><td class="m r">0.28</td><td class="m r">2.29</td><td class="m r">5.64</td><td class="m r">1.04</td><td class="m r">3.92</td><td class="m r">1065</td><td class="m">class_0</td></tr>
+              <tr><td class="pin m">wine.csv#0000002</td><td>accepted</td><td class="m r">13.2</td><td class="m r">1.78</td><td class="m r">11.2</td><td class="m chg">"100"</td><td class="m r">2.65</td><td class="m r">2.76</td><td class="m r">0.26</td><td class="m r">1.28</td><td class="m r">4.38</td><td class="m r">1.05</td><td class="m r">3.4</td><td class="m r">1050</td><td class="m">class_0</td></tr>
+              <tr><td class="pin m">wine.csv#0000003</td><td>accepted</td><td class="m r">13.16</td><td class="m r">2.36</td><td class="m r">18.6</td><td class="m chg">"101"</td><td class="m r">2.8</td><td class="m r">3.24</td><td class="m r">0.3</td><td class="m r">2.81</td><td class="m r">5.68</td><td class="m r">1.03</td><td class="m r">3.17</td><td class="m r">1185</td><td class="m">class_0</td></tr>
+              <tr><td class="pin m">wine.csv#0000004</td><td>accepted</td><td class="m r">14.37</td><td class="m r">1.95</td><td class="m r">16.8</td><td class="m chg">"113"</td><td class="m r">3.85</td><td class="m r">3.49</td><td class="m r">0.24</td><td class="m r">2.18</td><td class="m r">7.8</td><td class="m r">0.86</td><td class="m r">3.45</td><td class="m r">1480</td><td class="m">class_0</td></tr>
+              <tr><td class="pin m">wine.csv#0000005</td><td>accepted</td><td class="m r">13.24</td><td class="m r">2.59</td><td class="m r">21</td><td class="m chg">"118"</td><td class="m r">2.8</td><td class="m r">2.69</td><td class="m r">0.39</td><td class="m r">1.82</td><td class="m r">4.32</td><td class="m r">1.04</td><td class="m r">2.93</td><td class="m r">735</td><td class="m">class_0</td></tr>
+              <tr><td class="pin m">wine.csv#0000006</td><td>accepted</td><td class="m r">14.2</td><td class="m r">1.76</td><td class="m r">15.2</td><td class="m chg">"112"</td><td class="m r">3.27</td><td class="m r">3.39</td><td class="m r">0.34</td><td class="m r">1.97</td><td class="m r">6.75</td><td class="m r">1.05</td><td class="m r">2.85</td><td class="m r">1450</td><td class="m">class_0</td></tr>
+              <tr><td class="pin m">wine.csv#0000007</td><td>accepted</td><td class="m r">14.39</td><td class="m r">1.87</td><td class="m r">14.6</td><td class="m chg">"96"</td><td class="m r">2.5</td><td class="m r">2.52</td><td class="m r">0.3</td><td class="m r">1.98</td><td class="m r">5.25</td><td class="m r">1.02</td><td class="m r">3.58</td><td class="m r">1290</td><td class="m">class_0</td></tr>
+              <tr><td class="pin m">wine.csv#0000008</td><td>accepted</td><td class="m r">14.06</td><td class="m r">2.15</td><td class="m r">17.6</td><td class="m chg">"121"</td><td class="m r">2.6</td><td class="m r">2.51</td><td class="m r">0.31</td><td class="m r">1.25</td><td class="m r">5.05</td><td class="m r">1.06</td><td class="m r">3.58</td><td class="m r">1295</td><td class="m">class_0</td></tr>
+              <tr class="off"><td class="pin">…</td><td colspan="14">42 more rows, to wine.csv#0000050 (virtualised)</td></tr>
+            </table></div>
+            <div class="muted" style="font-size:11px">The table scrolls sideways under the pinned row key; long names are cut with their full name in the tooltip. A row opens SCR-03's row drawer for the raw row.</div></div>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 2% · RAM 3.4 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Header</td><td>The raw version, its dataset, rows and accepted rows, columns; <i>Open the version</i> (SCR-03). From a later version: "Starts from the raw version ds_…" and "Loaded from ds_…" (frame D)</td><td><span class="mono">GET /versions/{id}</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Run</td><td><i>Through clean and split</i> or <i>Transform only</i>, <i>Reset</i>, <i>Run</i>; disabled with the problem count (frame C) or "Add an operation first" (frame D)</td><td><span class="mono">POST /jobs</span> with <span class="mono">kind: pipeline</span>, <span class="mono">from_version</span>, <span class="mono">stages.transform.operations</span>, <span class="mono">until_stage</span> (<span class="mono">split</span> or <span class="mono">transform</span>) → SCR-04</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Operations</td><td>Cards in order, fields generated from the schema's discriminated union; column selects from the step's columns; the effect line per step on the sample</td><td><span class="mono">GET /config/schemas/transform</span>; <span class="mono">steps[i]</span> of <span class="mono">POST /versions/{id}/transform/preview</span> <i>planned</i> (open point 6c)</td><td>on every edit, 300 ms after the last keystroke</td></tr>
+<tr><td><span class="num">4</span></td><td>Add operation</td><td>The menu of operation types (frame B)</td><td>the schema's union members</td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Later stages</td><td>Folded: the clean and split settings, generated from their schemas; the summary line names what differs from the defaults</td><td><span class="mono">GET /config/schemas/clean_table</span>, <span class="mono">/split</span></td><td>–</td></tr>
+<tr><td><span class="num">6</span></td><td>Resulting schema</td><td>Columns after the last operation; changed outlined, dropped struck through</td><td>preview's <span class="mono">schema</span></td><td>with the preview</td></tr>
+<tr><td><span class="num">7</span></td><td>Preview</td><td>The first 50 rows after the operations: key, status, reason, values; counts over the sample. While a new preview is computed the old one stays, dimmed, so nothing moves</td><td>preview's <span class="mono">rows</span> (DATA-7.5.AC1: equal to the stage's first rows)</td><td>with every edit</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Adding an operation, and an ordinal encoding being set</h2>
+<div class="frame" style="height:620px">
+  <div style="padding:16px;display:grid;grid-template-columns:400px 1fr;gap:14px;position:relative">
+    <div class="tx-ops">
+      <div class="tx-op faint"><div class="hd"><span class="no">1</span><span class="select">drop ▾</span></div></div>
+      <div class="tx-op faint"><div class="hd"><span class="no">2</span><span class="select">rename ▾</span></div></div>
+      <div class="tx-op faint"><div class="hd"><span class="no">3</span><span class="select">set_kind ▾</span></div></div>
+      <div class="tx-op"><div class="hd"><span class="no">4</span><span class="select">set_encoding ▾</span><span class="spacer"></span><span class="btn sm ghost">⋮</span></div>
+        <div class="fields"><label>column</label><span class="select">magnesium ▾</span><label>encoding</label><span class="select">ordinal ▾</span></div>
+        <div class="fields"><span class="n in">8</span><label>order</label><span class="muted">33 categories in the sample, sorted as text · drag or Alt+↑/↓ · <span class="btn sm ghost">Sort as numbers</span></span></div>
+        <div class="tx-order"><span>100</span><span>101</span><span>102</span><span>103</span><span>104</span><span>105</span><span>…</span><span>89</span><span>90</span><span>91</span><span>93</span><span>94</span><span>…</span><span>98</span></div>
+        <div class="eff">a value not in the order, or missing, is treated as unknown (rule 29) · the sample has 33 of the column's categories; values seen only after row 50 are unknown until added</div></div>
+      <span class="btn sm" style="align-self:flex-start">+ Add operation</span>
+    </div>
+    <div class="tx-menu" style="left:16px;top:330px"><span class="n" style="left:-10px;top:-10px">9</span>
+      <div class="it"><b>drop</b><span>remove columns (not the target)</span></div>
+      <div class="it"><b>rename</b><span>give a column a new name</span></div>
+      <div class="it"><b>reorder</b><span>set the order of every column</span></div>
+      <div class="it on"><b>set_kind</b><span>numeric ↔ categorical</span></div>
+      <div class="it"><b>set_target</b><span>choose the target; the old one becomes a feature</span></div>
+      <div class="it"><b>set_encoding</b><span>one_hot, embedding, ordinal or ignore</span></div>
+      <div class="it muted"><b>derive</b><span>a new column from a formula (P2, if built)</span></div>
+      <div class="it muted"><b>filter</b><span>keep rows where a condition holds (P2, if built)</span></div>
+      <div class="note">Scaling, imputing and target encoding are fitted on the train split by the model, not here (ML-1.3).</div>
+    </div>
+    <div class="card"><h3>What <i>encoding</i> offers, by kind</h3>
+      <table class="t"><tr><th>Column</th><th>Choices</th></tr>
+        <tr><td>categorical feature</td><td class="m">one_hot (default) · embedding · ordinal · ignore</td></tr>
+        <tr><td>numeric feature</td><td class="m">— (as a number) · ignore</td></tr>
+        <tr><td>target</td><td class="muted">no encoding: not in the column select</td></tr></table>
+      <div class="muted" style="font-size:11px">A choice the column's kind does not allow is not offered; typed in through the API it is refused naming the column (rule 26). The new card is added at the end, focused on its first field.</div></div>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">8</span></td><td>Ordinal order</td><td>Every category in order, prefilled with those the sample shows, sorted as text; reordered by drag or keyboard; <i>Sort as numbers</i> for codes that are numbers</td><td>preview's <span class="mono">steps[i]</span>; for a column categorical at ingest, its categories from <span class="mono">GET /versions/{id}/columns</span> <i>planned</i></td><td>–</td></tr>
+<tr><td><span class="num">9</span></td><td>Add operation</td><td>One line per type; P2 types only once built (drawn faint here); the note on fitted operations</td><td>the schema</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · Problems: refused operations, and cast_failed rows</h2>
+<div class="frame" style="height:560px">
+  <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+    <div class="phead"><b>Transform</b><span class="mono">ds_b3f4ff09de8a</span><span class="k">ingest</span><span class="spacer"></span><span class="n in">10</span><span class="muted">2 problems</span><span class="btn off">Run</span></div>
+    <div style="display:grid;grid-template-columns:400px 1fr;gap:14px">
+      <div class="tx-ops">
+        <div class="tx-op bad"><div class="hd"><span class="no">1</span><span class="select">drop ▾</span></div>
+          <div class="fields"><label>columns</label><span class="select bad">ash ✕ · cultivar ✕ ▾</span></div>
+          <div class="err">cultivar is the target and cannot be dropped. Choose another target first (set_target).</div></div>
+        <div class="tx-op bad"><div class="hd"><span class="no">2</span><span class="select">rename ▾</span></div>
+          <div class="fields"><label>from</label><span class="select">malic_acid ▾</span><label>to</label><span class="select bad" style="width:80px">alcohol</span></div>
+          <div class="err">alcohol already exists. Pick a new name.</div></div>
+      </div>
+      <div class="card faint"><h3>Preview <span class="muted" style="font-weight:400;font-size:11px">the last valid preview, dimmed</span></h3>
+        <div class="callout" style="opacity:1">Fix the 2 problems to update the preview.</div>
+        <div><span class="skel" style="width:95%"></span></div><div><span class="skel" style="width:95%"></span></div><div><span class="skel" style="width:95%"></span></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:400px 1fr;gap:14px;margin-top:6px">
+      <div class="tx-ops">
+        <div class="muted" style="font-size:11px">A valid list whose rows fail to convert:</div>
+        <div class="tx-op"><div class="hd"><span class="no">1</span><span class="select">set_kind ▾</span></div>
+          <div class="fields"><label>column</label><span class="select">cultivar ▾</span><label>kind</label><span class="select">numeric ▾</span></div>
+          <div class="eff"><b style="color:var(--ink)">50 of 50 rows cast_failed</b> in the sample: "class_0" is not a number</div></div>
+      </div>
+      <div class="card"><h3><span class="n in">11</span>Preview <span class="muted" style="font-weight:400;font-size:11px">first 50 rows of 178 · 0 accepted · 50 rejected (cast_failed)</span></h3>
+        <table class="t">
+          <tr><th class="pin">Row</th><th>Status</th><th>Reason</th><th>cultivar<span class="sub">target · numeric</span></th><th>alcohol</th><th>…</th></tr>
+          <tr><td class="pin m">wine.csv#0000001</td><td><span class="pill dash">rejected</span></td><td class="m">cast_failed</td><td class="m chg">"class_0" ✖</td><td class="m r">14.23</td><td class="muted">…</td></tr>
+          <tr><td class="pin m">wine.csv#0000002</td><td><span class="pill dash">rejected</span></td><td class="m">cast_failed</td><td class="m chg">"class_0" ✖</td><td class="m r">13.2</td><td class="muted">…</td></tr>
+          <tr class="off"><td class="pin">…</td><td colspan="5">48 more, all cast_failed</td></tr>
+        </table>
+        <div class="callout"><b>Every sampled row would be rejected.</b> A numeric target makes this a regression, and "class_0" is not a number. A warning, not a problem: <i>Run</i> stays enabled, since <span class="mono">cast_failed</span> rows are kept and counted (DATA-7.2.AC1).</div></div>
+    </div>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">10</span></td><td>Problems</td><td>Each refused operation's message under its field, from <span class="mono">errors[].loc = ["stages","transform","operations",i,field]</span>; the count beside the disabled <i>Run</i>, each a link to its card. The preview keeps its last valid result, dimmed</td><td><span class="mono">422 validation_error</span> from the preview (rule 26), the same check <span class="mono">POST /jobs</span> makes</td><td>on every edit</td></tr>
+<tr><td><span class="num">11</span></td><td>cast_failed</td><td>The value that would not convert, with ✖, status and reason; the step's count; a warning when every sampled row is rejected</td><td>preview's <span class="mono">rows</span> and <span class="mono">steps[i]</span></td><td>on every edit</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · States and entry</h2>
+<div class="frame" style="height:520px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+    <div class="empty"><div><b>No operations yet.</b><p style="margin:6px 0">The preview shows the raw version's first rows.</p><span class="btn sm">+ Add operation</span><p class="muted" style="font-size:11px;margin:8px 0 0"><i>Run</i> disabled: "Add an operation first".</p></div></div>
+    <div class="card"><h3>Loading</h3>
+      <div><span class="skel" style="width:60%"></span></div><div><span class="skel" style="width:90%"></span></div><div><span class="skel" style="width:80%"></span></div>
+      <div class="muted" style="font-size:11px">The header first, then skeleton cards and rows. A later preview keeps the last one, dimmed, until the new one arrives.</div></div>
+    <div class="empty err"><div><b>The preview could not be computed</b><p style="margin:6px 0"><span class="mono">service_unavailable</span> · the API did not answer. Your operations are kept.</p><span class="btn sm">Try again</span><p class="muted" style="font-size:11px;margin:8px 0 0"><i>Run</i> disabled until a preview succeeds.</p></div></div>
+    <div class="empty"><div><b>Transforms apply to a table's raw version.</b><p style="margin:6px 0"><span class="mono">ds_499bfa2ee3d3</span> is a clean_table version. Its raw version is <span class="mono">ds_b3f4ff09de8a</span>.</p><span class="btn sm">Transform ds_b3f4ff09de8a</span></div></div>
+    <div class="card"><h3><span class="n in">12</span>Opened from a later version</h3>
+      <div style="font-size:12px"><b>Transform</b> <span class="mono">ds_b3f4ff09de8a</span> <span class="k">ingest</span></div>
+      <div class="callout">Starts from the raw version. Loaded the 4 operations of <span class="mono">ds_…</span> (transform). Running a changed list makes a new version beside it.</div>
+      <div class="muted" style="font-size:11px">URL <span class="mono">/versions/ds_b3f4ff09de8a/transform?from=ds_…</span>. A draft in session storage for this raw version wins over <span class="mono">?from</span> only if it is newer, and says so.</div></div>
+    <div class="card"><h3><span class="n in">13</span>On SCR-03 (header actions)</h3>
+      <div style="font-size:12px;display:flex;flex-direction:column;gap:6px">
+        <div>raw <span class="mono">ds_b3f4ff09de8a</span> · <span class="btn sm">Transform…</span></div>
+        <div>split after a transform · <span class="btn sm">Edit the transform…</span> <span class="btn sm">Train a model…</span></div>
+        <div>split straight from ingest <span class="mono">ds_6448d354c9c6</span> · <span class="btn sm">Transform…</span> <span class="muted">opens on its raw version</span></div>
+        <div class="muted">images, text: no transform action</div></div></div>
+  </div>
+</div>
+<p class="caption">After <i>Run</i>, SCR-04 opens on the new job; an unchanged list reuses its versions and the stages show "cached". The draft is cleared once the job is created. At 1024 px the two columns stay, the operations column narrows to 340 px and the schema chips wrap; the preview keeps sideways scrolling.</p>
+</main>
+</body>
+</html>
