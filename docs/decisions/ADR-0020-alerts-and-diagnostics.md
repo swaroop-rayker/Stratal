@@ -144,6 +144,8 @@
 
 ## As built in M11 (2026-11-22)
 
+- **History (rule 12, MON-4.5; built 2026-11-24).** From `job_stages` (config, final metrics, peaks, moving-average throughput) and `job_transitions` (running time across attempts), with the registry's lineage names; no new table, as the rule says, but not from `jobs.summary`, which lacks the config needed to group like runs. The rules are pure functions in `stratal.mon.history`; `GET /system/history` per API.md §3.13.
+
 - **The inference service's events reach the log.** Its holder used a log-only sink, so its loads and unloads never reached `events`; rule 9's claim that it "needs nothing more" was wrong. It now has a `StreamSink` (`stratal.mon.sink`), which sends each event to the stream with no job, and to the log as before. No spool file: the service has no job folder.
 - **The sink protocol gains `event_type`** (`activity`, `model_loaded`, `model_unloaded`), so the VRAM manager can type its two result events without a second channel. `JobContext`, `LogSink`, `StreamSink` and the test sink take it.
 - **A stall alert also clears when the supervisor ends the stalled stage**, not only when the watchdog sees progress return: the watchdog clears any open `no_progress` alert whose job is no longer `stalled` (found by the integration test).

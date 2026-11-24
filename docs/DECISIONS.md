@@ -786,6 +786,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** One grouping in `RunScreen.tsx` from each estimator's `tasks` (`GET /ml/estimators/schema`) and the split's task; a native select with option groups and disabled options, described by the line (`aria-describedby`); *Turn on* `aria-disabled` with its reason while an estimator that ignores the target is selected, whose fields then have no Tune toggles.
 - **Why:** A hidden choice read as a missing feature (the owner's report: no logistic regression, on a regression split), and filtering the list under a selection let the select and the form disagree (E-017). The *Train a model* drawer already shows a kind it cannot use, greyed, with the reason.
 
+**Trends across past runs** (MON-4.5; SCR-13's History tab, G2 approved 2026-11-22 and 2026-11-24)
+- **What:** `stratal.mon.history`: rate in the stage's own unit counting work done, time across attempts (per epoch for training), notes on unusual runs, groups of like runs; `GET /system/history`; SCR-13's History tab with a lane of points per figure and the runs table.
+- **How:** Training groups by the spec's structure hash (labels left out), dataset and batch; `label` by captioner and batch; other stages are one group. A label run's rate is captions computed ÷ running time, so reused captions do not inflate it; a training run's is its moving average of steps a second times the batch. Running time comes from the job's transitions, so a run that lost its worker counts both attempts.
+- **Why:** A rate or a peak compares only within one kind of work, and only like with like: the owner's choice of one stage at a time and the latest run's group. Counting from transitions makes a resumed run show what it cost (phase 2's killed run C: 11.0 s an epoch against 6.4).
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

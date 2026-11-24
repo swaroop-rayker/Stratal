@@ -38,3 +38,41 @@ No alert or diagnosis has fired on this laptop, and the monitor was down during 
 ## Tests
 
 `frontend/src/screens/system/System.test.tsx` (7); `tests/unit/test_MON_2_6_alert_rules.py`, `test_MON_3_2_diagnose.py`, `test_MON_3_3_load_events.py`; `tests/integration/test_M11_monitoring.py` (8). The PyTorch-marked tests in the GPU worker's image are still to run (E-012).
+
+## History tab (MON-4.5)
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-13history_v1.html`](../screens/SCR-13history_v1.html), G2 approved 2026-11-24 (low-fi 2026-11-22) |
+| Built | `frontend/src/screens/system/History.tsx`, the third tab of `SystemScreen`; `useHistory` in `frontend/src/api/monitor.ts`; the History block of `frontend/src/styles/scr13.css`; route `/system?tab=history&stage=&queue=&group=&n=&reused=`. API `GET /system/history` (`src/stratal/api/monitoring.py`), rules in `src/stratal/mon/history.py` |
+| Checked | 2026-11-24, live at 1280 × 900 on the dev database, dark and light: `train` on the GPU in `small_cnn · cifar10 · batch 128` (the mockup's frame A: the same 8 runs, rates and times per epoch), *All groups* (frame C) and `label` (frame B) |
+| Status | **Waiting for the owner's approval** |
+
+### Screenshots (in `SCR-13/`)
+
+| File | Mockup frame | What it shows |
+|---|---|---|
+| `live-history-train-dark.jpg` | A | The six lanes for the 8 runs; `job_0114` tagged "11.0 s · worker lost, resumed", `job_0106` "18.9 s · fine-tune", `job_0057` "paused"; medians and thresholds at the right end |
+| `live-history-train-light.jpg` | A, light | The same in light |
+| `live-history-all-groups-dark.jpg` | C | The last 20 runs against their groups' medians, six groups each with its own shape and colour |
+| `live-history-label-dark.jpg` | B | `label`: three runs that reused every caption hollow at the foot of the rate lane, tagged *reused*; `job_0122` (no peaks recorded) leaves gaps in the peak lanes |
+
+### Differences from the mockup
+
+1. **The lanes are HTML and SVG, not ECharts.** The mockup's note said ECharts; points as elements give the approved look exactly (rings, hollow points, shapes) and the linked hover with the table.
+2. **Stage and Group are native selects**, as *Compare two jobs*' pickers already are (that screen's approved difference 2), with the same names and counts.
+3. **GB are 1,024 MB**, as everywhere else in the app (Compare's 0.74 GB for the same card peak); the mockup divided by 1,000 (0.76 GB).
+4. **Points keep a right margin of 15 %** for the median and threshold labels, and the lane captions are 208 px wide: at the mockup's spacing the median label covered the latest point. The median label is left out where a threshold label would collide with it (the caption still gives it), and the lowest of two threshold labels sits under its line.
+5. **Tags beside raised points sit above them**, and only in a single group: in *All groups* the notes are in the table, since relative values and many groups made the tags collide.
+6. **Points are not in the tab order**: six lanes of 20 runs would be 120 stops. The keyboard path goes tabs, Stage, Group, Last, the view toggle, then each run's checkbox and link in the table, the lanes' text equivalent.
+7. **A seventh group shape**: *All groups* uses filled and hollow circles, squares and diamonds, and a triangle, with 8 categorical colours, so the dev database's six training groups never differ by colour alone (the mockup drew five).
+8. **The note column** shows attempts and the note words ("2 attempts · worker lost, resumed"); the mockup's longer wording ("run C: …", "paused by you for 7 s") is not in the data.
+
+### Accessibility
+
+- AA in both themes for every new text style: 8.07:1 dark and 7.77:1 light for text-secondary on the surface (tags, medians, thresholds, captions, axis), 7.19:1 or better for the controls; points against the surface 5.09:1 (light).
+- Each lane is an image whose name gives the figure, the number of runs and the median; *Table only* hides the lanes.
+
+### Tests
+
+`tests/unit/test_MON_4_5_history.py` (8), `tests/integration/test_M11_history.py` (2), `System.test.tsx` (3 more, 10 in all).
