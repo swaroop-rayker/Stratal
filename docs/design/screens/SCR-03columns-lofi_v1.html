@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-03 v4 Columns tab — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. Same sheet as the earlier low-fi files. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; background: #fff; font-family: var(--mono); white-space: nowrap; }
+.select.bad { border: 2px solid var(--ink); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+.t th .sub { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.t td { padding: 0 8px; height: 28px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); }
+.t td.pin, .t th.pin { position: sticky; left: 0; background: #fff; border-right: 1px solid var(--line); } .t th.pin { background: var(--fill); }
+.t .chg { font-weight: 700; } .t .new { outline: 1.5px dashed var(--ink-2); outline-offset: -3px; }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.ask { border: 2px solid var(--note); border-radius: 6px; padding: 10px 14px; background: #fff; max-width: 1280px; margin-top: 12px; } .ask li { color: var(--ink); margin: 4px 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.callout { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--fill); font-size: 12px; } .callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.faint { opacity: .45; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 50%; vertical-align: middle; } .box.on { background: radial-gradient(var(--ink-2) 45%, transparent 50%); }
+
+/* SCR-03 Columns tab (prefixed col-) */
+.col-spk { display: inline-flex; align-items: flex-end; gap: 1px; height: 20px; width: 96px; vertical-align: middle; border-bottom: 1px solid var(--soft); }
+.col-spk i { display: block; flex: 1; background: var(--ink-3); min-height: 1px; }
+.col-cats { display: inline-flex; gap: 8px; align-items: center; font: 11px var(--mono); }
+.col-cats span { display: inline-flex; align-items: center; gap: 3px; }
+.col-cats b { display: inline-block; height: 8px; background: var(--ink-3); border-radius: 1px; }
+.col-5 { font: 11px var(--mono); color: var(--ink-2); }
+.t tr.col-exp > td { height: auto; padding: 10px 8px 12px 28px; background: var(--fill); white-space: normal; }
+.col-hist { display: flex; align-items: flex-end; gap: 2px; height: 110px; width: 460px; border-bottom: 1px solid var(--line); }
+.col-hist i { flex: 1; background: var(--ink-2); }
+.col-ax { display: flex; justify-content: space-between; width: 460px; font: 10px var(--mono); color: var(--ink-3); }
+.col-bins { border-collapse: collapse; font: 11px var(--mono); }
+.col-bins td { padding: 1px 8px; border-bottom: 1px solid var(--soft); height: auto; }
+.t tr.ign td { color: var(--ink-3); }
+.t td.grey { color: var(--ink-3); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-03 v4 — the <i>Columns</i> tab · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: DATA-7.5 (column view), DATA-7.3 (encodings shown)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> v4, SCR-03 v4 addition (approved 2026-11-24)</span><span>Route: <span class="mono">/versions/:version_id?tab=columns</span></span><span>Design: ADR-0019 Addendum B rule 32; open point 6d (accepted rows)</span><span>2026-11-24</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-03 (faint where unchanged: header, lineage strip, tiles). Blue numbers are annotations. Frame A is the wine table's raw version <span class="mono">ds_b3f4ff09de8a</span>; every figure is computed from <span class="mono">sources/wine/wine.csv</span> (178 rows, all accepted, so the accepted rows are the whole table). Frame B is the version Flow 6's transform would make (its ID is not known yet, so <span class="mono">ds_…</span>); its figures are wine's after the four operations, again from the CSV. Frame C is <span class="mono">sources/household-power/power.parquet</span> as it would look once ingested with <span class="mono">Global_active_power</span> as the target: it is not ingested yet, but the counts, distinct values and histograms are computed from the file (2,075,259 rows; 25,979 of them empty in every column).</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Columns is the second tab, after Rows</b>, and appears on tabular versions only. The header, lineage strip and tiles stay as approved.</li>
+<li><b>One summary line above the table</b>: columns, features, the target with its task, and the rows counted: "over 178 accepted rows". When rows are not counted it says how many and why, with a link to Rows filtered to them (frame C). On a transformed version, a second line names the operations that made it, with <i>Edit the transform…</i> (frame B).</li>
+<li><b>One table row per column, in the schema's order</b>, sortable by any header; two small filters, <i>Kind</i> and <i>Role</i>. Columns: name, kind, role, encoding, missing, distinct, distribution.</li>
+<li><b>The distribution cell is a 12-bar sparkline</b> for a number, with min · median · max beside it in mono; for a category, its top 5 as short bars with their counts and "+N more". Every sparkline in the table has its own height scale, so a skewed column (frame C) still shows its shape.</li>
+<li><b>Encoding is in words:</b> <i>one_hot · default</i> in grey when not set, the choice in plain text when set, "—" for a number used as a number. An <i>ignore</i>d column stays in the table, dimmed, with "ignore", so it can be seen that it is left out.</li>
+<li><b>Missing reads as a count and a share</b> ("0" in grey; "1,204 · 0.6 %" otherwise).</li>
+<li><b>A row expands in place</b> (click, or <kbd>Enter</kbd>; <kbd>j</kbd> / <kbd>k</kbd> move): a 20-bin histogram beside a text table of the same bins (accessibility rule); for a category, every count up to 50; for the target, the class counts or its histogram. A drawer would cover the table being compared.</li>
+<li><b>Big tables load once:</b> the figures are computed from the manifest on first view and cached by version ID, like the Distributions tab; the first view of a large table shows a progress line instead of a spinner (frame D).</li>
+</ol>
+</div>
+
+<div class="ask">
+<h3>One question this layout depends on</h3>
+<ol>
+<li><b>Exact distinct counts on large tables?</b> The figures stream through the manifest in batches (rule 31), and an exact distinct count holds every distinct value of a column in memory. For wine and <span class="mono">power.parquet</span> that is small (the most is 4,186, <span class="mono">Global_active_power</span>), but a column of IDs or timestamps on 2 million rows would hold 2 million values. I propose <b>exact up to 10,000 distinct values, then "more than 10,000"</b>, which keeps memory bounded and still tells a code from a measurement. The alternative is always exact.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · wine's raw version <span class="mono">ds_b3f4ff09de8a</span>, magnesium expanded</h2>
+<div class="frame" style="height:920px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div class="nav">System</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / wine / ds_b3f4ff09de8a</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="faint" style="display:flex;flex-direction:column;gap:8px">
+        <div class="phead"><b class="mono">ds_b3f4ff09de8a</b><span class="k">ingest</span><span class="spacer"></span><span class="btn sm">Transform…</span><span class="btn sm">Continue the pipeline</span></div>
+        <div class="card" style="height:44px"><span>lineage: <b>ingest</b> → clean_table ds_499bfa2ee3d3 → split ds_6448d354c9c6</span></div>
+        <div class="card" style="height:40px"><span>tiles: accepted 178 · rejected 0 · duplicate 0</span></div>
+      </div>
+      <div class="group" style="align-self:flex-start"><span class="btn sm">Rows 178</span><span class="btn sm on">Columns 14</span><span class="btn sm">Reasons</span><span class="btn sm">Distributions</span><span class="btn sm">Compare</span><span class="btn sm">Config</span></div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:12px"><span class="n in">1</span><span><b>14 columns</b> · 13 features (13 numeric) · target <span class="mono">cultivar</span>, classification, 3 classes · over <b>178</b> accepted rows</span><span class="spacer"></span><span class="n in">2</span><span class="select">Kind: all ▾</span><span class="select">Role: all ▾</span></div>
+      <table class="t">
+        <tr><th>Column ▴</th><th>Kind</th><th>Role</th><th>Encoding</th><th class="r">Missing</th><th class="r">Distinct</th><th><span class="n in">3</span>Distribution</th><th>min · median · max</th></tr>
+        <tr><td class="m">alcohol</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">126</td><td><span class="col-spk"><i style="height:4%"></i><i style="height:36%"></i><i style="height:36%"></i><i style="height:88%"></i><i style="height:92%"></i><i style="height:72%"></i><i style="height:92%"></i><i style="height:88%"></i><i style="height:100%"></i><i style="height:52%"></i><i style="height:44%"></i><i style="height:8%"></i></span></td><td class="col-5">11.03 · 13.05 · 14.83</td></tr>
+        <tr><td class="m">malic_acid</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">133</td><td><span class="col-spk"><i style="height:25%"></i><i style="height:51%"></i><i style="height:100%"></i><i style="height:25%"></i><i style="height:25%"></i><i style="height:19%"></i><i style="height:18%"></i><i style="height:25%"></i><i style="height:11%"></i><i style="height:7%"></i><i style="height:4%"></i><i style="height:5%"></i></span></td><td class="col-5">0.74 · 1.865 · 5.8</td></tr>
+        <tr><td class="m">ash</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">79</td><td><span class="col-spk"><i style="height:2%"></i><i style="height:0%"></i><i style="height:11%"></i><i style="height:22%"></i><i style="height:28%"></i><i style="height:85%"></i><i style="height:100%"></i><i style="height:59%"></i><i style="height:63%"></i><i style="height:11%"></i><i style="height:2%"></i><i style="height:4%"></i></span></td><td class="col-5">1.36 · 2.36 · 3.23</td></tr>
+        <tr><td class="m">alcalinity_of_ash</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">63</td><td><span class="col-spk"><i style="height:11%"></i><i style="height:5%"></i><i style="height:21%"></i><i style="height:76%"></i><i style="height:79%"></i><i style="height:100%"></i><i style="height:71%"></i><i style="height:50%"></i><i style="height:37%"></i><i style="height:8%"></i><i style="height:3%"></i><i style="height:8%"></i></span></td><td class="col-5">10.6 · 19.5 · 30</td></tr>
+        <tr class="on"><td class="m">▾ magnesium</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">53</td><td><span class="col-spk"><i style="height:2%"></i><i style="height:44%"></i><i style="height:100%"></i><i style="height:86%"></i><i style="height:88%"></i><i style="height:37%"></i><i style="height:33%"></i><i style="height:9%"></i><i style="height:7%"></i><i style="height:2%"></i><i style="height:2%"></i><i style="height:2%"></i></span></td><td class="col-5">70 · 98 · 162</td></tr>
+        <tr class="col-exp"><td colspan="8"><div style="display:flex;gap:24px;align-items:flex-start"><span class="n in">4</span><div><div class="col-hist"><i style="height:3%"></i><i style="height:8%"></i><i style="height:19%"></i><i style="height:100%"></i><i style="height:44%"></i><i style="height:67%"></i><i style="height:81%"></i><i style="height:39%"></i><i style="height:39%"></i><i style="height:28%"></i><i style="height:31%"></i><i style="height:11%"></i><i style="height:8%"></i><i style="height:6%"></i><i style="height:3%"></i><i style="height:3%"></i><i style="height:0%"></i><i style="height:3%"></i><i style="height:0%"></i><i style="height:3%"></i></div><div class="col-ax"><span>70</span><span>93</span><span>116</span><span>139</span><span>162</span></div><div class="muted" style="font-size:11px;margin-top:4px">20 bins of 4.6 · 178 accepted rows · 53 distinct values, all whole numbers</div></div><table class="col-bins"><tr><td>70–74.6</td><td style="text-align:right">1</td></tr><tr><td>74.6–79.2</td><td style="text-align:right">3</td></tr><tr><td>79.2–83.8</td><td style="text-align:right">7</td></tr><tr><td>83.8–88.4</td><td style="text-align:right">36</td></tr><tr><td>88.4–93</td><td style="text-align:right">16</td></tr><tr><td>93–97.6</td><td style="text-align:right">24</td></tr><tr><td>97.6–102.2</td><td style="text-align:right">29</td></tr><tr><td>102.2–106.8</td><td style="text-align:right">14</td></tr><tr><td>106.8–111.4</td><td style="text-align:right">14</td></tr><tr><td>111.4–116</td><td style="text-align:right">10</td></tr></table><table class="col-bins"><tr><td>116–120.6</td><td style="text-align:right">11</td></tr><tr><td>120.6–125.2</td><td style="text-align:right">4</td></tr><tr><td>125.2–129.8</td><td style="text-align:right">3</td></tr><tr><td>129.8–134.4</td><td style="text-align:right">2</td></tr><tr><td>134.4–139</td><td style="text-align:right">1</td></tr><tr><td>139–143.6</td><td style="text-align:right">1</td></tr><tr><td>143.6–148.2</td><td style="text-align:right">0</td></tr><tr><td>148.2–152.8</td><td style="text-align:right">1</td></tr><tr><td>152.8–157.4</td><td style="text-align:right">0</td></tr><tr><td>157.4–162</td><td style="text-align:right">1</td></tr></table></div></td></tr>
+        <tr><td class="m">total_phenols</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">97</td><td><span class="col-spk"><i style="height:11%"></i><i style="height:54%"></i><i style="height:89%"></i><i style="height:57%"></i><i style="height:61%"></i><i style="height:71%"></i><i style="height:100%"></i><i style="height:75%"></i><i style="height:64%"></i><i style="height:36%"></i><i style="height:11%"></i><i style="height:7%"></i></span></td><td class="col-5">0.98 · 2.355 · 3.88</td></tr>
+        <tr><td class="m">flavanoids</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">132</td><td><span class="col-spk"><i style="height:100%"></i><i style="height:57%"></i><i style="height:57%"></i><i style="height:68%"></i><i style="height:79%"></i><i style="height:89%"></i><i style="height:93%"></i><i style="height:61%"></i><i style="height:25%"></i><i style="height:4%"></i><i style="height:0%"></i><i style="height:4%"></i></span></td><td class="col-5">0.34 · 2.135 · 5.08</td></tr>
+        <tr><td class="m">nonflavanoid_phenols</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">39</td><td><span class="col-spk"><i style="height:26%"></i><i style="height:32%"></i><i style="height:84%"></i><i style="height:100%"></i><i style="height:68%"></i><i style="height:42%"></i><i style="height:77%"></i><i style="height:39%"></i><i style="height:32%"></i><i style="height:29%"></i><i style="height:29%"></i><i style="height:16%"></i></span></td><td class="col-5">0.13 · 0.34 · 0.66</td></tr>
+        <tr><td class="m">proanthocyanins</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">101</td><td><span class="col-spk"><i style="height:17%"></i><i style="height:32%"></i><i style="height:54%"></i><i style="height:100%"></i><i style="height:71%"></i><i style="height:76%"></i><i style="height:32%"></i><i style="height:29%"></i><i style="height:5%"></i><i style="height:15%"></i><i style="height:2%"></i><i style="height:2%"></i></span></td><td class="col-5">0.41 · 1.555 · 3.58</td></tr>
+        <tr><td class="m">color_intensity</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">132</td><td><span class="col-spk"><i style="height:36%"></i><i style="height:100%"></i><i style="height:85%"></i><i style="height:91%"></i><i style="height:88%"></i><i style="height:39%"></i><i style="height:36%"></i><i style="height:24%"></i><i style="height:18%"></i><i style="height:15%"></i><i style="height:3%"></i><i style="height:3%"></i></span></td><td class="col-5">1.28 · 4.69 · 13</td></tr>
+        <tr><td class="m">hue</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">78</td><td><span class="col-spk"><i style="height:35%"></i><i style="height:44%"></i><i style="height:53%"></i><i style="height:53%"></i><i style="height:91%"></i><i style="height:100%"></i><i style="height:68%"></i><i style="height:53%"></i><i style="height:18%"></i><i style="height:6%"></i><i style="height:0%"></i><i style="height:3%"></i></span></td><td class="col-5">0.48 · 0.965 · 1.71</td></tr>
+        <tr><td class="m">od280/od315_of_diluted_wines</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">122</td><td><span class="col-spk"><i style="height:44%"></i><i style="height:76%"></i><i style="height:60%"></i><i style="height:40%"></i><i style="height:32%"></i><i style="height:48%"></i><i style="height:96%"></i><i style="height:92%"></i><i style="height:100%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:12%"></i></span></td><td class="col-5">1.27 · 2.78 · 4</td></tr>
+        <tr><td class="m">proline</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">121</td><td><span class="col-spk"><i style="height:53%"></i><i style="height:100%"></i><i style="height:91%"></i><i style="height:91%"></i><i style="height:50%"></i><i style="height:28%"></i><i style="height:56%"></i><i style="height:25%"></i><i style="height:41%"></i><i style="height:3%"></i><i style="height:16%"></i><i style="height:3%"></i></span></td><td class="col-5">278 · 673.5 · 1680</td></tr>
+        <tr><td class="m">cultivar</td><td>categorical</td><td><b>target</b></td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">3</td><td><span class="col-cats"><span>class_0<b style="width:23px"></b>59</span><span>class_1<b style="width:28px"></b>71</span><span>class_2<b style="width:19px"></b>48</span></span></td><td class="col-5 grey">class counts</td></tr>
+      </table>
+    </section>
+    <footer class="status">CPU 2% · RAM 3.4 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Summary line</td><td>Columns, features by kind, the target and its task, the rows counted (accepted, 6d), and any not counted, with a link</td><td><span class="mono">GET /versions/{id}/columns</span> <i>planned</i>; <span class="mono">GET /versions/{id}</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Filters</td><td><i>Kind</i> (all, numeric, categorical) and <i>Role</i> (all, feature, target); kept in the URL</td><td>–</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Columns table</td><td>Per column: kind, role, encoding, missing, distinct, distribution; sortable; a row expands in place</td><td><span class="mono">GET /versions/{id}/columns</span>, from the manifest, cached by version ID (rule 32)</td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Expanded column</td><td>20 bins and their counts as a chart and a table; for a category every count up to 50; for the target the class counts</td><td>same</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · After Flow 6's transform: the version it makes <span class="k">its ID is not known yet</span></h2>
+<div class="frame" style="height:400px">
+  <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+    <div class="group" style="align-self:flex-start"><span class="btn sm">Rows 178</span><span class="btn sm on">Columns 13</span><span class="btn sm">Reasons</span><span class="btn sm">Distributions</span><span class="btn sm">Compare</span><span class="btn sm">Config</span></div>
+    <div style="display:flex;flex-direction:column;gap:4px;font-size:12px">
+      <span><b>13 columns</b> · 12 features (11 numeric, 1 categorical) · target <span class="mono">cultivar</span>, classification, 3 classes · over <b>178</b> accepted rows</span>
+      <span><span class="n in">5</span>Made by a transform of <span class="mono">ds_b3f4ff09de8a</span>: drop <span class="mono">ash</span> · rename <span class="mono">od280/od315_of_diluted_wines → od280_od315</span> · <span class="mono">magnesium</span> categorical · <span class="mono">magnesium</span> embedding <span class="btn sm ghost">Edit the transform…</span></span>
+    </div>
+    <table class="t">
+      <tr><th>Column</th><th>Kind</th><th>Role</th><th>Encoding</th><th class="r">Missing</th><th class="r">Distinct</th><th>Distribution</th><th>min · median · max</th></tr>
+        <tr><td class="m">alcohol</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">126</td><td><span class="col-spk"><i style="height:4%"></i><i style="height:36%"></i><i style="height:36%"></i><i style="height:88%"></i><i style="height:92%"></i><i style="height:72%"></i><i style="height:92%"></i><i style="height:88%"></i><i style="height:100%"></i><i style="height:52%"></i><i style="height:44%"></i><i style="height:8%"></i></span></td><td class="col-5">11.03 · 13.05 · 14.83</td></tr>
+        <tr><td class="m">malic_acid</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">133</td><td><span class="col-spk"><i style="height:25%"></i><i style="height:51%"></i><i style="height:100%"></i><i style="height:25%"></i><i style="height:25%"></i><i style="height:19%"></i><i style="height:18%"></i><i style="height:25%"></i><i style="height:11%"></i><i style="height:7%"></i><i style="height:4%"></i><i style="height:5%"></i></span></td><td class="col-5">0.74 · 1.865 · 5.8</td></tr>
+        <tr><td class="m">alcalinity_of_ash</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">63</td><td><span class="col-spk"><i style="height:11%"></i><i style="height:5%"></i><i style="height:21%"></i><i style="height:76%"></i><i style="height:79%"></i><i style="height:100%"></i><i style="height:71%"></i><i style="height:50%"></i><i style="height:37%"></i><i style="height:8%"></i><i style="height:3%"></i><i style="height:8%"></i></span></td><td class="col-5">10.6 · 19.5 · 30</td></tr>
+        <tr><td class="m">magnesium</td><td>categorical</td><td>feature</td><td>embedding</td><td class="r m grey">0</td><td class="r m">53</td><td><span class="n in">6</span><span class="col-cats"><span>88<b style="width:28px"></b>13</span><span>86<b style="width:24px"></b>11</span><span>101<b style="width:19px"></b>9</span><span>98<b style="width:19px"></b>9</span><span>96<b style="width:17px"></b>8</span><span class="muted">+48 more</span></span></td><td class="col-5 grey">top 5 of 53</td></tr>
+        <tr class="off"><td colspan="8">… 6 more numeric features: total_phenols, flavanoids, nonflavanoid_phenols, proanthocyanins, color_intensity, hue</td></tr>
+        <tr><td class="m">od280_od315</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">122</td><td><span class="col-spk"><i style="height:44%"></i><i style="height:76%"></i><i style="height:60%"></i><i style="height:40%"></i><i style="height:32%"></i><i style="height:48%"></i><i style="height:96%"></i><i style="height:92%"></i><i style="height:100%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:12%"></i></span></td><td class="col-5">1.27 · 2.78 · 4</td></tr>
+        <tr><td class="m">proline</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">121</td><td><span class="col-spk"><i style="height:53%"></i><i style="height:100%"></i><i style="height:91%"></i><i style="height:91%"></i><i style="height:50%"></i><i style="height:28%"></i><i style="height:56%"></i><i style="height:25%"></i><i style="height:41%"></i><i style="height:3%"></i><i style="height:16%"></i><i style="height:3%"></i></span></td><td class="col-5">278 · 673.5 · 1680</td></tr>
+        <tr><td class="m">cultivar</td><td>categorical</td><td><b>target</b></td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">3</td><td><span class="col-cats"><span>class_0<b style="width:23px"></b>59</span><span>class_1<b style="width:28px"></b>71</span><span>class_2<b style="width:19px"></b>48</span></span></td><td class="col-5 grey">class counts</td></tr>
+    </table>
+    <div class="muted" style="font-size:11px">A column the transform changed has no extra mark in this table: the operations line says what changed, and the Compare tab shows it against the raw version.</div>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">5</span></td><td>Operations line</td><td>On a version a transform made, or one after it: the operations in order, as words, and <i>Edit the transform…</i> (SCR-15 with them loaded, 6b)</td><td>the transform version's config (<span class="mono">GET /versions/{id}</span>, or the lineage's transform ancestor)</td><td>–</td></tr>
+<tr><td><span class="num">6</span></td><td>A categorical column</td><td>Its top 5 categories with counts and "+N more"; expanded, every count up to 50</td><td><span class="mono">GET /versions/{id}/columns</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · A large table: <span class="mono">power.parquet</span> once ingested <span class="k">not ingested yet; figures from the file</span></h2>
+<div class="frame" style="height:340px">
+  <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+    <div class="group" style="align-self:flex-start"><span class="btn sm">Rows 2,075,259</span><span class="btn sm on">Columns 6</span><span class="btn sm">Reasons 1</span><span class="btn sm">Distributions</span><span class="btn sm">Config</span></div>
+    <div style="font-size:12px"><span class="n in">7</span><b>6 columns</b> · 5 features (5 numeric) · target <span class="mono">Global_active_power</span>, regression · over <b>2,049,280</b> accepted rows · <span class="muted">25,979 rejected rows not counted (<span class="mono">missing_target</span>)</span> <span class="btn sm ghost">Show them</span></div>
+    <table class="t">
+      <tr><th>Column</th><th>Kind</th><th>Role</th><th>Encoding</th><th class="r">Missing</th><th class="r">Distinct</th><th>Distribution</th><th>min · median · max</th></tr>
+        <tr><td class="m">Global_active_power</td><td>numeric</td><td><b>target</b></td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">4,186</td><td><span class="col-spk"><i style="height:100%"></i><i style="height:48%"></i><i style="height:16%"></i><i style="height:7%"></i><i style="height:3%"></i><i style="height:1%"></i><i style="height:1%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i></span></td><td class="col-5">0.076 · 0.602 · 11.122</td></tr>
+        <tr><td class="m">Global_reactive_power</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">532</td><td><span class="col-spk"><i style="height:100%"></i><i style="height:47%"></i><i style="height:20%"></i><i style="height:6%"></i><i style="height:1%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i></span></td><td class="col-5">0 · 0.1 · 1.39</td></tr>
+        <tr><td class="m">Voltage</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">2,837</td><td><span class="col-spk"><i style="height:0%"></i><i style="height:0%"></i><i style="height:1%"></i><i style="height:6%"></i><i style="height:18%"></i><i style="height:46%"></i><i style="height:100%"></i><i style="height:97%"></i><i style="height:39%"></i><i style="height:10%"></i><i style="height:2%"></i><i style="height:0%"></i></span></td><td class="col-5">223.2 · 241.01 · 254.15</td></tr>
+        <tr><td class="m">Sub_metering_1</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">88</td><td><span class="col-spk"><i style="height:100%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:2%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i></span></td><td class="col-5">0 · 0 · 88</td></tr>
+        <tr><td class="m">Sub_metering_2</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">81</td><td><span class="col-spk"><i style="height:100%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:1%"></i><i style="height:1%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i></span></td><td class="col-5">0 · 0 · 80</td></tr>
+        <tr><td class="m">Sub_metering_3</td><td>numeric</td><td>feature</td><td class="grey">—</td><td class="r m grey">0</td><td class="r m">32</td><td><span class="col-spk"><i style="height:100%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:1%"></i><i style="height:2%"></i><i style="height:0%"></i><i style="height:40%"></i><i style="height:10%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:1%"></i></span></td><td class="col-5">0 · 1 · 31</td></tr>
+    </table>
+    <div class="muted" style="font-size:11px">In the file, all six columns are empty on the same 25,979 rows. With the target among them, ingest rejects those rows as <span class="mono">missing_target</span>, so the accepted rows have no missing values: the summary line says why the Missing column is all zero. Medians are the file's, over the non-empty rows.</div>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">7</span></td><td>Rows not counted</td><td>How many rows are left out of the figures and why (by reason), with <i>Show them</i>: Rows filtered to those reasons</td><td><span class="mono">counts.by_reason</span> of the version</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · States</h2>
+<div class="frame" style="height:250px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+    <div class="card"><h3>Loading, first view of a large table</h3>
+      <div style="font-size:12px">Computing the column figures · 2,049,280 rows · once, then kept for this version</div>
+      <div><span class="skel" style="width:90%"></span></div><div><span class="skel" style="width:90%"></span></div><div><span class="skel" style="width:70%"></span></div>
+      <div class="muted" style="font-size:11px">One skeleton row per column once the schema is known (it is in the manifest's metadata, so it comes first).</div></div>
+    <div class="empty"><div><b>Every row of this version was rejected.</b><p style="margin:6px 0">The columns are listed with their kind and role; their figures read "—".</p><span class="btn sm">Show the rejected rows</span></div></div>
+    <div class="empty err"><div><b>The column figures could not be computed</b><p style="margin:6px 0"><span class="mono">version_data_missing</span> · the manifest is not on disk. Check the data volume, then try again.</p><span class="btn sm">Try again</span></div></div>
+  </div>
+</div>
+<p class="caption">On images and text there is no Columns tab. At 1024 px the min · median · max column moves under the sparkline, and the encoding column shortens <i>one_hot · default</i> to <i>one_hot</i> with "default" in its tooltip.</p>
+</main>
+</body>
+</html>
