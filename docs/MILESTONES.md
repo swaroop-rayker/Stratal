@@ -29,7 +29,7 @@
 | M9 | Model builder | 2 | L | Done 2026-11-19 |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
 | M11 | Dashboards and monitoring completion | 2 | L | Done 2026-11-24 |
-| M11b | Tabular transforms | 2 | M | In progress (kickoff proposed 2026-11-24) |
+| M11b | Tabular transforms | 2 | M | In progress (kickoff decisions K1–K9, 2026-11-24) |
 | M12 | LLM serving and RAG | 3 | L | Detailed, approved 2026-11-22 |
 | M13 | Router, tools, caption refinement | 3 | L | Detailed, approved 2026-11-22 |
 | M14 | Text→image and LoRA | 4 | L | Outline |
@@ -675,7 +675,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Size** M · **Branch** `m11b-tabular-transforms` · **Serves** DATA-7.1–7.5 · Added at the owner's request on 2026-11-19. The letter keeps M12–M15's numbers (as proposed for M8a/M8b). It comes after M11 because it needs M10's tabular ingestion and training. The `phase-2` tag goes on M11's merge, as planned; M11b follows it (the owner's choice, 2026-11-19: M11b carries no phase-2 acceptance criterion).
 
-**Proposed at M11b's kickoff (2026-11-24), waiting for the owner.** Each has a recommendation; none is taken until the owner decides.
+**Decided by the owner at M11b's kickoff (2026-11-24, "Accept all nine"): the recommended option in each.**
 
 | # | Decision | Recommended |
 |---|---|---|
