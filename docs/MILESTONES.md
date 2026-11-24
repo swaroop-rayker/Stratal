@@ -696,16 +696,18 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 - The `transform` stage between `ingest` and `clean` for tabular versions; row-local operations only (DATA-7.1, DATA-7.2, DATA-7.4).
 - Per-column encodings in the table schema, used by the input block and the classical pipelines (DATA-7.3).
 - SCR-03's column view for any tabular version, and the editor with a preview on sample rows (DATA-7.5).
+- **The *Start pipeline* drawer, type first** (added at the owner's request on 2026-11-24; a bug the owner reported on 2026-11-22). Today the drawer sends no `dataset_type`, so the API takes image–caption pairs: a CSV is saved as image–caption pairs and runs the image stages (`label` and `filter` fail on it). And it sends `until_stage` ("run up to here"), so unticking one stage unticks every stage after it. Proposed: the drawer asks for the dataset's type first (image–caption pairs, labelled images, tabular, labelled text), then shows only that type's stages in their order (a table: `ingest → transform → clean_table → split`), each optional stage ticked on its own, as far as the API allows; whether the API takes a list of stages instead of `until_stage` is settled at the G1 revision. Serves DATA-1.4, DATA-5.2 and DATA-7.1 (the transform stage must be reachable from the drawer). Its G1 and G2 go with SCR-15's.
 
 **Done when**
 
-- [ ] ADR approved (ADR-0019 Addendum B, rules 25–33, accepted 2026-11-24); G1 revision and G2 for SCR-15 and SCR-03's column view approved
+- [ ] ADR approved (ADR-0019 Addendum B, rules 25–33, accepted 2026-11-24); G1 revision and G2 for SCR-15, SCR-03's column view and the *Start pipeline* drawer approved
 - [ ] `test_DATA_7_1_*`: raw unchanged, same operations give the same ID, fitted operations refused
 - [ ] `test_DATA_7_2_*`: one test per operation; invalid ones refused naming the column; `cast_failed` rows kept and counted
 - [ ] `test_DATA_7_3_*`: `ignore`, `embedding` and `ordinal` reach the model's input as chosen
 - [ ] `test_DATA_7_4_*` (P2): derived columns and filters correct; anything outside the expression language refused
 - [ ] `test_DATA_7_5_*`: the column summary matches the manifest; the preview equals the stage's output
-- [ ] G3 for SCR-15 and SCR-03's column view
+- [ ] `test_DATA_5_2_*` (the drawer): a table source picked as *tabular* is saved as a table and offered only its own stages; unticking one stage leaves the later ones as they were; an image source still runs the image pipeline
+- [ ] G3 for SCR-15, SCR-03's column view and the *Start pipeline* drawer
 - [ ] Demo: drop a column of the wine table, change one column's kind, set an encoding, train on the result, and trace it back to raw on SCR-03
 - [ ] Owner's OK to merge
 
