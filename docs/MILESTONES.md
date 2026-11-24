@@ -29,7 +29,7 @@
 | M9 | Model builder | 2 | L | Done 2026-11-19 |
 | M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
 | M11 | Dashboards and monitoring completion | 2 | L | Done 2026-11-24 |
-| M11b | Tabular transforms | 2 | M | Not started (added at the owner's request 2026-11-19; outline) |
+| M11b | Tabular transforms | 2 | M | In progress (kickoff proposed 2026-11-24) |
 | M12 | LLM serving and RAG | 3 | L | Detailed, approved 2026-11-22 |
 | M13 | Router, tools, caption refinement | 3 | L | Detailed, approved 2026-11-22 |
 | M14 | Text→image and LoRA | 4 | L | Outline |
@@ -674,6 +674,20 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 ## M11b — Tabular transforms
 
 **Size** M · **Branch** `m11b-tabular-transforms` · **Serves** DATA-7.1–7.5 · Added at the owner's request on 2026-11-19. The letter keeps M12–M15's numbers (as proposed for M8a/M8b). It comes after M11 because it needs M10's tabular ingestion and training. The `phase-2` tag goes on M11's merge, as planned; M11b follows it (the owner's choice, 2026-11-19: M11b carries no phase-2 acceptance criterion).
+
+**Proposed at M11b's kickoff (2026-11-24), waiting for the owner.** Each has a recommendation; none is taken until the owner decides.
+
+| # | Decision | Recommended |
+|---|---|---|
+| K1 | **Where the design goes.** A new ADR would be ADR-0021 and shift the phase-3 plan's ADR-0021 to ADR-0023 | **ADR-0019 Addendum B**, so the approved phase-3 numbers stay |
+| K2 | **The stage's input and output.** Operations apply to one raw tabular version; the output is a new version whose parent is the raw one (DATA-7.1). A transform of a transform is refused, so lineage stays raw → transform → clean → split | As stated; to change the operations, edit the list and run it again on the raw version (a cache hit when nothing changed, AC1) |
+| K3 | **Choosing another target after ingest rejected rows with an empty target** (open point 1). Ingest keeps those rows, rejected as `missing_target`, with their features | The transform re-admits a row whose only problem was the old target being empty, and rejects rows whose *new* target is empty, as `missing_target`. Ingest does not change |
+| K4 | **Changing a column's kind after ingest coerced its values** (open point 2): `007` read as numeric is stored as `7.0` | Accept it and say so: numeric → categorical gives the number's text (`"7"`). Keeping leading zeros means setting the kind at ingest (`stages.ingest.table.kinds`, which exists). Storing the raw text too would change every tabular version's identity |
+| K5 | **Encodings (DATA-7.3).** A `set_encoding` operation; the table schema's column gains `encoding`: categorical `one_hot` (default), `embedding` or `ordinal` with its order; any column `ignore` | As stated. A network's input block reads it (embedding stays switchable there, as decided on 2026-11-19); classical pipelines read it with `embedding` as one-hot; `ignore` drops the column from both |
+| K6 | **The expression language (DATA-7.4, P2).** Numbers, column names, `+ - * /`, comparisons, `and or not`, `is null`, `abs log sqrt round min max`; nothing else | **Python's `ast.parse` with a whitelist of node types**, walked by our own evaluator: parsed, never `eval`, no new dependency. Alternative: our own small parser, which could be an owner unit for learning |
+| K7 | **Owner units.** DATA-7 carries no 👤 | None, unless you want the expression evaluator (K6) as yours |
+| K8 | **Screens.** The G1 revision adds the transform editor and SCR-03's column view | **SCR-15, a screen** at `/versions/:id/transform` (the operations list, a preview of the first 50 rows, *Run*), opened from a raw tabular version on SCR-03; **a *Columns* tab on SCR-03** for any tabular version (kind, encoding, missing count, distribution). The preview runs the stage's own functions in the API on sample rows, so it equals the output (DATA-7.5.AC1) |
+| K9 | **Large tables (NFR-2).** Ingest reads a table whole (ADR-0019: "tables here are small"); the household-power table you prepared has 2,075,259 rows | **Stream ingest and transform in record batches** (PyArrow), and use `power.parquet` as the large check, with its memory measured. The demo stays on wine, as planned |
 
 **Before starting:** an ADR (or an ADR-0019 addendum) for the `transform` stage: the operation list's schema, the expression language for DATA-7.4 (parsed, never `eval`), how encodings reach the table schema (decided 2026-11-19: the schema gives each column's default, a network's input block may still switch a categorical column between `one_hot` and `embedding`, classical pipelines follow the schema with `embedding` as `one_hot`; pointers in ADR-0017 rule 6 and ADR-0019 rule 17). Two points from M10's data layout to settle in that ADR: (1) ingest rejects a record whose target is empty (`missing_target`) before a transform could choose another target, so choosing the target in `transform` (DATA-7.2) needs ingest to keep those rows, or the transform to reconsider them; (2) `record` holds values already coerced to their inferred kind (a code `007` read as numeric is `7.0`), so changing a column's kind in `transform` cannot recover the original text unless ingest keeps it, or the kind is set at ingest (`stages.ingest.table.kinds`). A transform must also recompute each row's `sha256` from its new `record`, which the clean stage's exact duplicates rely on; a G1 revision adding the transform editor as a new screen (SCR-15 proposed) and SCR-03's column view; G2 for both.
 
