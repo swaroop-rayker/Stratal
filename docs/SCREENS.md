@@ -106,10 +106,10 @@ Each table says which endpoint feeds each piece of data. "Live" marks what updat
 
 | Part | Shows | Source |
 |---|---|---|
-| Start from | A folder under `/sources`, or a version to continue from (`from_version`), as today | `GET /sources`; `GET /datasets/{slug}/versions` |
+| Start from | A folder under `/sources`, or a version to continue from (`from_version`), as today | `GET /sources` (with `columns` for a folder holding one table, added with the drawer's low-fi, 2026-11-24); `GET /datasets/{slug}/versions` |
 | Type | **From a folder:** a required choice of the four types, each with what its folder must hold: *Image–caption pairs* (image files), *Labelled images* (class folders, or images and a CSV of labels), *Tabular* (one `.csv` or `.parquet` table), *Labelled text* (`.jsonl`, or `.txt` files in class folders). No default and no guess (open point 7d); nothing below it shows until a type is chosen. **From a version:** the version's own type, read-only | `GET /dataset-types` (titles; `stages` and `source` added, open point 7b) |
 | Dataset | The slug, from a folder only (as today) | `GET /datasets` |
-| Stages | Only the chosen type's stages, in its order (a table: `ingest → transform → clean_table → split`); from a version, only those after the stage that made it. Each row: the stage, one line on what it does, and its fields from its config schema (UI-2.3); `ingest` shows only the type's own fields (a table's `target` and `kinds`, the target required; `label_from` for labelled images; `text` for labelled text). How a run stops early, and how `transform` appears: open points 7a and 7c | `GET /config/schemas/{name}`; the type's `stages` |
+| Stages | Only the chosen type's stages, in its order (a table: `ingest → transform → clean_table → split`); from a version, only those after the stage that made it. Each row: the stage, one line on what it does, and its fields from its config schema (UI-2.3); `ingest` shows only the type's own fields (a table's `target` and `kinds`, the target required and chosen from the table's columns; `label_from` for labelled images; `text` for labelled text). How a run stops early, and how `transform` appears: open points 7a and 7c | `GET /config/schemas/{name}`; the type's `stages` |
 
 **Request.** `POST /jobs` with `kind: pipeline`, `dataset_type` (always sent from a folder; from a version, the version's own), `source` or `from_version`, the changed settings in `stages`, and the stop (open point 7a). Errors land on their fields from `errors[].loc`, `dataset_type` included.
 
