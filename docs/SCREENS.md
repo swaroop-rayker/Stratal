@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **v3, approved by the owner on 2026-11-20** (Gate 1 revision: choosing the model kind after the split — the *Train a model* drawer, SCR-03, SCR-08, SCR-09, SCR-11, Flow 4 steps 1–3; open point 5). v2 approved by the owner on 2026-11-17 (phase-2 screens detailed in §3a, Flow 4 in steps, Flow 3's phase-2 part). v1 approved 2026-11-15. Changes from here on are new versions and need approval |
+| Status | **v4, proposed on 2026-11-24 for the owner's Gate 1 review** (tabular transforms, M11b, DATA-7.1–7.5: SCR-15 the transform editor, SCR-03's *Columns* tab and *Transform…* action, Flow 6; open point 6). **v3, approved by the owner on 2026-11-20** (Gate 1 revision: choosing the model kind after the split — the *Train a model* drawer, SCR-03, SCR-08, SCR-09, SCR-11, Flow 4 steps 1–3; open point 5). v2 approved by the owner on 2026-11-17 (phase-2 screens detailed in §3a, Flow 4 in steps, Flow 3's phase-2 part). v1 approved 2026-11-15. Changes from here on are new versions and need approval |
 | Builds on | [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) v1 (Gate 0, approved 2026-11-15) |
 | Data sources | Endpoints are from [API.md](API.md). Phase-2 screens name the endpoints their milestone adds (*planned*). Phase-3 to phase-5 interfaces are not specified yet, so those screens are outlines and are detailed at their phase kickoff |
 | Approvals | Logged in [design/APPROVALS.md](design/APPROVALS.md) |
@@ -24,7 +24,7 @@ This file lists every screen with its purpose, the requirements it serves, the d
 |---|---|---|---|---|---|
 | SCR-01 | App shell and navigation | (wraps all) | 1 | all; UI-2.1 slice, MON-1.4, MON-2.1 | M6 |
 | SCR-02 | Datasets and versions | `/datasets`, `/datasets/:slug` | 1 | DATA-3.1, DATA-3.2, DATA-3.4, UI-2.1 | M6 |
-| SCR-03 | Version detail and lineage | `/versions/:version_id` | 1 (UI-2.2 part in 2) | DATA-3.3, DATA-2.1, DATA-2.2, DATA-6.1, DATA-5.1, UI-2.1, UI-2.2; DATA-3.5, DATA-2.3 | M6; v2 additions in M11 |
+| SCR-03 | Version detail and lineage | `/versions/:version_id` | 1 (UI-2.2 part in 2) | DATA-3.3, DATA-2.1, DATA-2.2, DATA-6.1, DATA-5.1, UI-2.1, UI-2.2; DATA-3.5, DATA-2.3; DATA-7.5 (*Columns*) | M6; v2 additions in M11; *Columns* tab in M11b |
 | SCR-04 | Live job view | `/jobs/:job_id` | 1 | MON-4.1, MON-4.2, MON-4.3, MON-1.1–1.5, MON-2.1, 2.3, 2.4, 2.5, MON-3.1; RUN-1.1/1.2 slice | M6 |
 | SCR-05 | Labeling review | `/reviews/:review_id` | 1 | LABEL-1.5 | M6 |
 | SCR-06 | Eval report | `/versions/:version_id/report` | 1 (EVAL-1.2 in 2) | EVAL-1.1, EVAL-1.2 | M6 |
@@ -36,17 +36,18 @@ This file lists every screen with its purpose, the requirements it serves, the d
 | SCR-12 | Chat (manual and auto mode) | `/chat` | 3, completed in 5 | UI-1.1, LLM-1.1, LLM-2.1, LLM-2.3, LLM-2.4, LLM-3.1, LLM-3.2, IMG-1.1, TRANS-1.1 | M12–M15 |
 | SCR-13 | System monitor | `/system` | 2 | MON-2.1–2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, RUN-1.6 | M11 |
 | SCR-14 | Settings | `/settings` | 2 | UI-2.3; thresholds for MON-2.2, MON-2.6, RUN-1.6, RUN-1.7; REG-2.3, REG-2.4 | M8–M11 |
+| SCR-15 | Transform editor (v4) | `/versions/:version_id/transform` | 2 | DATA-7.1–7.5, UI-2.3 | M11b |
 
-Gate 2 order follows SPEC §9.5: SCR-01, 02, 03, 04, 05, 06 first, then the SCR-07 slice.
+SCR-15 is not in SPEC §9.4's initial inventory, which ends at SCR-14; it was added at M11b's kickoff (K8) and in ADR-0019 Addendum B rule 33. Gate 2 order follows SPEC §9.5: SCR-01, 02, 03, 04, 05, 06 first, then the SCR-07 slice.
 
 ### Navigation map
 
 ```text
 ┌ SCR-01 shell ───────────────────────────────────────────────────────────┐
 │ Data ─── SCR-02 Datasets ──► SCR-03 Version ──► SCR-05 Review            │
-│                                   │  ▲  │                                │
-│                                   │  │  └──────► SCR-06 Eval report      │
-│                                   ▼  │                                   │
+│                                 │ │  ▲  │                                │
+│               SCR-15 Transform ◄┘ │  │  └──────► SCR-06 Eval report      │
+│               (Run → SCR-04)      ▼  │                                   │
 │ Jobs ─── (SCR-07 Jobs list) ──► SCR-04 Live job ──► output version       │
 │ Models ─ SCR-11 Registry ◄── SCR-10 HPO ◄── SCR-09 Run setup ◄── SCR-08  │
 │ Chat ─── SCR-12                                                          │
@@ -57,6 +58,8 @@ Gate 2 order follows SPEC §9.5: SCR-01, 02, 03, 04, 05, 06 first, then the SCR-
 ```
 
 Phase-1 navigation shows Data and Jobs only. Jobs opens the SCR-07 slice.
+
+**Into a transform (v4).** SCR-15 has no sidebar entry. It is opened from SCR-03 on a table's raw version (*Transform…*), or on a version made by a transform, or downstream of one, with *Edit the transform…* (open point 6b); *Run* leads to SCR-04, and the output version back to SCR-03.
 
 **Into training (v3).** SCR-11 and SCR-03 open the *Train a model* drawer; it leads to SCR-08 (a network) or straight to SCR-09 (a classical model). *Train again…* (SCR-11), *Start a run from the best configuration* (SCR-10) and *Start again with N* (SCR-04) keep going straight to SCR-09.
 
@@ -118,6 +121,7 @@ Each table says which endpoint feeds each piece of data. "Live" marks what updat
 - **Start a review** (sample size, optional seed) → `POST /versions/{id}/reviews` → SCR-05. Offered once the version has captions.
 - **Build the eval report** → `POST /versions/{id}/reports` → SCR-06, which shows the build in progress (link to SCR-04) and then the report. Open the latest report if one exists. (Changed at SCR-06's G3, 2026-11-17: the mockup sent builds through SCR-04.)
 - **Train a model…** (v3, M11) → the *Train a model* drawer with this version as step 1, opened at step 2. Offered on a version a model trains on: a `split` version, or a `tokenize` version for labelled text; on any other stage it is disabled and says "Training needs a split version (a tokenize version for text)".
+- **Transform…** (v4, M11b) → SCR-15 for this version. Shown on a `tabular` version only (hidden on other types). A transform always starts from the raw (`ingest`) version (ADR-0019 rule 25: a transform of a transform is refused), so SCR-15 always opens on the raw version in the lineage: on the raw version itself, with an empty list; on a version a transform made, or one downstream of it, the action reads **Edit the transform…** and loads that transform's operations (open point 6b); on a `clean_table` or `split` version made straight from ingest, with an empty list. When SCR-15 opens on an ancestor, its header says so ("Starts from the raw version ds_b3f4ff09de8a").
 - Open the creating job; copy IDs.
 
 **Empty.** A version whose rows were all rejected shows the counts and reasons, and the row table opens filtered to `rejected`. **Phase 2 adds** the UI-2.2 distributions (raw vs cleaned, per stage) and the diff with another version (DATA-3.5).
@@ -335,6 +339,46 @@ As approved with the low-fi wireframe on 2026-11-21 (`design/screens/SCR-03v2-lo
 
 Semantic clusters: a tile (clusters, rows, largest), a Rows filter, a cluster chip in the row, and the members side by side in the row drawer with each pair's similarity and their shared split group; every member stays accepted.
 
+### SCR-03 v4 addition: the *Columns* tab (M11b)
+
+**Purpose.** Any tabular version (raw, transformed, cleaned or split) as a table of its columns, so its schema and its data can be read before transforming or training (DATA-7.5). It is the second tab, after Rows: Rows, Columns, Reasons, Distributions, Compare, Models, Config. It is shown on `tabular` versions only; other types do not have it.
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Summary line | Columns, features and target ("14 columns · 13 features · target `cultivar`, classification, 3 classes"), the rows counted ("178 accepted rows", open point 6d), and on a transformed version the operations that made it, as one line with a link to SCR-15 | `GET /versions/{id}/columns` *planned*, M11b; `GET /versions/{id}` | |
+| Columns table | One row per column in the schema's order: name (mono), kind (*numeric* or *categorical*), role (*feature* or *target*), encoding (*one_hot*, *embedding*, *ordinal* with its order, *ignore*; a default shown as "one_hot · default", a numeric feature "—" unless *ignore*), missing count and share, distinct count, distribution: for a number a small histogram with min · median · max, for a category its top 5 with counts and "+N more". Sortable by any column; filter by kind and role | `GET /versions/{id}/columns` (rule 32) | |
+| Column detail (row expanded) | The histogram large (20 bins) or every category's count (top 50, then "+N more"), with a text table of the same figures beside it (accessibility rule); for an *ordinal* column its order; for the target, the class counts or the target's histogram | same | |
+
+**Actions.** Sort; filter; expand a column (`Enter`, `j` / `k` to move); copy a column's name; *Transform…* or *Edit the transform…* (as in the header's actions above).
+
+**States.** *Loading*: skeleton rows, one per column once the schema is known. *Empty*: no accepted rows ("Every row of this version was rejected.") with a link to Rows filtered to `rejected`; the columns stay listed with kind and role, their figures "—". *Error*: the error state with its `code`, `detail` and *Retry*, in the tab. Values are computed once per version and cached by its ID (as the version's distributions, M11 K10), so a second visit is immediate.
+
+### SCR-15 — Transform editor (M11b)
+
+**Purpose.** Build the ordered list of operations for a table's raw version, see what they do to the first rows before running anything, and run them (DATA-7.1, DATA-7.2, DATA-7.3, DATA-7.4, DATA-7.5). The preview is computed in the API by the stage's own code (`stratal.data.transform`), so what it shows is what the stage writes (DATA-7.5.AC1; ADR-0019 rule 32).
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Header | "Transform" and the raw version (ID, dataset, rows, accepted rows, columns), with a link back to SCR-03; when opened from a later version, "Starts from the raw version ds_…" and *Loaded from ds_…* | `GET /versions/{id}` | |
+| Operations list | The operations in order, each a card with its number, its `op` (a select of the operation types) and its fields, generated from the stage's config schema, a discriminated union (UI-2.3): `drop` (columns), `rename` (from, to), `reorder` (the full order), `set_kind` (column, kind), `set_target` (column), `set_encoding` (column, encoding; for *ordinal* the order, prefilled with the categories seen and reorderable), and, if built, `derive` (name, expression, kind) and `filter` (expression) (DATA-7.4, P2). A column field is a select of the columns as they are at that step (open point 6c). Under each card, what it did on the sample ("drops ash · 13 → 12 features"; "magnesium → categorical, 0 of 50 cast_failed"); a refused operation shows its message on its field, from `errors[].loc` (`["stages", "transform", "operations", i, field]`) | `GET /config/schemas/transform`; `POST /versions/{id}/transform/preview` *planned*, M11b | on every edit |
+| Add operation | A menu of the operation types, each with one line on what it does, and a note: "Scaling, imputing and target encoding are fitted on the train split by the model, not here (ML-1.3)" (DATA-7.1.AC2) | schema | |
+| Resulting schema | The columns after the last operation as chips: name, kind, role, encoding; those the list added, renamed, recast or re-encoded marked, a dropped one struck through at its old place | preview response | on every edit |
+| Preview | The first 50 rows of the raw version after the operations (`limit` ≤ 50): row key, status, reason, then the resulting columns. A `cast_failed` row shows the value that would not convert with its reason; a row the new target re-admits is marked "re-admitted"; a filtered row stays in the list as `filtered · transform_filter`. Counts over the sample above it ("50 rows: 48 accepted, 2 cast_failed"), said to be the sample's, not the table's. The row key column stays pinned when the table scrolls sideways | preview response | on every edit (debounced 300 ms; the last preview stays, dimmed, while the next loads, so nothing moves) |
+| Run | What *Run* does (open point 6a), the later stages' settings folded under *Later stages* (the split's proportions and seed, generated from their config schemas, as in the *Start pipeline* drawer), and the button. Disabled, saying why, while the list is empty or has a problem | `GET /config/schemas/{stage}` | |
+
+**Actions.**
+
+- *Add operation*; remove one; move one up or down (`Alt+↑` / `Alt+↓`, and buttons, so drag is never the only way); every field from the keyboard.
+- *Run* → `POST /jobs` with `kind: pipeline`, `from_version` the raw version, `stages.transform.operations` and `until_stage` (open point 6a) → SCR-04. The same raw version and operations reuse the version already made (DATA-7.1.AC1): the job shows the stage "cached" and its output, as for any memoized stage.
+- *Reset* (back to the list it opened with; confirm if edited); open the raw version (SCR-03).
+- The list is kept as a draft in the browser's session storage per raw version until it runs, as the builder keeps its draft, so leaving the page loses nothing.
+
+**States.** *Empty* (no operations): "No operations yet. The preview shows the raw version's first rows." with *Add operation*; the preview shows the raw rows. *Loading*: the header, then skeleton cards and preview rows. *Error*: the preview cannot be computed (the API is down, a timeout) → the error state in the preview with *Retry*, the list kept and *Run* disabled; a refused operation is not an error state but a problem on its card, with *Run* disabled and the count of problems beside it. *Not a raw table*: a URL for a version that is not a `tabular` `ingest` version shows "Transforms apply to a table's raw version." with a link to the raw version in its lineage, or to SCR-03 for a version of another type.
+
+**Not on this screen.** Fitted operations (scaling, imputation, target encoding) are the model's preprocessing (ML-1.3). Editing many tables at once, or a transform of a transformed version (ADR-0019 rule 25). The full table: the preview shows at most 50 rows, and the output version's Rows and Columns tabs on SCR-03 show the rest after the run.
+
+**Other screens touched by v4, with no new region.** SCR-03's lineage strip shows the `transform` node with one fact ("4 operations"); its Config tab shows the operations. SCR-04's timeline shows the `transform` stage like any other, and its stage drawer lists what each operation changed (columns dropped, renamed, recast with the number `cast_failed`, rows re-admitted, rows filtered; rule 28). SCR-08's locked input width and SCR-09's estimator pipeline follow the schema's encodings (rule 29); SCR-08 keeps its one-hot / embedding switch per categorical column, now defaulting to the schema's choice. The *Start pipeline* drawer does not offer the transform's operations (open point 6e).
+
 ## 4. Later screens (outline)
 
 Detailed at each phase kickoff, when their interfaces are specified. Listed now so the shell and the phase-1 screens leave room.
@@ -410,6 +454,19 @@ Step by step (v2; steps 1–3 rewritten in v3), as the phase-2 acceptance runs i
 
 SCR-12: the person types a request in Auto mode → the router classifies it and picks LLM, RAG, image generation, captioner or translator (LLM-3.1) → the answer streams back with its route, latency and, for RAG, citations → if the chosen model fails, the fallback answer or a clear error appears with the reason (LLM-3.2). In manual mode the person picks the model and the router is skipped.
 
+### Flow 6 — Raw table → transform → train (v4, M11b)
+
+The M11b demo on the wine table (MILESTONES.md, M11b *Done when*), from its raw version `ds_b3f4ff09de8a` (178 rows, 13 numeric features, target `cultivar`).
+
+| # | Screen | The person… | Behind it |
+|---|---|---|---|
+| 1 | SCR-03 | opens the raw version's *Columns* tab: 13 numeric features, `magnesium` with 53 distinct values, no missing values; clicks *Transform…* | `GET /versions/{id}/columns` |
+| 2 | SCR-15 | adds `drop ash`, `rename od280/od315_of_diluted_wines → od280_od315`, `set_kind magnesium → categorical` and `set_encoding magnesium → embedding`; the preview shows 12 features, `magnesium` as text (`"127"`), 0 `cast_failed` | `POST /versions/{id}/transform/preview` on every edit |
+| 3 | SCR-15 → SCR-04 | clicks *Run*; watches transform → clean_table → split | `POST /jobs` (`kind: pipeline`, `from_version`, `stages.transform.operations`) |
+| 4 | SCR-03 | opens the output split: the lineage reads raw → transform → clean_table → split; *Columns* shows `magnesium` categorical with *embedding*; clicks *Train a model…* → *Network* | `GET /versions/{id}/lineage`, `/columns` |
+| 5 | SCR-08 → SCR-09 → SCR-04 | finds `magnesium` going through an `Embedding` in the input block and `ash` absent from the input; trains | `POST /model-specs/validate`, `POST /jobs` (kind `train`) |
+| 6 | SCR-11 → SCR-03 | opens the trained version's dataset version and follows the lineage back to raw | `GET /model-versions/{id}`, `GET /versions/{id}/lineage` |
+
 ## 6. Open points for the owner
 
 1. **Finding jobs in phase 1.** SCR-07 is tagged phase 2 (RUN-1.1, RUN-1.2), but phase 1 already has job states, cancel and retry (CL-04). Without SCR-07 a past job is reached only from a version's "creating job" link or the shell's active-job indicator. Two options:
@@ -430,6 +487,12 @@ SCR-12: the person types a request in Auto mode → the router classifies it and
    - **(g) Gate order with fine-tuning (RUN-1.10, K11).** A low-fi of SCR-09 v2's fine-tuning form already exists, not yet approved (`design/screens/SCR-09v2-lofi_v1.html`, commit `7700fa3`). I propose one SCR-09 v2 gate covering both: this entry as its own low-fi file (`SCR-09v2-entry-lofi_v1.html`), then one hi-fi mockup with both. The alternative is this entry first, fine-tuning after.
 
    **Decided 2026-11-20 by the owner: the recommended option in each of (a) to (g)** ("Approved"). A drawer; *Train a model…*; from SCR-03 at step 2; *Network* always through SCR-08; SCR-08's selects stay changeable; *Change…* warns only when a spec would be left behind; one SCR-09 v2 gate, the entry's low-fi reviewed first.
+6. **Tabular transforms (v4, M11b, open for Gate 1).**
+   - **(a) What *Run* does.** (1) *Recommended:* a choice of two beside the button, **Through clean and split** (the default: `transform → clean_table → split`, ready to train) or **Transform only** (`until_stage: transform`, to look at the result on SCR-03 first). Training needs a split version, the demo trains on the result, and unchanged later stages are cache hits, so the default costs nothing extra. (2) Transform only, and the person continues from the output with the *Start pipeline* drawer: one more step for the common case. (3) A select of the last stage: the same as (1) with a third option nobody needs (stopping after `clean_table`).
+   - **(b) Editing a transform later.** *Recommended:* on a version a transform made, or one downstream of it, SCR-03 offers *Edit the transform…*, which opens SCR-15 on the raw version with those operations loaded (`/versions/{raw}/transform?from={version}`). Running the edited list makes a new version beside the old one, as K2 says. The alternative is to start again from the raw version each time, retyping the list.
+   - **(c) The columns at each step.** A column field lists the columns as they are at that operation's step (after a rename, the new name). *Recommended:* the preview response also returns `steps`, one per operation: the columns after it and what it did on the sample (rule 28's report, on the sample rows). This adds a field to the response rule 32 describes, recorded in the addendum's *As built*, and keeps the logic in the stage's code (K8). The alternative computes the columns in the browser, a second copy of the rules that could disagree with the stage.
+   - **(d) What the *Columns* tab counts.** *Recommended:* accepted rows, the ones a model trains on, as the Distributions tab's "here (accepted rows)" does; the summary line says so, and names how many rows are not counted. Alternatives: all rows; or a switch between the two.
+   - **(e) The *Start pipeline* drawer.** *Recommended:* it does not offer `stages.transform`; operations are written on SCR-15 only, where they are checked and previewed. The alternative shows the operations as a generated form in the drawer too, with no preview. (The drawer's own bugs are a separate item, not part of M11b.)
 
 ## Revision history
 
@@ -438,3 +501,4 @@ SCR-12: the person types a request in Auto mode → the router classifies it and
 | v1 | 2026-11-15 | First version, for Gate 1 review. Approved the same day; open point 1 then decided by the owner as option (a), recorded in place |
 | v2 | 2026-11-17 | Phase-2 kickoff: §3a details SCR-04 v2 (training runs), SCR-07 v2 (pause, resume), SCR-08 to SCR-11, SCR-13, SCR-14 and SCR-03's M11 additions, from the approved phase-2 plan and ADR-0014 to ADR-0016; Flow 4 in steps; Flow 3's phase-2 part. Approved by the owner the same day |
 | v3 | 2026-11-20 | Choosing the model kind after the split (ML-1.1, BUILD-1.3, UI-2.1; the owner's request of 2026-11-20): the *Train a model* drawer (step 1 the split version with its type and task, step 2 the kinds it allows, *Classical* greyed with its reason off tables); SCR-03 and SCR-11 open it, replacing *Build a model…*; SCR-08's dataset selects filled from step 1; SCR-09 receives the chosen kind with *Change…* and entry rules, its empty state reworded; *Train again…*, SCR-10's and SCR-04's starts unchanged; Flow 4's summary and steps 1–3 rewritten, with a table variant; open point 5. Approved by the owner the same day, with the recommended option in each of point 5's choices. Corrected with the approval of the entry's low-fi wireframe (same day): step 1 and SCR-03's button take `tokenize` versions for labelled text as well as `split` versions |
+| v4 | 2026-11-24 | Tabular transforms (M11b, DATA-7.1–7.5; kickoff K8, ADR-0019 Addendum B rules 32–33): SCR-15, the transform editor at `/versions/:version_id/transform` (operations list generated from the stage's schema, column fields per step, the resulting schema, a 50-row preview from the stage's own code, *Run*), with its states; SCR-03's *Columns* tab for any tabular version (kind, role, encoding, missing, distinct, distribution) and its *Transform…* / *Edit the transform…* action, always opening on the raw version; the inventory row and navigation map; the screens the new stage touches without a new region; Flow 6, the wine demo; open point 6 (a)–(e). Proposed for review |
