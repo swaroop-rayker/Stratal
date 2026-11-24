@@ -791,6 +791,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System History
+         * @description The last ``n`` completed runs of one stage in one group of like runs (MON-4.5): the
+         *     rate in the stage's own unit, running time across attempts (per epoch for training) and
+         *     the MON-2.5 peaks. Without ``stage``, the most recently run stage; without ``group``, the
+         *     latest run's group; ``group=all`` for every group. Stages reused from the cache are left
+         *     out unless ``reused``.
+         */
+        get: operations["system_history_api_v1_system_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/versions/{version_id}/reviews": {
         parameters: {
             query?: never;
@@ -2377,6 +2401,71 @@ export interface components {
             raw: number;
             /** Here */
             here: number;
+        };
+        /** HistoryGroup */
+        HistoryGroup: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Runs */
+            runs: number;
+        };
+        /** HistoryPeaks */
+        HistoryPeaks: {
+            /** Vram Used Mb */
+            vram_used_mb: number | null;
+            /** Torch Allocated Mb */
+            torch_allocated_mb: number | null;
+            /** Ram Used Mb */
+            ram_used_mb: number | null;
+            /** Gpu Temp C */
+            gpu_temp_c: number | null;
+            /** Rss Mb */
+            rss_mb: number | null;
+        };
+        /** HistoryRun */
+        HistoryRun: {
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /** Started At */
+            started_at: string | null;
+            /** Group */
+            group: string;
+            /** Reused */
+            reused: boolean;
+            /** Attempts */
+            attempts: number;
+            /** Running S */
+            running_s: number | null;
+            /** Epochs */
+            epochs: number | null;
+            /** Time */
+            time: number | null;
+            /** Rate */
+            rate: number | null;
+            /** Items */
+            items: number | null;
+            /** Computed */
+            computed: number | null;
+            peaks: components["schemas"]["HistoryPeaks"];
+            /** Notes */
+            notes: string[];
+        };
+        /** HistoryStage */
+        HistoryStage: {
+            /** Stage */
+            stage: string;
+            /** Queue */
+            queue: string;
+            /** Runs */
+            runs: number;
+            /** Reused */
+            reused: number;
+            /** Last At */
+            last_at: string | null;
         };
         /** Interval */
         Interval: {
@@ -4376,6 +4465,30 @@ export interface components {
             /** Items */
             items: components["schemas"]["DiagnosticPast"][];
         };
+        /** SystemHistory */
+        SystemHistory: {
+            /** Stages */
+            stages: components["schemas"]["HistoryStage"][];
+            /** Stage */
+            stage: string | null;
+            /** Queue */
+            queue: string | null;
+            /** Rate Unit */
+            rate_unit: string | null;
+            /**
+             * Time Unit
+             * @enum {string}
+             */
+            time_unit: "s" | "s/epoch";
+            /** Groups */
+            groups: components["schemas"]["HistoryGroup"][];
+            /** Group */
+            group: string | null;
+            /** N */
+            n: number;
+            /** Runs */
+            runs: components["schemas"]["HistoryRun"][];
+        };
         /** Tanh */
         Tanh: {
             /**
@@ -6065,6 +6178,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobOverlay"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    system_history_api_v1_system_history_get: {
+        parameters: {
+            query?: {
+                stage?: string | null;
+                queue?: string | null;
+                group?: string | null;
+                n?: number;
+                reused?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemHistory"];
                 };
             };
             /** @description Validation Error */

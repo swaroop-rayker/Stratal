@@ -1,5 +1,5 @@
-// SCR-13 — System monitor (approved hi-fi SCR-13_v1, 2026-11-22). Overview of a range and
-// Compare two jobs; the range, tab and jobs live in the URL (SCREENS.md SCR-13).
+// SCR-13 — System monitor (approved hi-fi SCR-13_v1, 2026-11-22; History SCR-13history_v1, 2026-11-24). Overview of a range,
+// Compare two jobs and History; the range, tab, jobs and history choices live in the URL (SCREENS.md SCR-13).
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
@@ -11,6 +11,7 @@ import { ago, stamp } from "../../lib/format";
 import { useNow } from "../../lib/useNow";
 import { useCrumbs } from "../../shell/hooks";
 import { CompareJobs } from "./CompareJobs";
+import { History } from "./History";
 import { Overview } from "./Overview";
 
 import "../../styles/scr13.css";
@@ -65,7 +66,8 @@ export function SystemScreen() {
   useCrumbs([{ label: "System" }]);
   useMonitorLive();
   const [params, setParams] = useSearchParams();
-  const tab = params.get("tab") === "compare" ? "compare" : "overview";
+  const asked = params.get("tab");
+  const tab = asked === "compare" || asked === "history" ? asked : "overview";
   const range = rangeOf(params);
   const [custom, setCustom] = useState<{ from: string; to: string } | null>(null);
 
@@ -137,9 +139,20 @@ export function SystemScreen() {
       <div className="tabs" role="tablist">
         <button type="button" className="tab" role="tab" aria-selected={tab === "overview"} onClick={() => { update({ tab: null }); }}>Overview</button>
         <button type="button" className="tab" role="tab" aria-selected={tab === "compare"} onClick={() => { update({ tab: "compare" }); }}>Compare two jobs</button>
+        <button type="button" className="tab" role="tab" aria-selected={tab === "history"} onClick={() => { update({ tab: "history" }); }}>History</button>
       </div>
       {tab === "overview" ? (
         <Overview range={range} onZoom={zoom} />
+      ) : tab === "history" ? (
+        <History
+          stage={params.get("stage")}
+          queue={params.get("queue")}
+          group={params.get("group")}
+          n={[10, 50, 100].includes(Number(params.get("n"))) ? Number(params.get("n")) : 20}
+          reused={params.get("reused") === "1"}
+          onChange={update}
+          onCompare={(a, b) => { update({ tab: "compare", a, b, align: null }); }}
+        />
       ) : (
         <CompareJobs
           a={params.get("a")}

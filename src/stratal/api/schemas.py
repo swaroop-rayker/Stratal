@@ -1133,6 +1133,64 @@ class JobOverlay(_Model):
     b: OverlaySide
 
 
+class HistoryStage(_Model):
+    stage: str
+    queue: str
+    runs: int
+    """Completed runs, not counting stages reused from the cache."""
+    reused: int
+    last_at: str | None
+
+
+class HistoryGroup(_Model):
+    key: str
+    label: str
+    runs: int
+
+
+class HistoryPeaks(_Model):
+    vram_used_mb: float | None
+    torch_allocated_mb: float | None
+    ram_used_mb: float | None
+    gpu_temp_c: float | None
+    rss_mb: float | None
+
+
+class HistoryRun(_Model):
+    job_id: str
+    kind: str
+    started_at: str | None
+    group: str
+    reused: bool
+    """The whole stage came from the cache."""
+    attempts: int
+    running_s: float | None
+    epochs: int | None
+    time: float | None
+    rate: float | None
+    items: int | None
+    """For ``label``: the images it labelled; ``computed`` of them were captioned here."""
+    computed: int | None
+    peaks: HistoryPeaks
+    notes: list[str]
+    """Codes: paused, resumed, fine_tune, pruned, reused_work, peaks_missing."""
+
+
+class SystemHistory(_Model):
+    stages: list[HistoryStage]
+    stage: str | None
+    queue: str | None
+    rate_unit: str | None
+    """None when the stage has no rate."""
+    time_unit: Literal["s", "s/epoch"]
+    groups: list[HistoryGroup]
+    group: str | None
+    """The group shown; None for all groups."""
+    n: int
+    runs: list[HistoryRun]
+    """Newest first, at most ``n``."""
+
+
 # -- SCR-03 v2: distributions, diff, models trained on a version, clusters (M11) -----------
 
 

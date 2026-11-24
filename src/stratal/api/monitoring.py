@@ -18,17 +18,22 @@ from stratal.api import schemas
 from stratal.api.jobs import Db, event_view
 from stratal.core.errors import NotFound, ValidationFailed
 from stratal.core.settings import get_settings
-from stratal.db.models import Event as EventRow
 from stratal.db.models import (
+    Dataset,
+    DatasetVersion,
     Job,
     JobStage,
     JobTransition,
+    ModelLineage,
+    ModelVersion,
     ProcessSample,
     ProcessSample1m,
     ResourceSample,
     ResourceSample1m,
 )
+from stratal.db.models import Event as EventRow
 from stratal.mon import diagnose as diag
+from stratal.mon import history as hist
 from stratal.mon.events import utc_now
 from stratal.runtime import limits
 
@@ -553,3 +558,224 @@ def compare_jobs(
         "a": _side(session, jobs[0], timelines[0], align, common, max_points),
         "b": _side(session, jobs[1], timelines[1], align, common, max_points),
     }
+
+
+# -- MON-4.5: trends across the last N runs of one stage (ADR-0020 rule 12) ----------------
+
+
+@dataclass
+class _Attempts:
+    running_s: float = 0.0
+    attempts: int = 0
+    paused: bool = False
+    worker_lost: bool = False
+
+
+def _attempts(session: Session, job_ids: Sequence[str]) -> dict[str, _Attempts]:
+    """Per job: seconds running across attempts, how many attempts, whether a person paused
+    it, and whether the watchdog requeued it after its worker was lost."""
+    rows = session.execute(
+        select(JobTransition.job_id, JobTransition.to_state, JobTransition.at, JobTransition.actor)
+        .where(JobTransition.job_id.in_(job_ids))
+        .order_by(JobTransition.job_id, JobTransition.id)
+    ).all()
+    out: dict[str, _Attempts] = {}
+    opened: dict[str, datetime] = {}
+    for job_id, state, at, actor in rows:
+        entry = out.setdefault(job_id, _Attempts())
+        if state in ("running", "stalled"):
+            if job_id not in opened:
+                opened[job_id] = at
+                entry.attempts += 1 if state == "running" else 0
+            continue
+        start = opened.pop(job_id, None)
+        if start is not None:
+            entry.running_s += (at - start).total_seconds()
+        if state == "paused" and actor != "watchdog":
+            entry.paused = True
+        if state == "queued" and actor == "watchdog":
+            entry.worker_lost = True
+    return out
+
+
+def _stage_list(session: Session) -> list[Json]:
+    rows = session.execute(
+        select(
+            JobStage.name,
+            JobStage.queue,
+            func.count().filter(JobStage.cache_hit.is_(False)),
+            func.count().filter(JobStage.cache_hit.is_(True)),
+            func.max(JobStage.started_at),
+        )
+        .where(JobStage.status == "completed")
+        .group_by(JobStage.name, JobStage.queue)
+        .order_by(func.max(JobStage.started_at).desc().nulls_last())
+    ).all()
+    return [
+        {
+            "stage": name,
+            "queue": q,
+            "runs": int(fresh),
+            "reused": int(cached),
+            "last_at": _iso(last),
+        }
+        for name, q, fresh, cached, last in rows
+    ]
+
+
+def _history_row(run: hist.StageRun, key: str, attempts: int) -> Json:
+    secs = hist.seconds(run)
+    labelled = run.stage == "label"
+    items = hist.number(run.metrics.get("images")) if labelled else None
+    computed = hist.number(run.metrics.get("captions_computed")) if labelled else None
+    return {
+        "job_id": run.job_id,
+        "kind": run.kind,
+        "started_at": _iso(run.started_at),
+        "group": key,
+        "reused": run.cache_hit,
+        "attempts": max(attempts, 1),
+        "running_s": round(secs, 1) if secs is not None else None,
+        "epochs": hist.epochs_run(run) if run.stage in hist.TRAINING_STAGES else None,
+        "time": hist.time_value(run)[0],
+        "rate": hist.rate(run),
+        "items": int(items) if items is not None else None,
+        "computed": int(computed) if computed is not None else None,
+        "peaks": {
+            "vram_used_mb": hist.number(run.peaks.get("vram_used_mb")),
+            "torch_allocated_mb": hist.number(run.peaks.get("torch_max_allocated_mb")),
+            "ram_used_mb": hist.number(run.peaks.get("ram_used_mb")),
+            "gpu_temp_c": hist.number(run.peaks.get("gpu_temp_c")),
+            "rss_mb": hist.number(run.peaks.get("rss_mb")),
+        },
+        "notes": hist.notes(run),
+    }
+
+
+@router.get("/system/history", response_model=schemas.SystemHistory)
+def system_history(
+    session: Db,
+    stage: str | None = None,
+    queue: str | None = None,
+    group: str | None = None,
+    n: Annotated[int, Query(ge=1, le=100)] = 20,
+    reused: bool = False,
+) -> Json:
+    """The last ``n`` completed runs of one stage in one group of like runs (MON-4.5): the
+    rate in the stage's own unit, running time across attempts (per epoch for training) and
+    the MON-2.5 peaks. Without ``stage``, the most recently run stage; without ``group``, the
+    latest run's group; ``group=all`` for every group. Stages reused from the cache are left
+    out unless ``reused``."""
+    stages = _stage_list(session)
+    result: Json = {
+        "stages": stages,
+        "stage": None,
+        "queue": None,
+        "rate_unit": None,
+        "time_unit": "s",
+        "groups": [],
+        "group": None,
+        "n": n,
+        "runs": [],
+    }
+    if not stages:
+        return result
+    if stage is None:
+        stage, queue = stages[0]["stage"], stages[0]["queue"]
+    elif queue is None:
+        queue = next((s["queue"] for s in stages if s["stage"] == stage), None)
+    if not any(s["stage"] == stage and s["queue"] == queue for s in stages):
+        raise NotFound(
+            f"No completed run of {stage} on the {queue} queue.",
+            suggested_action="Pick a stage from the list.",
+        )
+    query = (
+        select(JobStage, Job.kind)
+        .join(Job, Job.id == JobStage.job_id)
+        .where(JobStage.name == stage, JobStage.queue == queue, JobStage.status == "completed")
+        .order_by(JobStage.started_at.desc().nulls_last(), JobStage.job_id.desc())
+        .limit(2000)
+    )
+    if not reused:
+        query = query.where(JobStage.cache_hit.is_(False))
+    found = [(row, kind) for row, kind in session.execute(query).all()]
+    job_ids = [row.job_id for row, _ in found]
+    single = set(
+        session.scalars(
+            select(JobStage.job_id)
+            .where(JobStage.job_id.in_(job_ids))
+            .group_by(JobStage.job_id)
+            .having(func.count() == 1)
+        )
+    )
+    timing = _attempts(session, job_ids)
+    inputs = {row.input_version_id for row, _ in found if row.input_version_id}
+    slugs: dict[str, str] = {
+        v: s
+        for v, s in session.execute(
+            select(DatasetVersion.version_id, Dataset.slug)
+            .join(Dataset, Dataset.id == DatasetVersion.dataset_id)
+            .where(DatasetVersion.version_id.in_(inputs))
+        ).all()
+    }
+    lineages: dict[str, str] = {
+        j: name
+        for j, name in session.execute(
+            select(ModelVersion.job_id, ModelLineage.name)
+            .join(ModelLineage, ModelLineage.id == ModelVersion.lineage_id)
+            .where(ModelVersion.job_id.in_(job_ids))
+        ).all()
+        if j is not None
+    }
+    runs: list[tuple[hist.StageRun, str, int]] = []
+    groups: dict[str, Json] = {}
+    for row, kind in found:
+        t = timing.get(row.job_id, _Attempts())
+        stage_seconds = (
+            (row.finished_at - row.started_at).total_seconds()
+            if row.finished_at and row.started_at
+            else None
+        )
+        run = hist.StageRun(
+            job_id=row.job_id,
+            kind=kind,
+            stage=row.name,
+            queue=row.queue,
+            started_at=row.started_at,
+            config=row.config or {},
+            metrics=row.metrics or {},
+            peaks=row.peaks or {},
+            throughput=row.throughput,
+            cache_hit=row.cache_hit,
+            stage_seconds=stage_seconds,
+            running_s=t.running_s if row.job_id in single and t.running_s > 0 else None,
+            paused=t.paused,
+            worker_lost=t.worker_lost,
+            dataset_slug=slugs.get(row.input_version_id or ""),
+            lineage_name=lineages.get(row.job_id),
+        )
+        key, label = hist.group(run)
+        runs.append((run, key, t.attempts))
+        groups.setdefault(key, {"key": key, "label": label, "runs": 0})["runs"] += 1
+    latest = runs[0][1] if runs else None
+    if group is None:
+        group = latest
+    elif group == "all":
+        group = None
+    elif group not in groups:
+        raise NotFound(
+            f"No group {group} in {stage}.", suggested_action="Pick a group from the list."
+        )
+    chosen = [r for r in runs if group is None or r[1] == group][:n]
+    result.update(
+        {
+            "stage": stage,
+            "queue": queue,
+            "rate_unit": hist.RATE_UNITS.get(stage or ""),
+            "time_unit": "s/epoch" if stage in hist.TRAINING_STAGES else "s",
+            "groups": list(groups.values()),
+            "group": group,
+            "runs": [_history_row(run, key, attempts) for run, key, attempts in chosen],
+        }
+    )
+    return result

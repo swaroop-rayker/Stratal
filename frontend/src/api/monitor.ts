@@ -93,6 +93,38 @@ export function useJobOverlay(a: string | null, b: string | null, align: "time" 
   });
 }
 
+export type SystemHistory = Schemas["SystemHistory"];
+export type HistoryRun = Schemas["HistoryRun"];
+
+export interface HistoryQuery {
+  stage: string | null;
+  queue: string | null;
+  group: string | null; // "all" for every group
+  n: number;
+  reused: boolean;
+}
+
+/** The last N runs of one stage in one group (MON-4.5, SCR-13 History). */
+export function useHistory(q: HistoryQuery) {
+  return useQuery({
+    queryKey: ["monitor", "history", q.stage ?? "", q.queue ?? "", q.group ?? "", q.n, q.reused],
+    queryFn: () =>
+      call(() =>
+        api.GET("/api/v1/system/history", {
+          params: {
+            query: {
+              ...(q.stage ? { stage: q.stage } : {}),
+              ...(q.queue ? { queue: q.queue } : {}),
+              ...(q.group ? { group: q.group } : {}),
+              n: q.n,
+              reused: q.reused,
+            },
+          },
+        }),
+      ),
+  });
+}
+
 /** Recent jobs for the pickers: training runs first (SCR-13 frame C). */
 export function useRecentJobs() {
   return useQuery({

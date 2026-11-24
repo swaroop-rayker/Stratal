@@ -1,5 +1,6 @@
 // SCR-13 (M11, mockup SCR-13_v1; MON-2.6, MON-2.7, MON-3.2, MON-3.3, MON-4.4; ADR-0020):
-// alerts with the actions they caused, diagnostics, loads and unloads, two runs overlaid.
+// alerts with the actions they caused, diagnostics, loads and unloads, two runs overlaid;
+// History (MON-4.5, mockup SCR-13history_v1): the last N runs of a stage.
 // The canvas is replaced: jsdom has none, and the lanes' figures are checked through the
 // labels and the tables.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -212,5 +213,69 @@ describe("SCR-13 system monitor", () => {
       sample_interval_idle_s: "At least 5: the active interval.",
       vram_alert_percent: "At most 99.",
     });
+  });
+
+  const GROUP = "g_cnn";
+  function hrun(id: string, minute: number, over: Record<string, unknown> = {}) {
+    return {
+      job_id: id, kind: "train", started_at: new Date(Date.UTC(2026, 10, 22, 11, minute)).toISOString(), group: GROUP, reused: false,
+      attempts: 1, running_s: 62.9, epochs: 10, time: 6.29, rate: 10543, items: null, computed: null,
+      peaks: { vram_used_mb: 758.2, torch_allocated_mb: 149, ram_used_mb: 4362, gpu_temp_c: 69, rss_mb: 7430 }, notes: [], ...over,
+    };
+  }
+  const HISTORY = {
+    stages: [{ stage: "train", queue: "gpu", runs: 30, reused: 0, last_at: T(0) }, { stage: "label", queue: "gpu", runs: 8, reused: 1, last_at: T(0) }],
+    stage: "train", queue: "gpu", rate_unit: "samples/s", time_unit: "s/epoch",
+    groups: [{ key: GROUP, label: "small_cnn · cifar10 · batch 128", runs: 3 }, { key: "g_mlp", label: "mlp (reference) · cifar10 · batch 128", runs: 5 }],
+    group: GROUP, n: 20,
+    runs: [
+      hrun("job_0118", 40),
+      hrun("job_0114", 36, { attempts: 2, running_s: 109.6, time: 10.96, rate: 10834, notes: ["resumed"] }),
+      hrun("job_0106", 20, { epochs: 3, time: 18.87, rate: 8804, notes: ["fine_tune"] }),
+    ],
+  };
+
+  test("test_MON_4_5_trends_are_shown_for_the_last_n_runs_of_a_stage", async () => {
+    const calls = stubApi({ ...ROUTES, "/api/v1/system/history": HISTORY });
+    renderAt("/system?tab=history");
+    expect(await screen.findAllByText("Time per epoch")).toHaveLength(2); // the lane and the column
+    for (const lane of ["Rate", "VRAM peak", "PyTorch allocated", "RAM peak", "GPU temp"]) expect(screen.getByText(lane)).toBeInTheDocument();
+    expect(screen.getByText("all 3 runs of this group · oldest left · dashed: the group's median")).toBeInTheDocument();
+    expect(screen.getByText("11.0 s · worker lost, resumed")).toBeInTheDocument();
+    expect(screen.getByText("18.9 s · fine-tune")).toBeInTheDocument();
+    expect(screen.getByText("median 11.0 s · latest 6.3 s")).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: /Runs of train in small_cnn/ });
+    const lost = within(within(table).getByText("job_0114").closest("tr") as HTMLElement);
+    expect(lost.getByText("10,834")).toBeInTheDocument();
+    expect(lost.getByText("2 attempts · worker lost, resumed")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Include stages reused/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "50" }));
+    await vi.waitFor(() => { expect(calls.some((c) => c.url.pathname === "/api/v1/system/history" && c.url.searchParams.get("n") === "50")).toBe(true); });
+  });
+
+  test("test_MON_4_5_two_ticked_runs_open_compare_with_the_older_as_a", async () => {
+    stubApi({ ...ROUTES, "/api/v1/system/history": HISTORY, "/api/v1/jobs": { items: [], next_cursor: null, counts: {} } });
+    const router = renderAt("/system?tab=history");
+    const compare = await screen.findByRole("button", { name: "Compare these two" });
+    expect(compare).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select job_0118" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select job_0106" }));
+    expect(compare).toBeEnabled();
+    fireEvent.click(compare);
+    const params = new URLSearchParams(router.state.location.search);
+    expect([params.get("tab"), params.get("a"), params.get("b")]).toEqual(["compare", "job_0106", "job_0118"]);
+  });
+
+  test("test_MON_4_5_all_groups_put_each_run_against_its_groups_median", async () => {
+    const all = {
+      ...HISTORY, group: null,
+      runs: [hrun("job_0118", 40), hrun("job_0047", 10, { group: "g_mlp", rate: 4000, time: 10 }), hrun("job_0042", 5, { group: "g_mlp", rate: 4400, time: 11 })],
+    };
+    stubApi({ ...ROUTES, "/api/v1/system/history": all });
+    renderAt("/system?tab=history&group=all");
+    expect(await screen.findByText("Rate, against its group")).toBeInTheDocument();
+    expect(screen.getAllByText("100 % = the group's median").length).toBeGreaterThan(0);
+    expect(screen.getByText("mlp (reference) · cifar10 · batch 128")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /job_0047, .*: 95 %/ }).length).toBeGreaterThan(0);
   });
 });
