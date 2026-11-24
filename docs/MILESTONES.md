@@ -699,7 +699,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 **Done when**
 
-- [ ] ADR approved; G1 revision and G2 for SCR-15 and SCR-03's column view approved
+- [ ] ADR approved (ADR-0019 Addendum B, rules 25–33, accepted 2026-11-24); G1 revision and G2 for SCR-15 and SCR-03's column view approved
 - [ ] `test_DATA_7_1_*`: raw unchanged, same operations give the same ID, fitted operations refused
 - [ ] `test_DATA_7_2_*`: one test per operation; invalid ones refused naming the column; `cast_failed` rows kept and counted
 - [ ] `test_DATA_7_3_*`: `ignore`, `embedding` and `ordinal` reach the model's input as chosen

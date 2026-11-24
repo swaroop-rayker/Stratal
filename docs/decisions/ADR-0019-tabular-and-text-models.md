@@ -1,6 +1,6 @@
 # ADR-0019 — Tabular and text models end to end: data, fitted preprocessing, classical ML, serving
 
-**Status:** Accepted by the owner on 2026-11-19, as proposed ("Approve all three", M10), including rule 20 (scikit-learn and skops in the `gpu` extra too) and rule 24 (torchmetrics not added). Settles M10's open points 1–7, 9 and 14–17 (MILESTONES.md), as the owner chose at the kickoff (K5). Points 8 and 10 are settled in ADR-0017 rule 6; points 11–13 are requirement DATA-1.5 in SPEC, approved the same day. **Addendum B** (tabular transforms, DATA-7, M11b) proposed 2026-11-24.
+**Status:** Accepted by the owner on 2026-11-19, as proposed ("Approve all three", M10), including rule 20 (scikit-learn and skops in the `gpu` extra too) and rule 24 (torchmetrics not added). Settles M10's open points 1–7, 9 and 14–17 (MILESTONES.md), as the owner chose at the kickoff (K5). Points 8 and 10 are settled in ADR-0017 rule 6; points 11–13 are requirement DATA-1.5 in SPEC, approved the same day. **Addendum B** (tabular transforms, DATA-7, M11b) accepted by the owner on 2026-11-24, as proposed.
 
 ## Context
 
@@ -125,9 +125,9 @@ A tokenizer fitted inside training and stored with the weights was the alternati
 - ARCHITECTURE, DATA_MODEL §5, API.md and ADR-0016 (a pointer to rule 20) are updated when this is built.
 
 
-## Addendum B — Tabular transforms (DATA-7.1 to DATA-7.5, M11b), proposed 2026-11-24
+## Addendum B — Tabular transforms (DATA-7.1 to DATA-7.5, M11b)
 
-**Status:** Proposed, waiting for the owner's approval. It follows the owner's M11b kickoff decisions K1 to K9 (MILESTONES.md, M11b, "Accept all nine"): this addendum rather than a new ADR (K1).
+**Status:** Accepted by the owner on 2026-11-24, as proposed ("approved as proposed"). It follows the owner's M11b kickoff decisions K1 to K9 (MILESTONES.md, M11b, "Accept all nine"): this addendum rather than a new ADR (K1).
 
 ### Context
 
