@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start pipeline drawer v4 — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+/* the approved SCR-01 shell, drawn faintly: it is not under review here */
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; }
+.side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; display: grid; grid-template-columns: 248px 1fr; }
+.content.single { display: block; }
+.spacer { flex: 1; }
+/* SCR-02 */
+.list { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.list-head { display: flex; align-items: center; gap: 8px; padding: 14px 14px 10px; }
+.list-head b { font-size: 15px; }
+.search { margin: 0 14px 10px; height: 30px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; color: var(--ink-3); gap: 6px; }
+.search kbd, .k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.ds { padding: 10px 14px; border-top: 1px solid var(--soft); display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+.ds.on { background: var(--fill-2); box-shadow: inset 3px 0 0 var(--ink-2); }
+.ds b { font-family: var(--mono); font-weight: 600; } .ds .r { text-align: right; font: 12px var(--mono); color: var(--ink-2); }
+.ds .s { font-size: 12px; color: var(--ink-3); } .ds .s .mono { color: var(--ink-2); }
+.detail { padding: 14px 18px; overflow: hidden; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.dhead { display: flex; align-items: center; gap: 10px; }
+.dhead b { font: 600 18px var(--mono); } .dhead .s { color: var(--ink-3); font-size: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; border-color: var(--ink-2); }
+.btn.sm { height: 24px; padding: 0 8px; font-size: 11px; }
+.btn.ghost { border-color: transparent; color: var(--ink-2); }
+.facts { display: flex; gap: 24px; font-size: 12px; color: var(--ink-3); } .facts b { display: block; color: var(--ink); font: 600 14px var(--mono); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--fill); padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 0 6px; height: 34px; border-bottom: 1px solid var(--soft); white-space: nowrap; }
+.t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); }
+.t tr.running td { background: #f7f7f7; color: var(--ink-2); font-style: italic; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 7px; border: 1px solid var(--ink-2); border-radius: 9px; font-size: 10px; font-weight: 600; font-style: normal; }
+.pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+.stage { display: inline-block; font: 11px var(--mono); padding: 0 5px; border: 1px solid var(--soft); border-radius: 3px; }
+.stack { display: inline-flex; width: 56px; height: 8px; border: 1px solid var(--ink-3); vertical-align: middle; margin-right: 6px; }
+.stack i { display: block; height: 100%; } .stack .a { background: var(--ink-3); } .stack .rj { background: repeating-linear-gradient(45deg, var(--ink-3) 0 2px, transparent 2px 4px); } .stack .d { background: var(--soft); }
+.bar { width: 70px; height: 6px; border: 1px solid var(--ink-3); border-radius: 3px; display: inline-block; position: relative; vertical-align: middle; } .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 13%); background: var(--ink-3); }
+.empty { display: grid; place-items: center; height: 100%; text-align: center; }
+.empty .box { max-width: 420px; padding: 28px; border: 1.5px dashed var(--line); border-radius: 8px; }
+.empty .ico { width: 28px; height: 28px; border: 1.5px solid var(--ink-3); border-radius: 6px; margin: 0 auto 10px; }
+.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+/* drawer */
+.scrim { position: absolute; inset: 0; background: rgba(40,40,40,.25); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 440px; background: #fff; border-left: 1px solid var(--line); box-shadow: -4px 0 12px rgba(0,0,0,.1); display: flex; flex-direction: column; }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--soft); } .drawer header b { font-size: 15px; }
+.drawer .body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; flex: 1; }
+.drawer footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--soft); }
+.field { display: flex; flex-direction: column; gap: 3px; } .field label { font-size: 11px; font-weight: 600; color: var(--ink-2); } .field label .mono { font-weight: 400; }
+.field small { font-size: 11px; color: var(--ink-3); }
+.input { height: 30px; border: 1px solid var(--line); border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 12px; } .input.mono { font-family: var(--mono); }
+.field.bad .input { border: 2px solid var(--ink); } .field.bad small { color: var(--ink); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; } .seg span { padding: 4px 12px; font-size: 12px; } .seg .on { background: var(--fill-2); font-weight: 600; }
+.stagebox { border: 1px solid var(--soft); border-radius: 6px; } .stagebox > div { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--soft); font-size: 12px; } .stagebox > div:first-child { border-top: 0; }
+.stagebox .chk { width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 2px; } .stagebox .chk.on { background: var(--ink-2); }
+.stagebox .off { color: var(--ink-3); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* annotation */
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; }
+.choices li { margin: 4px 0; color: var(--ink); }
+/* Start pipeline drawer v4 (prefixed sp-) */
+.drawer { width: 480px; }
+.sp-types { display: flex; flex-direction: column; gap: 6px; }
+.sp-type { display: grid; grid-template-columns: 16px 1fr; gap: 0 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
+.sp-type .rad, .sp-stop .rad { width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 50%; margin-top: 2px; }
+.sp-type .rad.on, .sp-stop .rad.on { background: radial-gradient(var(--ink-2) 45%, transparent 50%); }
+.sp-type.on { border: 2px solid var(--ink); background: var(--fill); }
+.sp-type b { font-size: 12px; } .sp-type span.what { grid-column: 2; color: var(--ink-3); font-size: 11px; }
+.sp-type.ro { border-style: dashed; }
+.sp-chain { border: 1px solid var(--soft); border-radius: 6px; }
+.sp-st { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 10px; border-top: 1px solid var(--soft); font-size: 12px; position: relative; }
+.sp-st:first-child { border-top: 0; }
+.sp-st .nm { display: flex; align-items: center; gap: 6px; } .sp-st .nm b { font-family: var(--mono); font-size: 12px; }
+.sp-st .what { grid-column: 1; color: var(--ink-3); font-size: 11px; }
+.sp-stop { grid-row: 1 / 3; grid-column: 2; display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-2); white-space: nowrap; }
+.sp-st.notrun { color: var(--ink-3); background: repeating-linear-gradient(135deg, transparent 0 6px, var(--fill) 6px 7px); }
+.sp-st.notrun .nm b { color: var(--ink-3); font-weight: 400; }
+.sp-st.done { color: var(--ink-3); }
+.sp-st .tag { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); }
+.sp-set { grid-column: 1 / 3; background: var(--fill); border-radius: 4px; padding: 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+.sp-sw { display: inline-flex; align-items: center; width: 26px; height: 14px; border: 1.5px solid var(--ink-2); border-radius: 8px; padding: 1px; } .sp-sw i { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-2); }
+.sp-sw.on { justify-content: flex-end; background: var(--fill-2); } .sp-sw.dis { border-color: var(--soft); } .sp-sw.dis i { background: var(--soft); }
+.sp-why { font-size: 11px; color: var(--ink-2); }
+.sp-note { font-size: 11px; color: var(--ink-3); }
+.sp-callout { border: 1px solid var(--line); background: var(--fill); border-radius: 6px; padding: 7px 10px; font-size: 12px; }
+.sp-callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { opacity: .45; }
+.ask { border: 2px solid var(--note); border-radius: 6px; padding: 10px 14px; background: #fff; max-width: 1280px; margin-top: 12px; } .ask li { color: var(--ink); margin: 4px 0; }
+.faint { opacity: .35; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1><i>Start pipeline</i> drawer, type first (v4) · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: DATA-1.4, DATA-5.2, DATA-7.1 (the transform reachable)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> v4 amendment, <i>Start pipeline drawer, type first</i>, and open point 7 (approved 2026-11-24)</span><span>Opened from SCR-02 (<i>Ingest a folder</i>) and SCR-03 (<i>Continue the pipeline</i>)</span><span>2026-11-24</span></div>
+<p>Layout and hierarchy only. It replaces the phase-1 drawer (<span class="mono">SCR-02-lofi_v1.html</span> frames F and G, built in M6) for the two faults the owner reported: it sent no <span class="mono">dataset_type</span>, so a CSV became image–caption pairs, and it listed every registered stage and turned the ticks into <span class="mono">until_stage</span>, so unticking one stage unticked every later one. As approved in open point 7: the type first, then only that type's stages in its order, one <i>Stop after</i> choice (<span class="mono">until_stage</span>, no API change), <span class="mono">transform</span> the only stage with a switch, the stages from <span class="mono">GET /dataset-types</span>'s new <span class="mono">stages</span>, no type guess. The data is real: the folders under <span class="mono">sources/</span>, the wine and coco10k versions, and the stages' own fields and defaults from <span class="mono">GET /config/schemas/{name}</span>.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>The drawer widens from 440 to 480 px</b> (as the <i>Train a model</i> drawer), so each stage row has room for a line on what it does and the <i>Stop after</i> radio on its right.</li>
+<li><b>Order of the body: Start from → Source → Type → Dataset → Stages.</b> The type sits right under the folder, since it is about what the folder holds; nothing under it shows until it is chosen (frame A).</li>
+<li><b>The type is a list of four radio cards</b>, each with what its folder must hold (from the new <span class="mono">source</span> field). From a version, one dashed card with the version's type, not changeable (frame C).</li>
+<li><b>The stages are a chain</b>: one row per stage, in the type's order, the stage name, one line on what it does, its key setting, and a <i>Stop after</i> radio on the right. The last stage is chosen by default. Stages after the chosen one read "not run", hatched and dimmed, and keep their settings (frame D). A line above the chain says why there are no checkboxes: "Each stage reads the one before it."</li>
+<li><b>A stage's settings open under its row</b> (▸), generated from its schema, only the fields for this type: <span class="mono">ingest</span> on a table shows <span class="mono">table.target</span> and <span class="mono">table.kinds</span>, not <span class="mono">min_size</span>, which is about images (its default is still applied).</li>
+<li><b><span class="mono">transform</span> has a switch</b> in place of the radio. From a folder it is disabled with the reason and a <i>Stop after ingest</i> button (frame B); from a raw table version it is enabled, and switching it on closes the drawer and opens SCR-15 (frame C).</li>
+<li><b>The footer keeps <i>Cancel</i> and <i>Start job</i></b>, and <i>Start job</i> says how far the run goes: "Start job · to split".</li>
+</ol>
+</div>
+
+<div class="ask">
+<h3>One question this layout depends on</h3>
+<ol>
+<li><b>How the table's target is chosen.</b> Ingest needs <span class="mono">table.target</span>, a column name, before anything has read the table, so today it is typed, and a typo shows only when the job's ingest fails. I propose <b>a select of the table's columns</b>, read from its header: <span class="mono">GET /sources</span> gains <span class="mono">columns</span> for a folder that holds one table (one added field; reading a CSV's first line or a Parquet file's schema, not its rows). The same list fills <span class="mono">table.kinds</span>. The alternative keeps a text field, with the refusal at ingest.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · From a folder, before the type is chosen</h2>
+<div class="frame" style="height:640px">
+  <div class="shell faint">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b>Datasets</b></span></header>
+    <section class="content"></section>
+    <footer class="status">CPU 2% · RAM 3.4 / 9.7 GB<span class="spacer" style="flex:1"></span>● live</footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer">
+    <header><b>Start pipeline</b><span class="spacer" style="flex:1"></span><span class="k">Esc</span> ✕</header>
+    <div class="body">
+      <div class="field"><label>Start from</label><span class="seg"><span class="on">A folder</span><span>An existing version</span></span></div>
+      <div class="field"><label>Source folder <span class="mono">source.path</span></label><div class="input mono">/sources/wine ▾</div><small>1 file</small></div>
+      <div class="field"><label><span class="n" style="position:static;display:inline-block;margin-right:4px">1</span>What the folder holds <span class="mono">dataset_type</span></label>
+        <div class="sp-types">
+          <div class="sp-type"><span class="rad"></span><b>Image–caption pairs</b><span class="what">image files; captioned and scored by the label stage</span></div>
+          <div class="sp-type"><span class="rad"></span><b>Labelled images</b><span class="what">class folders, or images with a CSV of labels</span></div>
+          <div class="sp-type"><span class="rad"></span><b>Tabular</b><span class="what">one .csv or .parquet table</span></div>
+          <div class="sp-type"><span class="rad"></span><b>Labelled text</b><span class="what">.jsonl, or .txt files in class folders</span></div>
+        </div></div>
+      <div class="sp-callout">Choose what the folder holds. The dataset name and the stages follow from it.</div>
+    </div>
+    <footer><span class="btn ghost">Cancel</span><span class="btn primary off">Start job</span></footer>
+  </aside>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Source</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Type</td><td>Four radio cards, each with what its folder holds; required, no default and no guess (7d). <i>Start job</i> stays disabled until one is chosen</td><td><span class="mono">GET /dataset-types</span>: <span class="mono">title</span>, and <span class="mono">source</span> <i>planned</i> (7b)</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · A table from a folder: wine, run to split</h2>
+<div class="frame" style="height:890px">
+  <div class="shell faint">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b>Datasets</b></span></header>
+    <section class="content"></section>
+    <footer class="status">CPU 2%<span class="spacer" style="flex:1"></span>● live</footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer">
+    <header><b>Start pipeline</b><span class="spacer" style="flex:1"></span><span class="k">Esc</span> ✕</header>
+    <div class="body">
+      <div class="field"><label>Start from</label><span class="seg"><span class="on">A folder</span><span>An existing version</span></span></div>
+      <div class="field"><label>Source folder <span class="mono">source.path</span></label><div class="input mono">/sources/wine ▾</div></div>
+      <div class="field"><label>What the folder holds</label>
+        <div class="sp-types"><div class="sp-type on"><span class="rad on"></span><b>Tabular</b><span class="what">one .csv or .parquet table · <span class="btn sm ghost" style="height:16px">Change</span></span></div></div></div>
+      <div class="field"><label>Dataset <span class="mono">dataset</span></label><div class="input mono">wine</div><small>An existing dataset: this adds versions to it.</small></div>
+      <div class="field"><label><span class="n" style="position:static;display:inline-block;margin-right:4px">2</span>Stages <span style="font-weight:400;color:var(--ink-3)">· each stage reads the one before it, so a run stops at one point</span></label>
+        <div class="sp-chain">
+          <div class="sp-st"><span class="nm">▾ <b>ingest</b></span><span class="what">reads the table; each record becomes a row</span><span class="sp-stop"><span class="rad"></span>Stop after</span>
+            <div class="sp-set"><div class="field"><label><span class="n" style="position:static;display:inline-block;margin-right:4px">3</span><span class="mono">table.target</span> required</label><div class="input mono">cultivar ▾</div><small>The column to predict. Categorical: classification; numeric: regression. Columns read from the table's header (question 1).</small></div>
+              <div class="field"><label><span class="mono">table.kinds</span></label><div class="input" style="color:var(--ink-3)">+ set a column's kind</div><small>Otherwise inferred: numeric if every value is a number. Set here to keep a code like <span class="mono">007</span> as text.</small></div></div></div>
+          <div class="sp-st"><span class="nm"><span class="sp-sw dis"><i></i></span><b>transform</b><span class="tag">optional</span></span><span class="what"><span class="n" style="position:static;display:inline-block;margin-right:4px">4</span>runs on the raw version once it exists: stop after ingest, then <i>Transform…</i></span><span class="sp-stop"><span class="btn sm">Stop after ingest</span></span></div>
+          <div class="sp-st"><span class="nm">▸ <b>clean_table</b></span><span class="what">marks exact duplicate records · no settings</span><span class="sp-stop"><span class="rad"></span>Stop after</span></div>
+          <div class="sp-st"><span class="nm">▸ <b>split</b></span><span class="what">train / val / test by class · 0.8 / 0.1 / 0.1, seed 0</span><span class="sp-stop"><span class="rad on"></span>Stop after</span></div>
+        </div></div>
+    </div>
+    <footer><span class="btn ghost">Cancel</span><span class="btn primary">Start job · to split</span></footer>
+  </aside>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Source</th><th>Live</th></tr>
+<tr><td><span class="num">2</span></td><td>Stage chain</td><td>The type's stages in order with one line each and a key setting; one <i>Stop after</i> radio (the last by default). Sends <span class="mono">until_stage</span> only when it is not the last stage, and always <span class="mono">dataset_type</span></td><td><span class="mono">GET /dataset-types</span> <span class="mono">stages</span> <i>planned</i> (7b); <span class="mono">POST /jobs</span></td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Ingest's table fields</td><td>Only the fields of this type; the target required; a select of the table's columns if question 1 is approved</td><td><span class="mono">GET /config/schemas/ingest</span> (<span class="mono">TableIngest</span>); <span class="mono">GET /sources</span> <span class="mono">columns</span> <i>proposed</i></td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>transform from a folder</td><td>The switch disabled with its reason, and <i>Stop after ingest</i>, which moves the stop to ingest (7c)</td><td>–</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · From wine's raw version: the transform switch</h2>
+<div class="frame" style="height:580px">
+  <div class="shell faint">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b>Datasets</b> / wine / ds_b3f4ff09de8a</span></header>
+    <section class="content"></section>
+    <footer class="status">CPU 2%<span class="spacer" style="flex:1"></span>● live</footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer">
+    <header><b>Start pipeline</b><span class="spacer" style="flex:1"></span><span class="k">Esc</span> ✕</header>
+    <div class="body">
+      <div class="field"><label>Start from</label><span class="seg"><span>A folder</span><span class="on">An existing version</span></span></div>
+      <div class="field"><label>Version <span class="mono">from_version</span></label><div class="input mono">ds_b3f4ff09de8a · ingest · wine ▾</div></div>
+      <div class="field"><label>What it holds</label><div class="sp-types"><div class="sp-type ro"><span></span><b>Tabular</b><span class="what">the version's own type; target cultivar, classification</span></div></div></div>
+      <div class="field"><label>Stages</label>
+        <div class="sp-chain">
+          <div class="sp-st done"><span class="nm"><b>ingest</b></span><span class="what">already done in this version</span></div>
+          <div class="sp-st"><span class="nm"><span class="n" style="position:static;display:inline-block;margin-right:4px">5</span><span class="sp-sw"><i></i></span><b>transform</b><span class="tag">optional</span></span><span class="what">your operations on the raw table: switching this on opens the transform editor</span></div>
+          <div class="sp-st"><span class="nm">▸ <b>clean_table</b></span><span class="what">marks exact duplicate records</span><span class="sp-stop"><span class="rad"></span>Stop after</span></div>
+          <div class="sp-st"><span class="nm">▸ <b>split</b></span><span class="what">0.8 / 0.1 / 0.1, seed 0</span><span class="sp-stop"><span class="rad on"></span>Stop after</span></div>
+        </div></div>
+    </div>
+    <footer><span class="btn ghost">Cancel</span><span class="btn primary">Start job · to split</span></footer>
+  </aside>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Source</th><th>Live</th></tr>
+<tr><td><span class="num">5</span></td><td>transform from a raw table</td><td>Switching it on closes the drawer and opens SCR-15 for this version; its <i>Run</i> goes through clean and split (6a). Left off, the drawer runs clean_table and split as today</td><td>–</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · Image–caption pairs, stopping after preprocess</h2>
+<div class="frame" style="height:750px">
+  <div class="shell faint">
+    <aside class="side"><div class="nav on">Datasets</div></aside>
+    <header class="top"><span><b>Datasets</b></span></header>
+    <section class="content"></section>
+    <footer class="status">CPU 2%<span class="spacer" style="flex:1"></span>● live</footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer">
+    <header><b>Start pipeline</b><span class="spacer" style="flex:1"></span><span class="k">Esc</span> ✕</header>
+    <div class="body">
+      <div class="field"><label>Source folder</label><div class="input mono">/sources/coco10k ▾</div><small>10,000 files</small></div>
+      <div class="field"><label>What the folder holds</label><div class="sp-types"><div class="sp-type on"><span class="rad on"></span><b>Image–caption pairs</b><span class="what">image files · <span class="btn sm ghost" style="height:16px">Change</span></span></div></div></div>
+      <div class="field"><label>Dataset</label><div class="input mono">coco10k</div></div>
+      <div class="field"><label>Stages <span style="font-weight:400;color:var(--ink-3)">· each stage reads the one before it</span></label>
+        <div class="sp-chain">
+          <div class="sp-st"><span class="nm">▸ <b>ingest</b></span><span class="what">reads the images · min_size 256</span><span class="sp-stop"><span class="rad"></span>Stop after</span></div>
+          <div class="sp-st"><span class="nm">▸ <b>clean</b></span><span class="what">exact and near duplicates · pHash distance 8</span><span class="sp-stop"><span class="rad"></span>Stop after</span></div>
+          <div class="sp-st"><span class="nm">▸ <b>preprocess</b></span><span class="what">a resized copy · max side 768</span><span class="sp-stop"><span class="n" style="position:static;display:inline-block">6</span><span class="rad on"></span>Stop after</span></div>
+          <div class="sp-st notrun"><span class="nm">▸ <b>label</b></span><span class="what">not run · captions and CLIP scores</span><span class="sp-stop"><span class="rad"></span>Stop after</span></div>
+          <div class="sp-st notrun"><span class="nm">▸ <b>filter</b></span><span class="what">not run · CLIP threshold</span><span class="sp-stop"><span class="rad"></span>Stop after</span></div>
+          <div class="sp-st notrun"><span class="nm">▸ <b>split</b></span><span class="what">not run</span><span class="sp-stop"><span class="rad"></span>Stop after</span></div>
+          <div class="sp-st notrun"><span class="nm">▸ <b>evaluate</b></span><span class="what">not run · the phase-1 report</span><span class="sp-stop"><span class="rad"></span>Stop after</span></div>
+        </div></div>
+    </div>
+    <footer><span class="btn ghost">Cancel</span><span class="btn primary">Start job · to preprocess</span></footer>
+  </aside>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Source</th><th>Live</th></tr>
+<tr><td><span class="num">6</span></td><td>Stop after</td><td>Choosing preprocess hatches the four stages after it as "not run"; they keep any settings typed, and choosing a later stop brings them back. Nothing else changes when the stop moves</td><td><span class="mono">until_stage: "preprocess"</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== E -->
+<h2>E · States and edges</h2>
+<div class="frame" style="height:270px">
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;font-size:12px">
+    <div class="field"><label>Changing the type</label><div class="sp-callout">Type changed to <b>Tabular</b>. Settings for <span class="mono">label</span> and <span class="mono">filter</span> were cleared; those for <span class="mono">split</span> were kept. <span class="btn sm ghost">Undo</span></div><small>Only settings the new type's stages do not have are cleared.</small></div>
+    <div class="field"><label>Nothing left to run</label><div class="sp-callout"><span class="mono">ds_6448d354c9c6</span> is a split, the last tabular stage. There is nothing after it to run.</div><small>The chain is replaced by this line; <i>Start job</i> is disabled with it. <i>Train a model…</i> is the next step from here, on SCR-03.</small></div>
+    <div class="field bad"><label><span class="mono">table.target</span></label><div class="input mono">Cultivar</div><small>✕ Cultivar is not a column of wine.csv. Columns: alcohol, malic_acid, … cultivar.</small><div class="sp-note">With a text field (question 1's alternative), this comes back from the job's ingest; with a select it cannot happen.</div></div>
+    <div class="field"><label>Loading</label><div><span class="skel" style="width:90%"></span></div><div><span class="skel" style="width:80%"></span></div><div><span class="skel" style="width:85%"></span></div><small>The types and stage schemas load once per drawer.</small></div>
+    <div class="sp-callout bad">The dataset types could not be loaded. <span class="mono">service_unavailable</span> · start the stack, then try again. <span class="btn sm">Try again</span></div>
+    <div class="field"><label>Labelled images and labelled text</label><small>Ingest shows <span class="mono">label_from</span> (folder or CSV, with its columns) for labelled images, and <span class="mono">text</span> (its field names) for labelled text; their chains are <span class="mono">ingest → clean → preprocess → split</span> and <span class="mono">ingest → clean_text → split → tokenize</span>.</small></div>
+  </div>
+</div>
+<p class="caption">At 1024 px the drawer keeps 480 px over the content. The body scrolls; the footer stays.</p>
+</main>
+</body>
+</html>
