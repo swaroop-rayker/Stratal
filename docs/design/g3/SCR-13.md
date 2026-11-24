@@ -46,7 +46,7 @@ No alert or diagnosis has fired on this laptop, and the monitor was down during 
 | Mockup | [`screens/SCR-13history_v1.html`](../screens/SCR-13history_v1.html), G2 approved 2026-11-24 (low-fi 2026-11-22) |
 | Built | `frontend/src/screens/system/History.tsx`, the third tab of `SystemScreen`; `useHistory` in `frontend/src/api/monitor.ts`; the History block of `frontend/src/styles/scr13.css`; route `/system?tab=history&stage=&queue=&group=&n=&reused=`. API `GET /system/history` (`src/stratal/api/monitoring.py`), rules in `src/stratal/mon/history.py` |
 | Checked | 2026-11-24, live at 1280 × 900 on the dev database, dark and light: `train` on the GPU in `small_cnn · cifar10 · batch 128` (the mockup's frame A: the same 8 runs, rates and times per epoch), *All groups* (frame C) and `label` (frame B) |
-| Status | **Waiting for the owner's approval** |
+| Status | **Approved by the owner on 2026-11-24** ("Approved"), with the eight listed differences |
 
 ### Screenshots (in `SCR-13/`)
 
