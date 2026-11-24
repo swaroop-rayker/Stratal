@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-03 v4 Columns tab — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --cat-1: #5aa9f5; --cat-2: #f29e4c; --cat-3: #3cc4b4; --cat-4: #e58ad6; --cat-5: #a3d35c; --cat-6: #b79cff; --cat-7: #f0d264; --cat-8: #f4737b;
+  --seq-1: #1b2440; --seq-2: #27356a; --seq-3: #374a96; --seq-4: #4d64c0; --seq-5: #6f86e0; --seq-6: #9fb0f2; --seq-7: #d3dcfb;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --cat-1: #1f6fc4; --cat-2: #b0560a; --cat-3: #0b7d70; --cat-4: #a8348f; --cat-5: #4d7a12; --cat-6: #6a4fd8; --cat-7: #7d6300; --cat-8: #c2364a;
+  --seq-1: #e4e9fb; --seq-2: #c2cdf5; --seq-3: #9aabec; --seq-4: #7087de; --seq-5: #4d64c8; --seq-6: #3548a3; --seq-7: #222f72;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.tabs { display: flex; gap: var(--sp-1); border-bottom: var(--bw) solid var(--border); }
+.tab { padding: var(--sp-2) var(--sp-3); border: 0; background: none; color: var(--text-secondary); font: var(--fw-medium) var(--fs-13) var(--font-ui); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: var(--sp-2); align-items: center; }
+.tab[aria-selected=true] { color: var(--text-primary); border-bottom-color: var(--accent); }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t td { padding: 0 var(--sp-2); border-bottom: var(--bw) solid var(--border); height: 44px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); }
+.pill svg.i { width: 12px; height: 12px; }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.node { display: inline-flex; flex-direction: column; gap: 2px; min-width: 168px; padding: var(--sp-2) var(--sp-3); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-left: 3px solid var(--c, var(--accent)); border-radius: var(--r-md); box-shadow: var(--shadow-1); }
+.node small { font-size: var(--fs-11); color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.node b { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .node span { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-1); }
+.edge { width: 28px; height: 1px; background: var(--border-strong); position: relative; flex: none; }
+.edge::after { content: ""; position: absolute; right: 0; top: -3px; border: 3.5px solid transparent; border-left-color: var(--border-strong); }
+pre.code { margin: 0; background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); font: var(--fs-12)/1.6 var(--font-mono); }
+pre.code .k { color: var(--cat-6); } pre.code .s { color: var(--cat-5); } pre.code .n { color: var(--cat-2); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-8) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); max-width: 46ch; color: var(--text-secondary); }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.tip { position: absolute; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); box-shadow: var(--shadow-2); z-index: var(--z-tooltip); white-space: nowrap; }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; } .crumbs .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; } .progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-03 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.vhead { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.vhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); display: flex; align-items: center; gap: var(--sp-2); }
+.vhead .sub { color: var(--text-muted); font-size: var(--fs-12); margin-top: var(--sp-1); display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; } .vhead .sub .mono { color: var(--text-secondary); }
+.vhead .sub svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.stage-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.lineage { display: flex; align-items: center; padding: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.node.pending { --c: var(--state-running); border-style: dashed; background: transparent; box-shadow: none; }
+.node.done { --c: var(--state-completed); }
+.fork { display: flex; flex-direction: column; gap: var(--sp-2); } .fork .row { display: flex; align-items: center; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
+.stile { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c); border-radius: var(--r-md); text-align: left; cursor: pointer; }
+.stile:hover, .stile.is-hover { border-color: var(--border-strong); border-left-color: var(--c); }
+.stile[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); border-left-color: var(--c); }
+.stile .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.stile .k i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); }
+.stile .v { font: var(--fw-medium) var(--fs-20)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.stile .d { font-size: var(--fs-11); color: var(--text-muted); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.group-btns { display: inline-flex; }
+.group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.thumb { width: 32px; height: 32px; border-radius: var(--r-sm); border: var(--bw) solid var(--border); display: block; background: linear-gradient(135deg, var(--a, var(--seq-3)), var(--b, var(--seq-5))); }
+.rs { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-12); } .rs i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.rs.acc { --c: var(--success); } .rs.rej { --c: var(--danger); } .rs.dup { --c: var(--text-muted); } .rs.fil { --c: var(--warning); }
+.reason { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.muted { color: var(--text-muted); }
+.t td.hash { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); text-align: right; }
+.notice { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--warning-soft); border: var(--bw) solid color-mix(in srgb, var(--warning) 45%, transparent); font-size: var(--fs-12); }
+.notice svg.i { color: var(--warning); margin-top: 2px; }
+.kv { display: grid; grid-template-columns: 150px 1fr; gap: var(--sp-2) var(--sp-3); font-size: var(--fs-12); } .kv > span:nth-child(odd) { color: var(--text-muted); } .kv .mono { word-break: break-all; font-size: var(--fs-12); }
+h3.sec { margin: 0 0 var(--sp-2); font-size: var(--fs-12); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.reason-bar { display: inline-block; height: 6px; border-radius: var(--r-pill); background: var(--c); vertical-align: middle; }
+/* row drawer */
+.drawer { width: 540px; }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.drawer > header b { font: var(--fw-medium) var(--fs-14) var(--font-mono); }
+.drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); overflow: hidden; }
+.group-head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-secondary); }
+.group-head b { color: var(--text-primary); }
+.dist { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.card-img { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-12); }
+.photo { height: 190px; border-radius: var(--r-md); border: var(--bw) solid var(--border); background: radial-gradient(circle at 30% 35%, var(--cat-5) 0 16%, transparent 17%), radial-gradient(circle at 68% 60%, var(--cat-2) 0 13%, transparent 14%), linear-gradient(160deg, var(--seq-2), var(--seq-4)); position: relative; }
+.photo.kept { box-shadow: 0 0 0 2px var(--success); }
+.photo .tag { position: absolute; left: var(--sp-2); top: var(--sp-2); }
+.card-img .mono { font-size: var(--fs-12); color: var(--text-primary); } .card-img span { color: var(--text-secondary); } .card-img .hash { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.hash mark { background: var(--warning-soft); color: var(--warning); border-radius: var(--r-xs); }
+
+
+/* ============================================================================ SCR-03 v2 (M11), tokens only.
+   Callouts as SCR-09 v2 and SCR-11 v2 (approved); data-viz categorical 1 as SCR-10 and SCR-11. */
+:root { --cat-1: #5aa9f5; }
+[data-theme="light"] { --cat-1: #1f6fc4; }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.card > h2 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.card > h2 .sub2 { font-weight: var(--fw-regular); font-size: var(--fs-11); color: var(--text-secondary); }
+.note2 { font-size: var(--fs-12); color: var(--text-secondary); margin: 0; }
+.callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-primary); background: var(--surface); }
+.callout svg.i { margin-top: 2px; flex: none; }
+.callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .callout.info svg.i { color: var(--info); }
+.callout.err { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .callout.err svg.i { color: var(--danger); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.t.dense td { height: 32px; }
+.t td.r, .t th.r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t tr.here td { background: var(--accent-soft); }
+.t tr.here td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+.t td.lab { color: var(--text-secondary); }
+.t td.gone { color: var(--text-secondary); }
+/* the funnel's reason chips: a status dot, the code, the rows; they filter Rows */
+.chip { display: inline-flex; align-items: center; gap: var(--sp-1); height: 22px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-pill); background: var(--surface-raised); font: var(--fs-11) var(--font-mono); color: var(--text-primary); cursor: pointer; }
+.chip i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.chip b { font-weight: var(--fw-medium); }
+.chip.rej { --c: var(--danger); } .chip.dup { --c: var(--text-muted); } .chip.fil { --c: var(--warning); }
+.parts { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+/* histogram: raw as an outline, here filled (decision 3) */
+.hist { display: grid; grid-template-columns: 64px 1fr 110px; gap: 4px var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.hist .track { position: relative; height: 14px; }
+.hist .raw { position: absolute; left: 0; top: 0; bottom: 0; border: var(--bw) solid var(--text-secondary); border-radius: var(--r-xs); min-width: 1px; }
+.hist .here { position: absolute; left: 0; top: 3px; bottom: 3px; background: var(--cat-1); border-radius: var(--r-xs); min-width: 1px; }
+.hist .n { color: var(--text-primary); text-align: right; }
+.key { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); align-items: center; }
+.key i { display: inline-block; width: 14px; height: 8px; margin-right: var(--sp-1); vertical-align: middle; border-radius: var(--r-xs); }
+.key .k-raw { border: var(--bw) solid var(--text-secondary); } .key .k-here { background: var(--cat-1); }
+.mark-line { font-size: var(--fs-11); color: var(--text-secondary); }
+/* compare */
+.cmp-pick { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); flex-wrap: wrap; }
+.counts { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); }
+.counts > span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.counts > span:nth-child(odd) { color: var(--text-secondary); }
+.counts b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.arrow { color: var(--text-secondary); }
+/* semantic cluster tile and chip */
+.stile.sem { --c: var(--cat-1); }
+.scchip { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-11) var(--font-mono); color: var(--text-primary); background: color-mix(in srgb, var(--cat-1) 16%, transparent); border: var(--bw) solid color-mix(in srgb, var(--cat-1) 45%, transparent); }
+.simline { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.simline .dist { color: var(--text-primary); }
+/* lineage end chip */
+.endchip { display: inline-flex; align-items: center; gap: var(--sp-1); margin-left: var(--sp-3); height: 24px; padding: 0 var(--sp-2); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-pill); font-size: var(--fs-12); color: var(--text-primary); background: transparent; }
+.endchip svg.i { width: 12px; height: 12px; color: var(--text-secondary); }
+.split-frames { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: flex-start; }
+/* Secondary text on a selected surface uses text-secondary (design system, SCR-02 G3); a pressed tile measured 4.50:1 in light with text-muted. */
+.stile[aria-pressed=true] .d { color: var(--text-secondary); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+/* ============================================================================ SCR-03 v4 Columns tab (tokens only; classes prefixed col-) */
+.t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); } /* SCR-07, approved */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; } /* design system, approved */
+.content > .table-wrap, .content > .col-bar, .content > .tabs { flex-shrink: 0; }
+.col-bar { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.col-sum { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-4); font-size: var(--fs-12); color: var(--text-secondary); }
+.col-sum b { color: var(--text-primary); font: var(--fw-medium) var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; }
+.col-sum .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.col-sum .left { color: var(--text-secondary); }
+.col-sum a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+[data-theme="light"] .col-sum a { color: color-mix(in srgb, var(--accent) 85%, var(--text-primary)); }
+.col-filt { display: inline-flex; gap: var(--sp-2); align-items: center; margin-left: auto; font-size: var(--fs-12); color: var(--text-muted); }
+.col-filt .select { font-family: var(--font-ui); }
+.col-ops { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-2) var(--sp-3); border: var(--bw) solid color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); border-radius: var(--r-sm); font-size: var(--fs-12); color: var(--text-primary); }
+.col-ops > svg.i { color: var(--info); }
+.col-ops .op { font: var(--fs-12) var(--font-mono); }
+.col-ops .sep { color: var(--text-secondary); }
+/* Highlighted rows: muted text uses text-secondary (rule approved at SCR-11 G3). */
+table.col-t tr.col-open td.zero, table.col-t tr.col-open td.enc.none, table.col-t tbody tr:hover td.zero, table.col-t tbody tr:hover td.enc.none { color: var(--text-secondary); }
+table.col-t th { cursor: pointer; }
+table.col-t th[aria-sort] svg.i { width: 11px; height: 11px; vertical-align: -1px; }
+table.col-t td { height: 36px; }
+table.col-t td.name { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+table.col-t td.name svg.i { width: 11px; height: 11px; color: var(--text-muted); vertical-align: -1px; margin-right: 2px; }
+table.col-t td.kind, table.col-t td.role { font-size: var(--fs-12); color: var(--text-secondary); }
+table.col-t td.enc { font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+table.col-t td.enc small { font: var(--fs-11) var(--font-ui); color: var(--text-muted); margin-left: var(--sp-1); }
+table.col-t td.enc.none { color: var(--text-muted); }
+table.col-t td.zero { color: var(--text-muted); }
+table.col-t tr.ign td { color: var(--text-muted); }
+.col-spk { display: inline-flex; align-items: flex-end; gap: 1px; height: 20px; width: 96px; vertical-align: middle; border-bottom: var(--bw) solid var(--border-strong); }
+.col-spk i { display: block; flex: 1; background: var(--cat-1); min-height: 1px; border-radius: 1px 1px 0 0; }
+.col-five { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.col-five b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.col-cats { display: inline-flex; gap: var(--sp-3); align-items: center; font: var(--fs-12) var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.col-cats > span { display: inline-flex; align-items: center; gap: 4px; }
+.col-cats i { display: inline-block; height: 8px; background: var(--cat-1); border-radius: 1px; }
+.col-cats small { color: var(--text-secondary); font-size: var(--fs-11); }
+.col-cats .more { color: var(--text-muted); font-family: var(--font-ui); font-size: var(--fs-12); }
+table.col-t tr.col-open { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+table.col-t tr.col-exp > td { height: auto; padding: var(--sp-3) var(--sp-4) var(--sp-4) 36px; background: var(--surface-sunken); white-space: normal; }
+.col-detail { display: grid; grid-template-columns: 520px 1fr; gap: var(--sp-6); align-items: start; }
+.col-hist { position: relative; display: flex; align-items: flex-end; gap: 2px; height: 128px; border-bottom: var(--bw) solid var(--border-strong); }
+.col-hist i { flex: 1; background: var(--cat-1); border-radius: 2px 2px 0 0; min-height: 1px; }
+.col-hist .med { position: absolute; top: -4px; bottom: 0; border-left: 1.5px dashed var(--text-secondary); }
+.col-hist .med span { position: absolute; top: -14px; left: 4px; font: var(--fs-11) var(--font-mono); color: var(--text-secondary); white-space: nowrap; }
+.col-ax { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); margin-top: 4px; }
+.col-note { font-size: var(--fs-12); color: var(--text-secondary); margin-top: var(--sp-2); }
+.col-bins { display: grid; grid-template-columns: repeat(2, auto); gap: 0 var(--sp-6); justify-content: start; }
+.col-bins table { border-collapse: collapse; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; }
+.col-bins th { text-align: left; font: var(--fw-semibold) var(--fs-11) var(--font-ui); color: var(--text-secondary); text-transform: uppercase; letter-spacing: .05em; padding: 0 var(--sp-3) var(--sp-1) 0; }
+.col-bins td { padding: 2px var(--sp-3) 2px 0; color: var(--text-primary); border-bottom: var(--bw) solid var(--border); height: auto; }
+.col-bins td:first-child { color: var(--text-secondary); }
+.col-bins td.r { text-align: right; }
+.col-states { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); padding: var(--sp-4); }
+.col-states .state { min-height: 190px; }
+.col-load { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.col-load b { color: var(--text-primary); }
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M3.5 10.5h-1v-8h8v1"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><path d="M3.5 8h.3M8 8h.3M12.5 8h.3" stroke-width="2.4"/></symbol>
+  <!-- New in this mockup, same style -->
+  <symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-03 v4 — the <i>Columns</i> tab · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Serves DATA-7.5 (any tabular version as a table of columns) and shows DATA-7.3's encodings. Built on the approved low-fi wireframe (<span class="mono">SCR-03columns-lofi_v1.html</span>, approved 2026-11-24 with its question: distinct counts exact up to 10,000) inside SCR-03's approved look: header, lineage nodes, status tiles, tabs and dense table, unchanged. Frame A is wine's raw version <span class="mono">ds_b3f4ff09de8a</span>; frame B the version Flow 6's transform would make (its figures are wine's after the four operations); frame C <span class="mono">power.parquet</span> as it would read once ingested with <span class="mono">Global_active_power</span> as the target (not ingested yet; the figures are computed from the file). Every number is computed from the source files. Open as <span class="mono">SCR-03columns_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>Bars in categorical 1</b>, as the Distributions tab's <i>here</i> bars, on a baseline in border-strong; every sparkline has its own scale and an <span class="mono">aria-label</span> with its numbers, and the min · median · max beside it is the readable form, the median in text-primary.</li>
+<li><b>The target is a <span class="mono">target</span> badge</b> in the Role column, in the badge's grey: role is a word, not a colour.</li>
+<li><b>Encoding in mono</b>, as in the schema; "—" in muted for a number used as a number or for the target; a default shows as <span class="mono">one_hot</span> with a muted "default" after it; <i>ignore</i> dims the whole row to text-muted.</li>
+<li><b>Zeros in the Missing column are muted</b>, so a non-zero count stands out without a colour of its own; a non-zero count reads "1,204 · 0.6 %" in text-primary.</li>
+<li><b>The expanded row</b> takes the selected-row look (accent-soft, accent edge) and opens a sunken panel: a 20-bin histogram with the median as a dashed line labelled in mono, the axis under it, a note, and the bins as two dense tables beside it.</li>
+<li><b>A transformed version's operations</b> sit in an info callout above the table, each operation in mono, with <i>Edit the transform…</i> at its right (frame B).</li>
+<li><b>Rows not counted</b> are one secondary phrase at the end of the summary, the count in mono, with <i>Show them</i> as a link in accent (frame C).</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · wine's raw version <span class="mono">ds_b3f4ff09de8a</span>, magnesium expanded (dark)</h2>
+<div class="frame" id="frameA" style="height:1240px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets</div><div class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs</div><div class="nav"><svg class="i"><use href="#i-grid"/></svg>Models</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>wine</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_b3f4ff09de8a</span></div><span class="spacer"></span><span class="jobind idle"><svg class="i"><use href="#i-check"/></svg>Idle</span></header>
+    <main class="content">
+      <div class="vhead"><div><h1>ds_b3f4ff09de8a <span class="stage-tag">ingest</span></h1><div class="sub">wine · made 19 Nov 14:50 by <span class="mono">job_0061</span><svg class="i"><use href="#i-check"/></svg> · from <span class="mono">/sources/wine</span> · tabular, target <span class="mono">cultivar</span></div></div><span class="spacer"></span><button class="btn sm">Transform…</button><button class="btn sm"><svg class="i"><use href="#i-branch"/></svg>Continue the pipeline</button></div>
+      <div class="lineage" aria-label="Lineage"><div class="node done selected" aria-current="true"><small>ingest · this version</small><b>ds_b3f4ff09de8a</b><span>178 accepted</span></div><span class="edge"></span><div class="node done"><small>clean_table</small><b>ds_499bfa2ee3d3</b><span>0 duplicates</span></div><span class="edge"></span><div class="node done"><small>split</small><b>ds_6448d354c9c6</b><span>142 · 18 · 18</span></div></div>
+      <div class="tiles"><button class="stile" style="--c:var(--success)"><span class="k"><i></i>Accepted</span><span class="v">178</span><span class="d">100%</span></button><button class="stile" style="--c:var(--danger)"><span class="k"><i></i>Rejected</span><span class="v">0</span><span class="d">no reasons</span></button><button class="stile" style="--c:var(--text-muted)"><span class="k"><i></i>Duplicate</span><span class="v">0</span><span class="d">checked at clean_table</span></button><button class="stile" style="--c:var(--warning)"><span class="k"><i></i>Filtered</span><span class="v">0</span><span class="d">no filter for tables</span></button></div>
+      <div class="tabs" role="tablist"><span class="tab" role="tab">Rows <span class="count">178</span></span><span class="tab" role="tab" aria-selected="true">Columns <span class="count">14</span></span><span class="tab" role="tab">Reasons <span class="count">0</span></span><span class="tab" role="tab">Distributions</span><span class="tab" role="tab">Compare</span><span class="tab" role="tab">Config</span></div>
+      <div class="col-bar"><span class="n" style="position:static;display:inline-block">1</span><div class="col-sum"><span><b>14</b> columns</span><span><b>13</b> features, all numeric</span><span>target <span class="mono">cultivar</span> · classification, 3 classes</span><span>over <b>178</b> accepted rows</span></div>
+        <div class="col-filt"><span class="n" style="position:static;display:inline-block">2</span><span class="select"><span>Kind: all</span><svg class="i"><use href="#i-down"/></svg></span><span class="select"><span>Role: all</span><svg class="i"><use href="#i-down"/></svg></span><span>14 of 14</span></div></div>
+      <div class="table-wrap"><span class="n" style="position:static;display:inline-block">3</span><table class="t dense col-t"><caption class="sr-only">Columns of ds_b3f4ff09de8a over 178 accepted rows</caption><thead><tr><th aria-sort="ascending">Column <svg class="i"><use href="#i-sort"/></svg></th><th>Kind</th><th>Role</th><th>Encoding</th><th class="r">Missing</th><th class="r">Distinct</th><th>Distribution</th><th>min · median · max</th></tr></thead><tbody>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>alcohol</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">126</td><td role="img" aria-label="alcohol: min 11.03, median 13.05, max 14.83; 12 bins 1, 9, 9, 22, 23, 18, 23, 22, 25, 13, 11, 2"><span class="col-spk" aria-hidden="true"><i style="height:4%"></i><i style="height:36%"></i><i style="height:36%"></i><i style="height:88%"></i><i style="height:92%"></i><i style="height:72%"></i><i style="height:92%"></i><i style="height:88%"></i><i style="height:100%"></i><i style="height:52%"></i><i style="height:44%"></i><i style="height:8%"></i></span></td><td><span class="col-five">11.03 · <b>13.05</b> · 14.83</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>malic_acid</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">133</td><td role="img" aria-label="malic_acid: min 0.74, median 1.865, max 5.8; 12 bins 14, 29, 57, 14, 14, 11, 10, 14, 6, 4, 2, 3"><span class="col-spk" aria-hidden="true"><i style="height:25%"></i><i style="height:51%"></i><i style="height:100%"></i><i style="height:25%"></i><i style="height:25%"></i><i style="height:19%"></i><i style="height:18%"></i><i style="height:25%"></i><i style="height:11%"></i><i style="height:7%"></i><i style="height:4%"></i><i style="height:5%"></i></span></td><td><span class="col-five">0.74 · <b>1.865</b> · 5.8</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>ash</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">79</td><td role="img" aria-label="ash: min 1.36, median 2.36, max 3.23; 12 bins 1, 0, 5, 10, 13, 39, 46, 27, 29, 5, 1, 2"><span class="col-spk" aria-hidden="true"><i style="height:2%"></i><i style="height:0%"></i><i style="height:11%"></i><i style="height:22%"></i><i style="height:28%"></i><i style="height:85%"></i><i style="height:100%"></i><i style="height:59%"></i><i style="height:63%"></i><i style="height:11%"></i><i style="height:2%"></i><i style="height:4%"></i></span></td><td><span class="col-five">1.36 · <b>2.36</b> · 3.23</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>alcalinity_of_ash</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">63</td><td role="img" aria-label="alcalinity_of_ash: min 10.6, median 19.5, max 30; 12 bins 4, 2, 8, 29, 30, 38, 27, 19, 14, 3, 1, 3"><span class="col-spk" aria-hidden="true"><i style="height:11%"></i><i style="height:5%"></i><i style="height:21%"></i><i style="height:76%"></i><i style="height:79%"></i><i style="height:100%"></i><i style="height:71%"></i><i style="height:50%"></i><i style="height:37%"></i><i style="height:8%"></i><i style="height:3%"></i><i style="height:8%"></i></span></td><td><span class="col-five">10.6 · <b>19.5</b> · 30</span></td></tr>
+<tr class="col-open" aria-expanded="true"><td class="name"><svg class="i"><use href="#i-down"/></svg>magnesium</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">53</td><td role="img" aria-label="magnesium: min 70, median 98, max 162; 12 bins 1, 19, 43, 37, 38, 16, 14, 4, 3, 1, 1, 1"><span class="col-spk" aria-hidden="true"><i style="height:2%"></i><i style="height:44%"></i><i style="height:100%"></i><i style="height:86%"></i><i style="height:88%"></i><i style="height:37%"></i><i style="height:33%"></i><i style="height:9%"></i><i style="height:7%"></i><i style="height:2%"></i><i style="height:2%"></i><i style="height:2%"></i></span></td><td><span class="col-five">70 · <b>98</b> · 162</span></td></tr>
+<tr class="col-exp"><td colspan="8"><div class="col-detail"><div><span class="n" style="position:static;display:inline-block;margin-bottom:6px">4</span><div class="col-hist" role="img" aria-label="magnesium, 20 bins of 4.6 from 70 to 162; the table beside lists every bin"><i style="height:3%"></i><i style="height:8%"></i><i style="height:19%"></i><i style="height:100%"></i><i style="height:44%"></i><i style="height:67%"></i><i style="height:81%"></i><i style="height:39%"></i><i style="height:39%"></i><i style="height:28%"></i><i style="height:31%"></i><i style="height:11%"></i><i style="height:8%"></i><i style="height:6%"></i><i style="height:3%"></i><i style="height:3%"></i><i style="height:0%"></i><i style="height:3%"></i><i style="height:0%"></i><i style="height:3%"></i><span class="med" style="left:30.4%"><span>median 98</span></span></div><div class="col-ax"><span>70</span><span>93</span><span>116</span><span>139</span><span>162</span></div><div class="col-note">20 bins of 4.6 · 178 accepted rows · 53 distinct values, all whole numbers. A code like this can be made categorical on SCR-15 (<span class="mono">set_kind</span>).</div></div><div class="col-bins"><table><thead><tr><th>Bin</th><th>Rows</th></tr></thead><tbody><tr><td>70–74.6</td><td class="r">1</td></tr><tr><td>74.6–79.2</td><td class="r">3</td></tr><tr><td>79.2–83.8</td><td class="r">7</td></tr><tr><td>83.8–88.4</td><td class="r">36</td></tr><tr><td>88.4–93</td><td class="r">16</td></tr><tr><td>93–97.6</td><td class="r">24</td></tr><tr><td>97.6–102.2</td><td class="r">29</td></tr><tr><td>102.2–106.8</td><td class="r">14</td></tr><tr><td>106.8–111.4</td><td class="r">14</td></tr><tr><td>111.4–116</td><td class="r">10</td></tr></tbody></table><table><thead><tr><th>Bin</th><th>Rows</th></tr></thead><tbody><tr><td>116–120.6</td><td class="r">11</td></tr><tr><td>120.6–125.2</td><td class="r">4</td></tr><tr><td>125.2–129.8</td><td class="r">3</td></tr><tr><td>129.8–134.4</td><td class="r">2</td></tr><tr><td>134.4–139</td><td class="r">1</td></tr><tr><td>139–143.6</td><td class="r">1</td></tr><tr><td>143.6–148.2</td><td class="r">0</td></tr><tr><td>148.2–152.8</td><td class="r">1</td></tr><tr><td>152.8–157.4</td><td class="r">0</td></tr><tr><td>157.4–162</td><td class="r">1</td></tr></tbody></table></div></div></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>total_phenols</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">97</td><td role="img" aria-label="total_phenols: min 0.98, median 2.355, max 3.88; 12 bins 3, 15, 25, 16, 17, 20, 28, 21, 18, 10, 3, 2"><span class="col-spk" aria-hidden="true"><i style="height:11%"></i><i style="height:54%"></i><i style="height:89%"></i><i style="height:57%"></i><i style="height:61%"></i><i style="height:71%"></i><i style="height:100%"></i><i style="height:75%"></i><i style="height:64%"></i><i style="height:36%"></i><i style="height:11%"></i><i style="height:7%"></i></span></td><td><span class="col-five">0.98 · <b>2.355</b> · 3.88</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>flavanoids</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">132</td><td role="img" aria-label="flavanoids: min 0.34, median 2.135, max 5.08; 12 bins 28, 16, 16, 19, 22, 25, 26, 17, 7, 1, 0, 1"><span class="col-spk" aria-hidden="true"><i style="height:100%"></i><i style="height:57%"></i><i style="height:57%"></i><i style="height:68%"></i><i style="height:79%"></i><i style="height:89%"></i><i style="height:93%"></i><i style="height:61%"></i><i style="height:25%"></i><i style="height:4%"></i><i style="height:0%"></i><i style="height:4%"></i></span></td><td><span class="col-five">0.34 · <b>2.135</b> · 5.08</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>nonflavanoid_phenols</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">39</td><td role="img" aria-label="nonflavanoid_phenols: min 0.13, median 0.34, max 0.66; 12 bins 8, 10, 26, 31, 21, 13, 24, 12, 10, 9, 9, 5"><span class="col-spk" aria-hidden="true"><i style="height:26%"></i><i style="height:32%"></i><i style="height:84%"></i><i style="height:100%"></i><i style="height:68%"></i><i style="height:42%"></i><i style="height:77%"></i><i style="height:39%"></i><i style="height:32%"></i><i style="height:29%"></i><i style="height:29%"></i><i style="height:16%"></i></span></td><td><span class="col-five">0.13 · <b>0.34</b> · 0.66</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>proanthocyanins</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">101</td><td role="img" aria-label="proanthocyanins: min 0.41, median 1.555, max 3.58; 12 bins 7, 13, 22, 41, 29, 31, 13, 12, 2, 6, 1, 1"><span class="col-spk" aria-hidden="true"><i style="height:17%"></i><i style="height:32%"></i><i style="height:54%"></i><i style="height:100%"></i><i style="height:71%"></i><i style="height:76%"></i><i style="height:32%"></i><i style="height:29%"></i><i style="height:5%"></i><i style="height:15%"></i><i style="height:2%"></i><i style="height:2%"></i></span></td><td><span class="col-five">0.41 · <b>1.555</b> · 3.58</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>color_intensity</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">132</td><td role="img" aria-label="color_intensity: min 1.28, median 4.69, max 13; 12 bins 12, 33, 28, 30, 29, 13, 12, 8, 6, 5, 1, 1"><span class="col-spk" aria-hidden="true"><i style="height:36%"></i><i style="height:100%"></i><i style="height:85%"></i><i style="height:91%"></i><i style="height:88%"></i><i style="height:39%"></i><i style="height:36%"></i><i style="height:24%"></i><i style="height:18%"></i><i style="height:15%"></i><i style="height:3%"></i><i style="height:3%"></i></span></td><td><span class="col-five">1.28 · <b>4.69</b> · 13</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>hue</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">78</td><td role="img" aria-label="hue: min 0.48, median 0.965, max 1.71; 12 bins 12, 15, 18, 18, 31, 34, 23, 18, 6, 2, 0, 1"><span class="col-spk" aria-hidden="true"><i style="height:35%"></i><i style="height:44%"></i><i style="height:53%"></i><i style="height:53%"></i><i style="height:91%"></i><i style="height:100%"></i><i style="height:68%"></i><i style="height:53%"></i><i style="height:18%"></i><i style="height:6%"></i><i style="height:0%"></i><i style="height:3%"></i></span></td><td><span class="col-five">0.48 · <b>0.965</b> · 1.71</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>od280/od315_of_diluted_wines</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">122</td><td role="img" aria-label="od280/od315_of_diluted_wines: min 1.27, median 2.78, max 4; 12 bins 11, 19, 15, 10, 8, 12, 24, 23, 25, 18, 10, 3"><span class="col-spk" aria-hidden="true"><i style="height:44%"></i><i style="height:76%"></i><i style="height:60%"></i><i style="height:40%"></i><i style="height:32%"></i><i style="height:48%"></i><i style="height:96%"></i><i style="height:92%"></i><i style="height:100%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:12%"></i></span></td><td><span class="col-five">1.27 · <b>2.78</b> · 4</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>proline</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">121</td><td role="img" aria-label="proline: min 278, median 673.5, max 1,680; 12 bins 17, 32, 29, 29, 16, 9, 18, 8, 13, 1, 5, 1"><span class="col-spk" aria-hidden="true"><i style="height:53%"></i><i style="height:100%"></i><i style="height:91%"></i><i style="height:91%"></i><i style="height:50%"></i><i style="height:28%"></i><i style="height:56%"></i><i style="height:25%"></i><i style="height:41%"></i><i style="height:3%"></i><i style="height:16%"></i><i style="height:3%"></i></span></td><td><span class="col-five">278 · <b>673.5</b> · 1,680</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>cultivar</td><td class="kind">categorical</td><td class="role"><span class="badge">target</span></td><td class="enc none">—</td><td class="r zero">0</td><td class="r">3</td><td colspan="2"><span class="col-cats"><span>class_0<i style="width:23px"></i><small>59</small></span><span>class_1<i style="width:28px"></i><small>71</small></span><span>class_2<i style="width:19px"></i><small>48</small></span></span></td></tr>
+      </tbody></table></div>
+    </main>
+    <footer class="status"><div class="m"><span class="sq" style="--res:var(--res-cpu)"></span>CPU <b>2%</b></div><div class="m"><span class="sq" style="--res:var(--res-ram)"></span>RAM <b>3.4</b><small>/ 9.7 GB</small></div><div class="m"><span class="sq" style="--res:var(--res-gpu)"></span>GPU <b>0%</b></div><div class="m"><span class="sq" style="--res:var(--res-vram)"></span>VRAM <b>0.3</b><small>/ 6.0 GB</small></div><div class="m conn"><span class="live"><span class="pulse"></span>live</span></div></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Summary</td><td>Columns, features by kind, target and task, the accepted rows counted (6d), the rows not counted with <i>Show them</i> (frame C)</td><td><span class="mono">GET /versions/{id}/columns</span> <i>planned</i>; <span class="mono">GET /versions/{id}</span></td><td>static</td></tr>
+<tr><td><span class="n">2</span></td><td>Filters</td><td><i>Kind</i> and <i>Role</i>, in the URL, with "n of 14"</td><td>–</td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Columns table</td><td>Per column, in schema order (sortable by any header): kind, role, encoding, missing, distinct (exact up to 10,000), a 12-bin sparkline and min · median · max, or the top 5 categories</td><td><span class="mono">GET /versions/{id}/columns</span>, from the manifest, cached by version ID (rule 32)</td><td>static</td></tr>
+<tr><td><span class="n">4</span></td><td>Expanded column</td><td>20 bins with the median, and the same bins as tables; for a category, every count up to 50; for the target, class counts or its histogram</td><td>same</td><td>static</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div id="lightA"></div>
+
+<!-- ===================================================================== B -->
+<h2>B · The version Flow 6's transform makes (light) <span class="badge">its ID is not known yet</span></h2>
+<div data-theme="light" style="width:max-content"><div class="frame compact" style="height:540px">
+  <div style="padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+    <div class="tabs" role="tablist"><span class="tab" role="tab">Rows <span class="count">178</span></span><span class="tab" role="tab" aria-selected="true">Columns <span class="count">13</span></span><span class="tab" role="tab">Reasons <span class="count">0</span></span><span class="tab" role="tab">Distributions</span><span class="tab" role="tab">Compare</span><span class="tab" role="tab">Config</span></div>
+    <div class="col-sum"><span><b>13</b> columns</span><span><b>12</b> features: 11 numeric, 1 categorical</span><span>target <span class="mono">cultivar</span> · classification, 3 classes</span><span>over <b>178</b> accepted rows</span></div>
+    <div class="col-ops"><span class="n" style="position:static;display:inline-block">5</span><svg class="i"><use href="#i-info"/></svg><span>Made by a transform of <span class="mono">ds_b3f4ff09de8a</span>:</span><span class="op">drop ash</span><span class="sep">·</span><span class="op">rename od280/od315_of_diluted_wines → od280_od315</span><span class="sep">·</span><span class="op">set_kind magnesium categorical</span><span class="sep">·</span><span class="op">set_encoding magnesium embedding</span><span class="spacer"></span><button class="btn sm">Edit the transform…</button></div>
+    <div class="table-wrap"><table class="t dense col-t"><thead><tr><th>Column</th><th>Kind</th><th>Role</th><th>Encoding</th><th class="r">Missing</th><th class="r">Distinct</th><th>Distribution</th><th>min · median · max</th></tr></thead><tbody>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>alcohol</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">126</td><td role="img" aria-label="alcohol: min 11.03, median 13.05, max 14.83; 12 bins 1, 9, 9, 22, 23, 18, 23, 22, 25, 13, 11, 2"><span class="col-spk" aria-hidden="true"><i style="height:4%"></i><i style="height:36%"></i><i style="height:36%"></i><i style="height:88%"></i><i style="height:92%"></i><i style="height:72%"></i><i style="height:92%"></i><i style="height:88%"></i><i style="height:100%"></i><i style="height:52%"></i><i style="height:44%"></i><i style="height:8%"></i></span></td><td><span class="col-five">11.03 · <b>13.05</b> · 14.83</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>malic_acid</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">133</td><td role="img" aria-label="malic_acid: min 0.74, median 1.865, max 5.8; 12 bins 14, 29, 57, 14, 14, 11, 10, 14, 6, 4, 2, 3"><span class="col-spk" aria-hidden="true"><i style="height:25%"></i><i style="height:51%"></i><i style="height:100%"></i><i style="height:25%"></i><i style="height:25%"></i><i style="height:19%"></i><i style="height:18%"></i><i style="height:25%"></i><i style="height:11%"></i><i style="height:7%"></i><i style="height:4%"></i><i style="height:5%"></i></span></td><td><span class="col-five">0.74 · <b>1.865</b> · 5.8</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>alcalinity_of_ash</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">63</td><td role="img" aria-label="alcalinity_of_ash: min 10.6, median 19.5, max 30; 12 bins 4, 2, 8, 29, 30, 38, 27, 19, 14, 3, 1, 3"><span class="col-spk" aria-hidden="true"><i style="height:11%"></i><i style="height:5%"></i><i style="height:21%"></i><i style="height:76%"></i><i style="height:79%"></i><i style="height:100%"></i><i style="height:71%"></i><i style="height:50%"></i><i style="height:37%"></i><i style="height:8%"></i><i style="height:3%"></i><i style="height:8%"></i></span></td><td><span class="col-five">10.6 · <b>19.5</b> · 30</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>magnesium</td><td class="kind">categorical</td><td class="role">feature</td><td class="enc">embedding</td><td class="r zero">0</td><td class="r">53</td><td colspan="2"><span class="n" style="position:static;display:inline-block">6</span> <span class="col-cats"><span>88<i style="width:28px"></i><small>13</small></span><span>86<i style="width:24px"></i><small>11</small></span><span>101<i style="width:19px"></i><small>9</small></span><span>98<i style="width:19px"></i><small>9</small></span><span>96<i style="width:17px"></i><small>8</small></span><span class="more">+48 more</span></span></td></tr>
+<tr class="sec"><td colspan="8">6 more numeric features, as on the raw version <button class="btn sm ghost">Show</button></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>od280_od315</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">122</td><td role="img" aria-label="od280_od315: min 1.27, median 2.78, max 4; 12 bins 11, 19, 15, 10, 8, 12, 24, 23, 25, 18, 10, 3"><span class="col-spk" aria-hidden="true"><i style="height:44%"></i><i style="height:76%"></i><i style="height:60%"></i><i style="height:40%"></i><i style="height:32%"></i><i style="height:48%"></i><i style="height:96%"></i><i style="height:92%"></i><i style="height:100%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:12%"></i></span></td><td><span class="col-five">1.27 · <b>2.78</b> · 4</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>proline</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">121</td><td role="img" aria-label="proline: min 278, median 673.5, max 1,680; 12 bins 17, 32, 29, 29, 16, 9, 18, 8, 13, 1, 5, 1"><span class="col-spk" aria-hidden="true"><i style="height:53%"></i><i style="height:100%"></i><i style="height:91%"></i><i style="height:91%"></i><i style="height:50%"></i><i style="height:28%"></i><i style="height:56%"></i><i style="height:25%"></i><i style="height:41%"></i><i style="height:3%"></i><i style="height:16%"></i><i style="height:3%"></i></span></td><td><span class="col-five">278 · <b>673.5</b> · 1,680</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>cultivar</td><td class="kind">categorical</td><td class="role"><span class="badge">target</span></td><td class="enc none">—</td><td class="r zero">0</td><td class="r">3</td><td colspan="2"><span class="col-cats"><span>class_0<i style="width:23px"></i><small>59</small></span><span>class_1<i style="width:28px"></i><small>71</small></span><span>class_2<i style="width:19px"></i><small>48</small></span></span></td></tr>
+    </tbody></table></div>
+  </div>
+</div></div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">5</span></td><td>Operations</td><td>On a version a transform made, or one after it, the operations in order, and <i>Edit the transform…</i> (SCR-15 with them loaded, 6b)</td><td>the transform version's config, from <span class="mono">GET /versions/{id}</span> or the lineage's transform ancestor</td><td>static</td></tr>
+<tr><td><span class="n">6</span></td><td>A categorical column</td><td>Its top 5 categories with bars and counts, and "+N more"; expanded, every count up to 50</td><td><span class="mono">GET /versions/{id}/columns</span></td><td>static</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · A large table: <span class="mono">power.parquet</span> once ingested (dark) <span class="badge">not ingested yet; figures from the file</span></h2>
+<div class="frame compact" style="height:420px">
+  <div style="padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+    <div class="tabs" role="tablist"><span class="tab" role="tab">Rows <span class="count">2,075,259</span></span><span class="tab" role="tab" aria-selected="true">Columns <span class="count">6</span></span><span class="tab" role="tab">Reasons <span class="count">1</span></span><span class="tab" role="tab">Distributions</span><span class="tab" role="tab">Compare</span><span class="tab" role="tab">Config</span></div>
+    <div class="col-sum"><span class="n" style="position:static;display:inline-block">7</span><span><b>6</b> columns</span><span><b>5</b> features, all numeric</span><span>target <span class="mono">Global_active_power</span> · regression</span><span>over <b>2,049,280</b> accepted rows</span><span class="left"><b>25,979</b> rejected rows not counted (<span class="mono">missing_target</span>) · <a>Show them</a></span></div>
+    <div class="table-wrap"><table class="t dense col-t"><thead><tr><th>Column</th><th>Kind</th><th>Role</th><th>Encoding</th><th class="r">Missing</th><th class="r">Distinct</th><th>Distribution</th><th>min · median · max</th></tr></thead><tbody>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>Global_active_power</td><td class="kind">numeric</td><td class="role"><span class="badge">target</span></td><td class="enc none">—</td><td class="r zero">0</td><td class="r">4,186</td><td role="img" aria-label="Global_active_power: min 0.076, median 0.602, max 11.122; 12 bins 1160232, 558929, 185227, 82503, 38221, 14841, 6555, 1778, 799, 151, 38, 6"><span class="col-spk" aria-hidden="true"><i style="height:100%"></i><i style="height:48%"></i><i style="height:16%"></i><i style="height:7%"></i><i style="height:3%"></i><i style="height:1%"></i><i style="height:1%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i></span></td><td><span class="col-five">0.076 · <b>0.602</b> · 11.122</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>Global_reactive_power</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">532</td><td role="img" aria-label="Global_reactive_power: min 0, median 0.1, max 1.39; 12 bins 1174969, 552059, 231425, 66898, 17247, 4578, 1396, 509, 143, 44, 10, 2"><span class="col-spk" aria-hidden="true"><i style="height:100%"></i><i style="height:47%"></i><i style="height:20%"></i><i style="height:6%"></i><i style="height:1%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i></span></td><td><span class="col-five">0 · <b>0.1</b> · 1.39</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>Voltage</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">2,837</td><td role="img" aria-label="Voltage: min 223.2, median 241.01, max 254.15; 12 bins 148, 1680, 7556, 36149, 114643, 294121, 643056, 626443, 249023, 65513, 10273, 675"><span class="col-spk" aria-hidden="true"><i style="height:0%"></i><i style="height:0%"></i><i style="height:1%"></i><i style="height:6%"></i><i style="height:18%"></i><i style="height:46%"></i><i style="height:100%"></i><i style="height:97%"></i><i style="height:39%"></i><i style="height:10%"></i><i style="height:2%"></i><i style="height:0%"></i></span></td><td><span class="col-five">223.2 · <b>241.01</b> · 254.15</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>Sub_metering_1</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">88</td><td role="img" aria-label="Sub_metering_1: min 0, median 0, max 88; 12 bins 1986328, 4011, 3859, 3709, 9638, 39427, 1281, 330, 101, 242, 331, 23"><span class="col-spk" aria-hidden="true"><i style="height:100%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:2%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i></span></td><td><span class="col-five">0 · <b>0</b> · 88</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>Sub_metering_2</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">81</td><td role="img" aria-label="Sub_metering_2: min 0, median 0, max 80; 12 bins 1990888, 2790, 5975, 9414, 10138, 24421, 1347, 295, 329, 585, 2310, 788"><span class="col-spk" aria-hidden="true"><i style="height:100%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:1%"></i><i style="height:1%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i></span></td><td><span class="col-five">0 · <b>0</b> · 80</span></td></tr>
+<tr><td class="name"><svg class="i"><use href="#i-chevron"/></svg>Sub_metering_3</td><td class="kind">numeric</td><td class="role">feature</td><td class="enc none">—</td><td class="r zero">0</td><td class="r">32</td><td role="img" aria-label="Sub_metering_3: min 0, median 1, max 31; 12 bins 1325930, 5747, 3947, 7242, 28008, 6530, 525587, 125996, 2140, 1353, 6472, 10328"><span class="col-spk" aria-hidden="true"><i style="height:100%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:1%"></i><i style="height:2%"></i><i style="height:0%"></i><i style="height:40%"></i><i style="height:10%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:1%"></i></span></td><td><span class="col-five">0 · <b>1</b> · 31</span></td></tr>
+    </tbody></table></div>
+    <p class="note2">In the file, all six columns are empty on the same 25,979 rows, so with the target among them the accepted rows have none missing. Every sparkline has its own scale: the sub-meters are mostly 0, and <span class="mono">Sub_metering_3</span>'s second mode, around 16–18, still shows.</p>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">7</span></td><td>Rows not counted</td><td>How many rows are left out and why (by reason), with <i>Show them</i>: Rows filtered to those reasons</td><td>the version's <span class="mono">counts.by_reason</span></td><td>static</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · States (dark)</h2>
+<div class="frame" style="height:290px">
+  <div class="col-states">
+    <div class="col-load"><b>Loading, the first view of a large table</b><span>Computing the column figures · <span class="mono">2,049,280</span> rows · once, then kept for this version</span>
+      <span class="skeleton" style="width:92%"></span><span class="skeleton" style="width:92%"></span><span class="skeleton" style="width:92%"></span><span class="skeleton" style="width:70%"></span>
+      <span>One skeleton row per column: the schema is in the manifest's metadata, so it comes first. A column with more than 10,000 distinct values reads <span class="mono">&gt; 10,000</span>, with the reason in its tooltip.</span></div>
+    <div class="state"><svg class="i"><use href="#i-ban"/></svg><b>Every row of this version was rejected.</b><p>The columns are listed with their kind and role; their figures read "—".</p><button class="btn sm">Show the rejected rows</button></div>
+    <div class="state err"><svg class="i"><use href="#i-alert"/></svg><b>The column figures could not be computed</b><p><span class="mono">version_data_missing</span> · the manifest is not on disk. Check the data volume, then try again.</p><button class="btn sm">Try again</button></div>
+  </div>
+</div>
+<p class="cap">There is no Columns tab on images or text. At 1024 px the min · median · max column moves under the sparkline and the expanded panel stacks the bin tables under the histogram.</p>
+
+<h2>Accessibility notes</h2>
+<div class="changes">
+<ul>
+<li>Each column row is a button row: <kbd>Enter</kbd> expands it (<span class="mono">aria-expanded</span>), <kbd>j</kbd> / <kbd>k</kbd> move between rows, headers sort with <kbd>Enter</kbd> and carry <span class="mono">aria-sort</span>.</li>
+<li>Every sparkline and histogram is an image with its numbers in its label, and the expanded panel lists every bin as a table; the min · median · max is text.</li>
+<li>Role, encoding and status are words; muted zeros and dimmed ignored rows are also said in words (the "0" and the "ignore").</li>
+<li>Contrast uses the text tokens on <span class="mono">--surface</span>, <span class="mono">--surface-raised</span> and <span class="mono">--surface-sunken</span>; measured in both themes before this was sent.</li>
+</ul>
+</div>
+
+<h2>Tests, at Gate 3</h2>
+<div class="changes">
+<ul>
+<li>Python: <span class="mono">test_DATA_7_5_column_summary_matches_manifest</span> (each figure against the manifest, for a raw, a transformed and a split version), <span class="mono">test_DATA_7_5_distinct_capped_at_10000</span>.</li>
+<li>Vitest, <span class="mono">VersionScreen.test.tsx</span>: <span class="mono">test_DATA_7_5_columns_tab_only_on_tabular_versions</span>, <span class="mono">test_DATA_7_5_rows_not_counted_link_filters_rows</span>.</li>
+</ul>
+</div>
+</div>
+<script>
+(function () {
+  var a = document.getElementById('frameA'), slot = document.getElementById('lightA');
+  var c = a.cloneNode(true); c.id = 'frameA-light'; c.setAttribute('data-theme', 'light');
+  c.querySelectorAll('.n').forEach(function (n) { n.remove(); });
+  slot.replaceWith(c);
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>
