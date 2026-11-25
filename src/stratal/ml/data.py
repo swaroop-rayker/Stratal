@@ -65,6 +65,16 @@ class TabularData:
         return self._encoded("one_hot", "embedding")
 
     @property
+    def one_hot(self) -> list[str]:
+        """One-hot columns for a network (``embedding`` columns are apart there)."""
+        return self._encoded("one_hot")
+
+    @property
+    def embedded(self) -> list[str]:
+        """``embedding`` columns: a network looks each category up in an ``Embedding``."""
+        return self._encoded("embedding")
+
+    @property
     def ordinal(self) -> list[tuple[str, tuple[str, ...]]]:
         """``ordinal`` columns with their category order (DATA-7.3)."""
         return [

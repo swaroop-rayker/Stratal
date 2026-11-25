@@ -56,6 +56,7 @@ from stratal.train.config import TrainConfig
 from stratal.train.data import EpochOrder, LabelledImages, TensorRows, split_items
 from stratal.train.memory import TrainingState, suggest_batch_size, training_oom_error
 from stratal.train.reference import build_model, parameter_count
+from stratal.train.table_input import graph_of, with_table_input
 
 STAGE = "train"
 PROGRESS_EVERY_S = 1.0
@@ -283,7 +284,7 @@ class _Run:
             part = data.splits[split]
             assert self.prep is not None
             x = torch.tensor(self.prep.encode(part.columns), dtype=torch.float32)
-            x = x.reshape(len(part), self.prep.width)
+            x = x.reshape(len(part), self.prep.raw_width)
             y = torch.tensor(self.prep.target(part.target) if len(part) else [], dtype=target_type)
             return TensorRows(x, y)
 
@@ -336,7 +337,7 @@ class _Run:
             os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
             torch.use_deterministic_algorithms(True)
             torch.backends.cudnn.benchmark = False
-        model = build_model(config.model, self.input, self.outputs)
+        model = with_table_input(build_model(config.model, self.input, self.outputs), self.prep)
         self.parameters = parameter_count(model)
         if self.parent is not None:
             self._start_from_parent(model)
@@ -599,7 +600,7 @@ class _Run:
         """For ``device: auto``: time both devices on a small model, and move to the CPU
         worker if it wins (ADR-0014 rule 8). Large models stay on the GPU untimed."""
         config = self.config
-        probe = build_model(config.model, self.input, self.outputs)
+        probe = with_table_input(build_model(config.model, self.input, self.outputs), self.prep)
         small = parameter_count(probe) < device.MAX_PARAMETERS
         del probe
         if not small:
@@ -621,6 +622,7 @@ class _Run:
                 num_classes=self.outputs,
                 batch=config.batch_size,
                 batches=batches,
+                wrap=lambda model: with_table_input(model, self.prep),
                 on_start=lambda: self.ctx.emit(
                     stage=STAGE,
                     substage="device",
@@ -820,7 +822,8 @@ class _Run:
                 suggested_action="Fine-tune with the parent's own model spec.",
             )
         for node_id in self.config.freeze:
-            module = model.get_submodule("head" if node_id == "head" else f"nodes.{node_id}")
+            graph = graph_of(model)
+            module = graph.get_submodule("head" if node_id == "head" else f"nodes.{node_id}")
             for param in module.parameters():
                 param.requires_grad_(False)
             self.frozen.append(module)
@@ -1245,7 +1248,9 @@ def run_test_eval(run: StageRun, units: TrainUnits = OWNER_UNITS) -> StageResult
     config = TrainConfig.model_validate(config_json)
     training = _Run(replace(run, input_version_id=dataset_version), config, units)
     training.prepare()
-    model = build_model(config.model, training.input, training.outputs)
+    model = with_table_input(
+        build_model(config.model, training.input, training.outputs), training.prep
+    )
     weights.load_into(model, run.data_dir / weights_path)
     if training.device == "cuda":
         with gpu_lease(run.engine, holder=f"{run.ctx.job_id}/test_eval", wait_s=60):
@@ -1302,7 +1307,9 @@ def _score_version(run: StageRun, version_id: str, units: TrainUnits) -> StageRe
     )
     training = _Run(replace(run, input_version_id=dataset_version), config, units)
     training.prepare()
-    model = build_model(config.model, training.input, training.outputs)
+    model = with_table_input(
+        build_model(config.model, training.input, training.outputs), training.prep
+    )
     weights.load_into(model, run.data_dir / weights_path)
     if training.device == "cuda":
         with gpu_lease(run.engine, holder=f"{run.ctx.job_id}/test_eval", wait_s=60):

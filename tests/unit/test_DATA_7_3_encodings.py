@@ -77,3 +77,26 @@ def test_DATA_7_3_classical_columns_follow_the_encodings() -> None:
     assert data.categorical == ["colour"]  # embedding is one-hot for a classical model
     assert data.ordinal == [("quality", ("low", "mid", "high"))]
     assert data.text_columns == ["colour", "quality"]
+
+
+def test_DATA_7_3_an_embedding_column_reaches_the_input_block() -> None:
+    schema = TableSchema(
+        (
+            Column("alcohol", "numeric"),
+            Column("colour", "categorical", encoding="embedding"),
+            Column("y", "categorical", "target"),
+        )
+    )
+    data = TabularData(schema, "classification", _data().splits)
+    prep = fit(data)
+    [colour] = prep.embedded
+    assert colour.categories == ("red", "white") and colour.slots == 3
+    assert colour.dim == 1  # min(50, ceil(2 / 2))
+    assert prep.categorical == ()
+    assert (prep.lead_width, prep.raw_width, prep.width) == (1, 2, 2)
+    block = prep.columns()[-1]
+    assert (block.encoding, block.categories, block.embedding_dim) == ("embedding", 2, 1)
+    assert prep.encode_record({"alcohol": 13.0, "colour": "white"})[-1] == 1.0
+    assert prep.encode_record({"alcohol": 13.0, "colour": "pink"})[-1] == 2.0
+    assert prep.encode_record({"alcohol": 13.0, "colour": None})[-1] == 2.0
+    assert TablePrep.from_json(prep.to_json()) == prep

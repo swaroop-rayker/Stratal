@@ -13,6 +13,10 @@ train split (BUILD-1.3), the train stage can encode every split, and
 * Ordinal column (DATA-7.3): the category's position in the schema's order, as one
   number; a category outside the order, or missing, takes the train split's median
   position; then standardised like a number (ADR-0019 rule 29).
+* Embedding column (DATA-7.3): the category's index among the train split's sorted
+  categories, one more for unknown and missing, as one number; the network's
+  input layer (:mod:`stratal.train.table_input`) looks it up in an ``Embedding``
+  of ``min(50, ⌈n / 2⌉)`` features (ADR-0017 rule 6; ADR-0019 Addendum B, as built).
 * A column set to ``ignore`` is left out.
 * Target: for classification, the sorted classes; for regression, its mean and
   standard deviation, so the network learns a standardised target and its
@@ -28,7 +32,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from stratal.build.tabular import TabularColumn, input_block
+from stratal.build.tabular import TabularColumn, default_embedding_dim, input_block
 from stratal.ml.data import TabularData
 
 PREPROCESS_FILE = "preprocess.json"
@@ -61,6 +65,18 @@ class OrdinalColumn:
 
 
 @dataclass(frozen=True)
+class EmbeddedColumn:
+    name: str
+    categories: tuple[str, ...]
+    dim: int
+
+    @property
+    def slots(self) -> int:
+        """Rows of its ``Embedding``: the categories and one for unknown and missing."""
+        return len(self.categories) + 1
+
+
+@dataclass(frozen=True)
 class CategoricalColumn:
     name: str
     categories: tuple[str, ...]
@@ -76,15 +92,27 @@ class TablePrep:
     target_mean: float = 0.0
     target_std: float = 1.0
     ordinal: tuple[OrdinalColumn, ...] = ()
+    embedded: tuple[EmbeddedColumn, ...] = ()
 
     # ------------------------------------------------------------------ shape
     @property
     def width(self) -> int:
+        """The network body's input: after the input layer's embeddings (BUILD-1.3)."""
+        return self.lead_width + sum(c.dim for c in self.embedded)
+
+    @property
+    def lead_width(self) -> int:
+        """Numbers, ordinal positions and one-hot slots: what reaches the body unchanged."""
         return (
             len(self.numeric)
             + len(self.ordinal)
             + sum(len(c.categories) + 1 for c in self.categorical)
         )
+
+    @property
+    def raw_width(self) -> int:
+        """What :meth:`encode` gives: the lead, then one index per embedding column."""
+        return self.lead_width + len(self.embedded)
 
     @property
     def names(self) -> list[str]:
@@ -93,6 +121,7 @@ class TablePrep:
             *(c.name for c in self.numeric),
             *(c.name for c in self.ordinal),
             *(c.name for c in self.categorical),
+            *(c.name for c in self.embedded),
         ]
 
     @property
@@ -102,12 +131,23 @@ class TablePrep:
 
     def columns(self) -> list[TabularColumn]:
         """The input block's columns (one-hot), for the builder's figures."""
-        return [
-            TabularColumn(name=c.name, kind="numeric") for c in [*self.numeric, *self.ordinal]
-        ] + [
-            TabularColumn(name=c.name, kind="categorical", categories=max(1, len(c.categories)))
-            for c in self.categorical
-        ]
+        return (
+            [TabularColumn(name=c.name, kind="numeric") for c in [*self.numeric, *self.ordinal]]
+            + [
+                TabularColumn(name=c.name, kind="categorical", categories=max(1, len(c.categories)))
+                for c in self.categorical
+            ]
+            + [
+                TabularColumn(
+                    name=c.name,
+                    kind="categorical",
+                    categories=max(1, len(c.categories)),
+                    encoding="embedding",
+                    embedding_dim=c.dim,
+                )
+                for c in self.embedded
+            ]
+        )
 
     # ------------------------------------------------------------------ encoding
     def encode(self, columns: Mapping[str, Sequence[Any]]) -> list[list[float]]:
@@ -132,6 +172,12 @@ class TablePrep:
                 one_hot = [0.0] * (unknown + 1)
                 one_hot[slot] = 1.0
                 rows[i].extend(one_hot)
+        for column in self.embedded:
+            index = {category: k for k, category in enumerate(column.categories)}
+            unknown = len(column.categories)
+            for i, value in enumerate(columns[column.name]):
+                slot = index.get(str(value), unknown) if value is not None else unknown
+                rows[i].append(float(slot))
         return rows
 
     def encode_record(self, record: Mapping[str, Any]) -> list[float]:
@@ -170,6 +216,10 @@ class TablePrep:
                     }
                     for c in self.ordinal
                 ],
+                "embedded": [
+                    {"name": c.name, "categories": list(c.categories), "dim": c.dim}
+                    for c in self.embedded
+                ],
                 "task": self.task,
                 "classes": list(self.classes),
                 "target_mean": self.target_mean,
@@ -207,6 +257,12 @@ class TablePrep:
                     float(c["median"]),
                 )
                 for c in raw.get("ordinal", [])
+            ),
+            embedded=tuple(
+                EmbeddedColumn(
+                    str(c["name"]), tuple(str(x) for x in c["categories"]), int(c["dim"])
+                )
+                for c in raw.get("embedded", [])
             ),
         )
 
@@ -249,11 +305,14 @@ def fit(data: TabularData) -> TablePrep:
         ]
         mean, std = _spread(positions)
         ordinal.append(OrdinalColumn(name, tuple(order), mean, std, median))
-    categorical = [
-        CategoricalColumn(
-            name, tuple(sorted({str(v) for v in train.columns[name] if v is not None}))
-        )
-        for name in data.categorical
+
+    def seen(name: str) -> tuple[str, ...]:
+        return tuple(sorted({str(v) for v in train.columns[name] if v is not None}))
+
+    categorical = [CategoricalColumn(name, seen(name)) for name in data.one_hot]
+    embedded = [
+        EmbeddedColumn(name, seen(name), default_embedding_dim(max(1, len(seen(name)))))
+        for name in data.embedded
     ]
     if data.task == "classification":
         return TablePrep(
@@ -262,6 +321,7 @@ def fit(data: TabularData) -> TablePrep:
             "classification",
             tuple(data.classes),
             ordinal=tuple(ordinal),
+            embedded=tuple(embedded),
         )
     target_mean, target_std = _spread([float(v) for v in train.target])
     return TablePrep(
@@ -272,6 +332,7 @@ def fit(data: TabularData) -> TablePrep:
         target_mean,
         target_std,
         ordinal=tuple(ordinal),
+        embedded=tuple(embedded),
     )
 
 
