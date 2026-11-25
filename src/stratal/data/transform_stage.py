@@ -9,15 +9,29 @@ identity (rule 28). The raw manifest is only read (DATA-7.1.AC1).
 """
 
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from stratal.core.errors import ValidationFailed
 from stratal.data.commit import VersionRecord, commit_version
 from stratal.data.dataset_types import TableSchema
-from stratal.data.records import META_TABLE_SCHEMA, schema_to_json, table_schema_of
-from stratal.data.transform import STAGE, Plan, RowStep, TransformConfig, plan
+from stratal.data.records import (
+    META_TABLE_SCHEMA,
+    column_to_json,
+    row_values,
+    schema_to_json,
+    table_schema_of,
+)
+from stratal.data.transform import (
+    STAGE,
+    Plan,
+    RowStep,
+    TransformConfig,
+    plan,
+    step_summaries,
+)
 from stratal.data.versioning import VersionDeriver
 from stratal.mon.events import MetricValue
 from stratal.mon.sink import EventSink
@@ -133,3 +147,47 @@ def run_transform(
         "accepted": int(record.counts.get("accepted", 0)),
     }
     return TransformResult(record, metrics, round(time.monotonic() - started, 3))
+
+
+PREVIEW_ROWS = 50
+
+
+def preview(
+    manifest: Path, *, version_id: str, operations: Sequence[Any], limit: int = PREVIEW_ROWS
+) -> dict[str, Any]:
+    """The first ``limit`` rows of a raw version after ``operations``, computed by the
+    stage's own plan and row step, so they equal the first rows the stage writes
+    (DATA-7.5.AC1, rule 32). Raises :class:`TransformRefused` naming each problem."""
+    schema = input_schema(manifest, version_id=version_id)
+    checked = plan(schema, operations)
+    step = RowStep(checked)
+    rows: list[dict[str, Any]] = []
+    for n, row in enumerate(iter_rows(manifest)):
+        if n >= limit:
+            break
+        out = step(row)
+        rows.append(
+            {
+                "row_key": out["row_key"],
+                "status": out["status"],
+                "reason_code": out.get("reason_code"),
+                "reason_detail": out.get("reason_detail"),
+                "values": row_values(out, checked.output),
+            }
+        )
+    by_status: dict[str, int] = {}
+    for row in rows:
+        by_status[str(row["status"])] = by_status.get(str(row["status"]), 0) + 1
+    return {
+        "version_id": version_id,
+        "columns": [column_to_json(c) for c in checked.output.columns],
+        "steps": step_summaries(checked, step.counts),
+        "rows": rows,
+        "counts": {
+            "rows": len(rows),
+            "by_status": by_status,
+            "readmitted": step.counts.readmitted,
+            "cast_failed": sum(s.cast_failed for s in step.counts.steps),
+            "filtered": sum(s.filtered for s in step.counts.steps),
+        },
+    }

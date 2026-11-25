@@ -194,6 +194,16 @@ def _csv_records(batch: Any, read: ReadTable) -> list[dict[str, Any]]:
     return [{name: columns[name][k] for name in read.names} for k in range(batch.num_rows)]
 
 
+def table_columns(path: Path) -> list[str]:
+    """A table file's column names, from its header or its schema; no records are read."""
+    if TABLE_FORMATS.get(path.suffix.lower()) == "PARQUET":
+        return [str(n) for n in pq.ParquetFile(path).schema_arrow.names]
+    try:
+        return _csv_names(path)
+    except pa.ArrowInvalid as exc:
+        raise ValueError(str(exc)) from exc
+
+
 def read_table(source: Path, relpath: str) -> ReadTable:
     """A table's columns, kinds and record count; its records stream later (rule 31)."""
     path = source / relpath

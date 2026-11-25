@@ -345,6 +345,8 @@ class Source(_Model):
     name: str
     path: str
     files: int
+    columns: list[str] | None = None
+    """A folder holding exactly one table: its columns, from the header (DATA-1.4)."""
 
 
 class SourceList(_Model):
@@ -1251,6 +1253,62 @@ class TokenCut(_Model):
     length: int
     cut: int
     rows: int
+
+
+class ColumnSummary(_Model):
+    name: str
+    kind: Literal["numeric", "categorical"]
+    role: Literal["feature", "target"]
+    encoding: Literal["one_hot", "embedding", "ordinal", "ignore"] | None
+    order: list[str] | None
+    missing: int
+    distinct: int
+    distinct_capped: bool
+    """More than ``distinct_cap`` distinct values: ``distinct`` is then the cap."""
+    distribution: dict[str, Any]
+    """``{"type": "numeric", "min", "median", "max", "sparkline", "histogram": {"edges",
+    "counts"}}`` or ``{"type": "categorical", "top": [{"value", "count"}], "more"}``."""
+
+
+class VersionColumns(_Model):
+    version_id: str
+    task: Literal["classification", "regression"]
+    target: str
+    counted: int
+    """Accepted rows, the ones the figures are over (SCREENS.md open point 6d)."""
+    not_counted: dict[str, int]
+    """Rows left out, by reason code."""
+    distinct_cap: int
+    columns: list[ColumnSummary]
+
+
+class PreviewRow(_Model):
+    row_key: str
+    status: str
+    reason_code: str | None
+    reason_detail: str | None
+    values: dict[str, Any]
+
+
+class PreviewStep(_Model):
+    index: int
+    op: str
+    summary: str
+    columns: list[dict[str, Any]]
+    cast_failed: int
+    filtered: int
+    filtered_null: int
+    examples: list[str]
+
+
+class TransformPreview(_Model):
+    version_id: str
+    columns: list[dict[str, Any]]
+    """The schema after the last operation."""
+    steps: list[PreviewStep]
+    """Per operation: the columns after it and what it did on these rows (open point 6c)."""
+    rows: list[PreviewRow]
+    counts: dict[str, Any]
 
 
 class Distributions(_Model):

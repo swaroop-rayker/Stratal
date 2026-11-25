@@ -10,17 +10,19 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Path, Query, Response
 from fastapi.responses import FileResponse
 from PIL import Image, ImageOps
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import select
 
 from stratal.api import schemas
 from stratal.api.jobs import Db, Limit
 from stratal.core.errors import Conflict, NotFound, ValidationFailed
 from stratal.core.settings import get_settings
-from stratal.data import browse, profile, registry
+from stratal.data import browse, columns, profile, registry, transform, transform_stage
+from stratal.data.tables import TABLE_FORMATS, table_columns
 from stratal.db.models import Dataset, Derivation
 from stratal.label.semantic import cosine, unpack_vector
 from stratal.registry import store as model_store
+from stratal.runtime.jobs import field_problems
 from stratal.storage.blobs import BlobStore
 from stratal.storage.derivations import KIND_CLIP_IMAGE
 from stratal.storage.manifest import select_rows
@@ -192,12 +194,30 @@ def get_blob(
     return FileResponse(path, media_type=media, headers=headers)
 
 
-def _file_count(folder: FsPath) -> int:
+def _walk(folder: FsPath) -> tuple[int, list[FsPath]]:
+    """The folder's file count, and its table files (.csv, .parquet)."""
     count = 0
-    for _root, dirs, files in os.walk(folder):
+    found: list[FsPath] = []
+    for root, dirs, files in os.walk(folder):
         dirs[:] = [d for d in dirs if not d.startswith(".")]
-        count += sum(1 for f in files if not f.startswith("."))
-    return count
+        for name in files:
+            if name.startswith("."):
+                continue
+            count += 1
+            if FsPath(name).suffix.lower() in TABLE_FORMATS:
+                found.append(FsPath(root) / name)
+    return count, found
+
+
+def _columns(found: list[FsPath]) -> list[str] | None:
+    """A table folder's columns, read from its header (the drawer's target select, approved
+    with the Start pipeline drawer's low-fi, 2026-11-24). Only for exactly one table."""
+    if len(found) != 1:
+        return None
+    try:
+        return table_columns(found[0])
+    except (OSError, ValueError):
+        return None
 
 
 @router.get("/sources", response_model=schemas.SourceList)
@@ -209,10 +229,17 @@ def list_sources() -> Json:
         if root.is_dir()
         else []
     )
-    items = [
-        {"name": p.name, "path": f"{root.as_posix()}/{p.name}", "files": _file_count(p)}
-        for p in folders
-    ]
+    items: list[Json] = []
+    for p in folders:
+        count, tables = _walk(p)
+        items.append(
+            {
+                "name": p.name,
+                "path": f"{root.as_posix()}/{p.name}",
+                "files": count,
+                "columns": _columns(tables),
+            }
+        )
     return {"items": items, "next_cursor": None}
 
 
@@ -261,6 +288,53 @@ def version_distributions(version_id: str, session: Db) -> Json:
         }
 
     return _cached(("dist", version_id), build)
+
+
+@router.get("/versions/{version_id}/columns", response_model=schemas.VersionColumns)
+def version_columns(version_id: str, session: Db) -> Json:
+    """A tabular version as a table of columns: kind, role, encoding, missing, distinct and
+    distribution over its accepted rows (DATA-7.5, ADR-0019 Addendum B rule 32)."""
+    version, path = registry.manifest_for(session, get_settings().data_dir, version_id)
+    if version.dtype != "tabular":
+        raise ValidationFailed(
+            f"{version_id} is not a table; only tabular versions have columns.",
+            suggested_action="Open the Columns tab of a tabular version.",
+        )
+    return _cached(("columns", version_id), lambda: columns.summarise(path, version_id=version_id))
+
+
+class PreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    operations: list[dict[str, Any]] = Field(
+        default_factory=lambda: list[dict[str, Any]](),
+        max_length=transform.MAX_OPERATIONS,
+        description="The transform's operations, as in stages.transform.operations; empty "
+        "shows the raw rows.",
+    )
+    limit: int = Field(default=transform_stage.PREVIEW_ROWS, ge=1, le=50)
+
+
+@router.post("/versions/{version_id}/transform/preview", response_model=schemas.TransformPreview)
+def transform_preview(version_id: str, body: PreviewRequest, session: Db) -> Json:
+    """The first rows of a raw table version after the operations, computed by the
+    transform stage's own code, so they equal the stage's first rows (DATA-7.5.AC1). Refused
+    operations are a 422 with the same errors[].loc as POST /jobs (rule 26)."""
+    _, path = registry.manifest_for(session, get_settings().data_dir, version_id)
+    operations: list[Any] = []
+    if body.operations:
+        try:
+            config = transform.TransformConfig.model_validate({"operations": body.operations})
+        except ValidationError as exc:
+            raise ValidationFailed(
+                "An operation did not pass validation.",
+                suggested_action="Fix the fields listed in 'errors'.",
+                errors=field_problems("transform", exc),
+            ) from exc
+        operations = list(config.operations)
+    return transform_stage.preview(
+        path, version_id=version_id, operations=operations, limit=body.limit
+    )
 
 
 @router.get("/versions/{version_id}/diff", response_model=schemas.VersionDiff)

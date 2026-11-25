@@ -275,6 +275,8 @@ class TypeInfo:
     trainable: bool
     """Whether the training runtime accepts it (tabular and text since M10)."""
     note: str
+    source: str = ""
+    """What a source folder of this type holds, in one line (the Start pipeline drawer)."""
 
 
 TYPE_INFO: dict[str, TypeInfo] = {
@@ -286,6 +288,7 @@ TYPE_INFO: dict[str, TypeInfo] = {
         ("clip_score", "cider_d"),
         False,
         "Captioned by the label stage; evaluated, not trained by the builder.",
+        "image files; captioned and scored by the label stage",
     ),
     "labelled_images": TypeInfo(
         "labelled_images",
@@ -295,6 +298,7 @@ TYPE_INFO: dict[str, TypeInfo] = {
         ("accuracy", "macro_f1"),
         True,
         "Transformers need a layer that cuts images into patches, which the builder does not have.",
+        "class folders, or images with a CSV of labels",
     ),
     "tabular": TypeInfo(
         "tabular",
@@ -304,6 +308,7 @@ TYPE_INFO: dict[str, TypeInfo] = {
         ("accuracy", "macro_f1"),
         True,
         "Classification or regression, by the target's kind; trains on a split version.",
+        "one .csv or .parquet table",
     ),
     "labelled_text": TypeInfo(
         "labelled_text",
@@ -313,5 +318,6 @@ TYPE_INFO: dict[str, TypeInfo] = {
         ("accuracy", "macro_f1"),
         True,
         "Trains on a tokenize version: its tokens and vocabulary fix the input.",
+        ".jsonl, or .txt files in class folders",
     ),
 }

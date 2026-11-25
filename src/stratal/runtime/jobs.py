@@ -172,7 +172,8 @@ def create_job_from_plan(
     return job, Enqueue(job.id, 0, first_queue)
 
 
-def _field_problems(stage: str, exc: ValidationError) -> list[FieldProblem]:
+def field_problems(stage: str, exc: ValidationError) -> list[FieldProblem]:
+    """A stage config's validation errors, each at ``["stages", stage, …]``."""
     return [
         FieldProblem(
             loc=["stages", stage, *error["loc"]],
@@ -341,7 +342,7 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
                 _stage_overrides(dtype, request, name)
             )
         except ValidationError as exc:
-            problems.extend(_field_problems(name, exc))
+            problems.extend(field_problems(name, exc))
             continue
         plan.append((name, model.model_dump(mode="json")))
     problems.extend(_label_problems(dtype, plan))
@@ -983,7 +984,7 @@ def create_report_job(
         raise ValidationFailed(
             "The report request did not pass validation.",
             suggested_action="Fix the fields listed in 'errors'.",
-            errors=_field_problems("evaluate", exc),
+            errors=field_problems("evaluate", exc),
         ) from None
     if resolved.review_id is not None:
         reviews.review_for_report(session, version_id, resolved.review_id)
