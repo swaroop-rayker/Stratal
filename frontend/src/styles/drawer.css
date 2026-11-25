@@ -87,3 +87,45 @@
 /* SCR-09 v2: the chosen kind on the Model card. */
 .kindtag { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); font: var(--fw-medium) var(--fs-12) var(--font-ui); color: var(--text-primary); }
 .kindtag svg.i { width: 12px; height: 12px; color: var(--text-secondary); }
+
+/* ============================================================================ Start pipeline drawer, type first (M11b; approved hi-fi SCR-02drawer_v1) */
+.drawer .sp-kinds-set { display: flex; flex-direction: column; gap: var(--sp-2); border: 0; margin: 0; padding: 0; }
+.drawer .sp-kinds-set legend { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); margin-bottom: var(--sp-2); padding: 0; display: flex; gap: var(--sp-2); align-items: center; }
+.drawer .sp-kinds-set .kc { padding: var(--sp-2) var(--sp-3); }
+.drawer .sp-kinds-set .kc b { font-size: var(--fs-13); }
+.drawer .sp-kinds-set .err { color: var(--danger); font-size: var(--fs-11); }
+.drawer .kc[aria-disabled=true] { grid-template-columns: 1fr; padding: var(--sp-2) var(--sp-3); }
+.drawer .kc[aria-disabled=true] .what { grid-column: 1; }
+.drawer .kc[aria-disabled=true] b { font-size: var(--fs-13); }
+.drawer .sp-chosen { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.drawer .sp-chosen b { color: var(--text-primary); font-weight: var(--fw-semibold); font-size: var(--fs-13); }
+.drawer .sp-chosen .spacer { flex: 1; }
+.drawer .sp-why-chain { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-muted); }
+.drawer .sp-st { display: grid; grid-template-columns: 20px auto 1fr auto; align-items: center; gap: 2px var(--sp-2); padding: 6px var(--sp-3); min-height: 44px; border-top: var(--bw) solid var(--border); font-size: var(--fs-13); }
+.drawer .sp-st:first-child { border-top: 0; }
+.drawer .sp-st > svg.i { color: var(--text-muted); width: 12px; height: 12px; }
+.drawer .sp-st .expand { all: unset; cursor: pointer; display: inline-grid; place-items: center; width: 20px; height: 20px; color: var(--text-muted); border-radius: var(--r-xs); }
+.drawer .sp-st .expand:disabled { cursor: default; opacity: .45; }
+.drawer .sp-st .expand:focus-visible { outline: var(--focus-width) solid var(--focus); }
+.drawer .sp-st .expand svg.i { width: 12px; height: 12px; }
+.drawer .sp-st .name { font: var(--fw-medium) var(--fs-13) var(--font-mono); color: var(--text-primary); }
+.drawer .sp-st .what { grid-column: 2 / 4; grid-row: 2; font-size: var(--fs-12); color: var(--text-secondary); }
+.drawer .sp-st .what .mono { font-size: var(--fs-11); color: var(--text-primary); }
+.drawer .sp-st .stop { grid-column: 4; grid-row: 1 / 3; display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); color: var(--text-secondary); white-space: nowrap; cursor: pointer; }
+.drawer .sp-st .stop input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; }
+.drawer .sp-st .stop:has(input:checked) { color: var(--text-primary); font-weight: var(--fw-medium); }
+.drawer .sp-st.done { color: var(--text-muted); } .drawer .sp-st.done .name { color: var(--text-muted); font-weight: var(--fw-regular); } .drawer .sp-st.done .what { color: var(--text-muted); }
+.drawer .sp-st.notrun { background: var(--surface-sunken); } .drawer .sp-st.notrun .name { color: var(--text-secondary); font-weight: var(--fw-regular); } .drawer .sp-st.notrun .what { color: var(--text-muted); }
+.drawer .sp-st .opt { font: var(--fs-11) var(--font-ui); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); justify-self: start; }
+.drawer .sp-st .tg { grid-column: 4; grid-row: 1 / 3; }
+.drawer .sp-st.sel { box-shadow: inset 2px 0 0 var(--accent); }
+.drawer .st-form.one { grid-template-columns: 1fr; }
+.drawer .sp-kinds { display: flex; flex-wrap: wrap; gap: var(--sp-1); align-items: center; min-height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-sm); font-size: var(--fs-12); color: var(--text-secondary); }
+.drawer .sp-kinds .select { width: auto; height: var(--h-sm); font-size: var(--fs-12); }
+.drawer .sp-kinds .tag { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 2px 0 6px; border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.drawer .sp-kinds .tag button { all: unset; cursor: pointer; display: inline-grid; place-items: center; width: 16px; height: 16px; color: var(--text-muted); }
+.drawer .sp-kinds .tag svg.i { width: 10px; height: 10px; }
+.drawer .sp-note { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); font-size: var(--fs-12); color: var(--text-primary); border: var(--bw) solid color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); }
+.drawer .sp-note svg.i { color: var(--info); margin-top: 2px; flex: none; }
+.drawer .sp-note .btn { margin-left: auto; }
+.drawer .sp-wait { padding: var(--sp-4); text-align: center; border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }

@@ -16,6 +16,7 @@ import { bytes, count } from "../../lib/format";
 import { useCrumbs } from "../../shell/hooks";
 import { TrainDrawer, trainable } from "../build/TrainDrawer";
 import { StartPipelineDrawer } from "../datasets/StartPipelineDrawer";
+import { ColumnsTab, transformOf } from "./ColumnsTab";
 import { CompareTab } from "./CompareVersions";
 import { DistributionsTab } from "./Distributions";
 import { LineageStrip } from "./LineageStrip";
@@ -299,9 +300,20 @@ function ReviewModal({ version, open, onOpenChange }: { version: Version; open: 
   );
 }
 
-function Actions({ version, stats, onContinue, onReview, onTrain, compact }: {
+/** Where SCR-15 opens from this version (SCREENS.md v4): always the raw version in the
+ * lineage, with the transform's operations loaded when there is one. Tables only. */
+function transformLink(version: Version, lineage: Lineage | undefined): { to: string; edit: boolean } | null {
+  if (version.dtype !== "tabular") return null;
+  const raw = version.stage === "ingest" ? version.version_id : lineage?.ancestors.find((a) => a.stage === "ingest")?.version_id;
+  if (!raw) return null;
+  const t = transformOf(version.version_id, version.stage, version.config, lineage);
+  return t ? { to: `/versions/${raw}/transform?from=${t.versionId}`, edit: true } : { to: `/versions/${raw}/transform`, edit: false };
+}
+
+function Actions({ version, stats, lineage, onContinue, onReview, onTrain, compact }: {
   version: Version;
   stats: Stats | undefined;
+  lineage?: Lineage | undefined;
   onContinue: () => void;
   onReview: () => void;
   onTrain: () => void;
@@ -368,6 +380,13 @@ function Actions({ version, stats, onContinue, onReview, onTrain, compact }: {
       Train a model…
     </Button>
   );
+  const tx = transformLink(version, lineage);
+  const transformButton = tx ? (
+    <Button onClick={() => void navigate(tx.to)}>
+      <Icon name="sliders" />
+      {tx.edit ? "Edit the transform…" : "Transform…"}
+    </Button>
+  ) : null;
   const continueButton = (
     <Button
       variant={captioned ? "secondary" : "primary"}
@@ -392,6 +411,7 @@ function Actions({ version, stats, onContinue, onReview, onTrain, compact }: {
       <span id="why-review" className="sr-only">{captioned ? "" : why}</span>
       <span id="why-train" className="sr-only">{trainOk ? "" : whyTrain}</span>
       <span className="wide-action">
+        {transformButton}
         {trainButton}
         {reportButton}
         {version.created_by_job_id ? (
@@ -415,6 +435,9 @@ function Actions({ version, stats, onContinue, onReview, onTrain, compact }: {
                 <Menu.Item onSelect={() => void copy(version.version_id)}><Icon name="copy" />Copy ID</Menu.Item>
                 {version.created_by_job_id ? (
                   <Menu.Item onSelect={() => void navigate(`/jobs/${version.created_by_job_id ?? ""}`)}><Icon name="list" />Open job</Menu.Item>
+                ) : null}
+                {tx ? (
+                  <Menu.Item onSelect={() => void navigate(tx.to)}><Icon name="sliders" />{tx.edit ? "Edit the transform…" : "Transform…"}</Menu.Item>
                 ) : null}
                 <Menu.Item disabled={!trainOk} onSelect={onTrain}><Icon name="plus" />Train a model…</Menu.Item>
                 {reportable ? (
@@ -588,7 +611,7 @@ export function VersionScreen() {
           </div>
         </div>
         <span className="spacer" />
-        <Actions version={v} stats={stats.data} onContinue={() => { setDrawer(true); }} onReview={() => { setReview(true); }} onTrain={() => { setTraining(true); }} />
+        <Actions version={v} stats={stats.data} lineage={lineage.data} onContinue={() => { setDrawer(true); }} onReview={() => { setReview(true); }} onTrain={() => { setTraining(true); }} />
       </div>
 
       {lineage.data ? (
@@ -635,6 +658,11 @@ export function VersionScreen() {
           <Tabs.Trigger className="tab" value="rows">
             Rows <span className="count">{count(v.row_count)}</span>
           </Tabs.Trigger>
+          {v.dtype === "tabular" ? (
+            <Tabs.Trigger className="tab" value="columns">
+              Columns
+            </Tabs.Trigger>
+          ) : null}
           <Tabs.Trigger className="tab" value="reasons">
             Reasons <span className="count">{stats.data ? stats.data.reasons.length : "…"}</span>
           </Tabs.Trigger>
@@ -673,6 +701,19 @@ export function VersionScreen() {
             }}
           />
         </Tabs.Content>
+        {v.dtype === "tabular" ? (
+          <Tabs.Content value="columns" className="panel scroll">
+            <ColumnsTab
+              versionId={v.version_id}
+              stage={v.stage}
+              config={v.config}
+              lineage={lineage.data}
+              active={tab === "columns"}
+              onShowRows={(reason) => { set({ reason: reason || null, status: reason ? null : "rejected", tab: null }); }}
+              onEditTransform={(raw, from) => void navigate(`/versions/${raw}/transform?from=${from}`)}
+            />
+          </Tabs.Content>
+        ) : null}
         <Tabs.Content value="reasons" className="panel">
           {stats.data ? (
             <Reasons stats={stats.data} onShow={(code) => { set({ reason: code, status: null, tab: null }); }} />
