@@ -135,8 +135,16 @@ def build_estimator(spec: SklearnSpec, task: Task, seed: int) -> Any:
     raise AssertionError(f"no estimator {name}")
 
 
-def preprocessor(numeric: list[str], categorical: list[str]) -> Any:
-    """Imputing, scaling and encoding, fitted with the pipeline on train only (ML-1.3)."""
+def preprocessor(
+    numeric: list[str],
+    categorical: list[str],
+    ordinal: list[tuple[str, tuple[str, ...]]] | None = None,
+) -> Any:
+    """Imputing, scaling and encoding, fitted with the pipeline on train only (ML-1.3).
+
+    An ``ordinal`` column (DATA-7.3) is encoded in its given order; a value outside the
+    order, or missing, becomes -1 and is then imputed with the median position and
+    scaled like a number (ADR-0019 rule 29)."""
     pipeline, compose = _sk("pipeline"), _sk("compose")
     impute, prep = _sk("impute"), _sk("preprocessing")
     parts: list[tuple[str, Any, list[str]]] = []
@@ -169,6 +177,28 @@ def preprocessor(numeric: list[str], categorical: list[str]) -> Any:
                 categorical,
             )
         )
+    for name, order in ordinal or []:
+        parts.append(
+            (
+                f"ordinal:{name}",
+                pipeline.Pipeline(
+                    [
+                        ("missing", impute.SimpleImputer(strategy="constant", fill_value="")),
+                        (
+                            "encode",
+                            prep.OrdinalEncoder(
+                                categories=[list(order)],
+                                handle_unknown="use_encoded_value",
+                                unknown_value=-1,
+                            ),
+                        ),
+                        ("impute", impute.SimpleImputer(missing_values=-1, strategy="median")),
+                        ("scale", prep.StandardScaler()),
+                    ]
+                ),
+                [name],
+            )
+        )
     return compose.ColumnTransformer(parts)
 
 
@@ -176,7 +206,7 @@ def build_pipeline(spec: SklearnSpec, data: TabularData, seed: int) -> Any:
     task = task_for(spec.estimator, data.task)
     return _sk("pipeline").Pipeline(
         [
-            ("preprocess", preprocessor(data.numeric, data.categorical)),
+            ("preprocess", preprocessor(data.numeric, data.categorical, data.ordinal)),
             ("model", build_estimator(spec, task, seed)),
         ]
     )

@@ -44,17 +44,39 @@ class TabularData:
 
     @property
     def features(self) -> list[str]:
-        return [c.name for c in self.schema.columns if c.role == "feature"]
+        """The features a model sees: every feature but those set to ``ignore`` (DATA-7.3)."""
+        return [c.name for c in self.schema.columns if c.role == "feature" and not c.ignored]
+
+    def _encoded(self, *encodings: str) -> list[str]:
+        return [
+            c.name
+            for c in self.schema.columns
+            if c.role == "feature" and c.effective_encoding() in encodings
+        ]
 
     @property
     def numeric(self) -> list[str]:
-        return [c.name for c in self.schema.columns if c.role == "feature" and c.kind == "numeric"]
+        return self._encoded("number")
 
     @property
     def categorical(self) -> list[str]:
+        """One-hot columns. A classical model one-hot encodes ``embedding`` columns too
+        (ADR-0019 rule 29)."""
+        return self._encoded("one_hot", "embedding")
+
+    @property
+    def ordinal(self) -> list[tuple[str, tuple[str, ...]]]:
+        """``ordinal`` columns with their category order (DATA-7.3)."""
         return [
-            c.name for c in self.schema.columns if c.role == "feature" and c.kind == "categorical"
+            (c.name, c.order or ())
+            for c in self.schema.columns
+            if c.role == "feature" and c.effective_encoding() == "ordinal"
         ]
+
+    @property
+    def text_columns(self) -> list[str]:
+        """Columns handed to scikit-learn as strings: one-hot, then ordinal."""
+        return [*self.categorical, *(name for name, _ in self.ordinal)]
 
     @property
     def classes(self) -> list[str]:
@@ -65,12 +87,17 @@ class TabularData:
 
     def arrow(self, split: str) -> Any:
         """The split's features as a PyArrow table: numbers as float64, categories as strings."""
-        return to_arrow(self.splits[split].columns, self.numeric, self.categorical)
+        return to_arrow(self.splits[split].columns, self.numeric, self.text_columns)
 
     def facts(self) -> DataFacts:
         train = self.splits["train"]
-        width = len(self.numeric) + sum(
-            len({v for v in train.columns[name] if v is not None}) + 1 for name in self.categorical
+        width = (
+            len(self.numeric)
+            + len(self.ordinal)
+            + sum(
+                len({v for v in train.columns[name] if v is not None}) + 1
+                for name in self.categorical
+            )
         )
         return DataFacts(train_rows=len(train), encoded_width=width)
 
@@ -101,7 +128,7 @@ def load_tabular(manifest: Path) -> TabularData:
             suggested_action="Train classical models on a split of a tabular dataset.",
         )
     task = table_task(schema)
-    features = [c.name for c in schema.columns if c.role == "feature"]
+    features = [c.name for c in schema.columns if c.role == "feature" and not c.ignored]
     splits: dict[str, SplitTable] = {
         s: SplitTable({n: [] for n in features}) for s in ("train", "val", "test")
     }

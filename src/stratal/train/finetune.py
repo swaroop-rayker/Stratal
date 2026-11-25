@@ -110,10 +110,10 @@ def _classes(classes: Sequence[str]) -> str:
 
 def _table_columns(prep: Any) -> str:
     numeric = [c.name for c in prep.numeric]
+    ordinal = [f"{c.name} (ordinal)" for c in getattr(prep, "ordinal", ())]
     categorical = [c.name for c in prep.categorical]
-    return f"{len(numeric)} numeric, {len(categorical)} categorical: " + ", ".join(
-        numeric + categorical
-    )
+    kinds = f"{len(numeric)} numeric, " + (f"{len(ordinal)} ordinal, " if ordinal else "")
+    return kinds + f"{len(categorical)} categorical: " + ", ".join(numeric + ordinal + categorical)
 
 
 def _vocab(engine: Engine, data_dir: Path, version_id: str) -> dict[str, Any] | None:

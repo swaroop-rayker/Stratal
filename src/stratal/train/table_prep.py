@@ -10,6 +10,10 @@ train split (BUILD-1.3), the train stage can encode every split, and
   plus one slot for a category train never had, which a missing value also
   takes. Its width is categories + 1, as :class:`stratal.build.tabular.TabularColumn`
   counts it.
+* Ordinal column (DATA-7.3): the category's position in the schema's order, as one
+  number; a category outside the order, or missing, takes the train split's median
+  position; then standardised like a number (ADR-0019 rule 29).
+* A column set to ``ignore`` is left out.
 * Target: for classification, the sorted classes; for regression, its mean and
   standard deviation, so the network learns a standardised target and its
   predictions are scaled back.
@@ -40,6 +44,23 @@ class NumericColumn:
 
 
 @dataclass(frozen=True)
+class OrdinalColumn:
+    name: str
+    order: tuple[str, ...]
+    mean: float
+    std: float
+    median: float
+
+    def position(self, value: Any) -> float:
+        if value is None:
+            return self.median
+        try:
+            return float(self.order.index(str(value)))
+        except ValueError:
+            return self.median
+
+
+@dataclass(frozen=True)
 class CategoricalColumn:
     name: str
     categories: tuple[str, ...]
@@ -54,11 +75,25 @@ class TablePrep:
     """Classification: the sorted classes, index order. Regression: empty."""
     target_mean: float = 0.0
     target_std: float = 1.0
+    ordinal: tuple[OrdinalColumn, ...] = ()
 
     # ------------------------------------------------------------------ shape
     @property
     def width(self) -> int:
-        return len(self.numeric) + sum(len(c.categories) + 1 for c in self.categorical)
+        return (
+            len(self.numeric)
+            + len(self.ordinal)
+            + sum(len(c.categories) + 1 for c in self.categorical)
+        )
+
+    @property
+    def names(self) -> list[str]:
+        """The feature columns in the order they are encoded."""
+        return [
+            *(c.name for c in self.numeric),
+            *(c.name for c in self.ordinal),
+            *(c.name for c in self.categorical),
+        ]
 
     @property
     def outputs(self) -> int:
@@ -67,7 +102,9 @@ class TablePrep:
 
     def columns(self) -> list[TabularColumn]:
         """The input block's columns (one-hot), for the builder's figures."""
-        return [TabularColumn(name=c.name, kind="numeric") for c in self.numeric] + [
+        return [
+            TabularColumn(name=c.name, kind="numeric") for c in [*self.numeric, *self.ordinal]
+        ] + [
             TabularColumn(name=c.name, kind="categorical", categories=max(1, len(c.categories)))
             for c in self.categorical
         ]
@@ -75,7 +112,7 @@ class TablePrep:
     # ------------------------------------------------------------------ encoding
     def encode(self, columns: Mapping[str, Sequence[Any]]) -> list[list[float]]:
         """Rows of features (values by column name, as lists) as encoded vectors."""
-        names = [c.name for c in self.numeric] + [c.name for c in self.categorical]
+        names = self.names
         count = len(columns[names[0]]) if names else 0
         rows: list[list[float]] = [[] for _ in range(count)]
         for column in self.numeric:
@@ -84,6 +121,9 @@ class TablePrep:
                 if not math.isfinite(number):
                     number = column.median
                 rows[i].append((number - column.mean) / column.std)
+        for column in self.ordinal:
+            for i, value in enumerate(columns[column.name]):
+                rows[i].append((column.position(value) - column.mean) / column.std)
         for column in self.categorical:
             index = {category: k for k, category in enumerate(column.categories)}
             unknown = len(column.categories)
@@ -95,8 +135,7 @@ class TablePrep:
         return rows
 
     def encode_record(self, record: Mapping[str, Any]) -> list[float]:
-        names = [c.name for c in self.numeric] + [c.name for c in self.categorical]
-        return self.encode({n: [record.get(n)] for n in names})[0]
+        return self.encode({n: [record.get(n)] for n in self.names})[0]
 
     def target(self, values: Sequence[Any]) -> list[int] | list[float]:
         """Training targets: class indices, or the standardised value."""
@@ -120,6 +159,16 @@ class TablePrep:
                 ],
                 "categorical": [
                     {"name": c.name, "categories": list(c.categories)} for c in self.categorical
+                ],
+                "ordinal": [
+                    {
+                        "name": c.name,
+                        "order": list(c.order),
+                        "mean": c.mean,
+                        "std": c.std,
+                        "median": c.median,
+                    }
+                    for c in self.ordinal
                 ],
                 "task": self.task,
                 "classes": list(self.classes),
@@ -149,6 +198,16 @@ class TablePrep:
             classes=tuple(str(c) for c in raw["classes"]),
             target_mean=float(raw["target_mean"]),
             target_std=float(raw["target_std"]),
+            ordinal=tuple(
+                OrdinalColumn(
+                    str(c["name"]),
+                    tuple(str(x) for x in c["order"]),
+                    float(c["mean"]),
+                    float(c["std"]),
+                    float(c["median"]),
+                )
+                for c in raw.get("ordinal", [])
+            ),
         )
 
 
@@ -180,6 +239,16 @@ def fit(data: TabularData) -> TablePrep:
         median = _median(present)
         mean, std = _spread(present)
         numeric.append(NumericColumn(name, mean, std, median))
+    ordinal: list[OrdinalColumn] = []
+    for name, order in data.ordinal:
+        index = {category: float(k) for k, category in enumerate(order)}
+        known = [index[str(v)] for v in train.columns[name] if v is not None and str(v) in index]
+        median = _median(known) if known else (len(order) - 1) / 2
+        positions = [
+            index.get(str(v), median) if v is not None else median for v in train.columns[name]
+        ]
+        mean, std = _spread(positions)
+        ordinal.append(OrdinalColumn(name, tuple(order), mean, std, median))
     categorical = [
         CategoricalColumn(
             name, tuple(sorted({str(v) for v in train.columns[name] if v is not None}))
@@ -187,9 +256,23 @@ def fit(data: TabularData) -> TablePrep:
         for name in data.categorical
     ]
     if data.task == "classification":
-        return TablePrep(tuple(numeric), tuple(categorical), "classification", tuple(data.classes))
+        return TablePrep(
+            tuple(numeric),
+            tuple(categorical),
+            "classification",
+            tuple(data.classes),
+            ordinal=tuple(ordinal),
+        )
     target_mean, target_std = _spread([float(v) for v in train.target])
-    return TablePrep(tuple(numeric), tuple(categorical), "regression", (), target_mean, target_std)
+    return TablePrep(
+        tuple(numeric),
+        tuple(categorical),
+        "regression",
+        (),
+        target_mean,
+        target_std,
+        ordinal=tuple(ordinal),
+    )
 
 
 def block_figures(prep: TablePrep) -> tuple[int, int]:
