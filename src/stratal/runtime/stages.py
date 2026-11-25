@@ -28,6 +28,8 @@ from stratal.data.records import LABELLED_TEXT, TABULAR
 from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
 from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitUnits, run_split
 from stratal.data.tokenize import TokenizeConfig, run_tokenize
+from stratal.data.transform import TransformConfig
+from stratal.data.transform_stage import run_transform
 from stratal.data.versioning import derive_version_identity
 from stratal.db.models import Dataset, EvalReport
 from stratal.eval.report import OWNER_STATS, EvaluateConfig, ReportStats, assemble_phase1_report
@@ -55,7 +57,8 @@ PIPELINE_ORDERS: dict[str, tuple[str, ...]] = {
     LABELLED_IMAGES: ("ingest", "clean", "preprocess", "split"),
     # Records, not files (ADR-0019): their own clean stages; text is tokenized after the split,
     # so the vocabulary comes from train only.
-    TABULAR: ("ingest", "clean_table", "split"),
+    # transform runs only when the request gives it operations (ADR-0019 Addendum B rule 25).
+    TABULAR: ("ingest", "transform", "clean_table", "split"),
     LABELLED_TEXT: ("ingest", "clean_text", "split", "tokenize"),
 }
 """Each dataset type's stages, in order (DATA-5.2)."""
@@ -376,6 +379,29 @@ register(
     )
 )
 register(StageDef("tokenize", "cpu", TokenizeConfig, _run_tokenize))
+
+
+def _run_transform(run: StageRun) -> StageResult:
+    """A table's raw version through its operations (DATA-7.1, ADR-0019 Addendum B)."""
+
+    def body(given: DerivedInput) -> DerivedOutput:
+        result = run_transform(
+            parent_manifest=given.manifest,
+            parent_version_id=given.version_id,
+            data_dir=run.data_dir,
+            config=TransformConfig.model_validate(given.config),
+            derive=derive_version_identity,
+            sink=run.ctx,
+            checkpoint=run.ctx.raise_if_cancelled,
+        )
+        return DerivedOutput(result.record, 0, result.metrics)
+
+    return run_derived_stage(run, stage="transform", config_model=TransformConfig, body=body)
+
+
+register(StageDef("transform", "cpu", TransformConfig, _run_transform))
+OPTIONAL_STAGES = frozenset({"transform"})
+"""Stages a pipeline runs only when the request configures them (rule 25)."""
 
 
 def _owner_unit_missing(stage: str, exc: NotImplementedError) -> StratalError:

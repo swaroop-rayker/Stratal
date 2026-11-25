@@ -68,7 +68,13 @@ the train split (ML-1.3), so the transform refuses them by name (DATA-7.1.AC2)."
 
 
 class _Op(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        validate_by_name=True,
+        validate_by_alias=True,
+        serialize_by_alias=True,
+    )
 
 
 _Name = Annotated[str, Field(min_length=1, max_length=128)]
