@@ -198,3 +198,4 @@
 .scr03 .col-bars .bar { height: 8px; background: var(--surface); border-radius: 1px; }
 .scr03 .col-bars .bar i { display: block; height: 100%; background: var(--cat-1); border-radius: 1px; }
 .scr03 .col-bars .r { text-align: right; }
+.scr03 .col-t .col-bins td, .scr03 .col-t .col-bins th { height: auto; }

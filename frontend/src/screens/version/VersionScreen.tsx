@@ -87,10 +87,18 @@ function Tiles({ version, stats, lineage, pressed, onPress, semantic, onSemantic
   const context: Record<Status, string> = {
     accepted: `${((versionCount(version, "accepted") / total) * 100).toFixed(1)}%${pre && typeof pre.max_side === "number" ? ` · copies ≤ ${String(pre.max_side)} px` : ""}`,
     rejected: rejected.length ? `at ${rejectStages.join(", ")} · ${String(rejected.length)} ${rejected.length === 1 ? "reason" : "reasons"}` : "none",
-    duplicate: configOf(lineage, version, "clean") ? `${count(rows("exact_duplicate"))} exact · ${count(rows("near_duplicate"))} near` : "no clean stage yet",
+    duplicate: configOf(lineage, version, "clean")
+      ? `${count(rows("exact_duplicate"))} exact · ${count(rows("near_duplicate"))} near`
+      : configOf(lineage, version, "clean_table") ?? configOf(lineage, version, "clean_text")
+        ? `${count(rows("exact_duplicate"))} exact · checked at ${version.dtype === "labelled_text" ? "clean_text" : "clean_table"}`
+        : "no clean stage yet",
     filtered: filter
       ? `${((versionCount(version, "filtered") / total) * 100).toFixed(1)}% · CLIP below ${String(filter.clip_threshold)}`
-      : "no filter stage yet",
+      : rows("transform_filter")
+        ? `by the transform's filter (DATA-7.4)`
+        : version.dtype === "tabular" || version.dtype === "labelled_text"
+          ? `no filter for ${version.dtype === "tabular" ? "tables" : "texts"}`
+          : "no filter stage yet",
   };
   return (
     <div className={clusters ? "tiles five" : "tiles"}>

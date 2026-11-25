@@ -272,6 +272,22 @@ function OpCard({ op, index, total, schema, columns, sample, errors, summary, on
   );
 }
 
+/** The resulting columns in order, each dropped one struck through where it was. */
+export function chipOrder(base: Col[], result: Col[], dropped: Col[], ops: Op[]): { col: Col; gone: boolean }[] {
+  const renamedFrom = new Map(ops.filter((o) => o.op === "rename").map((o) => [String(o["to"]), String(o["from"])]));
+  const origin = (c: Col) => {
+    const i = base.findIndex((b) => b.name === (renamedFrom.get(c.name) ?? c.name));
+    return i < 0 ? Number.POSITIVE_INFINITY : i;
+  };
+  const gone = [...dropped].sort((a, b) => base.indexOf(a) - base.indexOf(b));
+  const out: { col: Col; gone: boolean }[] = [];
+  for (const c of result) {
+    while (gone.length && base.indexOf(gone[0] as Col) < origin(c)) out.push({ col: gone.shift() as Col, gone: true });
+    out.push({ col: c, gone: false });
+  }
+  return [...out, ...gone.map((col) => ({ col, gone: true }))];
+}
+
 function castColumn(detail: string | null | undefined): string | null {
   const m = /^'([^']+)' is /.exec(detail ?? "");
   return m?.[1] ?? null;
@@ -637,14 +653,17 @@ function Editor({ version: v, from, loadedOps }: { version: Schemas["Version"]; 
               </span>
             </header>
             <div className="tx-chips">
-              {baseCols.filter((c) => dropped.includes(c)).map((c) => <span key={`gone-${c.name}`} className="tx-chip gone" title="dropped">{c.name}</span>)}
-              {resultCols.map((c) => (
-                <span key={c.name} className={`tx-chip${changed.has(c.name) ? " chg" : ""}${c.role === "target" ? " tgt" : ""}`}>
-                  {c.name}
-                  {c.role === "target" ? <b>target</b> : null}
-                  {changed.has(c.name) && c.role !== "target" ? <small>{renamed.has(c.name) && !baseCols.some((b) => b.name === c.name) ? "renamed" : `${c.kind}${c.encoding ? ` · ${c.encoding}` : ""}`}</small> : null}
-                </span>
-              ))}
+              {chipOrder(baseCols, resultCols, dropped, ops).map(({ col: c, gone }) =>
+                gone ? (
+                  <span key={`gone-${c.name}`} className="tx-chip gone" title="dropped">{c.name}</span>
+                ) : (
+                  <span key={c.name} className={`tx-chip${changed.has(c.name) ? " chg" : ""}${c.role === "target" ? " tgt" : ""}`}>
+                    {c.name}
+                    {c.role === "target" ? <b>target</b> : null}
+                    {changed.has(c.name) && c.role !== "target" ? <small>{renamed.has(c.name) && !baseCols.some((b) => b.name === c.name) ? "renamed" : `${c.kind}${c.encoding ? ` · ${c.encoding}` : ""}`}</small> : null}
+                  </span>
+                ),
+              )}
             </div>
           </section>
           <section className={`tx-prev${preview.isFetching ? " stale" : ""}`}>

@@ -38,7 +38,7 @@
 .scr15 .tx-op.bad { border-color: var(--danger); }
 .scr15 .tx-op .hd { display: flex; align-items: center; gap: var(--sp-2); }
 .scr15 .tx-op .no { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-muted); width: 16px; text-align: right; font-variant-numeric: tabular-nums; }
-.scr15 .tx-op .select { height: var(--h-sm); width: auto; max-width: 100%; padding: 0 var(--sp-2); font: var(--fs-12) var(--font-mono); }
+.scr15 .tx-op .select { height: var(--h-sm); width: auto; max-width: 100%; padding: 0 var(--sp-6) 0 var(--sp-2); font: var(--fs-12) var(--font-mono); }
 .scr15 .tx-op .select.op { font-weight: var(--fw-medium); }
 .scr15 .tx-op .select.bad, .scr15 .tx-op .tin.bad { border-color: var(--danger); }
 .scr15 .icon-btn { width: var(--h-sm); height: var(--h-sm); padding: 0; border: 0; background: transparent; color: var(--text-muted); display: inline-grid; place-items: center; border-radius: var(--r-sm); cursor: pointer; }
