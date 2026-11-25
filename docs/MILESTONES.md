@@ -701,14 +701,15 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 **Done when**
 
 - [x] ADR approved (ADR-0019 Addendum B, rules 25–33, accepted 2026-11-24); G1 revision and G2 for SCR-15, SCR-03's column view and the *Start pipeline* drawer approved (SCREENS.md v4 and its drawer amendment, 2026-11-24; low-fi and hi-fi for each, the same day: `design/screens/SCR-15_v1.html`, `SCR-03columns_v1.html`, `SCR-02drawer_v1.html`)
-- [ ] `test_DATA_7_1_*`: raw unchanged, same operations give the same ID, fitted operations refused
-- [ ] `test_DATA_7_2_*`: one test per operation; invalid ones refused naming the column; `cast_failed` rows kept and counted
-- [ ] `test_DATA_7_3_*`: `ignore`, `embedding` and `ordinal` reach the model's input as chosen
-- [ ] `test_DATA_7_4_*` (P2): derived columns and filters correct; anything outside the expression language refused
-- [ ] `test_DATA_7_5_*`: the column summary matches the manifest; the preview equals the stage's output
-- [ ] `test_DATA_5_2_*` (the drawer): a table source picked as *tabular* is saved as a table and offered only its own stages; unticking one stage leaves the later ones as they were; an image source still runs the image pipeline
-- [ ] G3 for SCR-15, SCR-03's column view and the *Start pipeline* drawer
-- [ ] Demo: drop a column of the wine table, change one column's kind, set an encoding, train on the result, and trace it back to raw on SCR-03
+- [x] `test_DATA_7_1_*`: raw unchanged, same operations give the same ID, fitted operations refused (`tests/unit/test_DATA_7_transform.py`, `tests/integration/test_M11b_transform.py`, 2026-11-25)
+- [x] `test_DATA_7_2_*`: one test per operation; invalid ones refused naming the column; `cast_failed` rows kept and counted
+- [x] `test_DATA_7_3_*`: `ignore`, `embedding` and `ordinal` reach the model's input as chosen (classical in `worker-cpu`, the network's input layer in `worker-gpu`, a trained run in `test_M11b_encodings.py`)
+- [x] `test_DATA_7_4_*` (P2): derived columns and filters correct; anything outside the expression language refused
+- [x] `test_DATA_7_5_*`: the column summary matches the manifest; the preview equals the stage's output
+- [x] `test_DATA_5_2_*` (the drawer): a table source picked as *tabular* is saved as a table and offered only its own stages; unticking one stage leaves the later ones as they were; an image source still runs the image pipeline (as approved in open point 7a: moving the one stop changes no other stage)
+- [ ] G3 for SCR-15, SCR-03's column view and the *Start pipeline* drawer (reports in `design/g3/SCR-15.md`, `SCR-03.md` and `SCR-02.md`, proposed 2026-11-25)
+- *Checks:* the full `check.ps1 -Gpu` (about 1.5 h) was not run, at the owner's request (2026-11-25, "skip the 1 and half hour gate"). Run instead: ruff, the format check and pyright over the repository; all unit tests in dev (583); the `ml` unit tests in `worker-cpu`; the PyTorch unit tests in `worker-gpu`; the M11b integration tests with the M10 records, M10 networks (torch), M5 split, M6 and DATA-3.3 lineage ones; the frontend's typecheck, lint, raw-hex rule, Vitest (147) and build; the live demo above.
+- [x] Demo: drop a column of the wine table, change one column's kind, set an encoding, train on the result, and trace it back to raw on SCR-03 (2026-11-25, live: SCR-15 built the four operations; `job_0125` made `ds_ec52a5ed363e` → `ds_26aa75e5a924` → `ds_b0138df9a9f2`; `job_0126` trained the Tabular MLP through `magnesium`'s embedding, input 35, test accuracy 1.00, `mv_1b9c4e8ad2ab`; `/predict` without `ash` gave `class_0`; the lineage reads raw → transform → clean_table → split)
 - [ ] Owner's OK to merge
 
 ---

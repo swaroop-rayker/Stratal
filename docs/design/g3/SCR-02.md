@@ -59,3 +59,42 @@ Frames B (no datasets), C (a first ingest still running), D (loading) and E (ver
 ## Tests
 
 `frontend/src/screens/datasets/DatasetsScreen.test.tsx`: `test_UI_2_1_*`, `test_DATA_3_4_*`.
+
+---
+
+# *Start pipeline* drawer, type first — Gate 3 comparison (M11b)
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-02drawer_v1.html`](../screens/SCR-02drawer_v1.html), G2 approved 2026-11-24 |
+| Built | `frontend/src/screens/datasets/StartPipelineDrawer.tsx`, `frontend/src/styles/drawer.css` (M11b section). API: `GET /dataset-types` (`stages`, `source`), `GET /sources` (`columns`) |
+| Checked | 2026-11-25, live at 1280 × 800, dark and light, from SCR-02 on `wine` with *Ingest*: `/sources/wine`, then *Tabular* |
+| Status | **Proposed for the owner's approval** |
+
+## Screenshot (in `SCR-02/`)
+
+| File | Mockup frame | What it shows |
+|---|---|---|
+| `live-drawer-B-wine-dark.jpg` | B | `/sources/wine` ("1 files · a table with 14 columns"), *Tabular* folded with *Change*, the dataset `wine` ("An existing dataset"), the stages, `ingest` open with `table.target` = `cultivar` chosen from the header and *table.kinds*, and *Start job · to split* |
+
+**Checked live, by the page's state:** the four type cards and "Choose what the folder holds" before a type; after *Tabular*, the stages `ingest → transform → clean_table → split` with the stop on `split`; moving the stop to `clean_table` marks only `split` "not run" and the button reads *Start job · to clean_table*; the drawer 480 px wide.
+
+## Differences from the mockup
+
+1. **The disabled *Start job*** keeps its label and gives its reason to screen readers ("Choose what the folder holds", "Choose the table's target", "Nothing left to run"); the mockup showed no visible reason either.
+2. **The `transform` row** has no chevron, since it has no settings; its switch (from a raw version) or *Stop after ingest* (from a folder) sits where the stop radio would be.
+3. ***table.kinds*** is a "Set a column's kind…" select that then offers *categorical* or *numeric* as two buttons, and lists the choices as tags.
+4. **Labelled images' and texts' ingest fields** come from the schema with only their type's fields (`min_size` and `label_from`; `text`), as the mockup's frame E says, not drawn there.
+
+## Not seen live
+
+The type-change notice with *Undo*, the version tab's transform toggle and "Nothing left to run" were checked through `StartPipelineDrawer.test.tsx`, not on the live screen. No job was started from the drawer during the check (Flow 6's runs came from SCR-15).
+
+## Accessibility
+
+- **Contrast:** 40 text elements in the drawer; dark lowest 5.15:1, light lowest 4.84:1.
+- **Keyboard:** the types are one fieldset of native radios with a legend; the stops are one radio group labelled *Stages*, one "Stop after …" radio per stage; the transform switch is a native checkbox named "transform: open the transform editor".
+
+## Tests
+
+`frontend/src/screens/datasets/StartPipelineDrawer.test.tsx` (5): `test_DATA_5_2_table_source_sends_tabular_and_only_table_stages`, `…_moving_the_stop_changes_no_other_stage`, `…_image_source_runs_the_image_pipeline`, `test_DATA_7_1_transform_toggle_opens_the_editor`, `…_from_a_folder_transform_offers_stop_after_ingest`; `DatasetsScreen.test.tsx`'s `pipelineBody` test. API: `test_DATA_5_2_dataset_types_list_their_stages_and_sources_their_columns`.

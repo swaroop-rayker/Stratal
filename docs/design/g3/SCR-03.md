@@ -99,3 +99,44 @@ Frame F (every row rejected) does not exist on this machine. It is covered by `t
 ## Tests
 
 `frontend/src/screens/version/VersionV2.test.tsx` (4); `tests/integration/test_M11_profile.py` (3), `tests/integration/test_M11_semantic.py` (the pipeline and the cluster view); `tests/unit/test_DATA_2_3_semantic_clusters.py` (13).
+
+---
+
+# SCR-03 v4 *Columns* tab — Gate 3 comparison (M11b)
+
+| | |
+|---|---|
+| Mockup | [`screens/SCR-03columns_v1.html`](../screens/SCR-03columns_v1.html), G2 approved 2026-11-24 |
+| Built | `frontend/src/screens/version/ColumnsTab.tsx`, the *Columns* tab and *Transform…* / *Edit the transform…* in `VersionScreen.tsx`, `frontend/src/styles/scr03.css` (v4 section). API: `GET /versions/{id}/columns` |
+| Checked | 2026-11-25, live at 1280 × 800, dark and light: wine's split `ds_b0138df9a9f2`, made by Flow 6's transform (`job_0125`) |
+| Status | **Proposed for the owner's approval** |
+
+## Screenshots (in `SCR-03/`)
+
+| File | Mockup frame | What it shows |
+|---|---|---|
+| `live-columns-B-transformed-dark.jpg` | B | The lineage raw → transform → clean_table → split; the operations callout with *Edit the transform…*; 13 columns over 178 accepted rows; `magnesium` categorical · embedding with its top categories (88 · 13, 86 · 11, 101 · 9, …) and "+48 more" |
+| `live-columns-A-expanded-light.jpg` | A (light) | `alcohol` expanded: 20 bins with the dashed median (13.05), the axis, and the two bin tables |
+
+**Measured:** the expanded panel 254 px tall (after the fix below); the table 1,005 px wide, no sideways scroll.
+
+## Differences from the mockup
+
+1. **The tiles now say what applies to a table:** "0 exact · checked at clean_table" and "no filter for tables" (or "by the transform's filter" when one ran). The built tiles said "no clean stage yet" and "no filter stage yet" for every table; fixed here, as the hi-fi showed.
+2. **The filters are native selects** ("Kind: all", "Role: all"), with "n of 13".
+3. ***Show them*** (rows not counted) opens Rows filtered to the first of their reasons.
+4. **"+N more"** counts every category beyond the five shown, so it is larger than the mockup's when the summary lists up to 50.
+5. **Fixed during the check:** the bin tables had taken the dense table's 32 px rows (the panel was 367 px); they now size to their text.
+
+## Not seen live
+
+`power.parquet` is not ingested, so a column above 10,000 distinct values and the "rows not counted" phrase on a large table were checked through `ColumnsTab.test.tsx` and `test_DATA_7_5_the_column_summary_matches_the_manifest`, not on screen. No version has an *ignore* column yet.
+
+## Accessibility
+
+- **Contrast:** dark 246 text elements, lowest 5.15:1; light 246, lowest 4.84:1 (the axis labels, as in the mockup).
+- **Keyboard:** each column row is focusable and expands with Enter or Space (`aria-expanded`); the headers sort with Enter (`aria-sort`). Every sparkline and histogram is an image whose label carries its numbers, and the bins are also tables.
+
+## Tests
+
+`frontend/src/screens/version/ColumnsTab.test.tsx` (5): `test_DATA_7_5_columns_tab_shows_each_column_and_expands_one`, `…_only_on_tabular_versions`, `…_a_transformed_version_lists_its_operations_and_edits_them_on_scr15`, `…_rows_not_counted_link_filters_rows`, `…_a_raw_table_offers_transform`. API: `test_DATA_7_5_the_column_summary_matches_the_manifest` (raw, transform, clean_table and split versions).
