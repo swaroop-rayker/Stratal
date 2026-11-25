@@ -83,6 +83,12 @@ def schema_to_json(schema: TableSchema) -> str:
     )
 
 
+def schema_hash(schema: TableSchema) -> str:
+    """The schema's SHA-256, recorded by the stages after ``transform`` in their config, so a
+    table's schema is part of its versions' identity (ADR-0019 Addendum B, as built)."""
+    return content_hash(schema_to_json(schema))
+
+
 def schema_from_json(text: str) -> TableSchema:
     raw: dict[str, Any] = json.loads(text)
     return TableSchema(tuple(column_from_json(c) for c in raw["columns"]))

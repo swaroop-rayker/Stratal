@@ -199,3 +199,36 @@ def test_DATA_7_2_a_new_target_readmits_and_clean_table_sees_the_new_duplicates(
     clean_rows, _ = _rows(clean["output_version_id"])
     # Only ash is left: its 7 values repeat, so clean_table marks every repeat a duplicate.
     assert sum(1 for r in clean_rows if r["status"] == "accepted") == 7
+
+
+def test_DATA_7_1_a_schema_only_transform_gives_its_own_downstream_versions(
+    runner: Runner, tmp_path: Path
+) -> None:
+    """set_encoding and reorder leave every row as it was; clean_table and split record
+    their input's schema hash, so they do not collide with the versions made from raw
+    (ADR-0019 Addendum B, as built)."""
+    api = Api(runner)
+    raw = _raw(api, tmp_path, "m11bschema")
+    straight = api.run({"from_version": raw})
+    ops = [{"op": "set_encoding", "column": "ash", "encoding": "ignore"}]
+    through = api.run({"from_version": raw, "stages": {"transform": {"operations": ops}}})
+
+    assert straight["state"] == through["state"] == "completed", (straight, through)
+    plain = {s["name"]: s["output_version_id"] for s in straight["stages"]}
+    encoded = {s["name"]: s["output_version_id"] for s in through["stages"]}
+    assert plain["clean_table"] != encoded["clean_table"]
+    assert plain["split"] != encoded["split"]
+    rows_plain, _ = _rows(plain["split"])
+    rows_encoded, manifest = _rows(encoded["split"])
+    assert [r["record"] for r in rows_plain] == [r["record"] for r in rows_encoded]
+    schema = table_schema_of(manifest)
+    assert schema is not None and next(c for c in schema.columns if c.name == "ash").ignored
+    with Session(get_engine()) as session:
+        clean = registry.get_version(session, encoded["clean_table"])
+        assert clean.parent_version_id == encoded["transform"]
+        assert (
+            clean.config["input_schema"]
+            != registry.get_version(session, plain["clean_table"]).config["input_schema"]
+        )
+    again = api.run({"from_version": raw, "stages": {"transform": {"operations": ops}}})
+    assert all(s["cache_hit"] for s in again["stages"])
