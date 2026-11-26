@@ -376,7 +376,7 @@ Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `belo
 |---|---|---|---|
 | `row_key` | | ingest | `<file>#<record or line number, 7 digits>`, e.g. `breast_cancer.csv#0000001`, `captions.jsonl#0000042` |
 | `sha256` | | ingest, `clean_text` | the hash of the row's content: the canonical `record`, or the text (after `clean_text`, the normalised text), so exact duplicates are found as for files |
-| `format` | | ingest | `CSV`, `PARQUET`, `JSONL` or `TXT` |
+| `format` | | ingest | `CSV`, `PARQUET`, `JSONL` or `TXT` (a text, or a table saved as delimited text and converted to Parquet, DATA-1.4.AC2) |
 | `record` | string | ingest | a table row's feature values as canonical JSON (keys sorted, numbers as floats, categories as strings, a missing value as null) |
 | `target_value` | float64 | ingest | a numeric target (regression); a categorical target is in `label` |
 | `text` | string | ingest, `clean_text` | the text; `clean_text` writes it back normalised |

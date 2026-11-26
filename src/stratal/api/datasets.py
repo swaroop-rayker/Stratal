@@ -18,6 +18,7 @@ from stratal.api.jobs import Db, Limit
 from stratal.core.errors import Conflict, NotFound, ValidationFailed
 from stratal.core.settings import get_settings
 from stratal.data import browse, columns, profile, registry, transform, transform_stage
+from stratal.data.delimited import DELIMITED_SUFFIXES, sniff
 from stratal.data.tables import TABLE_FORMATS, table_columns
 from stratal.db.models import Dataset, Derivation
 from stratal.label.semantic import cosine, unpack_vector
@@ -194,19 +195,37 @@ def get_blob(
     return FileResponse(path, media_type=media, headers=headers)
 
 
+_TEXT_LIMIT = 8
+"""Delimited-text files sniffed per folder at most: a text dataset may hold thousands."""
+
+
 def _walk(folder: FsPath) -> tuple[int, list[FsPath]]:
-    """The folder's file count, and its table files (.csv, .parquet)."""
+    """The folder's file count, and its table files: the .csv and .parquet ones, or, when
+    there are none, the delimited-text files that read as tables (DATA-1.4.AC2)."""
     count = 0
     found: list[FsPath] = []
+    texts: list[FsPath] = []
     for root, dirs, files in os.walk(folder):
         dirs[:] = [d for d in dirs if not d.startswith(".")]
         for name in files:
             if name.startswith("."):
                 continue
             count += 1
-            if FsPath(name).suffix.lower() in TABLE_FORMATS:
+            suffix = FsPath(name).suffix.lower()
+            if suffix in TABLE_FORMATS:
                 found.append(FsPath(root) / name)
-    return count, found
+            elif suffix in DELIMITED_SUFFIXES:
+                texts.append(FsPath(root) / name)
+    if found or len(texts) > _TEXT_LIMIT:
+        return count, found
+    return count, [p for p in texts if _is_table(p)]
+
+
+def _is_table(path: FsPath) -> bool:
+    try:
+        return sniff(path) is not None
+    except OSError:
+        return False
 
 
 def _columns(found: list[FsPath]) -> list[str] | None:

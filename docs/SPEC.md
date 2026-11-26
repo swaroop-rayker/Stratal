@@ -62,6 +62,10 @@ This document is the source of truth for what Stratal must do. It restates every
 - **DATA-1.4** `[P1][2]` The system shall ingest tabular (CSV/Parquet) and text (TXT/JSONL) sources.
   - `DATA-1.4.AC1` sample CSV and JSONL ingest without errors.
 
+> **Approved by the owner on 2026-11-26** ("Approved … let it be automatic"; added to M11b at the owner's request, after `household_power_consumption.txt` had to be converted by hand).
+
+  - `DATA-1.4.AC2` a table saved as delimited text (`.txt`, `.tsv`, `.dat` or `.data`, separated by `,` `;` tab or `|`) is detected automatically when a tabular source holds no `.csv` or `.parquet`: its separator and header row are detected, `?` is a missing value (as are the CSV null words in a number column, as for a CSV), and it is converted once to Parquet and ingested with the same rows and values as the same table saved as CSV. The source file is not changed. A `.txt` in a text source is still read as text.
+
 > **Approved by the owner on 2026-11-19** ("Approve all three"; M10's open points 11–13, added to the plan at the owner's request). Before it, a labelled image's class came only from its first folder (`label_from: folder`, DATA-5.2).
 
 - **DATA-1.5** `[P1][2]` The system shall take labelled images' classes from a CSV in the source folder that maps each image's path to its label (`label_from: {csv, path_column, label_column}`), as an alternative to class folders. Paths in the CSV are relative to the source folder. Single-label classification only: several labels per image, and a number per image, are not covered.

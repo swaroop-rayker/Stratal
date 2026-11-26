@@ -818,6 +818,11 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** The CSV's first pass keeps only each column's kind and the count, with PyArrow's own inference quirks, so existing IDs are unchanged (breast-cancer, diabetes and wine re-ingested to the same IDs).
 - **Why:** `power.parquet` (2,075,259 rows) peaks at 753 MiB of the 2,500 MiB limit, ingest and transform together; with mimalloc the process kept 628 MiB against 372 MiB.
 
+**Delimited-text tables, converted automatically** (DATA-1.4.AC2; the owner's request, 2026-11-26)
+- **What:** A tabular source with no `.csv` or `.parquet` may hold one `.txt`, `.tsv`, `.dat` or `.data` table; ingest detects it and converts it to Parquet, with no command and no UI.
+- **How:** `sniff` reads the first 64 KiB: one of `; tab , |` must split every line into the same number of fields (two or more); the header row is found by its text over number columns, or by distinct text names; the file is converted once (two passes, as for a CSV, with `?` also missing) to `converted/<hash>.parquet` in the data volume and read as Parquet, its rows keeping the text file's name and `TXT`.
+- **Why:** The owner had to convert the UCI power file by hand; the sources mount is read-only, so the converted file lives with the derived data; using the CSV's own type rules gives the same rows, and so the same IDs, as the table saved as CSV.
+
 **Columns and preview** (DATA-7.5; rule 32, SCREENS.md v4)
 - **What:** `GET /versions/{id}/columns` (over accepted rows, distinct exact up to 10,000, cached by version ID) and `POST /versions/{id}/transform/preview` (the first 50 rows by the stage's own code, with per-step columns).
 - **How:** One streaming pass with compact per-column state; PyArrow for medians and histograms; the preview runs `plan` and `RowStep` on the raw manifest's first rows.
