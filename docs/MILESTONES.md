@@ -718,7 +718,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 - [x] `test_DATA_1_4_AC2_*`: detection (separators, header or none, quotes, prose and ragged lines refused), the same rows and values as the same table saved as CSV, converted once, the source unchanged, `.txt` in a text source still text (`tests/unit/test_DATA_1_4_delimited.py`); through the API, the sources listing and a full tabular pipeline (`tests/integration/test_DATA_1_4_delimited_ingest.py`)
 - [x] The real file (2026-11-26, in `worker-cpu` with a temporary data folder, not in the owner's database): `household_power_consumption.txt` detected as `;`-separated with a header row, 9 columns; 2,075,259 records ingested in 78 s, peak 594 MiB of the 2,500 MiB limit; 25,979 rejected as `missing_target` (the `?` rows); the six columns `power.parquet` kept are equal on every row; the converted file is 10.4 MiB
-- [ ] Checks: `.\scripts\check.ps1 -Gpu`
+- [x] Checks: `.\scripts\check.ps1 -Gpu` passed (2026-11-26, after the images were rebuilt): format, lint and pyright clean; unit 607 passed (23 skipped, run in the workers); `ml` 36; frontend typecheck, lint (the one existing TanStack Virtual warning), raw-hex rule, Vitest 147 and build; integration 176; integration (ml) 7; `torch` 102; `gpu` 12. Live, `GET /sources` lists the UCI text folder with its 9 columns
 - [ ] Owner's OK to merge the addition
 
 ---
