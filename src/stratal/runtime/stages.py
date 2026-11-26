@@ -24,10 +24,12 @@ from stratal.data.commit import VersionRecord
 from stratal.data.ingest import LABELLED_IMAGES, IngestConfig, config_dtype, run_ingest
 from stratal.data.preprocess import PreprocessConfig, run_preprocess
 from stratal.data.record_clean import CleanTableConfig, CleanTextConfig, run_clean_records
-from stratal.data.records import LABELLED_TEXT, TABULAR
+from stratal.data.records import LABELLED_TEXT, TABULAR, schema_hash, table_schema_of
 from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
 from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitUnits, run_split
 from stratal.data.tokenize import TokenizeConfig, run_tokenize
+from stratal.data.transform import TransformConfig
+from stratal.data.transform_stage import run_transform
 from stratal.data.versioning import derive_version_identity
 from stratal.db.models import Dataset, EvalReport
 from stratal.eval.report import OWNER_STATS, EvaluateConfig, ReportStats, assemble_phase1_report
@@ -55,7 +57,8 @@ PIPELINE_ORDERS: dict[str, tuple[str, ...]] = {
     LABELLED_IMAGES: ("ingest", "clean", "preprocess", "split"),
     # Records, not files (ADR-0019): their own clean stages; text is tokenized after the split,
     # so the vocabulary comes from train only.
-    TABULAR: ("ingest", "clean_table", "split"),
+    # transform runs only when the request gives it operations (ADR-0019 Addendum B rule 25).
+    TABULAR: ("ingest", "transform", "clean_table", "split"),
     LABELLED_TEXT: ("ingest", "clean_text", "split", "tokenize"),
 }
 """Each dataset type's stages, in order (DATA-5.2)."""
@@ -316,6 +319,34 @@ register(StageDef("clean", "cpu", CleanConfig, make_clean_runner(OWNER_UNITS)))
 register(StageDef("preprocess", "cpu", PreprocessConfig, _run_preprocess))
 
 
+def input_schema_hash(run: StageRun) -> str | None:
+    """The hash of the input version's table schema, or ``None`` if it is not a table.
+
+    ``clean_table`` and ``split`` record it in their config, so a table's schema is part
+    of every version's identity (ADR-0019 Addendum B, as built; the owner's choice,
+    2026-11-25): a transform that changes only the schema then gives new downstream
+    versions instead of colliding with those made straight from raw.
+    """
+    if run.input_version_id is None:
+        return None
+    with Session(run.engine) as session:
+        _, manifest = registry.manifest_for(session, run.data_dir, run.input_version_id)
+    schema = table_schema_of(manifest)
+    return schema_hash(schema) if schema is not None else None
+
+
+def with_input_schema(run: StageRun, field: str = "input_schema") -> StageRun:
+    """``run`` with its config's ``input_schema`` filled in by the stage."""
+    found = input_schema_hash(run)
+    asked = run.config.get(field)
+    if asked is not None and asked != found:
+        raise ValidationFailed(
+            f"{field} is set by the stage; it would be {found!r}, not {asked!r}.",
+            suggested_action=f"Leave {field} out of the stage's config.",
+        )
+    return dataclasses.replace(run, config={**run.config, field: found})
+
+
 def make_record_clean_runner(
     stage: str, config_model: type[CleanTableConfig] | type[CleanTextConfig], exact: ExactGrouper
 ) -> Callable[[StageRun], StageResult]:
@@ -336,7 +367,8 @@ def make_record_clean_runner(
             )
             return DerivedOutput(result.record, 0, result.metrics)
 
-        return run_derived_stage(run, stage=stage, config_model=config_model, body=body)
+        given_run = with_input_schema(run) if config_model is CleanTableConfig else run
+        return run_derived_stage(given_run, stage=stage, config_model=config_model, body=body)
 
     return _run
 
@@ -376,6 +408,29 @@ register(
     )
 )
 register(StageDef("tokenize", "cpu", TokenizeConfig, _run_tokenize))
+
+
+def _run_transform(run: StageRun) -> StageResult:
+    """A table's raw version through its operations (DATA-7.1, ADR-0019 Addendum B)."""
+
+    def body(given: DerivedInput) -> DerivedOutput:
+        result = run_transform(
+            parent_manifest=given.manifest,
+            parent_version_id=given.version_id,
+            data_dir=run.data_dir,
+            config=TransformConfig.model_validate(given.config),
+            derive=derive_version_identity,
+            sink=run.ctx,
+            checkpoint=run.ctx.raise_if_cancelled,
+        )
+        return DerivedOutput(result.record, 0, result.metrics)
+
+    return run_derived_stage(run, stage="transform", config_model=TransformConfig, body=body)
+
+
+register(StageDef("transform", "cpu", TransformConfig, _run_transform))
+OPTIONAL_STAGES = frozenset({"transform"})
+"""Stages a pipeline runs only when the request configures them (rule 25)."""
 
 
 def _owner_unit_missing(stage: str, exc: NotImplementedError) -> StratalError:
@@ -476,6 +531,8 @@ def make_split_runner(units: SplitUnits) -> Callable[[StageRun], StageResult]:
     def _run_split(run: StageRun) -> StageResult:
         if run.input_version_id is None:
             return run_derived_stage(run, stage="split", config_model=SplitConfig, body=_never)
+        run = with_input_schema(run)
+        assert run.input_version_id is not None
         asked = SplitConfig.model_validate(run.config)
         with Session(run.engine) as session:
             parent = registry.get_version(session, run.input_version_id)

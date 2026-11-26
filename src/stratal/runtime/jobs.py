@@ -27,7 +27,7 @@ from stratal.core.errors import (
     SourceNotFound,
     ValidationFailed,
 )
-from stratal.data import registry
+from stratal.data import registry, transform, transform_stage
 from stratal.db.models import Checkpoint, Dataset, DatasetVersion, Job, JobStage
 from stratal.hpo.config import StudyRequest
 from stratal.ml.params import ClassicalConfig
@@ -83,7 +83,9 @@ class PipelineRequest(BaseModel):
             description="Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest "
             "to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from "
             "class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, "
-            "stages.ingest.table.target required), clean_table, split. 'labelled_text': ingest "
+            "stages.ingest.table.target required), transform (only with "
+            "stages.transform.operations, on the raw version), clean_table, split. "
+            "'labelled_text': ingest "
             "(JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it "
             "has one, else image_caption.",
         )
@@ -170,7 +172,8 @@ def create_job_from_plan(
     return job, Enqueue(job.id, 0, first_queue)
 
 
-def _field_problems(stage: str, exc: ValidationError) -> list[FieldProblem]:
+def field_problems(stage: str, exc: ValidationError) -> list[FieldProblem]:
+    """A stage config's validation errors, each at ``["stages", stage, …]``."""
     return [
         FieldProblem(
             loc=["stages", stage, *error["loc"]],
@@ -257,6 +260,16 @@ def _label_problems(dtype: str, plan: list[tuple[str, dict[str, Any]]]) -> list[
     return []
 
 
+def _check_transform(session: Session, version_id: str, config: dict[str, Any]) -> None:
+    """Rule 26: the operations are checked against the raw version's schema before the job is
+    queued, so a refused operation is a 422 naming its column, not a failed job."""
+    from stratal.core.settings import get_settings
+
+    _, manifest = registry.manifest_for(session, get_settings().data_dir, version_id)
+    schema = transform_stage.input_schema(manifest, version_id=version_id)
+    transform.plan(schema, transform.TransformConfig.model_validate(config).operations)
+
+
 def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job, Enqueue]:
     """Validate a pipeline request, resolve every stage's config and queue the job."""
     available = stage_registry.registered()
@@ -285,6 +298,17 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
                 "there is nothing after it to run.",
                 suggested_action=f"Stages available now: {', '.join(all_names)}.",
             )
+    if "transform" in request.stages and made_by not in (None, "ingest"):
+        raise ValidationFailed(
+            f"Version {input_version_id} is a {made_by} version; a transform applies to a "
+            "table's raw (ingest) version only (ADR-0019 Addendum B rule 25).",
+            suggested_action="Start from the raw version, with the operations edited there.",
+            errors=[
+                FieldProblem(loc=["stages", "transform"], msg="needs a raw version", code="invalid")
+            ],
+        )
+    # An optional stage runs only when the request configures it (rule 25).
+    names = [n for n in names if n not in stage_registry.OPTIONAL_STAGES or n in request.stages]
     if not _SLUG.match(slug):
         raise ValidationFailed(
             f"Dataset name {slug!r} is not a valid slug.",
@@ -318,7 +342,7 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
                 _stage_overrides(dtype, request, name)
             )
         except ValidationError as exc:
-            problems.extend(_field_problems(name, exc))
+            problems.extend(field_problems(name, exc))
             continue
         plan.append((name, model.model_dump(mode="json")))
     problems.extend(_label_problems(dtype, plan))
@@ -328,6 +352,8 @@ def create_pipeline_job(session: Session, request: PipelineRequest) -> tuple[Job
             suggested_action="Fix the fields listed in 'errors'.",
             errors=problems,
         )
+    if input_version_id is not None and any(name == "transform" for name, _ in plan):
+        _check_transform(session, input_version_id, dict(plan)["transform"])
 
     dataset = registry.ensure_dataset(
         session,
@@ -958,7 +984,7 @@ def create_report_job(
         raise ValidationFailed(
             "The report request did not pass validation.",
             suggested_action="Fix the fields listed in 'errors'.",
-            errors=_field_problems("evaluate", exc),
+            errors=field_problems("evaluate", exc),
         ) from None
     if resolved.review_id is not None:
         reviews.review_for_report(session, version_id, resolved.review_id)

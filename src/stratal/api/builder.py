@@ -34,6 +34,7 @@ from stratal.build.spec import (
 from stratal.core.settings import get_settings
 from stratal.data.dataset_types import TYPE_INFO, Family, InputKind
 from stratal.db.engine import get_engine
+from stratal.runtime import stages as stage_registry
 
 router = APIRouter(tags=["builder"])
 
@@ -109,6 +110,12 @@ def validate_spec(body: ValidateRequest) -> ValidateResponse:
     return ValidateResponse(dataset=ends, report=report)
 
 
+class TypeStage(BaseModel):
+    name: str
+    optional: bool
+    """Run only when the request configures it (``transform``, ADR-0019 Addendum B rule 25)."""
+
+
 class DatasetTypeOut(BaseModel):
     name: str
     title: str
@@ -117,11 +124,17 @@ class DatasetTypeOut(BaseModel):
     default_metrics: list[str]
     trainable: bool
     note: str
+    source: str
+    """What a source folder of this type holds (the Start pipeline drawer, SCREENS.md v4)."""
+    stages: list[TypeStage]
+    """The type's pipeline stages in order, as POST /jobs runs them (open point 7b)."""
 
 
 @router.get("/dataset-types", response_model=list[DatasetTypeOut])
 def dataset_types() -> list[DatasetTypeOut]:
-    """Each dataset type's input, compatible model families and default metrics (DATA-5.5)."""
+    """Each dataset type's input, compatible model families and default metrics (DATA-5.5),
+    and its pipeline's stages with what its source folder holds (DATA-5.2)."""
+    available = stage_registry.registered()
     return [
         DatasetTypeOut(
             name=t.name,
@@ -131,6 +144,12 @@ def dataset_types() -> list[DatasetTypeOut]:
             default_metrics=list(t.default_metrics),
             trainable=t.trainable,
             note=t.note,
+            source=t.source,
+            stages=[
+                TypeStage(name=name, optional=name in stage_registry.OPTIONAL_STAGES)
+                for name in stage_registry.PIPELINE_ORDERS[t.name]
+                if name in available
+            ],
         )
         for t in TYPE_INFO.values()
     ]

@@ -78,6 +78,7 @@ from stratal.train.config import ModelSpec
 from stratal.train.data import to_tensor
 from stratal.train.memory import TrainingState
 from stratal.train.reference import build_model
+from stratal.train.table_input import with_table_input
 from stratal.train.table_prep import PREPROCESS_FILE, TablePrep
 from stratal.train.weights import read_tensors
 
@@ -498,11 +499,13 @@ class ModelHolder:
             Shape.from_json(meta["input"]) if meta.get("input") else tuple(meta["input_shape"])
         )
         outputs = 1 if meta.get("task") == "regression" else len(meta["classes"])
-        model = build_model(ModelSpec.model_validate(meta["model"]), shape, outputs)
-        model.load_state_dict(tensors, strict=True)
-        del tensors
         if (folder / PREPROCESS_FILE).exists():
             meta["_prep"] = TablePrep.from_json((folder / PREPROCESS_FILE).read_text("utf-8"))
+        model = with_table_input(
+            build_model(ModelSpec.model_validate(meta["model"]), shape, outputs), meta.get("_prep")
+        )
+        model.load_state_dict(tensors, strict=True)
+        del tensors
         if (meta.get("input") or {}).get("kind") == "tokens":
             meta["_vocab"] = self._vocabulary(str(meta["dataset_version"]))
         return model.eval(), meta

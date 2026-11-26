@@ -38,6 +38,7 @@ TRUSTED: tuple[str, ...] = (
     "sklearn.impute._base.SimpleImputer",
     "sklearn.preprocessing._data.StandardScaler",
     "sklearn.preprocessing._encoders.OneHotEncoder",
+    "sklearn.preprocessing._encoders.OrdinalEncoder",
     "sklearn.preprocessing._label.LabelEncoder",
     # The estimators (ML-1.1, ML-1.2) and what they hold.
     "sklearn.linear_model._base.LinearRegression",

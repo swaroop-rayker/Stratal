@@ -791,6 +791,43 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** Training groups by the spec's structure hash (labels left out), dataset and batch; `label` by captioner and batch; other stages are one group. A label run's rate is captions computed ÷ running time, so reused captions do not inflate it; a training run's is its moving average of steps a second times the batch. Running time comes from the job's transitions, so a run that lost its worker counts both attempts.
 - **Why:** A rate or a peak compares only within one kind of work, and only like with like: the owner's choice of one stage at a time and the latest run's group. Counting from transitions makes a resumed run show what it cost (phase 2's killed run C: 11.0 s an epoch against 6.4).
 
+## M11b: tabular transforms
+
+**The transform stage** (DATA-7.1, DATA-7.2; ADR-0019 Addendum B rules 25 to 28, accepted 2026-11-24)
+- **What:** An optional `transform` stage between `ingest` and `clean_table` for tables, on a raw version only, with drop, rename, reorder, set_kind, set_target, set_encoding, derive and filter.
+- **How:** The operations are a discriminated union checked against the schema before any row is read (`plan`), then applied row by row (`RowStep`) in a pure module shared with the API's preview; fitted operations are refused by name; `cast_failed` rows are kept and counted; rows rejected only for the old target come back; `sha256` is recomputed. `POST /jobs` checks the operations against the raw version's schema before queueing.
+- **Why:** Versions never change (ADR-0004), so a transform is a new version with the raw one as parent; checking before the run turns a mistake into a 422 naming the column; anything fitted on all rows would leak validation and test into training (ML-1.3).
+
+**A schema change in the identity** (DATA-3.2; the owner's choice, 2026-11-25)
+- **What:** `clean_table` and `split` record their input's table-schema hash (`input_schema`) in their config.
+- **How:** A read-only field the stage fills in, as `split`'s `continues_version_id`; `versioning.py` is unchanged.
+- **Why:** A transform that changes only the schema (an encoding, the order) leaves the rows as they were, and IDs hash rows and config, so the later versions collided with those made straight from raw.
+
+**Expressions parsed, never evaluated** (DATA-7.4; rule 30, K6)
+- **What:** `derive` and `filter` take Python expression syntax limited to numbers, strings, columns, `+ - * /`, comparisons, `and or not` and seven functions.
+- **How:** `ast.parse(mode="eval")`, every node checked against a whitelist and typed before any row; our own walker computes it with three-valued logic, a missing or impossible value giving null; a test scans the module for `eval`, `exec`, `compile` and `__import__`.
+- **Why:** No new dependency for a few operators, and nothing a user types can run as code.
+
+**Encodings in the schema** (DATA-7.3; rule 29 and its As built, 2026-11-25)
+- **What:** A column's `encoding` and `order`, written only when not the default; classical models drop `ignore`, use an `OrdinalEncoder` in the given order and one-hot `embedding`; networks get ordinal positions and an `Embedding` input layer.
+- **How:** `TabularData` and `table_prep` read the schema; `TableInput` wraps the compiled graph only when a version has embedding columns; `OrdinalEncoder` joins the skops allow-list; `/predict` no longer needs ignored columns.
+- **Why:** Leaving defaults out keeps every existing version's ID and weights; the network embedding had never been built (rule 29 assumed it had), and the owner chose to build it from the schema without SCR-08's per-model switch.
+
+**Streaming tables** (NFR-2; rule 31, K9)
+- **What:** Ingest reads Parquet in 65,536-row batches and a CSV in two passes; rows stream into the manifest; `worker-cpu` uses the system allocator for Arrow.
+- **How:** The CSV's first pass keeps only each column's kind and the count, with PyArrow's own inference quirks, so existing IDs are unchanged (breast-cancer, diabetes and wine re-ingested to the same IDs).
+- **Why:** `power.parquet` (2,075,259 rows) peaks at 753 MiB of the 2,500 MiB limit, ingest and transform together; with mimalloc the process kept 628 MiB against 372 MiB.
+
+**Columns and preview** (DATA-7.5; rule 32, SCREENS.md v4)
+- **What:** `GET /versions/{id}/columns` (over accepted rows, distinct exact up to 10,000, cached by version ID) and `POST /versions/{id}/transform/preview` (the first 50 rows by the stage's own code, with per-step columns).
+- **How:** One streaming pass with compact per-column state; PyArrow for medians and histograms; the preview runs `plan` and `RowStep` on the raw manifest's first rows.
+- **Why:** The screens show what the stage will write, not an imitation of it (DATA-7.5.AC1).
+
+**Start pipeline drawer, type first** (DATA-1.4, DATA-5.2; SCREENS.md v4 amendment, open point 7)
+- **What:** The type before the stages, only the type's stages, one *Stop after* choice, `dataset_type` always sent; `GET /dataset-types` lists each type's stages and `GET /sources` a table folder's columns.
+- **How:** `until_stage` is kept: the stages are a chain, each reading the one before it, so a gap would fail or break a guarantee; `transform` is reachable through SCR-15.
+- **Why:** The drawer sent no type (a CSV became image–caption pairs) and turned independent-looking checkboxes into `until_stage`.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

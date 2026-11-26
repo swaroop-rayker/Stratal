@@ -110,6 +110,15 @@ class SplitConfig(BaseModel):
         default=DEFAULT_STRATUM_KEYS,
         description="Row attributes to stratify on, in order (DATA-4.3); empty for none.",
     )
+    input_schema: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+        json_schema_extra={"readOnly": True},
+        description="Set by the stage, not by the user: the SHA-256 of its input's table "
+        "schema, so a schema change that leaves the rows as they were (a transform that only "
+        "sets an encoding or the column order) gives a new version (ADR-0019 Addendum B, as "
+        "built). Null for anything but a table.",
+    )
     continues_version_id: str | None = Field(
         default=None,
         json_schema_extra={"readOnly": True},

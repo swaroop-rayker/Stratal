@@ -533,6 +533,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/versions/{version_id}/columns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Version Columns
+         * @description A tabular version as a table of columns: kind, role, encoding, missing, distinct and
+         *     distribution over its accepted rows (DATA-7.5, ADR-0019 Addendum B rule 32).
+         */
+        get: operations["version_columns_api_v1_versions__version_id__columns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/versions/{version_id}/transform/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transform Preview
+         * @description The first rows of a raw table version after the operations, computed by the
+         *     transform stage's own code, so they equal the stage's first rows (DATA-7.5.AC1). Refused
+         *     operations are a 422 with the same errors[].loc as POST /jobs (rule 26).
+         */
+        post: operations["transform_preview_api_v1_versions__version_id__transform_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/versions/{version_id}/diff": {
         parameters: {
             query?: never;
@@ -1272,7 +1315,8 @@ export interface paths {
         };
         /**
          * Dataset Types
-         * @description Each dataset type's input, compatible model families and default metrics (DATA-5.5).
+         * @description Each dataset type's input, compatible model families and default metrics (DATA-5.5),
+         *     and its pipeline's stages with what its source folder holds (DATA-5.2).
          */
         get: operations["dataset_types_api_v1_dataset_types_get"];
         put?: never;
@@ -1609,6 +1653,35 @@ export interface components {
             /** Bins */
             bins: components["schemas"]["HistBin"][] | null;
         };
+        /** ColumnSummary */
+        ColumnSummary: {
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "numeric" | "categorical";
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "feature" | "target";
+            /** Encoding */
+            encoding: ("one_hot" | "embedding" | "ordinal" | "ignore") | null;
+            /** Order */
+            order: string[] | null;
+            /** Missing */
+            missing: number;
+            /** Distinct */
+            distinct: number;
+            /** Distinct Capped */
+            distinct_capped: boolean;
+            /** Distribution */
+            distribution: {
+                [key: string]: unknown;
+            };
+        };
         /**
          * CompareCandidate
          * @description A trained version on the split: compared if it has test metrics; scored once if not.
@@ -1905,6 +1978,10 @@ export interface components {
             trainable: boolean;
             /** Note */
             note: string;
+            /** Source */
+            source: string;
+            /** Stages */
+            stages: components["schemas"]["TypeStage"][];
         };
         /** Decision */
         Decision: {
@@ -3224,7 +3301,7 @@ export interface components {
             until_stage?: string | null;
             /**
              * Dataset Type
-             * @description Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, stages.ingest.table.target required), clean_table, split. 'labelled_text': ingest (JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it has one, else image_caption.
+             * @description Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, stages.ingest.table.target required), transform (only with stages.transform.operations, on the raw version), clean_table, split. 'labelled_text': ingest (JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it has one, else image_caption.
              */
             dataset_type?: ("image_caption" | "labelled_images" | "tabular" | "labelled_text") | null;
         };
@@ -3360,6 +3437,57 @@ export interface components {
             load_ms: number | null;
             /** Total Ms */
             total_ms: number;
+        };
+        /** PreviewRequest */
+        PreviewRequest: {
+            /**
+             * Operations
+             * @description The transform's operations, as in stages.transform.operations; empty shows the raw rows.
+             */
+            operations?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Limit
+             * @default 50
+             */
+            limit: number;
+        };
+        /** PreviewRow */
+        PreviewRow: {
+            /** Row Key */
+            row_key: string;
+            /** Status */
+            status: string;
+            /** Reason Code */
+            reason_code: string | null;
+            /** Reason Detail */
+            reason_detail: string | null;
+            /** Values */
+            values: {
+                [key: string]: unknown;
+            };
+        };
+        /** PreviewStep */
+        PreviewStep: {
+            /** Index */
+            index: number;
+            /** Op */
+            op: string;
+            /** Summary */
+            summary: string;
+            /** Columns */
+            columns: {
+                [key: string]: unknown;
+            }[];
+            /** Cast Failed */
+            cast_failed: number;
+            /** Filtered */
+            filtered: number;
+            /** Filtered Null */
+            filtered_null: number;
+            /** Examples */
+            examples: string[];
         };
         /** Problem */
         Problem: {
@@ -4060,6 +4188,8 @@ export interface components {
             path: string;
             /** Files */
             files: number;
+            /** Columns */
+            columns?: string[] | null;
         };
         /** SourceList */
         SourceList: {
@@ -4768,6 +4898,30 @@ export interface components {
             /** Running Jobs */
             running_jobs: string[];
         };
+        /** TransformPreview */
+        TransformPreview: {
+            /** Version Id */
+            version_id: string;
+            /** Columns */
+            columns: {
+                [key: string]: unknown;
+            }[];
+            /** Steps */
+            steps: components["schemas"]["PreviewStep"][];
+            /** Rows */
+            rows: components["schemas"]["PreviewRow"][];
+            /** Counts */
+            counts: {
+                [key: string]: unknown;
+            };
+        };
+        /** TypeStage */
+        TypeStage: {
+            /** Name */
+            name: string;
+            /** Optional */
+            optional: boolean;
+        };
         /** ValidateRequest */
         ValidateRequest: {
             graph: components["schemas"]["GraphSpec"];
@@ -4862,6 +5016,28 @@ export interface components {
              * @enum {string}
              */
             weights_status: "present" | "deleting" | "weights_deleted";
+        };
+        /** VersionColumns */
+        VersionColumns: {
+            /** Version Id */
+            version_id: string;
+            /**
+             * Task
+             * @enum {string}
+             */
+            task: "classification" | "regression";
+            /** Target */
+            target: string;
+            /** Counted */
+            counted: number;
+            /** Not Counted */
+            not_counted: {
+                [key: string]: number;
+            };
+            /** Distinct Cap */
+            distinct_cap: number;
+            /** Columns */
+            columns: components["schemas"]["ColumnSummary"][];
         };
         /** VersionCounts */
         VersionCounts: {
@@ -5819,6 +5995,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Distributions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    version_columns_api_v1_versions__version_id__columns_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionColumns"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transform_preview_api_v1_versions__version_id__transform_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransformPreview"];
                 };
             };
             /** @description Validation Error */

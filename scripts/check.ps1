@@ -25,7 +25,7 @@ Step "unit + meta"  { docker compose run --rm --no-deps dev pytest -q }
 # Tests that need scikit-learn, skops, Optuna or sacreBLEU (M10, marker ml) run in the CPU
 # worker's image, against the current source and tests; in the dev image they are skipped. The
 # files are named because worker-cpu has no httpx, which the API's unit tests import.
-Step "ml"           { docker compose run --rm --no-deps -v ./src:/app/src:ro -v ./tests:/app/tests:ro worker-cpu sh -c "pytest -q -m 'ml and not integration' tests/unit/test_ML_*.py tests/unit/test_EVAL_1_2_*.py" }
+Step "ml"           { docker compose run --rm --no-deps -v ./src:/app/src:ro -v ./tests:/app/tests:ro worker-cpu sh -c "pytest -q -m 'ml and not integration' tests/unit/test_ML_*.py tests/unit/test_EVAL_1_2_*.py tests/unit/test_DATA_7_3_*.py" }
 # Frontend (SPEC §7.5): typecheck, lint with the raw-hex rule, Vitest, production build.
 Step "frontend"     { docker compose run --rm --no-deps frontend-tools sh -c "npm run typecheck && npm run lint && npm test && npm run build" }
 if (-not $Fast) {

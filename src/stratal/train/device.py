@@ -102,10 +102,14 @@ def _time_steps(
     num_classes: int,
     batches: Sequence[tuple[torch.Tensor, torch.Tensor]],
     device: Device,
+    wrap: Callable[[nn.Module], nn.Module] = lambda model: model,
 ) -> float:
-    """Median milliseconds per Adam training step on ``device``, after a warm-up."""
+    """Median milliseconds per Adam training step on ``device``, after a warm-up.
+
+    ``wrap`` puts the model behind what training puts it behind (a table's embedding
+    input layer, :mod:`stratal.train.table_input`), so it takes the same batches."""
     torch.manual_seed(0)
-    model = build_model(spec, shape, num_classes).to(device)
+    model = wrap(build_model(spec, shape, num_classes)).to(device)
     optimizer = torch.optim.Adam(model.parameters())
     # A float target is regression (ADR-0019 rule 14): the step then uses MSE on one output.
     regression = bool(batches) and batches[0][1].is_floating_point()
@@ -148,6 +152,7 @@ def choose(
     batches: Sequence[tuple[torch.Tensor, torch.Tensor]],
     on_start: Callable[[], None] | None = None,
     on_measured: Callable[[Device, float], None] | None = None,
+    wrap: Callable[[nn.Module], nn.Module] = lambda model: model,
 ) -> DeviceChoice:
     """The faster device for this model and batch: from the cache, or measured now.
 
@@ -163,10 +168,10 @@ def choose(
     if on_start is not None:
         on_start()
     planted = _from_env()
-    gpu_ms = planted[0] if planted else _time_steps(spec, shape, num_classes, batches, "cuda")
+    gpu_ms = planted[0] if planted else _time_steps(spec, shape, num_classes, batches, "cuda", wrap)
     if on_measured is not None:
         on_measured("cuda", gpu_ms)
-    cpu_ms = planted[1] if planted else _time_steps(spec, shape, num_classes, batches, "cpu")
+    cpu_ms = planted[1] if planted else _time_steps(spec, shape, num_classes, batches, "cpu", wrap)
     if on_measured is not None:
         on_measured("cpu", cpu_ms)
     choice = DeviceChoice("cpu" if cpu_ms < gpu_ms else "cuda", gpu_ms, cpu_ms)

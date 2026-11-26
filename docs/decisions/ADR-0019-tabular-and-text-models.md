@@ -1,6 +1,6 @@
 # ADR-0019 — Tabular and text models end to end: data, fitted preprocessing, classical ML, serving
 
-**Status:** Accepted by the owner on 2026-11-19, as proposed ("Approve all three", M10), including rule 20 (scikit-learn and skops in the `gpu` extra too) and rule 24 (torchmetrics not added). Settles M10's open points 1–7, 9 and 14–17 (MILESTONES.md), as the owner chose at the kickoff (K5). Points 8 and 10 are settled in ADR-0017 rule 6; points 11–13 are requirement DATA-1.5 in SPEC, approved the same day.
+**Status:** Accepted by the owner on 2026-11-19, as proposed ("Approve all three", M10), including rule 20 (scikit-learn and skops in the `gpu` extra too) and rule 24 (torchmetrics not added). Settles M10's open points 1–7, 9 and 14–17 (MILESTONES.md), as the owner chose at the kickoff (K5). Points 8 and 10 are settled in ADR-0017 rule 6; points 11–13 are requirement DATA-1.5 in SPEC, approved the same day. **Addendum B** (tabular transforms, DATA-7, M11b) accepted by the owner on 2026-11-24, as proposed.
 
 ## Context
 
@@ -123,3 +123,87 @@ A tokenizer fitted inside training and stored with the weights was the alternati
 - **API:** `POST /jobs` with kind `train` accepts `tabular` and `labelled_text` versions and `sklearn` models; `GET /ml/estimators/schema` for SCR-09's forms; `/predict` gains `record` and `text`. `GET /dataset-types` reports `tabular` and `labelled_text` as trainable, with their task.
 - **New code:** `stratal.data` (table and text ingest, text clean, tokenize), `stratal.ml` (params in plain Python; pipelines and skops in the workers), the type-specific loaders in `stratal.train`, and the inference service's table and text paths.
 - ARCHITECTURE, DATA_MODEL §5, API.md and ADR-0016 (a pointer to rule 20) are updated when this is built.
+
+
+## Addendum B — Tabular transforms (DATA-7.1 to DATA-7.5, M11b)
+
+**Status:** Accepted by the owner on 2026-11-24, as proposed ("approved as proposed"). It follows the owner's M11b kickoff decisions K1 to K9 (MILESTONES.md, M11b, "Accept all nine"): this addendum rather than a new ADR (K1).
+
+### Context
+
+- **DATA-7.1** an ordered list of row-local operations on a tabular raw version, in a `transform` stage between `ingest` and `clean`, giving a new version whose parent is the raw one; the raw manifest unchanged; the same operations give the same ID; operations fitted on the data refused. **DATA-7.2** drop, rename, reorder, change a column's kind, choose the target; each refused before the run when invalid, naming the column; a value that will not convert is rejected as `cast_failed`, kept and counted. **DATA-7.3** each feature's encoding (`one_hot`, `embedding`, `ordinal`, `ignore`) in the table schema, used by the input block and the classical pipelines. **DATA-7.4** (P2) derived columns and row filters in a restricted expression language, parsed, never evaluated as code. **DATA-7.5** any tabular version as a table of columns, and a preview of the operations on sample rows that equals the stage's output.
+- **What exists (rules 1, 5, 13 and 17).** Ingest coerces every value to its column's kind and stores a record's features as canonical JSON in `record`, its target in `label` (categorical) or `target_value` (numeric); a row whose target is empty is rejected as `missing_target` but keeps its features. The `TableSchema` (columns with `kind` and `role`) is the manifest's `stratal.table_schema` metadata. A network's input block takes each categorical column one-hot by default or through an `Embedding` (ADR-0017 rule 6); a classical pipeline one-hot encodes every categorical column. Ingest reads a table whole (rule 1: "tables here are small").
+- **K2 to K9:** transforms apply to a raw version only; re-admitting rows whose old target was empty (K3); kinds changed on already-coerced values (K4); `set_encoding` and the schema's `encoding` (K5); the expression language through `ast.parse` and a whitelist (K6); no owner unit (K7); SCR-15 and SCR-03's *Columns* tab, the preview computed in the API by the stage's own functions (K8); streaming ingest and transform (K9).
+
+### Decision
+
+25. **An optional `transform` stage for tables.** A `tabular` pipeline runs `ingest → transform → clean_table → split` when the request gives `stages.transform.operations`, and `ingest → clean_table → split` otherwise, so every existing pipeline and version ID is unchanged. It runs on the CPU queue, memoized like every stage, so the same input and operations reuse the version (DATA-7.1.AC1). Its input must be an `ingest` version of a `tabular` dataset; anything else, a transform's output included, is refused with `validation_error` (K2). To change the operations, the list is edited and run again on the raw version.
+26. **Operations** are a list of objects, each with an `op` (a discriminated union, so the form is generated from its schema, UI-2.3), applied in order:
+
+    | `op` | Fields | Effect |
+    |---|---|---|
+    | `drop` | `columns` | Removes the columns; the target cannot be dropped |
+    | `rename` | `from`, `to` | Renames a column; `to` must be new |
+    | `reorder` | `columns` | The full order; every column once |
+    | `set_kind` | `column`, `kind` | `numeric` ↔ `categorical` (rule 27) |
+    | `set_target` | `column` | The old target becomes a feature |
+    | `set_encoding` | `column`, `encoding`, `order` | Rule 29 |
+    | `derive` (P2) | `name`, `expression`, `kind` | A new column from the row's columns (rule 30) |
+    | `filter` (P2) | `expression` | Keeps the rows where it is true (rule 30) |
+
+    - **Checked before the run** against the input's schema, operation by operation: an unknown column, dropping or duplicating the target, a rename onto an existing name, an incomplete `reorder`, an encoding the column's kind does not allow, an expression outside the language. Each is a `validation_error` whose `errors[].loc` is `["stages", "transform", "operations", i, field]` and whose message names the column (DATA-7.2.AC1).
+    - **Fitted operations are refused by name** (DATA-7.1.AC2): `scale`, `standardize`, `normalize`, `impute`, `fill_mean`, `fill_median`, `target_encode` and `bin` get "is fitted on the data, so it belongs in the model's preprocessing, fitted on the train split (ML-1.3)", not a generic "unknown operation".
+27. **Rows.** The stage rebuilds each row's values from `record` and the old target (`label` or `target_value`), applies the operations, and writes `record` (the new features, canonical JSON), `label` or `target_value` (the new target) and, recomputed, `sha256` and `size_bytes`, since `clean_table`'s exact duplicates compare `sha256` (open point 2's note).
+    - `set_kind` to numeric parses the text as a number; a value that will not parse is rejected as **`cast_failed`**, kept in the manifest and counted (DATA-7.2.AC1). To categorical, a number becomes its canonical text (`7.0` → `"7"`): ingest's coercion is not undone (K4; to keep `007`, set the kind at ingest with `stages.ingest.table.kinds`).
+    - **A row rejected at ingest only as `missing_target`** is taken back when the new target has a value; a row whose new target is empty is rejected as `missing_target` (K3). Rows rejected for other reasons keep their status and reason (INV-06).
+    - A `filter` marks the rows it drops `filtered` with **`transform_filter`**; an expression that cannot be computed for a row (a missing value, a division by zero, the logarithm of a non-positive number) gives null: a derived value is then missing, and a filter drops the row, counted apart as `transform_null` in the stage's counts.
+28. **The schema changes with the operations** and is stored as the output's `stratal.table_schema`, so it is part of the version's identity (DATA-3.2). The stage reports per operation what it changed: columns dropped, renamed, recast with the number of `cast_failed`, rows re-admitted, rows filtered.
+29. **Encodings (DATA-7.3, K5).** A schema column gains `encoding`: for a categorical column `one_hot` (the default), `embedding` or `ordinal` with its `order` (every category in order; a value outside it, or missing, is treated as unknown); for any feature `ignore`. A default is not written into the schema's JSON, so existing versions' schemas, and their IDs, are unchanged.
+    - **The network's input block** takes the schema's encoding as its default: `ignore` leaves the column out; `ordinal` becomes one numeric feature, the category's position, standardised on the train split like any number (unknown → the median position); `one_hot` and `embedding` as today, the switch between them still offered on SCR-08 and SCR-09 (decided 2026-11-19).
+    - **The classical pipeline** drops `ignore` columns, encodes `ordinal` with an `OrdinalEncoder` in the given order (unknown → −1, then imputed), and one-hot encodes `one_hot` and `embedding` columns, as rule 17's pointer said.
+    - **`/predict`** accepts a record without its `ignore` columns.
+30. **The expression language (DATA-7.4, K6)** is Python's expression syntax, parsed with `ast.parse(text, mode="eval")` and accepted only if every node is on a whitelist; our own walker then computes it on a row. Nothing is ever passed to `eval`, `exec` or `compile`.
+    - **Allowed:** numbers, strings, `True`, `False`; column names (a column whose name is not an identifier is written `col("name")`); `+ - * /` and unary minus on numbers; `== != < <= > >=`; `and`, `or`, `not`; `isnull(x)`, `notnull(x)`, `abs`, `log`, `sqrt`, `round(x, n)`, `min`, `max`.
+    - **Refused, naming the construct:** attribute access, subscripts, calls to anything else, comprehensions, lambdas, assignments, names that are not columns. At most 500 characters and 100 nodes.
+    - Arithmetic needs numeric columns; comparing a categorical column is with strings. A derived column's kind is given or inferred (numeric for arithmetic, categorical for a string).
+31. **Streaming (NFR-2, K9).** Ingest and the transform read a table in record batches of 65,536 rows and write the manifest as they go. A Parquet file keeps its own column types; a CSV's kinds are inferred in a first pass that keeps, per column, only whether every value parses as a number. The memory of ingesting and transforming `sources/household-power/power.parquet` (2,075,259 rows) is measured from `worker-cpu`'s cgroup (`memory.peak`) and recorded; the target is under half its 2.5 GB limit.
+32. **Preview and columns (DATA-7.5, K8).** The operations and the row step are a pure module, `stratal.data.transform`, in plain Python, which the stage and the API share.
+    - `POST /versions/{id}/transform/preview` with `{operations, limit ≤ 50}` checks the operations (rule 26) and returns the resulting schema and the first `limit` rows after the operations, with their status and reason. It equals the first rows of the version the stage then produces (DATA-7.5.AC1, tested).
+    - `GET /versions/{id}/columns` returns, for any tabular version, each column's kind, role, encoding, missing count, distinct count and distribution (a histogram on numbers, the top categories otherwise), from the manifest, cached by version ID like the version's profile (M11, K10).
+33. **Screens (K8).** **SCR-15**, the transform editor at `/versions/{id}/transform` for a raw tabular version, and a ***Columns* tab on SCR-03** for any tabular version, each through Gate 1 and Gate 2 before being built.
+
+### Tests
+
+- `test_DATA_7_1_*`: the raw manifest is byte-identical after a transform; the same operations give the same version ID (a cache hit); one changed operation gives a new one; a transform of a transform is refused; `scale` and `impute` refused with the pointer to the model's preprocessing.
+- `test_DATA_7_2_*`: one test per operation; each invalid case of rule 26 refused before the run, naming the column, with its `loc`; `cast_failed` rows kept and counted; a new target re-admits a row rejected only for the old one; `sha256` recomputed, so `clean_table` finds a duplicate the transform created.
+- `test_DATA_7_3_*`: an `ignore` column is absent from the input block and the classical pipeline; an `embedding` choice reaches the input block; `ordinal` keeps the order given, in both.
+- `test_DATA_7_4_*` (P2): derived values match the formula on sample rows; a filter keeps exactly the matching rows and marks the rest `transform_filter`; each refused construct of rule 30 refused, and no expression reaches `eval` (a scan of the module, as NFR-8's no-unpickling scan does).
+- `test_DATA_7_5_*`: the column summary matches the manifest; the preview equals the stage's first rows.
+- `power.parquet` ingested and transformed with its peak memory recorded (rule 31).
+
+### Alternatives
+
+| Option | Why not |
+|---|---|
+| Edit a version in place | Versions are immutable (ADR-0004); DATA-7.1 asks for a new version with the raw one as parent |
+| Store each value's raw text beside the coerced one | Changes every tabular version's identity, for the rare `007` case; setting the kind at ingest already covers it (K4) |
+| A library for expressions (e.g. `simpleeval`, `numexpr`) | A new dependency for a few operators; the whitelist over `ast` is small and testable (K6) |
+| `pandas.eval` or `DataFrame.query` | Evaluates code paths we do not control, and pandas is not in the CPU image |
+| Fitted operations in the transform | Fitting on all rows leaks validation and test into training (ML-1.3); they stay in the model's preprocessing |
+
+### Consequences
+
+- **Manifest and schema:** the schema's columns gain `encoding` and `order` (written only when not the default); new reason codes `cast_failed`, `transform_filter`; the new stage `transform` (DATA_MODEL.md, ARCHITECTURE.md §3).
+- **API:** `stages.transform` in `POST /jobs`; `POST /versions/{id}/transform/preview`; `GET /versions/{id}/columns` (API.md).
+- **The input block, the classical pipeline, `table_prep` and `/predict`** read the schema's encodings (rule 29), so models trained on transformed versions honour them; versions without encodings behave exactly as before.
+- **Ingest streams** (rule 31), so a large table no longer has to fit in memory; the ingest config and its version IDs are unchanged.
+- **Screens:** SCR-15 and SCR-03's *Columns* tab, through G1 and G2 (SCREENS.md v4).
+
+### As built (M11b, 2026-11-25)
+
+- **Rule 29's network embedding, corrected (the owner's decision, 2026-11-25, "Yes, as proposed").** Rule 29 said a network takes `one_hot` and `embedding` "as today", with the switch "still offered on SCR-08 and SCR-09". Neither existed: a table reached a network as a vector already encoded by `table_prep`, every category one-hot, and the graph spec had no per-column input block (M10's *As built*, part C). Built in M11b: the schema's `embedding` reaches the network. `table_prep` hands an embedding column over as its category's index (the train split's categories sorted; unknown and missing take one more slot); a small input layer in front of the compiled network looks each index up in an `Embedding` of `min(50, ⌈n / 2⌉)` features and joins the result to the other columns. The builder's locked input width and parameter count follow ADR-0017 rule 6's input block. The layer is added only when a version has embedding columns, so the weights of every existing model load unchanged. **Not built:** a per-model switch on SCR-08 between `one_hot` and `embedding`; it has no approved design and is left for later. The schema's encoding is the only one.
+- **The schema in the identity (rule 28), corrected (the owner's choice, 2026-11-25, "Schema in config").** Rule 28 said the stored schema is part of the version's identity; it was not: an ID hashes the rows and the config (DATA-3.2, `stratal.data.versioning`), and manifest metadata is left out. A transform that changes only the schema (`set_encoding`, `reorder`) leaves every row as it was, so the `clean_table` and `split` after it got the IDs of those made straight from raw, with another parent, and registration failed (found by `test_M10_networks` run after `test_M11b_encodings`). Now `clean_table` and `split` record their input's schema hash in their config (`input_schema`, read-only, filled by the stage, refused if a request sets another value), so the schema reaches the identity through the config. `versioning.py` is unchanged. Tabular versions made before M11b keep their IDs; running their pipeline again makes new `clean_table` and `split` versions once, since the config now has the field. Tested by `test_DATA_7_1_a_schema_only_transform_gives_its_own_downstream_versions`.
+- **Streaming (rule 31), measured 2026-11-25.** A Parquet table streams in record batches of 65,536 rows. A CSV takes two passes over its text: the first keeps, per column, only whether every value is a number (cast by Arrow), a true/false word, or empty, and counts the records; the second converts one 8 MiB block at a time. The kinds and values are those PyArrow gave reading the whole table (its null words such as `NA` empty a numeric column; a column of `true`/`false` words becomes `"true"`/`"false"`; text keeps `NA` as written), so the version IDs do not change: re-ingesting breast-cancer, diabetes and wine with the new reader gave `ds_0044ce75dd60`, `ds_aefb5cccf85e` and `ds_b3f4ff09de8a` again. The rows reach the manifest writer as a stream (the other files of the folder merged in by row key), and the transform reads its parent's manifest the same way.
+  - **`sources/household-power/power.parquet`** (2,075,259 rows, 6 columns, target `Global_active_power`, 25,979 rows empty in every column), in a one-off `worker-cpu` container with its 2,500 MiB limit, cgroup `memory.peak`: **ingest 494 MiB** (61 s; 2,049,280 accepted, 25,979 `missing_target`), **ingest and transform 753 MiB** (a further 93 s; drop, derive, filter `Voltage > 230`: 31,107 filtered), of which about 366 MiB is the page cache of the two manifests (175 MiB and 191 MiB); the process's own peak was 426 MiB. Under half the limit, as the rule asked.
+  - **Arrow's allocator.** With Arrow's default allocator (mimalloc) the same ingest kept the memory it freed: the process peaked at 628 MiB, and 158 MiB above its baseline at 500,000 rows, 346 MiB at 2,075,259, while live Python memory stayed under 75 MiB and Arrow's pool under 174 MiB. `worker-cpu` now sets `ARROW_DEFAULT_MEMORY_POOL=system` (compose.yaml): 372 MiB. Tested by `test_DATA_1_4_streaming.py` (many small blocks or batches give the same version as one).
+- **Where refusals sit (rule 26).** Our own checks give `loc` = `["stages", "transform", "operations", i, field]`. Two kinds come from the config model before them: a fitted operation's refusal has `loc` ending at the operation's index, and a structural error (a missing field) carries the operation's tag before the field (`[…, "operations", 1, "rename", "to"]`). SCR-15 maps both to the operation's card.

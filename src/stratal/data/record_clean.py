@@ -46,6 +46,16 @@ class CleanTableConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    input_schema: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+        json_schema_extra={"readOnly": True},
+        description="Set by the stage, not by the user: the SHA-256 of its input's table "
+        "schema, so a schema change that leaves the rows as they were (a transform that only "
+        "sets an encoding or the column order) gives a new version (ADR-0019 Addendum B, as "
+        "built). Null for anything but a table.",
+    )
+
     algorithm_version: int = Field(
         default=dedupe.ALGORITHM_VERSION,
         ge=1,

@@ -99,6 +99,10 @@ services:
     command: ["celery", "-A", "stratal.runtime.celery_app", "worker", "-Q", "cpu", "-c", "2", "-n", "cpu@%h"]
     environment:
       <<: *stratal-env
+      # Arrow's default allocator (mimalloc) kept the memory freed while a large table
+      # streams: ingesting power.parquet (2,075,259 rows) peaked at 628 MiB with it and
+      # 372 MiB with the system allocator (ADR-0019 Addendum B rule 31, measured M11b).
+      ARROW_DEFAULT_MEMORY_POOL: system
     volumes:
       - stratal-data:/data
       - *sources

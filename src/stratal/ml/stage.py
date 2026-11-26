@@ -98,7 +98,11 @@ class _Classical:
             "state": state,
             "model": self.spec.model_dump(mode="json"),
             "task": self.task,
-            "features": {"numeric": data.numeric, "categorical": data.categorical},
+            "features": {
+                "numeric": data.numeric,
+                "categorical": data.categorical,
+                "ordinal": [name for name, _ in data.ordinal],
+            },
             "classes": data.classes,
             "table_schema": json.loads(schema_to_json(data.schema)),
             "dataset_version": self.run.input_version_id,

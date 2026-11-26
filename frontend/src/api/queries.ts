@@ -235,3 +235,16 @@ export function useCluster(id: string, clusterId: string | null) {
     staleTime: Infinity,
   });
 }
+
+// -- M11b: tabular columns and transforms (DATA-7.5) --------------------------------------
+
+/** A tabular version as a table of columns, over its accepted rows; cached by version ID. */
+export function useColumns(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["versions", id, "columns"],
+    queryFn: () => call(() => api.GET("/api/v1/versions/{version_id}/columns", { params: { path: { version_id: id } } })),
+    enabled,
+    staleTime: Infinity,
+  });
+}
+

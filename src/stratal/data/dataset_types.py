@@ -141,13 +141,35 @@ DATASET_TYPES: dict[str, Validator] = {
 # ---------------------------------------------------------------------------- M9: the other two
 
 
+Encoding = Literal["one_hot", "embedding", "ordinal", "ignore"]
+"""How a feature reaches a model (DATA-7.3, ADR-0019 rule 29)."""
+
+
 @dataclass(frozen=True)
 class Column:
-    """One column of a tabular dataset (DATA-5.2)."""
+    """One column of a tabular dataset (DATA-5.2).
+
+    ``encoding`` is ``None`` for the default: a number as a number, a category
+    one-hot. A transform may set it (DATA-7.3); ``order`` is the category order
+    of an ``ordinal`` column. Defaults are not written into the schema's JSON, so
+    a version without encodings keeps its ID (rule 29).
+    """
 
     name: str
     kind: Literal["numeric", "categorical"]
     role: Literal["feature", "target"] = "feature"
+    encoding: Encoding | None = None
+    order: tuple[str, ...] | None = None
+
+    @property
+    def ignored(self) -> bool:
+        return self.encoding == "ignore"
+
+    def effective_encoding(self) -> Literal["number", "one_hot", "embedding", "ordinal", "ignore"]:
+        """What a model does with the column, defaults resolved."""
+        if self.encoding is not None:
+            return self.encoding
+        return "number" if self.kind == "numeric" else "one_hot"
 
 
 @dataclass(frozen=True)
@@ -253,6 +275,8 @@ class TypeInfo:
     trainable: bool
     """Whether the training runtime accepts it (tabular and text since M10)."""
     note: str
+    source: str = ""
+    """What a source folder of this type holds, in one line (the Start pipeline drawer)."""
 
 
 TYPE_INFO: dict[str, TypeInfo] = {
@@ -264,6 +288,7 @@ TYPE_INFO: dict[str, TypeInfo] = {
         ("clip_score", "cider_d"),
         False,
         "Captioned by the label stage; evaluated, not trained by the builder.",
+        "image files; captioned and scored by the label stage",
     ),
     "labelled_images": TypeInfo(
         "labelled_images",
@@ -273,6 +298,7 @@ TYPE_INFO: dict[str, TypeInfo] = {
         ("accuracy", "macro_f1"),
         True,
         "Transformers need a layer that cuts images into patches, which the builder does not have.",
+        "class folders, or images with a CSV of labels",
     ),
     "tabular": TypeInfo(
         "tabular",
@@ -282,6 +308,7 @@ TYPE_INFO: dict[str, TypeInfo] = {
         ("accuracy", "macro_f1"),
         True,
         "Classification or regression, by the target's kind; trains on a split version.",
+        "one .csv or .parquet table",
     ),
     "labelled_text": TypeInfo(
         "labelled_text",
@@ -291,5 +318,6 @@ TYPE_INFO: dict[str, TypeInfo] = {
         ("accuracy", "macro_f1"),
         True,
         "Trains on a tokenize version: its tokens and vocabulary fix the input.",
+        ".jsonl, or .txt files in class folders",
     ),
 }

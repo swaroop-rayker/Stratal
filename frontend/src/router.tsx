@@ -17,6 +17,7 @@ import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { StudyScreen } from "./screens/studies/StudyScreen";
 import { SystemScreen } from "./screens/system/SystemScreen";
 import { VersionScreen } from "./screens/version/VersionScreen";
+import { TransformScreen } from "./screens/transform/TransformScreen";
 import { AppShell } from "./shell/AppShell";
 
 export const router = createBrowserRouter([
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
           { path: "jobs/:jobId", element: <JobScreen /> },
           { path: "reviews/:reviewId", element: <ReviewScreen /> },
           { path: "versions/:versionId/report", element: <ReportScreen /> },
+          { path: "versions/:versionId/transform", element: <TransformScreen /> },
           { path: "models", element: <ModelsScreen /> },
           { path: "models/build", element: <BuilderScreen /> },
           { path: "models/compare", element: <CompareScreen /> },

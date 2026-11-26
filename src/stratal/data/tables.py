@@ -9,6 +9,11 @@ target's kind decides the task.
 
 PyArrow reads both formats; it ships without type information, so the unknown
 type checks are off for this file, and no PyArrow object leaves it.
+
+A table streams (ADR-0019 Addendum B rule 31): a Parquet file in record batches
+of 65,536 rows with its own column types; a CSV in two passes, the first keeping
+per column only whether every value is a number (its kind), the second
+converting one block at a time. One batch is held at a time.
 """
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 # pyright: reportUnknownArgumentType=false, reportMissingTypeStubs=false
@@ -20,6 +25,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import pyarrow as pa
+import pyarrow.compute as _compute
 import pyarrow.csv as pa_csv
 import pyarrow.parquet as pq
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,6 +34,8 @@ from stratal.core.errors import ValidationFailed
 from stratal.data.dataset_types import Column, TableSchema, table_problem
 from stratal.data.records import canonical_json, content_hash
 from stratal.storage.manifest import STATUS_ACCEPTED, STATUS_REJECTED, Row
+
+pc: Any = _compute  # its functions are generated at import, unknown to pyright
 
 TABLE_FORMATS = {".csv": "CSV", ".parquet": "PARQUET"}
 Kind = Literal["numeric", "categorical"]
@@ -51,13 +59,34 @@ class TableIngest(BaseModel):
     )
 
 
+BATCH_ROWS = 65_536
+"""Records per batch when a table streams (ADR-0019 Addendum B rule 31)."""
+_CSV_BLOCK_BYTES = 8 << 20
+
+
 @dataclass(frozen=True)
 class ReadTable:
+    """A table's shape, read without holding its records; :meth:`batches` streams them."""
+
     relpath: str
     format: str
     names: list[str]
     inferred: dict[str, Kind]
-    records: list[dict[str, Any]]
+    count: int
+    path: Path
+    bool_columns: frozenset[str] = frozenset()
+    """CSV columns of true/false words only, which PyArrow's inference reads as booleans."""
+    empty_columns: frozenset[str] = frozenset()
+    """CSV columns with no value at all, which PyArrow's inference reads as nulls."""
+
+    def batches(self) -> Iterator[list[dict[str, Any]]]:
+        """The records in source order: Parquet in :data:`BATCH_ROWS`, a CSV a block at a time."""
+        if self.format == "PARQUET":
+            for batch in pq.ParquetFile(self.path).iter_batches(batch_size=BATCH_ROWS):
+                yield batch.to_pylist()
+            return
+        for batch in _csv_strings(self.path, self.names):
+            yield _csv_records(batch, self)
 
 
 def find_table(source: Path, relpaths: list[str]) -> str:
@@ -73,22 +102,130 @@ def find_table(source: Path, relpaths: list[str]) -> str:
     return tables[0]
 
 
+_DEFAULTS = pa_csv.ConvertOptions()
+_NULLS: Any = pa.array(list(_DEFAULTS.null_values), type=pa.string())
+_WORDS: Any = pa.array(sorted({*_DEFAULTS.true_values, *_DEFAULTS.false_values}), type=pa.string())
+_TRUE = frozenset(_DEFAULTS.true_values)
+
+
+def _csv_strings(path: Path, names: list[str] | None = None) -> Iterator[Any]:
+    """A CSV's record batches with every column as text, as written."""
+    convert = pa_csv.ConvertOptions(
+        column_types={n: pa.string() for n in names} if names is not None else None,
+        strings_can_be_null=False,
+        null_values=[],
+    )
+    reader = pa_csv.open_csv(
+        path, read_options=pa_csv.ReadOptions(block_size=_CSV_BLOCK_BYTES), convert_options=convert
+    )
+    try:
+        yield from reader
+    finally:
+        reader.close()
+
+
+def _nulled(column: Any) -> Any:
+    """PyArrow's null words (empty, NA, null …) as nulls, as its CSV reader does for numbers."""
+    return pc.if_else(pc.is_in(column, value_set=_NULLS), pa.scalar(None, pa.string()), column)
+
+
+def _csv_names(path: Path) -> list[str]:
+    reader = pa_csv.open_csv(
+        path, convert_options=pa_csv.ConvertOptions(strings_can_be_null=False, null_values=[])
+    )
+    try:
+        return [str(n) for n in reader.schema.names]
+    finally:
+        reader.close()
+
+
+@dataclass(frozen=True)
+class _Scan:
+    names: list[str]
+    inferred: dict[str, Kind]
+    count: int
+    bools: frozenset[str]
+    empty: frozenset[str]
+
+
+def _scan_csv(path: Path) -> _Scan:
+    """Pass 1 over a CSV (rule 31): per column only whether every value is a number, a
+    true/false word or empty, and the record count. The kinds match what reading the whole
+    table with PyArrow inferred before M11b, so version IDs do not change."""
+    names = _csv_names(path)
+    numeric = dict.fromkeys(names, True)
+    words = dict.fromkeys(names, True)
+    seen = dict.fromkeys(names, False)
+    count = 0
+    for batch in _csv_strings(path, names):
+        count += batch.num_rows
+        for i, name in enumerate(names):
+            present = _nulled(batch.column(i)).drop_null()
+            if not len(present):
+                continue
+            seen[name] = True
+            if numeric[name]:
+                try:
+                    pc.cast(present, pa.float64())
+                except (pa.ArrowInvalid, pa.ArrowNotImplementedError):
+                    numeric[name] = False
+            if words[name]:
+                words[name] = bool(pc.all(pc.is_in(present, value_set=_WORDS)).as_py())
+    inferred: dict[str, Kind] = {
+        n: "numeric" if numeric[n] and seen[n] else "categorical" for n in names
+    }
+    bools = frozenset(n for n in names if seen[n] and words[n] and not numeric[n])
+    empty = frozenset(n for n in names if not seen[n])
+    return _Scan(names, inferred, count, bools, empty)
+
+
+def _csv_records(batch: Any, read: ReadTable) -> list[dict[str, Any]]:
+    columns: dict[str, list[Any]] = {}
+    for i, name in enumerate(read.names):
+        raw = batch.column(i)
+        if name in read.empty_columns:
+            columns[name] = [None] * batch.num_rows
+        elif read.inferred[name] == "numeric":
+            columns[name] = pc.cast(_nulled(raw), pa.float64()).to_pylist()
+        elif name in read.bool_columns:
+            columns[name] = [None if v is None else v in _TRUE for v in _nulled(raw).to_pylist()]
+        else:
+            columns[name] = raw.to_pylist()
+    return [{name: columns[name][k] for name in read.names} for k in range(batch.num_rows)]
+
+
+def table_columns(path: Path) -> list[str]:
+    """A table file's column names, from its header or its schema; no records are read."""
+    if TABLE_FORMATS.get(path.suffix.lower()) == "PARQUET":
+        return [str(n) for n in pq.ParquetFile(path).schema_arrow.names]
+    try:
+        return _csv_names(path)
+    except pa.ArrowInvalid as exc:
+        raise ValueError(str(exc)) from exc
+
+
 def read_table(source: Path, relpath: str) -> ReadTable:
-    """Read the table whole; tabular datasets here are small (scikit-learn's, NFR-2 noted)."""
+    """A table's columns, kinds and record count; its records stream later (rule 31)."""
     path = source / relpath
     fmt = TABLE_FORMATS[path.suffix.lower()]
     try:
-        table: Any = pa_csv.read_csv(path) if fmt == "CSV" else pq.read_table(path)
+        if fmt == "PARQUET":
+            parquet = pq.ParquetFile(path)
+            inferred: dict[str, Kind] = {}
+            for field in parquet.schema_arrow:
+                numeric = pa.types.is_integer(field.type) or pa.types.is_floating(field.type)
+                inferred[str(field.name)] = "numeric" if numeric else "categorical"
+            count = int(parquet.metadata.num_rows)
+            return ReadTable(relpath, fmt, list(inferred), inferred, count, path)
+        scan = _scan_csv(path)
     except (OSError, pa.ArrowInvalid) as exc:
         raise ValidationFailed(
             f"Could not read {relpath} as {fmt}: {type(exc).__name__}: {exc}"[:500],
             suggested_action="Check that the file is a valid table with a header row.",
         ) from exc
-    inferred: dict[str, Kind] = {}
-    for field in table.schema:
-        numeric = pa.types.is_integer(field.type) or pa.types.is_floating(field.type)
-        inferred[str(field.name)] = "numeric" if numeric else "categorical"
-    return ReadTable(relpath, fmt, list(inferred), inferred, table.to_pylist())
+    return ReadTable(
+        relpath, fmt, scan.names, scan.inferred, scan.count, path, scan.bools, scan.empty
+    )
 
 
 def build_schema(read: ReadTable, config: TableIngest) -> TableSchema:
@@ -153,9 +290,10 @@ def _finite_or_none(value: Any) -> Any:
 
 def table_rows(read: ReadTable, schema: TableSchema, *, stage: str) -> Iterator[Row]:
     """One manifest row per record. A row that breaks the schema is rejected with its reason."""
-    digits = max(7, len(str(len(read.records))))
+    digits = max(7, len(str(read.count)))
     target = next(c for c in schema.columns if c.role == "target")
-    for number, raw in enumerate(read.records, start=1):
+    records = (record for batch in read.batches() for record in batch)
+    for number, raw in enumerate(records, start=1):
         values = {c.name: coerce(raw.get(c.name), c.kind) for c in schema.columns}
         features = {
             c.name: _finite_or_none(values[c.name]) for c in schema.columns if c.role == "feature"

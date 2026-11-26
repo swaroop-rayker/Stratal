@@ -129,28 +129,31 @@ describe("SCR-02", () => {
 
   test("test_UI_2_1_start_pipeline_sends_only_changed_settings", () => {
     const defaults = { ingest: { min_size: 256 }, clean: { phash_max_distance: 8 }, preprocess: { max_side: 768, jpeg_quality: 95 } };
-    const all = ["ingest", "clean", "preprocess", "label"];
+    const chain = ["ingest", "clean", "preprocess", "label", "filter", "split", "evaluate"];
     const folder = pipelineBody({
       from: { dataset: "flowers5k", path: "/sources/flowers5k" },
-      ticked: ["ingest", "clean", "preprocess"],
-      runnable: all,
-      values: { preprocess: { max_side: 512, jpeg_quality: 95 }, ingest: { min_size: 256 } },
+      dtype: "image_caption",
+      chain,
+      stop: "preprocess",
+      values: { preprocess: { max_side: 512, jpeg_quality: 95 }, ingest: { min_size: 256 }, label: { caption_batch_size: 4 } },
       defaults,
     });
     expect(folder).toEqual({
       kind: "pipeline",
       dataset: "flowers5k",
       source: { kind: "folder", path: "/sources/flowers5k" },
+      dataset_type: "image_caption",
       stages: { preprocess: { max_side: 512 } },
       until_stage: "preprocess",
     });
     const fromVersion = pipelineBody({
       from: { versionId: "ds_e1aa7c52d940" },
-      ticked: ["preprocess", "label"],
-      runnable: ["preprocess", "label"],
+      dtype: "image_caption",
+      chain: ["preprocess", "label"],
+      stop: "label",
       values: {},
       defaults,
     });
-    expect(fromVersion).toEqual({ kind: "pipeline", from_version: "ds_e1aa7c52d940", stages: {}, until_stage: null });
+    expect(fromVersion).toEqual({ kind: "pipeline", from_version: "ds_e1aa7c52d940", dataset_type: "image_caption", stages: {}, until_stage: null });
   });
 });

@@ -15,9 +15,10 @@ one row; see :mod:`stratal.data.tables` and :mod:`stratal.data.texts`.
 """
 
 import csv
+import heapq
 import time
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal
@@ -428,23 +429,17 @@ def _ingest_records(
             for p in relpaths
             if p != relpath
         ]
-        rows = sorted(
-            [*table_rows(read, schema, stage=STAGE), *others], key=lambda r: str(r["row_key"])
+        # Both streams are sorted by row key: the records by number, the other files by path.
+        rows: Iterable[Mapping[str, Any]] = heapq.merge(
+            table_rows(read, schema, stage=STAGE),
+            sorted(others, key=lambda r: str(r["row_key"])),
+            key=lambda r: str(r["row_key"]),
         )
         dtype = TABULAR
     else:
         assert config.text is not None
         rows = text_rows(source, relpaths, config.text, stage=STAGE)
         dtype = LABELLED_TEXT
-    accepted = sum(1 for r in rows if r["status"] == STATUS_ACCEPTED)
-    sink.emit(
-        stage=STAGE,
-        substage="read_records",
-        message=f"Read {len(rows):,} records · {accepted:,} accepted",
-        step=len(rows),
-        total=len(rows),
-        metrics={"records": len(rows), "accepted": accepted, "rejected": len(rows) - accepted},
-    )
     record = commit_version(
         data_dir=data_dir,
         stage=STAGE,
@@ -454,5 +449,18 @@ def _ingest_records(
         derive=derive,
         sink=sink,
         metadata=metadata,
+    )
+    accepted = int(record.counts.get("accepted", 0))
+    sink.emit(
+        stage=STAGE,
+        substage="read_records",
+        message=f"Read {record.row_count:,} records · {accepted:,} accepted",
+        step=record.row_count,
+        total=record.row_count,
+        metrics={
+            "records": record.row_count,
+            "accepted": accepted,
+            "rejected": record.row_count - accepted,
+        },
     )
     return replace(record, dtype=dtype)

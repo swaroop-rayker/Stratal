@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start pipeline drawer v4 — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.spinner { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: var(--r-pill); animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.field.error > small { color: var(--danger); display: flex; gap: var(--sp-1); align-items: center; }
+.input, .select { height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-13) var(--font-ui); width: 100%; display: flex; align-items: center; }
+.input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.field.error .input { border-color: var(--danger); }
+.select { justify-content: space-between; }
+.tabs { display: flex; gap: var(--sp-1); border-bottom: var(--bw) solid var(--border); }
+.tab { padding: var(--sp-2) var(--sp-3); border: 0; background: none; color: var(--text-secondary); font: var(--fw-medium) var(--fs-13) var(--font-ui); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: var(--sp-2); align-items: center; }
+.tab[aria-selected=true] { color: var(--text-primary); border-bottom-color: var(--accent); }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-2); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: 0 var(--sp-2); border-bottom: var(--bw) solid var(--border); height: 36px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-4); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-8) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); max-width: 46ch; color: var(--text-secondary); }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; display: inline-block; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.tip { position: absolute; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); box-shadow: var(--shadow-2); z-index: var(--z-tooltip); white-space: nowrap; }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); }
+.brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); }
+.nav kbd { margin-left: auto; }
+.side .foot { margin-top: auto; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.health { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); } .health svg.i { color: var(--success); }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); color: var(--text-primary); font: var(--fs-12) var(--font-ui); }
+.jobind .stage { color: var(--text-secondary); } .jobind .eta { color: var(--text-muted); } .jobind .progress { width: 80px; } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; }
+.m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); font-size: var(--fs-11); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-02 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; display: grid; grid-template-columns: 248px 1fr; background: var(--bg); }
+.content.single { display: block; padding: var(--sp-6); }
+.list { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border-right: var(--bw) solid var(--border); }
+.list-head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-4) var(--sp-3) var(--sp-3); }
+.list-head h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.filter { margin: 0 var(--sp-3) var(--sp-3); position: relative; }
+.filter .input { padding-left: 28px; color: var(--text-muted); } .filter svg.i { position: absolute; left: var(--sp-2); top: 9px; color: var(--text-muted); } .filter kbd { position: absolute; right: var(--sp-2); top: 6px; }
+.ds { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-2); padding: var(--sp-2) var(--sp-3); border-top: var(--bw) solid var(--border); cursor: pointer; }
+.ds:hover, .ds.is-hover { background: var(--accent-soft); }
+.ds[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.ds .slug { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .ds .r { text-align: right; font: var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.ds .sub { font-size: var(--fs-12); color: var(--text-muted); display: flex; gap: var(--sp-1); align-items: center; flex-wrap: wrap; } .ds .sub .mono { color: var(--text-secondary); font-size: var(--fs-11); }
+.ds .pill { height: 16px; font-size: 10px; padding: 0 6px 0 5px; }
+.detail { padding: var(--sp-4) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; overflow: hidden; }
+.dhead { display: flex; align-items: baseline; gap: var(--sp-3); }
+.dhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); }
+.dhead .sub { color: var(--text-muted); font-size: var(--fs-12); } .dhead .sub .mono { color: var(--text-secondary); }
+.facts { display: flex; gap: var(--sp-6); }
+.facts > div { display: flex; flex-direction: column; gap: 2px; }
+.facts .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.facts .v { font: var(--fw-medium) var(--fs-14) var(--font-mono); font-variant-numeric: tabular-nums; }
+.stage-tag { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.counts { display: flex; align-items: center; gap: var(--sp-1); font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.counts .n-acc { color: var(--text-primary); }
+.stack { display: flex; width: 48px; height: 6px; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-sunken); flex: none; }
+.stack i { display: block; height: 100%; }
+.stack .acc { background: var(--success); } .stack .rej { background: var(--danger); } .stack .dup { background: var(--text-muted); } .stack .fil { background: var(--warning); }
+.keyrow { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-muted); }
+.keyrow span { display: inline-flex; gap: var(--sp-1); align-items: center; } .keyrow i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); display: inline-block; }
+.made { display: inline-flex; gap: var(--sp-1); align-items: center; color: var(--text-secondary); font-size: var(--fs-12); } .made .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.made svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.parent { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); } .parent.raw { color: var(--text-muted); font-family: var(--font-ui); }
+.pending td { background: color-mix(in srgb, var(--state-running) 6%, transparent); }
+.pending .progress { width: 56px; } .pending .what { font-size: var(--fs-12); color: var(--text-secondary); }
+.t td.menu { color: var(--text-muted); text-align: center; width: 28px; padding: 0 var(--sp-1); }
+.foot-note { margin: 0; font-size: var(--fs-12); color: var(--text-muted); }
+/* drawer */
+.scrim { position: absolute; inset: 0; background: var(--scrim); z-index: var(--z-drawer); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 440px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); display: flex; flex-direction: column; z-index: var(--z-drawer); }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.drawer > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); overflow: hidden; flex: 1; }
+.drawer > footer { display: flex; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-top: var(--bw) solid var(--border); }
+.stages { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.st { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); height: 36px; border-top: var(--bw) solid var(--border); font-size: var(--fs-13); }
+.st:first-child { border-top: 0; }
+.st input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; }
+.st .name { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .st .key { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted); } .st svg.i { color: var(--text-muted); }
+.st.off { color: var(--text-muted); } .st.off .name { color: var(--text-muted); font-weight: var(--fw-regular); }
+.st-form { padding: var(--sp-3); border-top: var(--bw) solid var(--border); background: var(--surface-sunken); display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.type { font: var(--fs-11) var(--font-mono); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); }
+.summary { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--danger-soft); border: var(--bw) solid color-mix(in srgb, var(--danger) 50%, transparent); font-size: var(--fs-12); }
+.summary svg.i { color: var(--danger); margin-top: 2px; }
+.menu-pop { position: absolute; width: 270px; padding: var(--sp-1); background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-2); z-index: var(--z-drawer); }
+.menu-pop div { display: flex; align-items: center; gap: var(--sp-2); height: 32px; padding: 0 var(--sp-2); border-radius: var(--r-sm); font-size: var(--fs-13); }
+.menu-pop div.is-hover { background: var(--accent-soft); } .menu-pop kbd { margin-left: auto; } .menu-pop svg.i { color: var(--text-muted); }
+
+/* ============================================================================ document chrome (review page, not UI) */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; }
+.changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+
+/* ============================================================================ design-system toggle (system-preview.html, unchanged) */
+.toggle { display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: var(--fs-13); }
+.toggle input { position: absolute; opacity: 0; }
+.toggle i { width: 30px; height: 18px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border-strong); position: relative; }
+.toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: var(--r-pill); background: var(--text-secondary); }
+.toggle input:checked + i { background: var(--accent); border-color: var(--accent); }
+.toggle input:checked + i::after { transform: translateX(12px); background: var(--on-accent); }
+.toggle input:disabled + i { opacity: .45; }
+.toggle.is-focus i { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+/* ============================================================================ SCR-09 v2 kind cards (approved, unchanged) */
+.kc { display: grid; grid-template-columns: 16px 1fr; gap: 2px var(--sp-3); padding: var(--sp-2) var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
+.kc input { accent-color: var(--accent); width: 14px; height: 14px; margin: 3px 0 0; }
+.kc b { font-size: var(--fs-13); font-weight: var(--fw-semibold); color: var(--text-primary); display: flex; align-items: center; gap: var(--sp-2); }
+.kc .what { grid-column: 2; font-size: var(--fs-12); color: var(--text-secondary); }
+.kc:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.kc[aria-disabled=true] { cursor: default; border-style: dashed; background: transparent; grid-template-columns: 1fr; }
+.kc[aria-disabled=true] .what { grid-column: 1; }
+.kc.is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+/* ============================================================================ Start pipeline drawer v4 (tokens only; classes prefixed sp-) */
+.drawer { width: 480px; }
+.sp-kinds { display: flex; flex-direction: column; gap: var(--sp-2); border: 0; margin: 0; padding: 0; }
+.sp-kinds legend { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); margin-bottom: var(--sp-2); padding: 0; display: flex; gap: var(--sp-2); align-items: center; }
+.sp-chosen { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.sp-chosen b { color: var(--text-primary); font-weight: var(--fw-semibold); font-size: var(--fs-13); }
+.sp-why-chain { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-muted); }
+.sp-st { display: grid; grid-template-columns: 14px auto 1fr auto; align-items: center; gap: 2px var(--sp-2); padding: 6px var(--sp-3); min-height: 44px; border-top: var(--bw) solid var(--border); font-size: var(--fs-13); }
+.sp-st:first-child { border-top: 0; }
+.sp-st > svg.i { color: var(--text-muted); width: 12px; height: 12px; }
+.sp-st .name { font: var(--fw-medium) var(--fs-13) var(--font-mono); color: var(--text-primary); }
+.sp-st .what { grid-column: 2 / 4; grid-row: 2; font-size: var(--fs-12); color: var(--text-secondary); }
+.sp-st .what .mono { font-size: var(--fs-11); color: var(--text-primary); }
+.sp-st .stop { grid-column: 4; grid-row: 1 / 3; display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); color: var(--text-secondary); white-space: nowrap; cursor: pointer; }
+.sp-st .stop input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; }
+.sp-st .stop:has(input:checked) { color: var(--text-primary); font-weight: var(--fw-medium); }
+.sp-st.done { background: transparent; color: var(--text-muted); } .sp-st.done .name { color: var(--text-muted); font-weight: var(--fw-regular); } .sp-st.done .what { color: var(--text-muted); }
+.sp-st.notrun { background: var(--surface-sunken); } .sp-st.notrun .name { color: var(--text-secondary); font-weight: var(--fw-regular); } .sp-st.notrun .what { color: var(--text-muted); }
+.sp-st .opt { font: var(--fs-11) var(--font-ui); color: var(--text-muted); padding: 0 4px; border: var(--bw) solid var(--border); border-radius: var(--r-xs); }
+.sp-st .tg { grid-column: 4; grid-row: 1 / 3; }
+.sp-st.sel { box-shadow: inset 2px 0 0 var(--accent); }
+.sp-form { padding: var(--sp-3); border-top: var(--bw) solid var(--border); background: var(--surface-sunken); display: grid; grid-template-columns: 1fr; gap: var(--sp-3); }
+.sp-form.two { grid-template-columns: 1fr 1fr; }
+.sp-form .select.input { justify-content: space-between; }
+.sp-kinds-list { display: flex; flex-wrap: wrap; gap: var(--sp-1); align-items: center; min-height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-sm); font-size: var(--fs-12); color: var(--text-secondary); }
+.sp-note { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); font-size: var(--fs-12); color: var(--text-primary); border: var(--bw) solid color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); }
+.sp-note svg.i { color: var(--info); margin-top: 2px; flex: none; }
+.sp-note .btn { margin-left: auto; }
+.sp-wait { padding: var(--sp-4); text-align: center; border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.sp-states { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); padding: var(--sp-4); }
+.sp-box { background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.sp-box > b { color: var(--text-primary); font-size: var(--fs-13); }
+.sp-list { position: absolute; z-index: var(--z-tooltip); width: 220px; padding: var(--sp-1) 0; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); box-shadow: var(--shadow-3); font: var(--fs-12)/1.25 var(--font-mono); }
+.sp-list div { padding: 4px var(--sp-3); color: var(--text-primary); }
+.sp-list div.sel { background: var(--accent); color: var(--on-accent); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M2 8h3l1.5-3 3 6L11 8h3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <!-- New in this mockup, same style -->
+  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><path d="M3.5 8h.3M8 8h.3M12.5 8h.3" stroke-width="2.4"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 16 16"><path d="M2 4.5h4l1.5 1.5H14v6.5H2z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M3.5 10.5h-1v-8h8v1"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 16 16"><path d="M5 6.5H10a3 3 0 0 1 0 6H7M5 6.5l2.5-2.5M5 6.5L7.5 9"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1><i>Start pipeline</i> drawer, type first (v4) · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Serves DATA-1.4, DATA-5.2 and DATA-7.1 (the transform stage reachable). Built on the approved low-fi wireframe (<span class="mono">SCR-02drawer-lofi_v1.html</span>, approved 2026-11-24 with its question: the table's target is a select of the header's columns, from <span class="mono">GET /sources</span>'s new <span class="mono">columns</span>) inside SCR-02's approved drawer: its header, tabs, fields, stage box, sunken settings panel and footer, unchanged. The data is real: the folders under <span class="mono">sources/</span>, wine's raw version <span class="mono">ds_b3f4ff09de8a</span> and split <span class="mono">ds_6448d354c9c6</span>, and each stage's own fields and defaults from <span class="mono">GET /config/schemas/{name}</span>. Open as <span class="mono">SCR-02drawer_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions made in this step, for review</b>
+<ul>
+<li><b>The type is chosen with the <i>Train a model</i> drawer's radio cards</b> (SCR-09 v2, approved): accent-soft with an accent edge when chosen. Once chosen, the four cards fold into one line with <i>Change</i>, as that drawer folds its step 1, so the stages get the room. From a version it is one dashed card, as a kind that cannot be chosen there.</li>
+<li><b>The stop is a native radio in accent</b> labelled "Stop after" on each row; the chosen row takes the accent edge. Stages after it sit on <span class="mono">--surface-sunken</span> with "not run · …" in their line: a fill and words, not hatching, so the text keeps its contrast.</li>
+<li><b>The transform switch is the design system's toggle</b>: it acts at once (it opens SCR-15), which is what a toggle is for; the stop radios are submitted with the form, as SCR-02's checkboxes were. From a folder the toggle is replaced by a <i>Stop after ingest</i> button, so nothing disabled sits in the tab order without a use.</li>
+<li><b>Stage rows have two lines</b>: the name in mono with its chevron, and what it does with its key setting in secondary; 44 px high, against 36 px for the phase-1 rows.</li>
+<li><b><i>Start job</i> names the stop</b> ("Start job · to split"), so the button says what the radios chose.</li>
+<li><b>Notices</b> (type changed, nothing left to run) are info callouts, with <i>Undo</i> on a type change.</li>
+</ul>
+</div>
+
+<h2>A · From a folder, the type not chosen yet (dark)</h2>
+<div class="frame" style="height:640px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b></div></header>
+    <main class="content"><section class="list"></section><section class="detail"></section></main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer" role="dialog" aria-label="Start pipeline">
+    <header><h2>Start pipeline</h2><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="body">
+      <div class="tabs" role="tablist"><span class="tab" role="tab" aria-selected="true"><svg class="i"><use href="#i-folder"/></svg>A folder</span><span class="tab" role="tab"><svg class="i"><use href="#i-branch"/></svg>An existing version</span></div>
+      <div class="field"><label>Source folder <span class="type">source.path</span></label><div class="select input mono">/sources/wine<svg class="i"><use href="#i-down"/></svg></div><small>1 file · a table with 14 columns</small></div>
+      <fieldset class="sp-kinds"><legend><span class="n" style="position:static;display:inline-block">1</span>What the folder holds <span class="type">dataset_type</span></legend><label class="kc is-focus"><input type="radio" name="t2727739899840"><b>Image–caption pairs</b><span class="what">image files; captioned and scored by the label stage</span></label><label class="kc"><input type="radio" name="t2727739899840"><b>Labelled images</b><span class="what">class folders, or images with a CSV of labels</span></label><label class="kc"><input type="radio" name="t2727739899840"><b>Tabular</b><span class="what">one .csv or .parquet table</span></label><label class="kc"><input type="radio" name="t2727739899840"><b>Labelled text</b><span class="what">.jsonl, or .txt files in class folders</span></label></fieldset>
+      <div class="sp-wait">Choose what the folder holds. The dataset name and the stages follow from it.</div>
+    </div>
+    <footer><button class="btn ghost">Cancel</button><button class="btn primary is-disabled" disabled>Start job</button></footer>
+  </aside>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Type</td><td>Four radio cards, each with what its folder holds; required, no default, no guess (7d); <i>Start job</i> disabled until one is chosen</td><td><span class="mono">GET /dataset-types</span> <span class="mono">title</span>, <span class="mono">source</span> <i>planned</i> (7b)</td><td>on open</td></tr>
+</table>
+
+<h2>B · A table from a folder: wine, run to split (dark)</h2>
+<div class="frame" id="frameB" style="height:965px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>wine</div></header>
+    <main class="content"><section class="list"></section><section class="detail"></section></main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer" role="dialog" aria-label="Start pipeline">
+    <header><h2>Start pipeline</h2><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="body">
+      <div class="tabs" role="tablist"><span class="tab" role="tab" aria-selected="true"><svg class="i"><use href="#i-folder"/></svg>A folder</span><span class="tab" role="tab"><svg class="i"><use href="#i-branch"/></svg>An existing version</span></div>
+      <div class="field"><label>Source folder <span class="type">source.path</span></label><div class="select input mono">/sources/wine<svg class="i"><use href="#i-down"/></svg></div><small>1 file · a table with 14 columns</small></div>
+      <div class="field"><label>What the folder holds <span class="type">dataset_type</span></label><div class="sp-chosen"><b>Tabular</b><span>one .csv or .parquet table</span><span class="spacer"></span><button class="btn sm ghost">Change</button></div></div>
+      <div class="field"><label>Dataset <span class="type">dataset</span></label><div class="input mono">wine</div><small>An existing dataset: this adds versions to it.</small></div>
+      <div class="field"><label><span class="n" style="position:static;display:inline-block">2</span>Stages <span class="sp-why-chain">· each stage reads the one before it, so a run stops at one point</span></label>
+        <div class="stages" role="radiogroup" aria-label="Stop after">
+          <div class="sp-st"><svg class="i"><use href="#i-down"/></svg><span class="name">ingest</span><span class="what">reads the table; each record becomes a row</span><label class="stop"><input type="radio" name="sb">Stop after</label></div>
+          <div class="sp-form">
+            <div class="field"><label><span class="n" style="position:static;display:inline-block">3</span><span class="mono">table.target</span><span class="type">required</span></label><div class="select input mono">cultivar<svg class="i"><use href="#i-down"/></svg></div><small>The column to predict, from the table's header. Categorical: classification; numeric: regression.</small></div>
+            <div class="field"><label><span class="mono">table.kinds</span><span class="type">optional</span></label><div class="sp-kinds-list"><button class="btn sm ghost"><svg class="i"><use href="#i-plus"/></svg>Set a column's kind</button></div><small>Otherwise inferred: numeric if every value is a number. Set one here to keep a code like <span class="mono">007</span> as text.</small></div>
+          </div>
+          <div class="sp-st"><svg class="i" style="opacity:0"><use href="#i-chevron"/></svg><span class="name">transform</span><span class="opt">optional</span><span class="what"><span class="n" style="position:static;display:inline-block">4</span>runs on the raw version once it exists: stop after ingest, then <i>Transform…</i></span><span class="tg"><button class="btn sm">Stop after ingest</button></span></div>
+          <div class="sp-st"><svg class="i"><use href="#i-chevron"/></svg><span class="name">clean_table</span><span class="what">marks exact duplicate records · no settings</span><label class="stop"><input type="radio" name="sb">Stop after</label></div>
+          <div class="sp-st sel"><svg class="i"><use href="#i-chevron"/></svg><span class="name">split</span><span class="what">train / val / test by class · <span class="mono">0.8 / 0.1 / 0.1</span>, seed <span class="mono">0</span></span><label class="stop"><input type="radio" name="sb" checked>Stop after</label></div>
+        </div><small>Fields come from each stage's config schema, only those of this type; only changed values are sent.</small></div>
+    </div>
+    <footer><button class="btn ghost">Cancel</button><button class="btn primary">Start job · to split</button></footer>
+  </aside>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">2</span></td><td>Stage chain</td><td>The type's stages in order, each with one line and a key setting, one <i>Stop after</i> radio (the last by default). Sends <span class="mono">dataset_type</span> always and <span class="mono">until_stage</span> when the stop is not the last stage</td><td><span class="mono">GET /dataset-types</span> <span class="mono">stages</span> <i>planned</i>; <span class="mono">POST /jobs</span></td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Ingest's table fields</td><td><span class="mono">table.target</span> as a select of the table's columns, required; <span class="mono">table.kinds</span> as column–kind pairs from the same list. <span class="mono">min_size</span> is not shown for a table (its default is still applied)</td><td><span class="mono">GET /sources</span> <span class="mono">columns</span> <i>planned</i>; <span class="mono">GET /config/schemas/ingest</span></td><td>on open</td></tr>
+<tr><td><span class="n">4</span></td><td>transform from a folder</td><td>Why it cannot run yet, and <i>Stop after ingest</i>, which moves the stop to ingest</td><td>–</td><td>–</td></tr>
+</table>
+
+<h2>B · in light</h2>
+<div id="lightB"></div>
+
+<h2>C · From wine's raw version: the transform toggle (light)</h2>
+<div data-theme="light" style="width:max-content"><div class="frame" style="height:605px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>wine<svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_b3f4ff09de8a</span></div></header>
+    <main class="content"><section class="list"></section><section class="detail"></section></main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer" role="dialog" aria-label="Start pipeline">
+    <header><h2>Start pipeline</h2><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="body">
+      <div class="tabs" role="tablist"><span class="tab" role="tab"><svg class="i"><use href="#i-folder"/></svg>A folder</span><span class="tab" role="tab" aria-selected="true"><svg class="i"><use href="#i-branch"/></svg>An existing version</span></div>
+      <div class="field"><label>Version <span class="type">from_version</span></label><div class="select input mono">ds_b3f4ff09de8a · ingest · wine<svg class="i"><use href="#i-down"/></svg></div></div>
+      <div class="field"><label>What it holds</label><div class="kc" aria-disabled="true"><b>Tabular</b><span class="what">the version's own type · target <span class="mono">cultivar</span>, classification</span></div></div>
+      <div class="field"><label>Stages <span class="sp-why-chain">· each stage reads the one before it</span></label>
+        <div class="stages" role="radiogroup" aria-label="Stop after">
+          <div class="sp-st done"><svg class="i"><use href="#i-check"/></svg><span class="name">ingest</span><span class="what">already done in this version</span></div>
+          <div class="sp-st"><svg class="i" style="opacity:0"><use href="#i-chevron"/></svg><span class="name">transform</span><span class="opt">optional</span><span class="what"><span class="n" style="position:static;display:inline-block">5</span>your operations on this raw table: switching on opens the transform editor</span><label class="toggle tg is-focus"><input type="checkbox" aria-describedby="tx-why"><i></i><span class="sr-only" id="tx-why">Opens SCR-15 for ds_b3f4ff09de8a</span></label></div>
+          <div class="sp-st"><svg class="i"><use href="#i-chevron"/></svg><span class="name">clean_table</span><span class="what">marks exact duplicate records</span><label class="stop"><input type="radio" name="sc">Stop after</label></div>
+          <div class="sp-st sel"><svg class="i"><use href="#i-chevron"/></svg><span class="name">split</span><span class="what"><span class="mono">0.8 / 0.1 / 0.1</span>, seed <span class="mono">0</span></span><label class="stop"><input type="radio" name="sc" checked>Stop after</label></div>
+        </div></div>
+    </div>
+    <footer><button class="btn ghost">Cancel</button><button class="btn primary">Start job · to split</button></footer>
+  </aside>
+</div></div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">5</span></td><td>transform from a raw table</td><td>Switching it on closes the drawer and opens SCR-15 for this version (its <i>Run</i> goes through clean and split, 6a); off, the drawer runs clean_table and split</td><td>–</td><td>–</td></tr>
+</table>
+
+<h2>D · Image–caption pairs, stopping after preprocess (dark)</h2>
+<div class="frame" style="height:825px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg>coco10k</div></header>
+    <main class="content"><section class="list"></section><section class="detail"></section></main>
+    <footer class="status"><span class="m conn">live</span></footer>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer" role="dialog" aria-label="Start pipeline">
+    <header><h2>Start pipeline</h2><span class="spacer"></span><kbd>Esc</kbd><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="body">
+      <div class="tabs" role="tablist"><span class="tab" role="tab" aria-selected="true"><svg class="i"><use href="#i-folder"/></svg>A folder</span><span class="tab" role="tab"><svg class="i"><use href="#i-branch"/></svg>An existing version</span></div>
+      <div class="field"><label>Source folder <span class="type">source.path</span></label><div class="select input mono">/sources/coco10k<svg class="i"><use href="#i-down"/></svg></div><small>10,000 files</small></div>
+      <div class="field"><label>What the folder holds <span class="type">dataset_type</span></label><div class="sp-chosen"><b>Image–caption pairs</b><span>image files</span><span class="spacer"></span><button class="btn sm ghost">Change</button></div></div>
+      <div class="field"><label>Dataset <span class="type">dataset</span></label><div class="input mono">coco10k</div><small>An existing dataset: this adds versions to it.</small></div>
+      <div class="field"><label>Stages <span class="sp-why-chain">· each stage reads the one before it</span></label>
+        <div class="stages" role="radiogroup" aria-label="Stop after">
+          <div class="sp-st"><svg class="i"><use href="#i-chevron"/></svg><span class="name">ingest</span><span class="what">reads the images · min_size <span class="mono">256</span></span><label class="stop"><input type="radio" name="sd">Stop after</label></div>
+          <div class="sp-st"><svg class="i"><use href="#i-chevron"/></svg><span class="name">clean</span><span class="what">exact and near duplicates · pHash distance <span class="mono">8</span></span><label class="stop"><input type="radio" name="sd">Stop after</label></div>
+          <div class="sp-st sel"><svg class="i"><use href="#i-chevron"/></svg><span class="name">preprocess</span><span class="what">a resized copy · max_side <span class="mono">768</span></span><label class="stop"><span class="n" style="position:static;display:inline-block">6</span><input type="radio" name="sd" checked>Stop after</label></div>
+          <div class="sp-st notrun"><svg class="i"><use href="#i-chevron"/></svg><span class="name">label</span><span class="what">not run · captions and CLIP scores</span><label class="stop"><input type="radio" name="sd">Stop after</label></div>
+          <div class="sp-st notrun"><svg class="i"><use href="#i-chevron"/></svg><span class="name">filter</span><span class="what">not run · CLIP threshold</span><label class="stop"><input type="radio" name="sd">Stop after</label></div>
+          <div class="sp-st notrun"><svg class="i"><use href="#i-chevron"/></svg><span class="name">split</span><span class="what">not run · train / val / test</span><label class="stop"><input type="radio" name="sd">Stop after</label></div>
+          <div class="sp-st notrun"><svg class="i"><use href="#i-chevron"/></svg><span class="name">evaluate</span><span class="what">not run · the phase-1 report</span><label class="stop"><input type="radio" name="sd">Stop after</label></div>
+        </div></div>
+    </div>
+    <footer><button class="btn ghost">Cancel</button><button class="btn primary">Start job · to preprocess</button></footer>
+  </aside>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">6</span></td><td>Stop after</td><td>The chosen stop; the four stages after it on the sunken fill with "not run", keeping any settings typed. Sends <span class="mono">until_stage: "preprocess"</span></td><td><span class="mono">POST /jobs</span></td><td>–</td></tr>
+</table>
+
+<h2>E · States and edges (dark)</h2>
+<div class="frame" style="height:460px">
+  <div class="sp-states">
+    <div class="sp-box"><b>Changing the type</b><div class="sp-note"><svg class="i"><use href="#i-info"/></svg><span>Type changed to <b>Tabular</b>. Settings for <span class="mono">label</span> and <span class="mono">filter</span> were cleared; <span class="mono">split</span>'s were kept.</span><button class="btn sm ghost"><svg class="i"><use href="#i-undo"/></svg>Undo</button></div><span>Only settings the new type's stages do not have are cleared.</span></div>
+    <div class="sp-box"><b>Nothing left to run</b><div class="sp-note"><svg class="i"><use href="#i-info"/></svg><span><span class="mono">ds_6448d354c9c6</span> is a split, the last tabular stage. There is nothing after it to run.</span></div><span>The chain is replaced by this line and <i>Start job</i> is disabled with it. <i>Train a model…</i> on SCR-03 is the next step from here.</span></div>
+    <div class="sp-box"><b>Loading</b><span class="skeleton" style="width:90%"></span><span class="skeleton" style="width:80%;height:40px"></span><span class="skeleton" style="width:85%;height:40px"></span><span>The types, stage schemas and the folder's columns load when the drawer opens.</span></div>
+    <div class="state err" style="grid-column:span 2"><svg class="i"><use href="#i-alert"/></svg><b>The dataset types could not be loaded</b><p><span class="mono">service_unavailable</span> · the API did not answer. Start the stack, then try again.</p><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Try again</button></div>
+    <div class="sp-box"><b>Labelled images and labelled text</b><span>Ingest shows <span class="mono">label_from</span> (folder, or a CSV with its columns) for labelled images and <span class="mono">text</span> (its field names) for labelled text. Their chains: <span class="mono">ingest → clean → preprocess → split</span>, <span class="mono">ingest → clean_text → split → tokenize</span>.</span></div>
+  </div>
+</div>
+<p class="cap">At 1024 px the drawer keeps 480 px over the content; its body scrolls and its footer stays.</p>
+
+<h2>Accessibility notes</h2>
+<div class="changes">
+<ul>
+<li>The type cards are one <span class="mono">fieldset</span> of native radios with a legend; the stops are one radio group labelled "Stop after", one radio per stage, so the arrow keys move the stop and a screen reader reads "Stop after, split, 4 of 4".</li>
+<li>A not-run stage says "not run" in its text; the sunken fill is not the only cue. The chosen stop also names itself in <i>Start job</i>.</li>
+<li>The transform toggle has its effect as its description ("Opens SCR-15 for ds_…"), so switching it is never a surprise.</li>
+<li>Contrast is measured in both themes before this was sent; muted text on the sunken fill and on the chosen card uses the approved tokens.</li>
+</ul>
+</div>
+
+<h2>Tests, at Gate 3</h2>
+<div class="changes">
+<ul>
+<li>Vitest, <span class="mono">StartPipelineDrawer.test.tsx</span>: <span class="mono">test_DATA_5_2_table_source_sends_tabular_and_only_table_stages</span>, <span class="mono">test_DATA_5_2_moving_the_stop_changes_no_other_stage</span>, <span class="mono">test_DATA_5_2_image_source_runs_the_image_pipeline</span>, <span class="mono">test_DATA_7_1_transform_toggle_opens_the_editor</span>.</li>
+<li>Python: <span class="mono">test_DATA_5_2_dataset_types_list_their_stages</span>, <span class="mono">test_DATA_1_4_sources_report_a_tables_columns</span>.</li>
+</ul>
+</div>
+</div>
+<script>
+(function () {
+  var a = document.getElementById('frameB'), slot = document.getElementById('lightB');
+  var c = a.cloneNode(true); c.id = 'frameB-light'; c.setAttribute('data-theme', 'light');
+  c.querySelectorAll('.n').forEach(function (n) { n.remove(); });
+  c.querySelectorAll('input[type=radio]').forEach(function (r) { r.name = r.name + '-l'; });
+  slot.replaceWith(c);
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>

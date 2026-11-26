@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-15 transform editor — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.group-btns { display: inline-flex; } .group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.select { display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--h-sm); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--fs-12); color: var(--text-primary); }
+.select svg.i { width: 12px; height: 12px; color: var(--text-secondary); } .select.is-disabled { opacity: .45; }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t th[aria-sort] { color: var(--text-primary); }
+.t td { padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); height: 40px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; }
+.pill.queued { --c: var(--state-queued); } .pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); } .pill.failed { --c: var(--state-failed); } .pill.cancelled { --c: var(--state-cancelled); }
+.pill.cancelled { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.toast { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: var(--bw) solid var(--border); border-left: 3px solid var(--c, var(--info)); border-radius: var(--r-md); box-shadow: var(--shadow-2); max-width: 400px; }
+.toast > svg { color: var(--c, var(--info)); margin-top: 2px; } .toast b { display: block; } .toast span { color: var(--text-secondary); font-size: var(--fs-12); }
+.modal { width: 460px; max-width: 100%; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-3); }
+.modal > header { padding: var(--sp-4) var(--sp-4) 0; font: var(--fw-semibold) var(--fs-16) var(--font-ui); display: flex; gap: var(--sp-2); align-items: center; } .modal > header svg.i { color: var(--danger); }
+.modal > div { padding: var(--sp-3) var(--sp-4); color: var(--text-secondary); } .modal > div b { color: var(--text-primary); }
+.modal > footer { padding: var(--sp-3) var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); max-width: 40ch; }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.grp { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.jobind.idle { background: transparent; color: var(--text-secondary); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-07 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.phead { display: flex; align-items: center; gap: var(--sp-3); } .phead h1 { margin: 0; font-size: var(--fs-20); font-weight: var(--fw-semibold); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.t tr.sec td { height: 28px; background: var(--surface-raised); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.t tr.sec td .count { margin-left: var(--sp-1); }
+.now { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.now .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.now .stg { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.now .progress { width: 72px; }
+.now.err .code { color: var(--danger); font-family: var(--font-mono); }
+.now.muted { color: var(--text-muted); }
+.now svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.acts { display: inline-flex; gap: var(--sp-1); justify-content: flex-end; width: 100%; }
+.t td.acts-cell { width: 120px; text-align: right; }
+.toasts { position: absolute; right: var(--sp-4); bottom: calc(28px + var(--sp-4)); z-index: var(--z-toast); }
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: var(--z-modal); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+
+
+/* ============================================================================ SCR-01 sidebar foot (approved v1, unchanged) */
+.side .foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.health { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.health svg.i { color: var(--success); }
+
+/* ============================================================================ form field (design-system preview, unchanged) */
+.field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.field > label { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-secondary); display: flex; align-items: center; gap: var(--sp-2); }
+.field > small { font-size: var(--fs-11); color: var(--text-muted); }
+.field.error > small { color: var(--danger); display: flex; gap: var(--sp-1); align-items: center; }
+.input { height: var(--h-md); padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-13) var(--font-ui); width: 100%; display: flex; align-items: center; }
+.input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.field.error .input { border-color: var(--danger); }
+.badge.info { color: var(--info); background: var(--info-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; } .badge.ok { color: var(--success); background: var(--success-soft); border-color: transparent; }
+
+/* ============================================================================ SCR-14 (tokens only) */
+.pill.paused { --c: var(--state-paused); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.note2 { font-size: var(--fs-12); color: var(--text-muted); margin: 0; } .note2 .mono { color: var(--text-secondary); }
+.typeconfirm { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-3); font-size: var(--fs-12); }
+.typeconfirm .input { font: var(--fs-13) var(--font-mono); }
+.cols { display: grid; grid-template-columns: 168px 1fr; gap: var(--sp-5); min-height: 0; }
+.index { display: flex; flex-direction: column; gap: 2px; }
+.index a { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); text-decoration: none; }
+.index a[aria-current=true] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); }
+.index a[aria-disabled=true] { color: var(--text-muted); }
+.index a .count, .index a .badge { margin-left: auto; }
+.secs { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.sec { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); display: flex; flex-direction: column; }
+.sec > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.sec > header h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.sec > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.sec > header .aside { font-size: var(--fs-12); color: var(--text-secondary); }
+.frow { display: grid; grid-template-columns: 380px 1fr; gap: var(--sp-6); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); align-items: start; }
+.frow .input.num { width: 132px; }
+.frow .mod { display: flex; align-items: center; gap: var(--sp-2); }
+.applies { display: flex; flex-direction: column; gap: var(--sp-2); padding-top: 22px; font-size: var(--fs-12); color: var(--text-secondary); }
+.applies .badge svg.i { width: 11px; height: 11px; }
+.ctx { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ctx b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ctx .sq { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res-temp); margin-right: var(--sp-1); }
+.fixed { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-4); font-size: var(--fs-12); color: var(--text-secondary); }
+.fixed svg.i { color: var(--text-muted); margin-top: 2px; }
+.savebar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-top: var(--bw) solid var(--border); background: var(--surface-raised); border-radius: 0 0 var(--r-md) var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.savebar b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.ovr { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); border-bottom: var(--bw) solid var(--border); }
+.ovr h3 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.t td .input { height: var(--h-sm); width: 72px; font-size: var(--fs-12); }
+.t td.dim { color: var(--text-secondary); }
+.t.dense td { height: 36px; }
+/* Contrast rules approved at G3 since the v1 mockups (in the built app). */
+[data-theme="light"] .pill { color: color-mix(in srgb, var(--c) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.err { color: color-mix(in srgb, var(--danger) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.info { color: color-mix(in srgb, var(--info) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.warn { color: color-mix(in srgb, var(--warning) 80%, var(--text-primary)); }
+[data-theme="light"] .badge.ok { color: color-mix(in srgb, var(--success) 80%, var(--text-primary)); }
+[data-theme="dark"] .t tr[aria-selected=true] .pill, [data-theme="dark"] .t tr.is-hover .pill { color: color-mix(in srgb, var(--c) 70%, var(--text-primary)); }
+
+/* ============================================================================ SCR-08 / SCR-09 (tokens only) */
+.pill.paused { --c: var(--state-paused); }
+.phead .sub { color: var(--text-muted); font-size: var(--fs-12); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.dsbar { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.dsbar .ends { font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.bgrid { display: grid; grid-template-columns: 184px 1fr 312px; gap: var(--sp-3); min-height: 0; flex: 1; }
+.panel { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.panel > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); font-size: var(--fs-13); }
+.panel > header .spacer + * { font-weight: var(--fw-regular); }
+.palette { padding: var(--sp-2); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.pal-grp { margin: var(--sp-2) var(--sp-1) 2px; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.pal-grp:first-child { margin-top: 0; }
+.tile { display: flex; align-items: center; gap: var(--sp-2); height: 26px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border); border-radius: var(--r-sm); background: var(--surface-raised); font-size: var(--fs-12); color: var(--text-primary); }
+.tile svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.tile[aria-disabled=true] { background: transparent; border-style: dashed; color: var(--text-muted); }
+.pal-note { margin: var(--sp-1) var(--sp-1) 0; font-size: var(--fs-11); color: var(--text-muted); display: flex; gap: var(--sp-1); }
+.pal-note svg.i { width: 12px; height: 12px; margin-top: 2px; }
+.canvas { position: relative; flex: 1; background-color: var(--surface-sunken); background-image: radial-gradient(var(--border) 1px, transparent 1px); background-size: 16px 16px; overflow: hidden; }
+.canvas-tools { position: absolute; left: var(--sp-2); bottom: var(--sp-2); display: flex; gap: var(--sp-1); }
+.canvas-tools .btn { width: var(--h-sm); padding: 0; }
+.gn { position: absolute; width: 280px; height: 44px; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-1); font-size: var(--fs-12); }
+.gn > .h { display: flex; align-items: center; gap: var(--sp-2); height: 23px; padding: 0 var(--sp-2); line-height: 1; }
+.gn > .h .id { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.gn > .h .ty { color: var(--text-secondary); }
+.gn > .h .kv { color: var(--text-muted); font: var(--fs-11) var(--font-mono); }
+.gn > .f { display: flex; align-items: center; gap: var(--sp-2); height: 19px; padding: 0 var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.gn > .f .p { margin-left: auto; color: var(--text-muted); }
+.gn[aria-selected=true] { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-width) var(--accent-soft), var(--shadow-1); }
+.gn.lock { background: var(--surface); border-style: dashed; }
+.gn.lock:not(:has(.f)) > .h { height: 42px; }
+.gn.lock .h svg.i { color: var(--text-muted); }
+.gn.bad { border-color: var(--danger); }
+.gn.bad > .f { color: var(--danger); }
+.gn.muted { opacity: .6; }
+.gn .hd { position: absolute; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: var(--r-pill); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); }
+.gn .hd.in { top: -5px; } .gn .hd.out { bottom: -5px; }
+.gn .flag { margin-left: auto; color: var(--danger); display: inline-flex; }
+.edges { position: absolute; inset: 0; pointer-events: none; }
+.edges path { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+.edges path.on { stroke: var(--accent); stroke-width: 2; }
+.edges path.skip { stroke-dasharray: 0; }
+.edges text { font: var(--fs-11) var(--font-mono); fill: var(--text-muted); }
+.dropzone { position: absolute; width: 280px; height: 30px; border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; gap: var(--sp-2); color: var(--text-muted); font-size: var(--fs-12); }
+.insp { padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-3); overflow: hidden; }
+.insp .field > label .badge { margin-left: auto; }
+.insp .field .input { height: 28px; }
+.insp .io { display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.insp .io b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.inferred { color: var(--text-muted); font-style: italic; }
+.chk { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-13); }
+.chk i { width: 14px; height: 14px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-xs); background: var(--accent); display: inline-grid; place-items: center; }
+.chk i svg.i { width: 10px; height: 10px; color: var(--on-accent); stroke-width: 2.4; }
+.chk i.off { background: var(--surface-sunken); }
+.sumbar { white-space: nowrap; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); font-size: var(--fs-12); color: var(--text-secondary); }
+.sumbar .big { font: var(--fw-semibold) var(--fs-14) var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.sumbar .sep { width: 1px; align-self: stretch; background: var(--border); }
+.mem { display: flex; height: 8px; width: 120px; flex: none; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-sunken); border: var(--bw) solid var(--border); }
+.mem i { display: block; height: 100%; }
+.mem i.w, .key.w::before { background: var(--accent); }
+.mem i.g, .key.g::before { background: var(--info); }
+.mem i.o, .key.o::before { background: var(--text-muted); }
+.key { white-space: nowrap; display: inline-flex; align-items: center; gap: var(--sp-1); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.key::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-xs); }
+.problems { background: var(--surface); border: var(--bw) solid color-mix(in srgb, var(--danger) 45%, transparent); border-radius: var(--r-md); }
+.problems > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+.problems > header svg.i { color: var(--danger); }
+.prob { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-12); border-bottom: var(--bw) solid var(--border); }
+.prob:last-child { border-bottom: 0; }
+.prob a { font-family: var(--font-mono); color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.prob .code { margin-left: auto; font: var(--fs-11) var(--font-mono); color: var(--text-muted); white-space: nowrap; }
+.prob svg.i { color: var(--danger); margin-top: 2px; }
+.tpl { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+.tplc { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.tplc b { font-size: var(--fs-14); }
+.tplc p { margin: 0; font-size: var(--fs-12); color: var(--text-secondary); }
+.tplc .meta { display: flex; gap: var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.drawer { position: absolute; top: 48px; right: 0; bottom: 28px; width: 320px; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+/* SCR-09 */
+.runcols { display: grid; grid-template-columns: 1fr 360px; gap: var(--sp-4); min-height: 0; align-items: start; }
+.cards { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); }
+.card > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.card > header h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.card > header .req { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.card > .b { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.card.collapsed > header { border-bottom: 0; color: var(--text-muted); }
+.facts { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.facts b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3) var(--sp-4); }
+.fset { display: flex; flex-direction: column; gap: var(--sp-2); }
+.fset > h3 { margin: 0; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.check { position: sticky; top: 0; }
+.vram { display: flex; flex-direction: column; gap: var(--sp-1); }
+.vbar { position: relative; height: 12px; border-radius: var(--r-sm); background: var(--surface-sunken); border: var(--bw) solid var(--border); display: flex; overflow: visible; }
+.vbar i { display: block; height: 100%; }
+.vbar i.fix { background: var(--res-vram); }
+.vbar i.act { background: color-mix(in srgb, var(--res-vram) 55%, var(--surface-sunken)); }
+.vbar i.ctx { background: var(--text-muted); }
+.vbar .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-primary); }
+.vscale { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.kv2 { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.kv2 span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.kv2 .tot { color: var(--text-primary); font-weight: var(--fw-semibold); border-top: var(--bw) solid var(--border); padding-top: 2px; }
+.callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid; font-size: var(--fs-12); color: var(--text-primary); }
+.callout svg.i { margin-top: 2px; flex: none; }
+.callout.ok { border-color: color-mix(in srgb, var(--success) 45%, transparent); background: var(--success-soft); } .callout.ok svg.i { color: var(--success); }
+.callout.warn { border-color: color-mix(in srgb, var(--warning) 50%, transparent); background: var(--warning-soft); } .callout.warn svg.i { color: var(--warning); }
+.callout.err { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .callout.err svg.i { color: var(--danger); }
+.callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .callout.info svg.i { color: var(--info); }
+.plan { font-size: var(--fs-12); color: var(--text-secondary); padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.plan b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.was { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+
+/* ============================================================================ data-viz (design system v1: categorical 1 and 2, as SCR-04 v2) */
+:root { --cat-1: #5aa9f5; --cat-2: #f29e4c; }
+[data-theme="light"] { --cat-1: #1f6fc4; --cat-2: #b0560a; }
+/* ============================================================================ SCR-10 / SCR-09 study (tokens only) */
+.pill.pruned { --c: var(--state-cancelled); }
+.badge.best { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+[data-theme="light"] .badge.best { color: color-mix(in srgb, var(--accent) 85%, var(--text-primary)); }
+.limits { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-6); font-size: var(--fs-12); color: var(--text-secondary); }
+.limits b { color: var(--text-primary); font: var(--fw-medium) var(--fs-13) var(--font-mono); font-variant-numeric: tabular-nums; }
+.limits .progress { width: 96px; margin-left: var(--sp-1); }
+.limits .muted { color: var(--text-muted); }
+.sgrid { display: grid; grid-template-columns: 1fr 380px; gap: var(--sp-3); min-height: 0; }
+.sgrid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); }
+.hist { display: block; width: 100%; height: 190px; }
+.hist .grid { stroke: var(--border); stroke-width: 1; }
+.hist .axis { font: var(--fs-11) var(--font-mono); fill: var(--text-muted); }
+.hist .best { fill: none; stroke: var(--cat-2); stroke-width: 2; }
+.hist .dot { fill: var(--cat-1); }
+.hist .hollow { fill: var(--surface); stroke: var(--cat-1); stroke-width: 1.5; }
+.hist .fail { stroke: var(--state-failed); stroke-width: 1.8; }
+.hist .med { fill: none; stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.hist .trial { fill: none; stroke: var(--cat-1); stroke-width: 2; }
+.legend2 { display: flex; flex-wrap: wrap; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); }
+.legend2 i { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-pill); margin-right: var(--sp-1); vertical-align: middle; background: var(--cat-1); }
+.legend2 i.h { background: transparent; border: 1.5px solid var(--cat-1); }
+.legend2 i.l { width: 12px; height: 2px; border-radius: 0; background: var(--cat-2); }
+.legend2 i.m { width: 12px; height: 0; border-radius: 0; border-top: 1.5px dashed var(--text-muted); background: transparent; }
+.legend2 .x { color: var(--state-failed); font-weight: var(--fw-semibold); margin-right: var(--sp-1); }
+.imp { display: grid; grid-template-columns: 132px 1fr 44px; gap: var(--sp-2) var(--sp-3); align-items: center; font: var(--fs-12) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.imp .bar { height: 10px; border-radius: var(--r-xs); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; }
+.imp .bar > i { display: block; height: 100%; width: var(--p); background: var(--cat-1); }
+.imp span:nth-child(3n) { text-align: right; color: var(--text-primary); }
+.once { display: flex; flex-direction: column; gap: var(--sp-2); }
+.once .big { font: var(--fw-semibold) var(--fs-24)/1.1 var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.placeholder { display: flex; gap: var(--sp-2); align-items: flex-start; font-size: var(--fs-12); color: var(--text-muted); }
+.placeholder svg.i { margin-top: 2px; }
+.t td .why { color: var(--text-muted); font-size: var(--fs-12); margin-left: var(--sp-1); }
+.t td .muted, .muted { color: var(--text-muted); }
+.t th .i { width: 12px; height: 12px; vertical-align: -2px; }
+.t td.p { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+.t td.p.best-col { color: var(--text-primary); }
+.drawer.wide { width: 520px; top: 0; bottom: 0; }
+.drawer .body { padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.tune { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 6px; margin-left: auto; border: var(--bw) solid var(--border); border-radius: var(--r-sm); background: transparent; color: var(--text-muted); font: var(--fw-medium) var(--fs-11) var(--font-ui); cursor: pointer; }
+.tune svg.i { width: 12px; height: 12px; }
+.tune[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); }
+.field > label .badge + .tune { margin-left: auto; }
+.field.tuned .input { border-color: var(--accent); }
+.range { display: flex; gap: var(--sp-1); align-items: center; }
+.range .input { width: auto; flex: 1; min-width: 0; }
+.range .sep { color: var(--text-muted); font-size: var(--fs-12); }
+.range .select { height: var(--h-md); }
+.chips { display: flex; gap: var(--sp-1); align-items: center; flex-wrap: wrap; min-height: var(--h-md); padding: 0 var(--sp-1); border: var(--bw) solid var(--accent); border-radius: var(--r-sm); background: var(--surface-sunken); }
+.chip { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 6px; border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.chip svg.i { width: 10px; height: 10px; color: var(--text-muted); }
+.chip.add { border-style: dashed; color: var(--text-muted); font-family: var(--font-ui); }
+.sform { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--sp-3) var(--sp-4); }
+.field > label { flex-wrap: wrap; row-gap: 2px; }
+.t td .err-line { display: flex; gap: var(--sp-1); align-items: center; color: var(--danger); font-size: var(--fs-11); white-space: normal; }
+.t td .err-line svg.i { width: 11px; height: 11px; }
+.t tr.bad td { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--danger) 45%, transparent); }
+.t.space td { height: 36px; }
+.popover { width: 460px; background: var(--surface-raised); border: var(--bw) solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-3); }
+.popover > header { display: flex; gap: var(--sp-2); align-items: center; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-weight: var(--fw-semibold); }
+/* Highlighted rows: muted text uses text-secondary (approved at SCR-11's Gate 3); the grey pruned pill is lifted further. */
+.t tr.is-hover .why, .t tr[aria-selected=true] .why, .t tr.is-hover .muted, .t tr[aria-selected=true] .muted { color: var(--text-secondary); }
+[data-theme="dark"] .t tr[aria-selected=true] .pill.pruned, [data-theme="dark"] .t tr.is-hover .pill.pruned { color: color-mix(in srgb, var(--c) 45%, var(--text-primary)); }
+[data-theme="dark"] .pill.pruned { color: color-mix(in srgb, var(--c) 75%, var(--text-primary)); }
+
+/* ============================================================================ SCR-09 v2 addendum: the estimator list (tokens only) */
+.estrow { display: flex; gap: var(--sp-3); align-items: center; position: relative; }
+.estrow .select { height: var(--h-md); min-width: 300px; justify-content: space-between; font-family: var(--font-mono); }
+.ruled { display: flex; gap: var(--sp-2); align-items: flex-start; font-size: var(--fs-12); color: var(--text-secondary); max-width: 92ch; }
+.ruled svg.i { color: var(--text-muted); margin-top: 2px; }
+.nl { position: absolute; top: calc(var(--h-md) + 2px); left: 28px; z-index: var(--z-drawer); width: 440px; padding: var(--sp-1) 0; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); box-shadow: var(--shadow-3); font: var(--fs-12)/1.25 var(--font-mono); }
+.nl .og { padding: 6px var(--sp-3) 3px; font: var(--fw-semibold) var(--fs-12)/1.25 var(--font-ui); color: var(--text-primary); }
+.nl .op { display: flex; gap: var(--sp-2); align-items: baseline; padding: 4px var(--sp-3) 4px var(--sp-6); color: var(--text-primary); white-space: nowrap; }
+.nl .op .t2 { font-family: var(--font-ui); color: var(--text-secondary); }
+.nl .op.sel { background: var(--accent); color: var(--on-accent); } .nl .op.sel .t2 { color: var(--on-accent); }
+.nl .op.dis, .nl .op.dis .t2 { color: var(--text-muted); }
+.nl .op .why { margin-left: auto; font: var(--fs-11)/1.25 var(--font-ui); color: var(--text-muted); }
+.under { opacity: .35; }
+.study-off { display: flex; align-items: center; gap: var(--sp-3); margin-left: auto; }
+.study-off .why { font-size: var(--fs-12); color: var(--text-secondary); max-width: 52ch; text-align: right; }
+.btn[aria-disabled=true] { opacity: .45; cursor: not-allowed; }
+.cardhead-badge { display: inline-flex; align-items: center; gap: var(--sp-2); }
+
+/* ============================================================================ SCR-03 pieces reused here (approved v1/v2, unchanged) */
+.stage-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.rs { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-12); } .rs i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.rs.acc { --c: var(--success); } .rs.rej { --c: var(--danger); } .rs.dup { --c: var(--text-muted); } .rs.fil { --c: var(--warning); }
+.reason { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+
+/* ============================================================================ SCR-15 transform editor (tokens only; classes prefixed tx-) */
+.tx-head { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.tx-head h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-ui); display: flex; align-items: center; gap: var(--sp-2); }
+.tx-head h1 .mono { font-weight: var(--fw-medium); }
+.tx-head .sub { color: var(--text-muted); font-size: var(--fs-12); margin-top: var(--sp-1); display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; } .tx-head .sub .mono { color: var(--text-secondary); }
+.tx-run { display: flex; align-items: center; gap: var(--sp-3); flex: none; padding-top: 2px; }
+.tx-modes { display: inline-flex; gap: var(--sp-3); border: 0; margin: 0; padding: 0; }
+.tx-modes label { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-13); color: var(--text-primary); cursor: pointer; white-space: nowrap; }
+.tx-modes input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; }
+.tx-body { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: var(--sp-3); flex: 1; min-height: 0; }
+.tx-col { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; min-height: 0; }
+.tx-col > h2 { margin: 0; font-size: var(--fs-14); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); }
+.tx-col > h2 .aside { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-muted); }
+.tx-op { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); display: flex; flex-direction: column; gap: 6px; }
+.tx-op.is-focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 var(--focus-width) var(--accent-soft); }
+.tx-op.bad { border-color: var(--danger); }
+.tx-op .hd { display: flex; align-items: center; gap: var(--sp-2); }
+.tx-op .no { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-muted); width: 16px; text-align: right; font-variant-numeric: tabular-nums; }
+.tx-op .hd .select { font-family: var(--font-mono); font-weight: var(--fw-medium); }
+.tx-op .hd .icon-btn { width: var(--h-sm); height: var(--h-sm); padding: 0; border: 0; background: transparent; color: var(--text-muted); display: inline-grid; place-items: center; border-radius: var(--r-sm); }
+.tx-fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); padding-left: 24px; }
+.tx-fields .lab { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.tx-fields .select { font-family: var(--font-mono); max-width: 100%; }
+.tx-fields .select.bad { border-color: var(--danger); }
+.tx-fields .arrow { color: var(--text-muted); font-size: var(--fs-12); }
+.tx-fields .tin { height: var(--h-sm); width: 120px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-primary); font: var(--fs-12) var(--font-mono); display: inline-flex; align-items: center; }
+.tx-fields .tin.bad { border-color: var(--danger); }
+.tx-fields .tag { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 6px; border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.tx-fields .tag svg.i { width: 10px; height: 10px; color: var(--text-muted); }
+.tx-eff { padding-left: 24px; display: flex; gap: var(--sp-1); align-items: flex-start; font-size: var(--fs-12); color: var(--text-secondary); }
+.tx-eff svg.i { width: 12px; height: 12px; margin-top: 2px; color: var(--text-muted); }
+.tx-eff .mono { color: var(--text-primary); font-size: var(--fs-11); }
+.tx-err { padding-left: 24px; display: flex; gap: var(--sp-1); align-items: flex-start; font-size: var(--fs-12); color: var(--danger); }
+.tx-err svg.i { width: 12px; height: 12px; margin-top: 2px; }
+.tx-err .mono { font-size: var(--fs-11); }
+[data-theme="light"] .tx-err { color: color-mix(in srgb, var(--danger) 85%, var(--text-primary)); }
+.tx-warn { padding-left: 24px; display: flex; gap: var(--sp-1); align-items: flex-start; font-size: var(--fs-12); color: var(--text-primary); }
+.tx-warn svg.i { width: 12px; height: 12px; margin-top: 2px; color: var(--warning); }
+.tx-add { align-self: flex-start; }
+.tx-later { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); }
+.tx-later > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-13); font-weight: var(--fw-semibold); }
+.tx-later > header svg.i { width: 12px; height: 12px; color: var(--text-muted); }
+.tx-later > header .aside { font: var(--fs-12) var(--font-mono); font-weight: var(--fw-regular); color: var(--text-muted); }
+.tx-later.open > header svg.i { transform: rotate(90deg); }
+.tx-later .b { border-top: var(--bw) solid var(--border); padding: var(--sp-3); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); }
+.tx-later .b .field .input { height: 28px; }
+.tx-later.off { opacity: .45; }
+.tx-schema { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3) var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.tx-schema > header { display: flex; align-items: baseline; gap: var(--sp-2); font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.tx-schema > header .aside { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-secondary); }
+.tx-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.tx-chip { display: inline-flex; align-items: center; gap: var(--sp-1); height: 22px; padding: 0 6px; border-radius: var(--r-sm); background: var(--surface-raised); border: var(--bw) solid var(--border); font: var(--fs-12) var(--font-mono); color: var(--text-primary); white-space: nowrap; }
+.tx-chip small { font: var(--fs-11) var(--font-ui); color: var(--text-secondary); }
+.tx-chip.chg { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tx-chip.gone { background: transparent; border-style: dashed; border-color: var(--border-strong); color: var(--text-muted); text-decoration: line-through; }
+.tx-chip.tgt { border-color: var(--border-strong); }
+.tx-chip.tgt b { font: var(--fw-semibold) var(--fs-11) var(--font-ui); color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+.tx-prev { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.tx-prev > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.tx-prev > header .aside { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-secondary); }
+.tx-prev > header .aside b { color: var(--text-primary); font: var(--fw-medium) var(--fs-12) var(--font-mono); font-variant-numeric: tabular-nums; }
+.tx-prev > header .fresh { font-size: var(--fs-11); font-weight: var(--fw-regular); color: var(--text-muted); display: inline-flex; gap: var(--sp-1); align-items: center; }
+.tx-prev > header .fresh svg.i { width: 11px; height: 11px; }
+.tx-scroll { overflow: auto; min-height: 0; flex: 1; }
+.tx-prev.stale .tx-scroll { opacity: .45; }
+table.tx-t { border-collapse: separate; border-spacing: 0; font-size: var(--fs-12); min-width: 100%; }
+.tx-t th { position: sticky; top: 0; z-index: 1; text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); color: var(--text-secondary); background: var(--surface-raised); padding: 6px var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; vertical-align: bottom; font-family: var(--font-mono); }
+.tx-t th small { display: block; font: var(--fw-regular) var(--fs-11) var(--font-ui); color: var(--text-muted); }
+.tx-t th.chg small { color: var(--text-secondary); }
+.tx-t th.chg { box-shadow: inset 0 -2px 0 var(--accent); }
+.tx-t th.r { text-align: right; }
+.tx-t td { height: 30px; padding: 0 var(--sp-3); border-bottom: var(--bw) solid var(--border); white-space: nowrap; font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.tx-t td.r { text-align: right; }
+.tx-t td.chg { font-weight: var(--fw-semibold); }
+.tx-t td.ui { font-family: var(--font-ui); }
+.tx-t .pin { position: sticky; left: 0; background: var(--surface); box-shadow: inset -1px 0 0 var(--border); z-index: 2; }
+.tx-t th.pin { background: var(--surface-raised); z-index: 3; }
+.tx-t td.bad { color: var(--danger); font-weight: var(--fw-semibold); }
+[data-theme="light"] .tx-t td.bad { color: color-mix(in srgb, var(--danger) 85%, var(--text-primary)); }
+.tx-t td.bad svg.i { width: 11px; height: 11px; vertical-align: -1px; }
+.tx-t tr.more td { color: var(--text-muted); font-family: var(--font-ui); height: 28px; }
+.tx-foot { padding: var(--sp-1) var(--sp-3); font-size: var(--fs-11); color: var(--text-muted); border-top: var(--bw) solid var(--border); }
+.tx-menu { position: absolute; z-index: var(--z-drawer); width: 400px; padding: var(--sp-1) 0; background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-3); }
+.tx-menu .it { display: grid; grid-template-columns: 104px 1fr; gap: var(--sp-2); align-items: baseline; padding: 6px var(--sp-3); font-size: var(--fs-12); color: var(--text-secondary); }
+.tx-menu .it b { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.tx-menu .it[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); color: var(--text-primary); }
+.tx-menu .note { display: flex; gap: var(--sp-2); align-items: flex-start; margin-top: var(--sp-1); padding: var(--sp-2) var(--sp-3) var(--sp-1); border-top: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-secondary); }
+.tx-menu .note svg.i { margin-top: 2px; color: var(--info); }
+.tx-order { padding-left: 24px; display: flex; flex-direction: column; gap: var(--sp-1); }
+.tx-order .line { display: flex; flex-wrap: wrap; gap: 3px; }
+.tx-order .o { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 5px; border-radius: var(--r-xs); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); font: var(--fs-11) var(--font-mono); color: var(--text-primary); }
+.tx-order .o small { color: var(--text-muted); font-size: 10px; }
+.tx-order .o.is-focus { outline-offset: 1px; }
+.tx-order .hint { font-size: var(--fs-11); color: var(--text-muted); display: flex; gap: var(--sp-2); align-items: center; }
+.tx-states { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); padding: var(--sp-4); }
+.tx-states .state { min-height: 200px; }
+.tx-mini { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.tx-mini h3 { margin: 0; font-size: var(--fs-13); color: var(--text-primary); display: flex; gap: var(--sp-2); align-items: center; }
+.tx-mini .row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.tx-mini .row .mono { color: var(--text-primary); }
+.tx-sk { display: flex; flex-direction: column; gap: var(--sp-2); }
+.callout .mono { font-size: var(--fs-12); }
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+<symbol id="i-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9" stroke-width="2.2"/></symbol>
+<symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+<symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+<symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 16 16"><path d="M6 2.5h4M6.8 2.5v3.8L5 9h6L9.2 6.3V2.5M8 9v4.5"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M2 8h3l1.5-3 3 6L11 8h3"/></symbol>
+  <symbol id="i-keys" viewBox="0 0 16 16"><rect x="1.8" y="4" width="12.4" height="8" rx="1.5"/><path d="M4.5 6.7h.3M7 6.7h.3M9.5 6.7h.3M5 9.4h6"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 16 16"><path d="M2.5 4h2M7.5 4h6M2.5 8h7M12.5 8h1M2.5 12h4M9.5 12h4"/><circle cx="6" cy="4" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="8" cy="12" r="1.5"/></symbol>
+  <symbol id="i-grip" viewBox="0 0 16 16"><path d="M6 4h.3M10 4h.3M6 8h.3M10 8h.3M6 12h.3M10 12h.3" stroke-width="2.2"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><path d="M8 3.5h.3M8 8h.3M8 12.5h.3" stroke-width="2.4"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-15 — Transform editor · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Serves DATA-7.1, DATA-7.2, DATA-7.3, DATA-7.4 (P2), DATA-7.5 and UI-2.3, at <span class="mono">/versions/:version_id/transform</span>. It follows the approved low-fi wireframe (<span class="mono">SCR-15-lofi_v1.html</span>, 2026-11-24), SCREENS.md v4 and ADR-0019 Addendum B rules 25–33. Everything is drawn with the design system's tokens and components; the few pieces it lacked are composed from them and listed below. The data is the wine table's raw version <span class="mono">ds_b3f4ff09de8a</span> (ingest by <span class="mono">job_0061</span>, 178 rows, 13 numeric features, target <span class="mono">cultivar</span>). The preview's values are the real first rows of <span class="mono">sources/wine/wine.csv</span> after Flow 6's four operations; the per-operation lines and counts are what rules 26–29 give on the first 50 rows, worked out from the CSV, since the preview endpoint is not built yet. Open as <span class="mono">SCR-15_v1.html#light</span> to start in light.</p>
+
+<div class="changes">
+<b>Decisions to review (beyond the approved low-fi)</b>
+<ul>
+<li><b>A categorical value is told apart by its alignment and its column, not by quotes:</b> numbers right-aligned, text left-aligned, and the column's header says <i>categorical · embedding</i> under its name. After <span class="mono">set_kind</span>, <span class="mono">magnesium</span> moves to the left and its values are semibold, the mark for a cell an operation changed. Quotes, as in the low-fi, made every categorical cell noisier than the numbers around it.</li>
+<li><b>Changed columns carry an accent underline in the preview's header and an accent outline in the schema chips;</b> the change is always in words beside it too (<i>renamed</i>, <i>categorical · embedding</i>), so colour is never the only sign.</li>
+<li><b>Each operation's effect line starts with an info icon in muted grey;</b> a refused one's message is in danger red with a ✕ icon, and an all-<span class="mono">cast_failed</span> step gets the warning icon and a warning callout in the preview. The card's border follows: accent when focused, danger when refused.</li>
+<li><b><i>Run</i> carries a play icon and stays the only primary button on the page.</b> When disabled it uses <span class="mono">aria-disabled</span>, so it keeps focus and reads its reason ("2 problems" or "Add an operation first"), as SCR-09's <i>Turn on</i> does.</li>
+<li><b>The preview's freshness</b> is a quiet "updated 0.2 s ago" at the right of its header; while the next preview is computing it reads "updating…" and the rows dim to 45 %, so nothing moves.</li>
+<li><b>New composites</b> (each from existing tokens): the operation card (SCR-09's card and select), the schema chip (SCR-09's chip), the <i>Add operation</i> menu (SCR-09 v2's native-list drawing), the ordinal order list (chips with arrow keys), and the native radio in accent (SCR-09 v2's kind cards).</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · The demo's four operations on wine's raw version (dark)</h2>
+<div class="frame" id="frameA" style="height:800px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Data</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></div><div class="grp">Work</div><div class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></div><div class="nav"><svg class="i"><use href="#i-grid"/></svg>Models</div><div class="nav"><svg class="i"><use href="#i-heart"/></svg>System</div><div class="foot"><div class="nav"><svg class="i"><use href="#i-sliders"/></svg>Settings</div><div class="health"><svg class="i"><use href="#i-check"/></svg>All services up</div></div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>wine</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_b3f4ff09de8a</span><svg class="i"><use href="#i-chevron"/></svg><span>Transform</span></div><span class="spacer"></span><span class="jobind idle"><svg class="i"><use href="#i-check"/></svg>Idle</span></header>
+    <main class="content">
+      <div class="tx-head">
+        <div><h1><span class="n" style="position:static;display:inline-block">1</span>Transform <span class="mono">ds_b3f4ff09de8a</span><span class="stage-tag">ingest</span></h1>
+          <div class="sub">wine · <span class="mono">178</span> rows, all accepted · <span class="mono">14</span> columns · made by <span class="mono">job_0061</span> · <a class="mono" style="color:var(--accent)">Open the version</a></div></div>
+        <span class="spacer"></span>
+        <div class="tx-run"><span class="n" style="position:static;display:inline-block">2</span>
+          <fieldset class="tx-modes"><legend class="sr-only">What Run does</legend><label><input type="radio" name="ma" checked>Through clean and split</label><label><input type="radio" name="ma">Transform only</label></fieldset>
+          <button class="btn ghost">Reset</button><button class="btn primary"><svg class="i"><use href="#i-play"/></svg>Run</button></div>
+      </div>
+      <div class="tx-body">
+        <div class="tx-col">
+          <h2><span class="n" style="position:static;display:inline-block">3</span>Operations <span class="count">4</span><span class="aside">applied in order</span></h2>
+          <div class="tx-op"><div class="hd"><span class="no">1</span><span class="select"><span>drop</span><svg class="i"><use href="#i-down"/></svg></span><span class="spacer"></span><button class="icon-btn" aria-label="Drag to move"><svg class="i"><use href="#i-grip"/></svg></button><button class="icon-btn" aria-label="Operation 1 actions"><svg class="i"><use href="#i-more"/></svg></button></div>
+            <div class="tx-fields"><span class="lab">columns</span><span class="tag">ash<svg class="i"><use href="#i-x"/></svg></span><span class="select" style="color:var(--text-muted)"><span>add a column</span><svg class="i"><use href="#i-down"/></svg></span></div>
+            <div class="tx-eff"><svg class="i"><use href="#i-info"/></svg><span>removes <span class="mono">ash</span> · 13 → 12 features</span></div></div>
+          <div class="tx-op"><div class="hd"><span class="no">2</span><span class="select"><span>rename</span><svg class="i"><use href="#i-down"/></svg></span><span class="spacer"></span><button class="icon-btn" aria-label="Drag to move"><svg class="i"><use href="#i-grip"/></svg></button><button class="icon-btn" aria-label="Operation 2 actions"><svg class="i"><use href="#i-more"/></svg></button></div>
+            <div class="tx-fields"><span class="lab">from</span><span class="select"><span>od280/od315_of_diluted_wines</span><svg class="i"><use href="#i-down"/></svg></span><span class="arrow">→</span><span class="lab">to</span><span class="tin">od280_od315</span></div>
+            <div class="tx-eff"><svg class="i"><use href="#i-info"/></svg><span>a plain name, so a formula can use it without <span class="mono">col("…")</span></span></div></div>
+          <div class="tx-op"><div class="hd"><span class="no">3</span><span class="select"><span>set_kind</span><svg class="i"><use href="#i-down"/></svg></span><span class="spacer"></span><button class="icon-btn" aria-label="Drag to move"><svg class="i"><use href="#i-grip"/></svg></button><button class="icon-btn" aria-label="Operation 3 actions"><svg class="i"><use href="#i-more"/></svg></button></div>
+            <div class="tx-fields"><span class="lab">column</span><span class="select"><span>magnesium</span><svg class="i"><use href="#i-down"/></svg></span><span class="lab">kind</span><span class="select"><span>categorical</span><svg class="i"><use href="#i-down"/></svg></span></div>
+            <div class="tx-eff"><svg class="i"><use href="#i-info"/></svg><span>numeric → categorical: <span class="mono">127.0</span> becomes <span class="mono">127</span> · 33 categories in the sample · 0 cast_failed</span></div></div>
+          <div class="tx-op is-focus"><div class="hd"><span class="no">4</span><span class="select"><span>set_encoding</span><svg class="i"><use href="#i-down"/></svg></span><span class="spacer"></span><button class="icon-btn" aria-label="Drag to move"><svg class="i"><use href="#i-grip"/></svg></button><button class="icon-btn" aria-label="Operation 4 actions"><svg class="i"><use href="#i-more"/></svg></button></div>
+            <div class="tx-fields"><span class="lab">column</span><span class="select"><span>magnesium</span><svg class="i"><use href="#i-down"/></svg></span><span class="lab">encoding</span><span class="select is-focus"><span>embedding</span><svg class="i"><use href="#i-down"/></svg></span></div>
+            <div class="tx-eff"><svg class="i"><use href="#i-info"/></svg><span>a network learns a vector per category; a classical model one-hot encodes it (rule 29)</span></div></div>
+          <button class="btn sm tx-add"><span class="n" style="position:static;display:inline-block">4</span><svg class="i"><use href="#i-plus"/></svg>Add operation</button>
+          <section class="tx-later"><header><span class="n" style="position:static;display:inline-block">5</span><svg class="i"><use href="#i-chevron"/></svg>Later stages<span class="aside">clean_table defaults · split 0.8 / 0.1 / 0.1 · seed 0</span></header></section>
+        </div>
+        <div class="tx-col">
+          <section class="tx-schema"><header><span class="n" style="position:static;display:inline-block">6</span>Resulting schema<span class="aside">13 columns · 12 features (11 numeric, 1 categorical) · target <span class="mono">cultivar</span>, 3 classes</span></header>
+            <div class="tx-chips">
+              <span class="tx-chip">alcohol</span><span class="tx-chip">malic_acid</span><span class="tx-chip gone" title="dropped by operation 1">ash</span><span class="tx-chip">alcalinity_of_ash</span><span class="tx-chip chg">magnesium <small>categorical · embedding</small></span><span class="tx-chip">total_phenols</span><span class="tx-chip">flavanoids</span><span class="tx-chip">nonflavanoid_phenols</span><span class="tx-chip">proanthocyanins</span><span class="tx-chip">color_intensity</span><span class="tx-chip">hue</span><span class="tx-chip chg">od280_od315 <small>renamed</small></span><span class="tx-chip">proline</span><span class="tx-chip tgt">cultivar <b>target</b></span>
+            </div></section>
+          <section class="tx-prev"><header><span class="n" style="position:static;display:inline-block">7</span>Preview<span class="aside">first <b>50</b> rows of <b>178</b> · <b>50</b> accepted</span><span class="spacer"></span><span class="fresh" aria-live="polite"><svg class="i"><use href="#i-check"/></svg>updated 0.2 s ago</span></header>
+            <div class="tx-scroll">
+              <table class="tx-t"><caption class="sr-only">The first 50 rows after the operations</caption>
+                <thead><tr><th class="pin">row</th><th>status</th><th class="r">alcohol</th><th class="r">malic_acid</th><th class="r">alcalinity_of_ash</th><th class="chg">magnesium<small>categorical · embedding</small></th><th class="r">total_phenols</th><th class="r">flavanoids</th><th class="r">nonflavanoid_phenols</th><th class="r">proanthocyanins</th><th class="r">color_intensity</th><th class="r">hue</th><th class="r chg">od280_od315<small>renamed</small></th><th class="r">proline</th><th>cultivar<small>target</small></th></tr></thead>
+                <tbody>
+                <tr><td class="pin">wine.csv#0000001</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">14.23</td><td class="r">1.71</td><td class="r">15.6</td><td class="chg">127</td><td class="r">2.8</td><td class="r">3.06</td><td class="r">0.28</td><td class="r">2.29</td><td class="r">5.64</td><td class="r">1.04</td><td class="r">3.92</td><td class="r">1065</td><td>class_0</td></tr>
+                <tr><td class="pin">wine.csv#0000002</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">13.2</td><td class="r">1.78</td><td class="r">11.2</td><td class="chg">100</td><td class="r">2.65</td><td class="r">2.76</td><td class="r">0.26</td><td class="r">1.28</td><td class="r">4.38</td><td class="r">1.05</td><td class="r">3.4</td><td class="r">1050</td><td>class_0</td></tr>
+                <tr><td class="pin">wine.csv#0000003</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">13.16</td><td class="r">2.36</td><td class="r">18.6</td><td class="chg">101</td><td class="r">2.8</td><td class="r">3.24</td><td class="r">0.3</td><td class="r">2.81</td><td class="r">5.68</td><td class="r">1.03</td><td class="r">3.17</td><td class="r">1185</td><td>class_0</td></tr>
+                <tr><td class="pin">wine.csv#0000004</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">14.37</td><td class="r">1.95</td><td class="r">16.8</td><td class="chg">113</td><td class="r">3.85</td><td class="r">3.49</td><td class="r">0.24</td><td class="r">2.18</td><td class="r">7.8</td><td class="r">0.86</td><td class="r">3.45</td><td class="r">1480</td><td>class_0</td></tr>
+                <tr><td class="pin">wine.csv#0000005</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">13.24</td><td class="r">2.59</td><td class="r">21</td><td class="chg">118</td><td class="r">2.8</td><td class="r">2.69</td><td class="r">0.39</td><td class="r">1.82</td><td class="r">4.32</td><td class="r">1.04</td><td class="r">2.93</td><td class="r">735</td><td>class_0</td></tr>
+                <tr><td class="pin">wine.csv#0000006</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">14.2</td><td class="r">1.76</td><td class="r">15.2</td><td class="chg">112</td><td class="r">3.27</td><td class="r">3.39</td><td class="r">0.34</td><td class="r">1.97</td><td class="r">6.75</td><td class="r">1.05</td><td class="r">2.85</td><td class="r">1450</td><td>class_0</td></tr>
+                <tr><td class="pin">wine.csv#0000007</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">14.39</td><td class="r">1.87</td><td class="r">14.6</td><td class="chg">96</td><td class="r">2.5</td><td class="r">2.52</td><td class="r">0.3</td><td class="r">1.98</td><td class="r">5.25</td><td class="r">1.02</td><td class="r">3.58</td><td class="r">1290</td><td>class_0</td></tr>
+                <tr><td class="pin">wine.csv#0000008</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">14.06</td><td class="r">2.15</td><td class="r">17.6</td><td class="chg">121</td><td class="r">2.6</td><td class="r">2.51</td><td class="r">0.31</td><td class="r">1.25</td><td class="r">5.05</td><td class="r">1.06</td><td class="r">3.58</td><td class="r">1295</td><td>class_0</td></tr>
+                <tr><td class="pin">wine.csv#0000009</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">14.83</td><td class="r">1.64</td><td class="r">14</td><td class="chg">97</td><td class="r">2.8</td><td class="r">2.98</td><td class="r">0.29</td><td class="r">1.98</td><td class="r">5.2</td><td class="r">1.08</td><td class="r">2.85</td><td class="r">1045</td><td>class_0</td></tr>
+                <tr><td class="pin">wine.csv#0000010</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">13.86</td><td class="r">1.35</td><td class="r">16</td><td class="chg">98</td><td class="r">2.98</td><td class="r">3.15</td><td class="r">0.22</td><td class="r">1.85</td><td class="r">7.22</td><td class="r">1.01</td><td class="r">3.55</td><td class="r">1045</td><td>class_0</td></tr>
+                <tr class="more"><td class="pin">…</td><td colspan="14">40 more rows, to <span class="mono">wine.csv#0000050</span></td></tr>
+                </tbody></table></div>
+            <div class="tx-foot">Computed by the stage's own code: these are the first rows the run will write (DATA-7.5.AC1). Scroll sideways for every column; the row key stays.</div></section>
+        </div>
+      </div>
+    </main>
+    <footer class="status"><div class="m"><span class="sq" style="--res:var(--res-cpu)"></span>CPU <b>2%</b></div><div class="m"><span class="sq" style="--res:var(--res-ram)"></span>RAM <b>3.4</b><small>/ 9.7 GB</small></div><div class="m"><span class="sq" style="--res:var(--res-gpu)"></span>GPU <b>0%</b></div><div class="m"><span class="sq" style="--res:var(--res-vram)"></span>VRAM <b>0.3</b><small>/ 6.0 GB</small></div><div class="m conn"><span class="live"><span class="pulse"></span>live</span></div></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Header</td><td>The raw version, its dataset, rows, columns and creating job; <i>Open the version</i> (SCR-03). Opened from a later version: frame D</td><td><span class="mono">GET /versions/{id}</span></td><td>static</td></tr>
+<tr><td><span class="n">2</span></td><td>Run</td><td><i>Through clean and split</i> (default) or <i>Transform only</i>; <i>Reset</i>; <i>Run</i>, disabled with its reason (frames C, D)</td><td><span class="mono">POST /jobs</span>: <span class="mono">kind: pipeline</span>, <span class="mono">from_version</span>, <span class="mono">stages.transform.operations</span>, <span class="mono">until_stage</span> <span class="mono">split</span> or <span class="mono">transform</span> → SCR-04</td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Operations</td><td>Cards in order, generated from the schema's union; column selects from that step's columns; one line per step of what it did on the sample</td><td><span class="mono">GET /config/schemas/transform</span>; <span class="mono">steps[i]</span> of <span class="mono">POST /versions/{id}/transform/preview</span> <i>planned</i></td><td>every edit, 300 ms after the last</td></tr>
+<tr><td><span class="n">4</span></td><td>Add operation</td><td>The menu of operation types (frame B)</td><td>the schema's union members</td><td>–</td></tr>
+<tr><td><span class="n">5</span></td><td>Later stages</td><td>Folded; its summary names the settings in force. Open: frame B</td><td><span class="mono">GET /config/schemas/clean_table</span>, <span class="mono">/split</span></td><td>–</td></tr>
+<tr><td><span class="n">6</span></td><td>Resulting schema</td><td>The columns after the last operation, in order; changed ones outlined and named, the dropped one struck through where it was</td><td>preview's <span class="mono">schema</span></td><td>with the preview</td></tr>
+<tr><td><span class="n">7</span></td><td>Preview</td><td>The first 50 rows (rule 32): row key, status and reason, values; counts over the sample; freshness</td><td>preview's <span class="mono">rows</span></td><td>with every edit; the old result stays, dimmed, while the next computes</td></tr>
+</table>
+
+<h2>A · in light</h2>
+<div id="lightA"></div>
+
+<!-- ===================================================================== B -->
+<h2>B · Adding an operation, an ordinal order, and the later stages (dark)</h2>
+<div class="frame compact" style="height:760px">
+  <div style="padding:var(--sp-4);display:grid;grid-template-columns:400px 1fr;gap:var(--sp-3);position:relative;height:100%">
+    <div class="tx-col">
+      <div class="tx-op" style="opacity:.45"><div class="hd"><span class="no">1</span><span class="select"><span>drop</span><svg class="i"><use href="#i-down"/></svg></span></div></div>
+      <div class="tx-op" style="opacity:.45"><div class="hd"><span class="no">2</span><span class="select"><span>rename</span><svg class="i"><use href="#i-down"/></svg></span></div></div>
+      <div class="tx-op" style="opacity:.45"><div class="hd"><span class="no">3</span><span class="select"><span>set_kind</span><svg class="i"><use href="#i-down"/></svg></span></div></div>
+      <div class="tx-op is-focus"><div class="hd"><span class="no">4</span><span class="select"><span>set_encoding</span><svg class="i"><use href="#i-down"/></svg></span><span class="spacer"></span><button class="icon-btn" aria-label="Operation 4 actions"><svg class="i"><use href="#i-more"/></svg></button></div>
+        <div class="tx-fields"><span class="lab">column</span><span class="select"><span>magnesium</span><svg class="i"><use href="#i-down"/></svg></span><span class="lab">encoding</span><span class="select"><span>ordinal</span><svg class="i"><use href="#i-down"/></svg></span></div>
+        <div class="tx-order"><span class="hint"><span class="n" style="position:static;display:inline-block">8</span><span><span class="mono">order</span> · 33 categories in the sample, sorted as text</span><span class="spacer"></span><button class="btn sm">Sort as numbers</button></span>
+          <div class="line" role="listbox" aria-label="Category order"><span class="o">100</span><span class="o">101</span><span class="o">102</span><span class="o">103</span><span class="o">104</span><span class="o">105</span><span class="o">106</span><span class="o">107</span><span class="o">108</span><span class="o">110</span><span class="o">111</span><span class="o is-focus" aria-selected="true">112</span><span class="o">113</span><span class="o">115</span><span class="o">116</span><span class="o">117</span><span class="o">118</span><span class="o">120</span><span class="o">121</span><span class="o">124</span><span class="o">126</span><span class="o">127</span><span class="o">128</span><span class="o">132</span><span class="o">89</span><span class="o">90</span><span class="o">91</span><span class="o">93</span><span class="o">94</span><span class="o">95</span><span class="o">96</span><span class="o">97</span><span class="o">98</span></div>
+          <span class="hint">←/→ to move between · <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> to move one · drag</span></div>
+        <div class="tx-eff"><svg class="i"><use href="#i-info"/></svg><span>a value outside the order, or missing, is unknown (rule 29); categories seen only after row 50 are unknown until added</span></div></div>
+      <button class="btn sm tx-add" aria-expanded="true"><svg class="i"><use href="#i-plus"/></svg>Add operation</button>
+      <div class="tx-menu" role="menu" style="left:var(--sp-4);top:494px"><span class="n" style="left:-10px;top:-10px">9</span>
+        <div class="it" role="menuitem"><b>drop</b><span>remove columns (not the target)</span></div>
+        <div class="it" role="menuitem"><b>rename</b><span>give a column a new name</span></div>
+        <div class="it" role="menuitem"><b>reorder</b><span>set the order of every column</span></div>
+        <div class="it" role="menuitem" aria-selected="true"><b>set_kind</b><span>numeric ↔ categorical</span></div>
+        <div class="it" role="menuitem"><b>set_target</b><span>choose the target; the old one becomes a feature</span></div>
+        <div class="it" role="menuitem"><b>set_encoding</b><span>one_hot, embedding, ordinal or ignore</span></div>
+        <div class="note"><svg class="i"><use href="#i-info"/></svg><span>Scaling, imputing and target encoding are fitted on the train split by the model, not here (ML-1.3).</span></div>
+      </div>
+    </div>
+    <div class="tx-col">
+      <section class="tx-later open"><header><span class="n" style="position:static;display:inline-block">10</span><svg class="i"><use href="#i-chevron"/></svg>Later stages<span class="aside">with <i style="font-family:var(--font-ui)">Through clean and split</i></span></header>
+        <div class="b">
+          <div class="field"><label><span class="mono">split.train</span></label><span class="input mono">0.8</span><small>0–1 · default 0.8</small></div>
+          <div class="field"><label><span class="mono">split.val</span></label><span class="input mono">0.1</span><small>0–1 · default 0.1</small></div>
+          <div class="field"><label><span class="mono">split.test</span></label><span class="input mono">0.1</span><small>0–1 · default 0.1</small></div>
+          <div class="field"><label><span class="mono">split.seed</span></label><span class="input mono">0</span><small>default 0</small></div>
+          <div class="field" style="grid-column:span 2"><label><span class="mono">clean_table</span></label><small style="padding-top:6px">no settings: exact duplicates are marked by content hash (ADR-0019 rule 5)</small></div>
+        </div></section>
+      <div class="tx-mini"><h3>What <span class="mono">encoding</span> offers, by kind</h3>
+        <div class="table-wrap"><table class="t dense"><thead><tr><th>Column</th><th>Choices</th></tr></thead><tbody>
+          <tr><td>categorical feature</td><td class="id">one_hot (default) · embedding · ordinal · ignore</td></tr>
+          <tr><td>numeric feature</td><td class="id">as a number (default) · ignore</td></tr>
+          <tr><td>target</td><td class="muted">not offered in the column select</td></tr></tbody></table></div>
+        <span>The new card goes to the end of the list with focus on its first field. With <i>Transform only</i> chosen, <i>Later stages</i> is greyed and reads "not run".</span></div>
+    </div>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">8</span></td><td>Ordinal order</td><td>Every category in order as chips, prefilled from the sample sorted as text (<span class="mono">100</span> before <span class="mono">89</span>), so <i>Sort as numbers</i> is offered when every category is a number; moved by keyboard or drag</td><td>preview's <span class="mono">steps[i]</span>; for a column categorical at ingest, its categories from <span class="mono">GET /versions/{id}/columns</span> <i>planned</i></td><td>–</td></tr>
+<tr><td><span class="n">9</span></td><td>Add operation</td><td>One line per type with what it does; <span class="mono">derive</span> and <span class="mono">filter</span> join it once built (P2); the note on fitted operations (DATA-7.1.AC2)</td><td>the schema's union members</td><td>–</td></tr>
+<tr><td><span class="n">10</span></td><td>Later stages, open</td><td>The split's settings, generated from its schema, as in the <i>Start pipeline</i> drawer</td><td><span class="mono">GET /config/schemas/split</span>, <span class="mono">/clean_table</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · Problems, and cast_failed rows (light)</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame compact" style="height:620px">
+  <div style="padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3);height:100%">
+    <div class="tx-head"><div><h1>Transform <span class="mono">ds_b3f4ff09de8a</span><span class="stage-tag">ingest</span></h1></div><span class="spacer"></span>
+      <div class="tx-run"><span class="n" style="position:static;display:inline-block">11</span><a class="badge err" style="text-decoration:none"><svg class="i" style="width:11px;height:11px"><use href="#i-x"/></svg>2 problems</a><button class="btn primary" aria-disabled="true" aria-describedby="probs"><svg class="i"><use href="#i-play"/></svg>Run</button><span class="sr-only" id="probs">Run is unavailable: 2 operations are refused.</span></div></div>
+    <div style="display:grid;grid-template-columns:400px 1fr;gap:var(--sp-3)">
+      <div class="tx-col">
+        <div class="tx-op bad"><div class="hd"><span class="no">1</span><span class="select"><span>drop</span><svg class="i"><use href="#i-down"/></svg></span></div>
+          <div class="tx-fields"><span class="lab">columns</span><span class="tag">ash<svg class="i"><use href="#i-x"/></svg></span><span class="tag" style="border-color:var(--danger)">cultivar<svg class="i"><use href="#i-x"/></svg></span></div>
+          <div class="tx-err"><svg class="i"><use href="#i-x"/></svg><span><span class="mono">cultivar</span> is the target and cannot be dropped. Choose another target first (<span class="mono">set_target</span>).</span></div></div>
+        <div class="tx-op bad"><div class="hd"><span class="no">2</span><span class="select"><span>rename</span><svg class="i"><use href="#i-down"/></svg></span></div>
+          <div class="tx-fields"><span class="lab">from</span><span class="select"><span>malic_acid</span><svg class="i"><use href="#i-down"/></svg></span><span class="arrow">→</span><span class="lab">to</span><span class="tin bad">alcohol</span></div>
+          <div class="tx-err"><svg class="i"><use href="#i-x"/></svg><span><span class="mono">alcohol</span> already exists. Pick a new name.</span></div></div>
+      </div>
+      <section class="tx-prev stale"><header>Preview<span class="aside">the last valid preview</span><span class="spacer"></span><span class="fresh">waiting for 2 fixes</span></header>
+        <div style="padding:var(--sp-2) var(--sp-3)"><div class="callout info"><svg class="i"><use href="#i-info"/></svg><span>Fix the 2 problems to update the preview. The rows below are from before operation 1 changed.</span></div></div>
+        <div class="tx-scroll"><table class="tx-t"><thead><tr><th class="pin">row</th><th>status</th><th class="r">alcohol</th><th class="r">malic_acid</th><th class="r">ash</th><th>…</th></tr></thead><tbody>
+          <tr><td class="pin">wine.csv#0000001</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">14.23</td><td class="r">1.71</td><td class="r">2.43</td><td class="ui">…</td></tr>
+          <tr><td class="pin">wine.csv#0000002</td><td class="ui"><span class="rs acc"><i></i>accepted</span></td><td class="r">13.2</td><td class="r">1.78</td><td class="r">2.14</td><td class="ui">…</td></tr></tbody></table></div></section>
+    </div>
+    <div style="display:grid;grid-template-columns:400px 1fr;gap:var(--sp-3);flex:1;min-height:0">
+      <div class="tx-col">
+        <div class="tx-op"><div class="hd"><span class="no">1</span><span class="select"><span>set_kind</span><svg class="i"><use href="#i-down"/></svg></span></div>
+          <div class="tx-fields"><span class="lab">column</span><span class="select"><span>cultivar</span><svg class="i"><use href="#i-down"/></svg></span><span class="lab">kind</span><span class="select"><span>numeric</span><svg class="i"><use href="#i-down"/></svg></span></div>
+          <div class="tx-warn"><svg class="i"><use href="#i-alert"/></svg><span><b>50 of 50</b> rows <span class="mono">cast_failed</span> in the sample: <span class="mono">class_0</span> is not a number</span></div></div>
+        <p class="note2">A valid list whose rows fail to convert. <i>Run</i> stays enabled: <span class="mono">cast_failed</span> rows are kept and counted (DATA-7.2.AC1).</p>
+      </div>
+      <section class="tx-prev"><header><span class="n" style="position:static;display:inline-block">12</span>Preview<span class="aside">first <b>50</b> rows of <b>178</b> · <b>0</b> accepted · <b>50</b> rejected</span></header>
+        <div style="padding:var(--sp-2) var(--sp-3) 0"><div class="callout warn"><svg class="i"><use href="#i-alert"/></svg><span><b>Every sampled row would be rejected.</b> A numeric target makes this a regression, and <span class="mono">class_0</span> is not a number. Remove the operation, or set the kind at ingest.</span></div></div>
+        <div class="tx-scroll"><table class="tx-t"><thead><tr><th class="pin">row</th><th>status</th><th>reason</th><th class="r chg">cultivar<small>target · numeric</small></th><th class="r">alcohol</th><th>…</th></tr></thead><tbody>
+          <tr><td class="pin">wine.csv#0000001</td><td class="ui"><span class="rs rej"><i></i>rejected</span></td><td><span class="reason">cast_failed</span></td><td class="r bad"><svg class="i"><use href="#i-x"/></svg> class_0</td><td class="r">14.23</td><td class="ui">…</td></tr>
+          <tr><td class="pin">wine.csv#0000002</td><td class="ui"><span class="rs rej"><i></i>rejected</span></td><td><span class="reason">cast_failed</span></td><td class="r bad"><svg class="i"><use href="#i-x"/></svg> class_0</td><td class="r">13.2</td><td class="ui">…</td></tr>
+          <tr class="more"><td class="pin">…</td><td colspan="5">48 more, all <span class="mono">cast_failed</span></td></tr></tbody></table></div></section>
+    </div>
+  </div>
+</div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">11</span></td><td>Problems</td><td>The count as a link to the first refused card; <i>Run</i> with <span class="mono">aria-disabled</span> and its reason. Each refused card has a danger border, its field marked, and the message under it from <span class="mono">errors[].loc = ["stages","transform","operations",i,field]</span>. The preview keeps the last valid result, dimmed, under an info callout</td><td><span class="mono">422 validation_error</span> from the preview (rule 26), the same check as <span class="mono">POST /jobs</span></td><td>every edit</td></tr>
+<tr><td><span class="n">12</span></td><td>cast_failed</td><td>The value that would not convert, in danger with a ✕, status <i>rejected</i> and reason <span class="mono">cast_failed</span>; the step's count with the warning icon; a warning callout when every sampled row is rejected</td><td>preview's <span class="mono">rows</span> and <span class="mono">steps[i]</span></td><td>every edit</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · States and entry (dark)</h2>
+<div class="frame" style="height:560px">
+  <div class="tx-states">
+    <div class="state"><svg class="i"><use href="#i-list"/></svg><b>No operations yet.</b><p>The preview shows the raw version's first rows. <i>Run</i> reads "Add an operation first".</p><button class="btn sm"><svg class="i"><use href="#i-plus"/></svg>Add operation</button></div>
+    <div class="tx-mini"><h3>Loading</h3>
+      <div class="tx-sk"><span class="skeleton" style="width:60%"></span><span class="skeleton" style="width:90%;height:56px"></span><span class="skeleton" style="width:90%;height:56px"></span><span class="skeleton" style="width:75%"></span><span class="skeleton" style="width:85%"></span></div>
+      <span>The header first, then skeleton cards and rows. A later preview keeps the last one, dimmed, with "updating…".</span></div>
+    <div class="state err"><svg class="i"><use href="#i-alert"/></svg><b>The preview could not be computed</b><p><span class="mono">service_unavailable</span> · the API did not answer. Your operations are kept. Start the stack, then try again.</p><button class="btn sm"><svg class="i"><use href="#i-refresh"/></svg>Try again</button></div>
+    <div class="state"><svg class="i"><use href="#i-ban"/></svg><b>Transforms apply to a table's raw version.</b><p><span class="mono">ds_499bfa2ee3d3</span> is a <span class="mono">clean_table</span> version of wine. Its raw version is <span class="mono">ds_b3f4ff09de8a</span>.</p><button class="btn sm">Transform ds_b3f4ff09de8a</button></div>
+    <div class="tx-mini"><h3><span class="n" style="position:static;display:inline-block">13</span>Opened from a later version</h3>
+      <div class="row"><b style="color:var(--text-primary)">Transform</b><span class="mono">ds_b3f4ff09de8a</span><span class="stage-tag">ingest</span></div>
+      <div class="callout info"><svg class="i"><use href="#i-info"/></svg><span>Starts from the raw version. Loaded the 4 operations of <span class="mono">ds_…</span> (transform). Running a changed list makes a new version beside it.</span></div>
+      <span><span class="mono">/versions/ds_b3f4ff09de8a/transform?from=ds_…</span>. A newer draft for this raw version wins over <span class="mono">?from</span>, and says so with <i>Use the loaded list</i>.</span></div>
+    <div class="tx-mini"><h3><span class="n" style="position:static;display:inline-block">14</span>On SCR-03, beside <i>Train a model…</i></h3>
+      <div class="row">raw <span class="mono">ds_b3f4ff09de8a</span><span class="spacer"></span><button class="btn sm">Transform…</button></div>
+      <div class="row">a split after a transform<span class="spacer"></span><button class="btn sm">Edit the transform…</button></div>
+      <div class="row">split straight from ingest <span class="mono">ds_6448d354c9c6</span><span class="spacer"></span><button class="btn sm">Transform…</button></div>
+      <span>The last opens SCR-15 on its raw version. Images and text have no transform action.</span></div>
+  </div>
+</div>
+<p class="cap">After <i>Run</i>, SCR-04 opens on the new job; an unchanged list reuses its versions, and the stages show "cached". The draft is cleared once the job is created. At 1024 px the columns stay, the operations narrow to 340 px and the chips wrap; the preview keeps sideways scrolling.</p>
+
+<h2>Accessibility notes</h2>
+<div class="changes">
+<ul>
+<li><b>Keyboard path.</b> Tab order: <i>Run</i>'s choices, <i>Reset</i>, <i>Run</i>; then each card (its <span class="mono">op</span> select, fields, ⋮ menu); <i>Add operation</i>; <i>Later stages</i>; the preview. <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd> move the focused card; the ⋮ menu has <i>Move up</i>, <i>Move down</i>, <i>Duplicate</i> and <i>Remove</i>, so the grip is never the only way. The ordinal order moves with <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>→</kbd>.</li>
+<li><b>Never colour alone:</b> a refused card has its message and a ✕; a <span class="mono">cast_failed</span> cell has a ✕ and the reason column; changed columns say how in words; status reads <i>accepted</i> or <i>rejected</i> beside its dot.</li>
+<li><b>Announcements.</b> The preview's header line (counts and freshness) is <span class="mono">aria-live="polite"</span>, so a screen reader hears "50 accepted, updated" after an edit; each refused field is <span class="mono">aria-invalid</span> with its message as its description.</li>
+<li><b>Contrast</b> uses the text tokens on <span class="mono">--surface</span> and <span class="mono">--surface-raised</span>, as approved; the danger text in light uses the same 85 % mix with text-primary as the approved badges. Measured at Gate 3 in both themes.</li>
+<li><b>Motion:</b> the dimming while a preview computes has no transition when <span class="mono">prefers-reduced-motion</span> is set; skeletons stop shimmering.</li>
+</ul>
+</div>
+
+<h2>Tests, at Gate 3</h2>
+<div class="changes">
+<ul>
+<li>Vitest, <span class="mono">TransformScreen.test.tsx</span>: <span class="mono">test_DATA_7_5_operations_form_generated_from_schema</span>, <span class="mono">test_DATA_7_5_refused_operation_message_on_its_field</span>, <span class="mono">test_DATA_7_5_run_posts_from_version_operations_and_until_stage</span>, <span class="mono">test_DATA_7_5_column_select_lists_columns_at_that_step</span>.</li>
+<li>Python: <span class="mono">test_DATA_7_5_preview_equals_stage_first_rows</span> (the API's preview against the version the stage writes), as Addendum B lists.</li>
+</ul>
+</div>
+</div>
+<script>
+(function () {
+  var a = document.getElementById('frameA'), slot = document.getElementById('lightA');
+  var c = a.cloneNode(true); c.id = 'frameA-light'; c.setAttribute('data-theme', 'light');
+  c.querySelectorAll('.n').forEach(function (n) { n.remove(); });
+  c.querySelectorAll('input[type=radio]').forEach(function (r) { r.name = r.name + '-l'; });
+  slot.replaceWith(c);
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>

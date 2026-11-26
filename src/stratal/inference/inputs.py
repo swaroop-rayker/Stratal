@@ -35,12 +35,18 @@ TOP_K = 5
 def check_record(record: Mapping[str, Any], schema: Mapping[str, Any]) -> dict[str, Any]:
     """The record's features, coerced to their kinds, or :class:`WrongInput` naming the field."""
     columns = list(schema["columns"])
-    features = {c["name"]: c["kind"] for c in columns if c["role"] == "feature"}
+    features = {
+        c["name"]: c["kind"]
+        for c in columns
+        if c["role"] == "feature" and c.get("encoding") != "ignore"
+    }
+    # Features set to ignore (DATA-7.3) are not needed, and dropped if sent (rule 29).
+    ignored = {c["name"] for c in columns if c.get("encoding") == "ignore"}
     target = next(c["name"] for c in columns if c["role"] == "target")
     problems: list[tuple[str, str]] = []
     if target in record:
         problems.append((target, "the target is what the model predicts; leave it out"))
-    for name in sorted(set(record) - set(features) - {target}):
+    for name in sorted(set(record) - set(features) - ignored - {target}):
         problems.append((name, "not a column of this model's table"))
     values: dict[str, Any] = {}
     for name, kind in features.items():
@@ -84,7 +90,8 @@ class ClassicalModel:
 
     def predict(self, record: Mapping[str, Any]) -> dict[str, Any]:
         features = self.meta["features"]
-        table = records_table([record], features["numeric"], features["categorical"])
+        text = [*features["categorical"], *features.get("ordinal", [])]
+        table = records_table([record], features["numeric"], text)
         task = self.meta["task"]
         estimator = self.meta["model"]["estimator"]
         if task == "classification":
