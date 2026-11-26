@@ -83,7 +83,8 @@ class IngestConfig(BaseModel):
     )
     table: TableIngest | None = Field(
         default=None,
-        description="The source is one table (CSV or Parquet): a tabular dataset (DATA-1.4).",
+        description="The source is one table (CSV, Parquet, or delimited text converted to "
+        "Parquet, DATA-1.4.AC2): a tabular dataset (DATA-1.4).",
     )
     text: TextIngest | None = Field(
         default=None,
@@ -415,7 +416,16 @@ def _ingest_records(
     metadata: dict[str, str] = {}
     if config.table is not None:
         relpath = find_table(source, relpaths)
-        read = read_table(source, relpath)
+        read = read_table(source, relpath, data_dir)
+        if read.dialect is not None:
+            sink.emit(
+                stage=STAGE,
+                substage="convert",
+                message=f"Read {relpath} as a table ({read.dialect.describe()}, "
+                f"{read.count:,} records) and converted it to Parquet",
+                reason="A table saved as delimited text (DATA-1.4.AC2).",
+                metrics={"converted_records": read.count},
+            )
         schema = build_schema(read, config.table)
         metadata[META_TABLE_SCHEMA] = schema_to_json(schema)
         others: list[Row] = [

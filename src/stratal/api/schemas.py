@@ -346,7 +346,8 @@ class Source(_Model):
     path: str
     files: int
     columns: list[str] | None = None
-    """A folder holding exactly one table: its columns, from the header (DATA-1.4)."""
+    """A folder holding exactly one table: its columns, from the header (DATA-1.4); a
+    delimited-text table counts when the folder has no .csv or .parquet (DATA-1.4.AC2)."""
 
 
 class SourceList(_Model):
