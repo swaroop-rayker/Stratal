@@ -833,6 +833,48 @@ Newest entries go at the bottom of their section. All entries below date from th
 - **How:** `until_stage` is kept: the stages are a chain, each reading the one before it, so a gap would fail or break a guarantee; `transform` is reachable through SCR-15.
 - **Why:** The drawer sent no type (a CSV became image–caption pairs) and turned independent-looking checkboxes into `until_stage`.
 
+## M12: LLM serving and RAG
+
+**Qwen3-1.7B through Ollama** (LLM-1.1; decision 1, spike S-11; [ADR-0021](decisions/ADR-0021-llm-serving.md))
+- **What:** Qwen3-1.7B, Q4_K_M, served by a pinned `ollama` image; SmolLM3-3B was measured and left out.
+- **How:** The GGUF is on the allow-list with its SHA-256; `inference` uploads it to Ollama as a blob and creates the model from it, so Ollama never pulls; `think` is off, temperature 0.3, at most 512 tokens.
+- **Why:** In S-11 it used 1.66 GB of VRAM, gave its first token in 25 ms at 124 tokens/s, routed 9 of 12 test requests correctly and returned valid JSON 50 of 50 times; SmolLM3 routed 5 of 12 and copied sources instead of citing them.
+
+**No route out for the LLM** (NFR-7; ADR-0021 rule 1)
+- **What:** `ollama` sits on a Compose network of its own, `llm`, declared `internal`, which only `inference` joins.
+- **How:** `internal: true` gives the network no gateway; `OLLAMA_NO_CLOUD=1`; a test reads the network layout from `compose.yaml`, and live probes from the container reached neither the internet, the registry nor `api`.
+- **Why:** "No network" becomes a property of the network, not a promise of the image.
+
+**The LLM shares the GPU lease** (BUG6, NFR-1; ADR-0021 rules 3 to 6)
+- **What:** `inference` is Ollama's adapter: it takes the GPU lease before a load and gives it back after 60 s idle or when a job waits.
+- **How:** Free VRAM is checked before the load, a partial offload (`size_vram < size`) is unloaded and refused, the unload is checked on the card against the pre-load baseline, and a load or unload event shows the card before and after. A restarted `inference` first unloads what Ollama still holds (E-020).
+- **Why:** Ollama keeps its model outside PyTorch and knows nothing of the lease or of a waiting job, so something that does must decide.
+
+**Chat over SSE, every request recorded** (LLM-1.1, NFR-6; ADR-0021 rules 8 and 9)
+- **What:** `POST /chat` in `api` streams an answer from `inference`; conversations, messages and one `inference_requests` row per answer are stored.
+- **How:** `api` relays `inference`'s NDJSON as server-sent events with the standard library; closing the stream stops the answer and frees the LLM (E-019); the timings outlive a deleted conversation.
+- **Why:** The browser needs tokens as they come; NFR-6 is measured from the stored rows.
+
+**Corpora are dataset versions** (DATA-5.3, LLM-2.1; decision 7, [ADR-0022](decisions/ADR-0022-corpora-and-retrieval.md))
+- **What:** `text_corpus` runs `ingest → clean_text → chunk → index`, `instruction_pairs` runs `ingest → clean_text → split`; an index is the version whose manifest names a FAISS `IndexFlatIP` blob.
+- **How:** Chunks are cut at Markdown headings, then by size with sentence overlap, counted with bge's tokenizer; each vector is a `text_embedding` derivation; `clean_text` keeps line breaks for corpora (E-018).
+- **Why:** Versions already give identity, lineage, memoization and SCR-02/03, which separate corpus tables would have had to rebuild; two chunk sizes are two version IDs to compare.
+
+**Citations are checked, and a low match is not answered** (LLM-2.1, LLM-2.3; ADR-0022 rules 7 and 8)
+- **What:** A citation naming no source given is removed and logged; below the owner's threshold RAG answers "I don't know" with the nearest source, without asking the model.
+- **How:** A streaming filter holds back an unclosed `[`; the threshold lives in the settings, per embedding model, and is not set until the owner sets it.
+- **Why:** In S-11 half the answers cited nothing; and asking the model about a question the documents do not cover only spends the GPU on an answer to discard.
+
+**hit@k on a frozen question set, now v2** (LLM-2.2; decision 6, the owner's choice 2026-11-27)
+- **What:** 50 answerable and 15 unanswerable questions labelled by section; v1 frozen, then v2, which adds 56 labels where another chunk states the same fact.
+- **How:** The agent drafted both and the owner checked them; both hashes are pinned in a test; `retrieval_eval` scores an index version with no LLM call.
+- **Why:** The docs repeat facts across DECISIONS.md, SPEC.md and the ADRs, so v1's one place per fact counted correct citations as misses; decision 11's reading went from 76–81 % on v1 to 93 % on v2.
+
+**Ollama's prompt cache off** (NFR-2; ADR-0021 As built, E-023)
+- **What:** `LLAMA_ARG_CACHE_RAM=0` on the `ollama` service.
+- **How:** llama.cpp reads its flags from `LLAMA_ARG_*` variables, which Ollama's runner inherits.
+- **Why:** The runner kept every prompt in RAM, up to 8 GiB by default, and the 1,000 MiB limit killed it after about fifteen RAG questions; RAG prompts share no prefix worth caching.
+
 ## GPU
 **GPU ownership** — [ADR-0006](decisions/ADR-0006-gpu-ownership-and-vram-policy.md)
 - **What:** One lease decides who may use the GPU; every GPU process runs under a hard VRAM cap.

@@ -95,12 +95,19 @@ def config_schema(name: str) -> Json:
 
 
 @router.get("/config/defaults", tags=["config"])
-def config_defaults() -> Json:
-    """Each stage's default config, as a pipeline would resolve it with no overrides."""
+def config_defaults(dataset_type: str | None = None) -> Json:
+    """Each stage's default config, as a pipeline would resolve it with no overrides. With
+    ``dataset_type``, that type's own defaults are applied too (a corpus's ``max_chars``)."""
+    extra = stage_registry.TYPE_DEFAULTS.get(dataset_type or "", {})
     defaults: Json = {}
     for name, stage in _pipeline_stages():
         try:
-            defaults[name] = stage.config_model().model_dump(mode="json")
+            base = stage.config_model().model_dump(mode="json")
+            defaults[name] = (
+                stage.config_model()
+                .model_validate({**base, **extra.get(name, {})})
+                .model_dump(mode="json")
+            )
         except Exception:  # a config with a required field has no defaults to show
             defaults[name] = None
     return defaults

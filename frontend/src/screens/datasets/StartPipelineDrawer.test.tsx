@@ -11,12 +11,14 @@ import { StartPipelineDrawer, type StartFrom } from "./StartPipelineDrawer";
 const stage = (name: string, optional = false) => ({ name, optional });
 const TYPES = [
   { name: "image_caption", title: "Image–caption pairs", input_kind: null, families: [], default_metrics: [], trainable: false, note: "", source: "image files; captioned and scored by the label stage", stages: ["ingest", "clean", "preprocess", "label", "filter", "split", "evaluate"].map((n) => stage(n)) },
+  { name: "text_corpus", title: "Text corpus", input_kind: null, families: [], default_metrics: [], trainable: false, note: "", source: ".md and .txt files, at any depth", stages: ["ingest", "clean_text", "chunk", "index"].map((n) => stage(n)) },
   { name: "tabular", title: "Tabular", input_kind: "vector", families: ["mlp"], default_metrics: [], trainable: true, note: "", source: "one .csv or .parquet table", stages: [stage("ingest"), stage("transform", true), stage("clean_table"), stage("split")] },
 ];
 const SOURCES = {
   items: [
     { name: "wine", path: "/sources/wine", files: 1, columns: ["alcohol", "ash", "magnesium", "cultivar"] },
     { name: "coco10k", path: "/sources/coco10k", files: 10_000, columns: null },
+    { name: "stratal-docs", path: "/sources/stratal-docs", files: 43, columns: null },
   ],
   next_cursor: null,
 };
@@ -32,7 +34,11 @@ function setup() {
     "/api/v1/dataset-types": TYPES,
     "/api/v1/datasets": { items: [{ slug: "wine" }], next_cursor: null },
     "/api/v1/datasets/wine/versions": { items: [RAW], next_cursor: null },
-    "/api/v1/config/defaults": { ingest: { min_size: 256 }, split: { seed: 0 } },
+    // A type's own defaults when the drawer names it (a corpus's max_chars, M12).
+    "/api/v1/config/defaults": (url: URL) =>
+      url.searchParams.get("dataset_type") === "text_corpus"
+        ? { ingest: { min_size: 256 }, clean_text: { max_chars: 1_000_000 }, chunk: { chunk_tokens: 256, overlap_tokens: 32, min_tokens: 32 }, index: { embedding_model: "bge-small-en-v1.5", embedding_revision: "5c38ec7c405e" } }
+        : { ingest: { min_size: 256 }, split: { seed: 0 } },
     "/api/v1/config/schemas/*": { type: "object", properties: {} },
     "/api/v1/jobs": { id: "job_0100", ...emptyList },
   });
@@ -100,6 +106,35 @@ describe("Start pipeline drawer", () => {
     expect(screen.getByRole("button", { name: "Start job · to clean_table" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "Stop after split" }));
     expect(split).not.toHaveClass("notrun");
+  });
+
+  test("test_DATA_5_3_corpus_types_offer_their_stages", async () => {
+    const calls = setup();
+    renderDrawer({ mode: "folder" });
+    await pickFolder("/sources/stratal-docs");
+    fireEvent.click(await screen.findByRole("radio", { name: /Text corpus/ }));
+
+    const stages = await screen.findByRole("radiogroup", { name: /Stages/ });
+    const names = within(stages).getAllByText(/^(ingest|clean_text|chunk|index|split)$/).map((n) => n.textContent);
+    expect(names).toEqual(["ingest", "clean_text", "chunk", "index"]);
+    const row = (name: string) => within(stages).getByText(name).closest(".sp-st") as HTMLElement;
+    expect(row("ingest")).toHaveTextContent("one row per document");
+    expect(within(row("ingest")).getByRole("button", { name: /ingest settings/ })).toBeDisabled(); // nothing to set
+    expect(await within(stages).findByText("1000000")).toBeInTheDocument(); // the corpus's max_chars, not 10,000
+    expect(row("chunk")).toHaveTextContent("at headings, then by size · chunk_tokens 256");
+    // One embedding model (M12 decision 4): shown fixed, not an input.
+    expect(row("index")).toHaveTextContent("embed, build the index · embedding bge-small-en-v1.5 · 5c38ec7 fixed");
+    expect(within(row("index")).getByRole("button", { name: /index settings/ })).toBeDisabled();
+    expect(within(row("index")).getByRole("radio", { name: "Stop after index" })).toBeChecked();
+    expect(calls.some((c) => c.url.searchParams.get("dataset_type") === "text_corpus")).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Start job · to index" }));
+    await waitFor(() => { expect(calls.some((c) => c.url.pathname === "/api/v1/jobs" && c.method === "POST")).toBe(true); });
+    const job = calls.find((c) => c.url.pathname === "/api/v1/jobs" && c.method === "POST");
+    expect(job?.body).toEqual({
+      kind: "pipeline", dataset: "stratal-docs", source: { kind: "folder", path: "/sources/stratal-docs" }, dataset_type: "text_corpus",
+      stages: {}, until_stage: null,
+    });
   });
 
   test("test_DATA_5_2_image_source_runs_the_image_pipeline", async () => {

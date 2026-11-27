@@ -84,7 +84,7 @@ Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 | `id` | bigint identity | no | PK |
 | `slug` | text | no | unique |
 | `display_name` | text | yes | |
-| `modality` | text | no | `image`, `tabular`, `text` |
+| `modality` | text | no | `image`, `tabular`, `text`; from M12 `text corpus`, `instruction pairs` (the corpus types, ADR-0022) |
 | `source_uri` | text | yes | where the raw data came from; informational |
 | `created_at` | timestamptz | no | |
 
@@ -262,6 +262,7 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 | `clip_image_embedding` (M11) | preprocessed copy's `sha256` | CLIP model and revision, dtype, torch, transformers and Pillow versions | the image's CLIP vector, float16 base64 (about 1 KB), for the semantic clusters (ADR-0013 rule 2) |
 | `caption` | preprocessed copy's `sha256` | captioner name and revision, task, `max_new_tokens`, `num_beams`, dtype, the caption loop's `ALGORITHM_VERSION`, torch, transformers and Pillow versions | the caption text |
 | `clip_score` | SHA-256 of the copy's `sha256`, a newline and the caption | CLIP model and revision, dtype, the similarity's `ALGORITHM_VERSION`, library versions | the score, a number |
+| `text_embedding` (M12) | the chunk text's SHA-256 | the embedding model and revision, and the sentence-transformers version | the normalised bge vector, float32 base64; re-indexing a chunk already embedded costs nothing (ADR-0022 rule 4) |
 
 ### 4.10 `review_sessions` and `review_items` (LABEL-1.5)
 
@@ -271,7 +272,7 @@ Values as built in M3 (`params_hash` is SHA-256 of the canonical JSON of the par
 
 ### 4.11 `eval_reports` (EVAL-1.1)
 
-`id` (bigint identity, PK), `version_id` (FK), `kind` (`phase1_dataset`), `report` (jsonb), `review_session_id` (FK, nullable), `job_id` (FK, nullable), `created_at`. Index: `(version_id, created_at desc)`. Built in M5 (2026-11-16). The `report` document is described in [API.md §3.6](API.md#36-evaluation-eval-11).
+`id` (bigint identity, PK), `version_id` (FK), `kind` (`phase1_dataset`; `retrieval` since M12, a check constraint), `report` (jsonb), `review_session_id` (FK, nullable), `job_id` (FK, nullable), `created_at`. Index: `(version_id, created_at desc)`. Built in M5 (2026-11-16). The `report` document is described in [API.md §3.6](API.md#36-evaluation-eval-11).
 
 ### 4.12 Model registry (M8, REG-1.1, REG-1.2, [ADR-0015](decisions/ADR-0015-model-registry-and-retention.md))
 
@@ -320,7 +321,7 @@ Constraints: state and weights status check constraints; `present` needs a path 
 
 ### 4.13 `settings` (M8, OC-9, SCR-14)
 
-`section` (text, PK), `values` (jsonb), `updated_at`. One row per section of SCR-14 other than retention, which has its own table above. In M8 the only row is `training`: `{checkpoint_interval_min, thermal_pause_c, thermal_resume_c, stall_timeout_s}` (`stratal.runtime.limits.TrainingValues`). Until it is saved the environment's `STRATAL_THERMAL_PAUSE_C`, `STRATAL_THERMAL_RESUME_C` and `STRATAL_STALL_TIMEOUT_S` are the values, so a fresh install behaves as before. The watchdog reads it before every check; `checkpoint_interval_min` becomes `checkpoint_every_s` of new training runs that do not set it. M11 adds `monitoring`: `{sample_interval_active_s, sample_interval_idle_s, vram_alert_percent, ram_alert_percent, disk_bottleneck_mb_s}` (`stratal.runtime.limits.MonitoringValues`; MON-2.2, MON-2.6, MON-3.2; ADR-0020 rule 14), the environment's values until saved; the alerts read it at most every 5 s, the sampler every 30 s.
+`section` (text, PK), `values` (jsonb), `updated_at`. One row per section of SCR-14 other than retention, which has its own table above. In M8 the only row is `training`: `{checkpoint_interval_min, thermal_pause_c, thermal_resume_c, stall_timeout_s}` (`stratal.runtime.limits.TrainingValues`). Until it is saved the environment's `STRATAL_THERMAL_PAUSE_C`, `STRATAL_THERMAL_RESUME_C` and `STRATAL_STALL_TIMEOUT_S` are the values, so a fresh install behaves as before. The watchdog reads it before every check; `checkpoint_interval_min` becomes `checkpoint_every_s` of new training runs that do not set it. M11 adds `monitoring`: `{sample_interval_active_s, sample_interval_idle_s, vram_alert_percent, ram_alert_percent, disk_bottleneck_mb_s}` (`stratal.runtime.limits.MonitoringValues`; MON-2.2, MON-2.6, MON-3.2; ADR-0020 rule 14), the environment's values until saved; the alerts read it at most every 5 s, the sampler every 30 s. M12 adds `retrieval`: `{embedding_model, abstention_threshold, threshold_source, default_k}` (`stratal.data.retrieval_settings.RetrievalValues`; LLM-2.3, ADR-0022 rule 8). Until saved the threshold is null and RAG never abstains; RAG reads the row for every question.
 
 ### 4.14 `model_templates` (M9, BUILD-1.7, [ADR-0017](decisions/ADR-0017-model-spec.md) rule 9)
 
@@ -337,6 +338,14 @@ A graph spec is also stored, as part of its run's config, in `job_stages.config`
 A network trial's weights live in its job's folder until its study's next step: `jobs/<job>/trial/initial` (when its lineage is new), `trial/trained` and `trial/result.json`. Only the best trial's are kept, and they are deleted once copied into the registry (ADR-0018 rule 7).
 
 `model_versions.study_id` (FK, null) names the study whose best trial a version is. Optuna's own tables live in schema `optuna`, created empty by the migration and filled by Optuna; the API never reads them.
+
+### 4.16 Chat (M12, LLM-1.1, NFR-6, [ADR-0021](decisions/ADR-0021-llm-serving.md) rule 9)
+
+`chat_sessions`: `id` (text PK, `cs_` plus 12 random hex), `title` (the first question, at most 80 characters), `created_at`, `updated_at` (the last message). Index `(updated_at desc)`. Kept until the owner deletes it (SCREENS.md v5, open point 8a).
+
+`chat_messages`: `id` (bigint identity PK), `session_id` (FK, cascades on delete), `role` (`user`, `assistant`), `mode` (`llm`, `rag`, `images`), `content`, `citations` (jsonb: each `{n, row_key, document, section, char_start, char_end, relevance, snippet, cited}`, RAG only), `details` (jsonb: a RAG answer's `sources`, `removed`, `uncited`, `abstained`, `nearest`, `threshold`; image results `images`, `searched`, `version_id`; `stopped`; a refusal's `error`), `request_id` (FK → `inference_requests`, set null on delete), `created_at`. Index `(session_id, id)`.
+
+`inference_requests`: one row per answer, the NFR-6 record. `id` (uuid PK), `kind` (`llm`, `rag`, `images`), `session_id` (FK, set null when its conversation is deleted, so the timings stay), `route`, `model`, `revision`, `device` (`gpu`, `cpu`), `index_version_id` (an index, or the labelled version searched), `cold_start`, `load_ms`, `ttft_ms`, `total_ms` (a stopped answer's is `api`'s own clock), `prompt_tokens`, `output_tokens`, `tokens_per_s`, `status` (`ok`, `refused`, `failed`, `stopped`), `error_code`, `created_at`. Index `(created_at desc)`.
 
 ## 5. Manifest schema
 
@@ -387,9 +396,20 @@ Initial reason codes: `unreadable`, `corrupt_image`, `unsupported_format`, `belo
 
 All six are nullable and appended, so no earlier version's ID changed.
 
+**Corpora (M12, DATA-5.3, [ADR-0022](decisions/ADR-0022-corpora-and-retrieval.md))** use the text columns above and add five, appended and nullable like them:
+
+| Column | Type | Added by | Notes |
+|---|---|---|---|
+| `title` | string | ingest | a corpus document's first heading, or its file name |
+| `document` | string | chunk | the document a chunk comes from: its path in the source folder, the document row's `row_key` |
+| `section` | string | chunk | the chunk's heading path, `Title › Section › Subsection` |
+| `char_start`, `char_end` | int32 | chunk | the chunk's offsets in the cleaned document; `text` is exactly `document_text[char_start:char_end]` |
+
+A `text_corpus` has one row per document at ingest and `clean_text` (`row_key` the relative path), then one per chunk (`<document>#<chunk number, 4 digits>`, `token_count` counted with the embedding model's tokenizer). An `instruction_pairs` row holds the pair in `record` (`{instruction, input, output}`) and the whole pair as one text in `text`, so `clean_text` and the duplicate check apply to it. M12 reasons: `not_utf8` and `unsupported_format` (corpus ingest), `missing_field`, `empty_output`, `not_json` (pairs).
+
 `corrupt_image` is normally decided at ingest. Clean and preprocess decode the image again and use the same code, with their own stage in `decided_at_stage`, if that decode fails. In clean and preprocess, a file missing from the blob store is not a reason code: it fails the stage (BUG1). The filter stage is the exception: its schema validation (DATA-5.1) marks a row whose original or preprocessed file is missing `rejected` with `missing_file`, warns, and lists it in `counts.validation` (the owner's choice, 2026-11-16).
 
-File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.parent_version_id`, `stratal.config_hash`. Since M10 also `stratal.table_schema` (a table's columns with kind and role, and its task: `classification` or `regression`), passed on by every stage that keeps the rows, and `stratal.vocab` (`{sha256, size, max_length}` of a tokenized version's vocabulary, a JSON blob). They follow from the rows and the config, so they are not part of the identity. *Since M11b (ADR-0019 Addendum B, as built; the owner's choice, 2026-11-25):* a transform can change a table's schema without changing its rows (an encoding, the column order), so `clean_table` and `split` record their input's schema hash (SHA-256 of the `stratal.table_schema` JSON) in their config as `input_schema`, a read-only field the stage fills in; through the config it is part of their versions' identity. A schema's columns may carry `encoding` and `order` (DATA-7.3), written only when set. The vocabulary blob is referenced only from this metadata: the blob garbage collector (phase 2) must count it as in use. Rows are written sorted by `row_key`.
+File-level metadata keys: `stratal.schema_version`, `stratal.stage`, `stratal.parent_version_id`, `stratal.config_hash`. Since M10 also `stratal.table_schema` (a table's columns with kind and role, and its task: `classification` or `regression`), passed on by every stage that keeps the rows; since M12 `stratal.rag_index` on an index version (`{sha256, dimension, count, model, revision, query_prefix, order, metric}`: the FAISS index blob, read in the order of the accepted rows by `row_key`; ADR-0022 rule 4), and `stratal.vocab` (`{sha256, size, max_length}` of a tokenized version's vocabulary, a JSON blob). They follow from the rows and the config, so they are not part of the identity. *Since M11b (ADR-0019 Addendum B, as built; the owner's choice, 2026-11-25):* a transform can change a table's schema without changing its rows (an encoding, the column order), so `clean_table` and `split` record their input's schema hash (SHA-256 of the `stratal.table_schema` JSON) in their config as `input_schema`, a read-only field the stage fills in; through the config it is part of their versions' identity. A schema's columns may carry `encoding` and `order` (DATA-7.3), written only when set. The vocabulary blob is referenced only from this metadata: the blob garbage collector (phase 2) must count it as in use. Rows are written sorted by `row_key`.
 
 ## 6. Blob store
 
@@ -442,7 +462,7 @@ Outlined only. Each is specified at its phase kickoff, with an ADR where it is a
 |---|---|---|
 | 2 | ~~`model_lineages`, `model_versions`, `checkpoints`, `pins`, `retention_settings`~~ | Built in M8: [§4.12](#412-model-registry-m8-reg-11-reg-12-adr-0015) |
 | 2 | ~~Optuna's own tables, in a separate schema~~ | Built in M10: schema `optuna`, with `studies` and `study_trials` beside them ([§4.15](#415-hpo-studies-m10-hpo-11-to-hpo-15-adr-0018)) |
-| 3 | `corpora`, `rag_indexes`, `chat_sessions`, `inference_requests` | Index versions for hit@k (LLM-2.2); request latency for NFR-6 |
+| 3 | ~~`corpora`, `rag_indexes`~~, ~~`chat_sessions`, `inference_requests`~~ | Built in M12: corpora and indexes are dataset versions (ADR-0022, decision 7), not tables; chat in [§4.16](#416-chat-m12-llm-11-nfr-6-adr-0021-rule-9) |
 | 4 | adapter columns on `model_versions` | LoRA deltas with a parent base (REG-1.3, REG-2.8) |
 
 ## 10. Retention and growth

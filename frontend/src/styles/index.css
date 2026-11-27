@@ -5,11 +5,13 @@
 @import "./scr02.css";
 @import "./drawer.css";
 @import "./scr03.css";
+@import "./scr03corpus.css";
 @import "./rowdrawer.css";
 @import "./scr04.css";
 @import "./stagedrawer.css";
 @import "./scr05.css";
 @import "./scr06.css";
+@import "./scr06retrieval.css";
 @import "./scr07.css";
 @import "./scr11.css";
 @import "./scr14.css";
@@ -17,3 +19,4 @@
 @import "./scr09.css";
 @import "./scr10.css";
 @import "./scr15.css";
+@import "./scr12.css";

@@ -9,6 +9,7 @@ import { EmptyState, ErrorState } from "../../components/states";
 import { Button, Icon, Kbd, Skeleton } from "../../components/ui";
 import { bytes } from "../../lib/format";
 import { useShortcuts } from "../../shell/hooks";
+import { type CorpusKind, CorpusCells, corpusColumns } from "./Corpus";
 import { dims, imageHash, type Row, STATUS_CLASS, type Status, thumbUrl } from "./rows";
 import { clusterName } from "./RowDrawer";
 
@@ -65,10 +66,10 @@ function Cells({ row, labelled, split, details }: { row: Row; labelled: boolean;
   );
 }
 
-export function RowsPanel({ versionId, filters, setFilter, reasons, splits, labelled, view, selected, onSelect, onOpen }: {
+export function RowsPanel({ versionId, filters, setFilter, reasons, splits, labelled, view, selected, onSelect, onOpen, corpus = null, documents = [], drawerOpen = false }: {
   versionId: string;
   filters: RowFilters;
-  setFilter: (patch: Partial<Record<"status" | "reason" | "split" | "q" | "view", string | null>>) => void;
+  setFilter: (patch: Partial<Record<"status" | "reason" | "split" | "q" | "view" | "document" | "text", string | null>>) => void;
   reasons: string[];
   splits: string[];
   labelled: boolean;
@@ -76,6 +77,12 @@ export function RowsPanel({ versionId, filters, setFilter, reasons, splits, labe
   selected: number;
   onSelect: (index: number) => void;
   onOpen: (index: number, rows: Row[]) => void;
+  /** A corpus's rows (SCR-03 for corpora): their own columns, no thumbnails or grid. */
+  corpus?: CorpusKind | null;
+  /** A chunk version's documents, for the document filter. */
+  documents?: string[];
+  /** The chunk drawer is open: the Document column is dropped to make room. */
+  drawerOpen?: boolean;
 }) {
   const rows = useRows(versionId, filters);
   const items = useMemo(() => rows.data?.pages.flatMap((p) => p.items) ?? [], [rows.data]);
@@ -128,13 +135,53 @@ export function RowsPanel({ versionId, filters, setFilter, reasons, splits, labe
   const status = filters.status ?? null;
   const top = visible[0]?.start ?? 0;
   const bottom = virtual.getTotalSize() - (visible[visible.length - 1]?.end ?? 0);
-  const columns = labelled
-    ? ["", "Row key", "Status", "Reason", "Caption", "CLIP", ...(split ? ["Split"] : [])]
-    : ["", "Row key", "Status", "Reason", "Size", "Original", "Copy", "Duplicate of", "pHash"];
-  const right = new Set(["Size", "Original", "Copy", "pHash", "CLIP"]);
+  const withDocument = !drawerOpen;
+  const columns = corpus
+    ? corpusColumns(corpus, withDocument).map((c) => c.name)
+    : labelled
+      ? ["", "Row key", "Status", "Reason", "Caption", "CLIP", ...(split ? ["Split"] : [])]
+      : ["", "Row key", "Status", "Reason", "Size", "Original", "Copy", "Duplicate of", "pHash"];
+  const right = new Set(["Size", "Original", "Copy", "pHash", "CLIP", "Tokens", "Characters"]);
+  const shownView = corpus ? "table" : view;
 
   return (
     <>
+      {corpus === "chunks" ? (
+        <div className="toolbar co-tools">
+          <select
+            className="select co-docsel"
+            aria-label="Document"
+            value={filters.document ?? ""}
+            onChange={(e) => { setFilter({ document: e.target.value || null }); }}
+          >
+            <option value="">Document: all {documents.length || ""}</option>
+            {documents.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <span className="search">
+            <Icon name="search" />
+            <input
+              ref={search}
+              className="input"
+              placeholder="Search the text"
+              aria-label="Search the text"
+              defaultValue={filters.text ?? ""}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") setFilter({ text: e.currentTarget.value.trim() || null });
+                if (e.key === "Escape") e.currentTarget.blur();
+              }}
+              onBlur={(e) => {
+                setFilter({ text: e.currentTarget.value.trim() || null });
+              }}
+            />
+            <Kbd>/</Kbd>
+          </span>
+          <span className="aside">{rows.data ? `${matched.toLocaleString("en-US")} ${matched === 1 ? "chunk" : "chunks"}` : ""}</span>
+        </div>
+      ) : (
       <div className="toolbar">
         <span className="group-btns" role="group" aria-label="Status">
           {[null, ...STATUSES].map((s) => (
@@ -208,17 +255,20 @@ export function RowsPanel({ versionId, filters, setFilter, reasons, splits, labe
           />
           <Kbd>/</Kbd>
         </span>
-        <span className="group-btns" role="group" aria-label="View">
-          <button type="button" className="btn sm" aria-pressed={view === "table"} onClick={() => { setFilter({ view: null }); }}>
-            <Icon name="list" />
-            Table
-          </button>
-          <button type="button" className="btn sm" aria-pressed={view === "grid"} onClick={() => { setFilter({ view: "grid" }); }}>
-            <Icon name="grid" />
-            Grid
-          </button>
-        </span>
+        {corpus ? null : (
+          <span className="group-btns" role="group" aria-label="View">
+            <button type="button" className="btn sm" aria-pressed={view === "table"} onClick={() => { setFilter({ view: null }); }}>
+              <Icon name="list" />
+              Table
+            </button>
+            <button type="button" className="btn sm" aria-pressed={view === "grid"} onClick={() => { setFilter({ view: "grid" }); }}>
+              <Icon name="grid" />
+              Grid
+            </button>
+          </span>
+        )}
       </div>
+      )}
 
       {rows.isPending ? (
         <div className="table-wrap" aria-busy="true">
@@ -236,7 +286,7 @@ export function RowsPanel({ versionId, filters, setFilter, reasons, splits, labe
         <EmptyState icon="search" title="No rows match">
           Clear a filter to see more rows.
         </EmptyState>
-      ) : view === "grid" ? (
+      ) : shownView === "grid" ? (
         <div className="rows-wrap" ref={scroller}>
           <div className="grid-view" role="listbox" aria-label={`Rows, ${String(matched)}`}>
             {items.map((row, i) => {
@@ -286,22 +336,29 @@ export function RowsPanel({ versionId, filters, setFilter, reasons, splits, labe
                 return (
                   <tr
                     key={row.row_key}
+                    data-key={row.row_key}
                     aria-rowindex={v.index + 2}
                     aria-selected={v.index === selected}
                     tabIndex={v.index === selected ? 0 : -1}
                     onClick={() => { onSelect(v.index); onOpen(v.index, items); }}
                   >
-                    <td>
-                      <Thumb row={row} />
-                    </td>
-                    <td className="id">
-                      {row.row_key}
-                      {row.semantic_cluster_id ? <span className="scchip" title="Semantic cluster (DATA-2.3)">{clusterName(row.semantic_cluster_id)}</span> : null}
-                    </td>
-                    <td>
-                      <RowStatus status={row.status} />
-                    </td>
-                    <Cells row={row} labelled={labelled} split={split} details={status === "rejected"} />
+                    {corpus ? (
+                      <CorpusCells kind={corpus} row={row} withDocument={withDocument} />
+                    ) : (
+                      <>
+                        <td>
+                          <Thumb row={row} />
+                        </td>
+                        <td className="id">
+                          {row.row_key}
+                          {row.semantic_cluster_id ? <span className="scchip" title="Semantic cluster (DATA-2.3)">{clusterName(row.semantic_cluster_id)}</span> : null}
+                        </td>
+                        <td>
+                          <RowStatus status={row.status} />
+                        </td>
+                        <Cells row={row} labelled={labelled} split={split} details={status === "rejected"} />
+                      </>
+                    )}
                   </tr>
                 );
               })}

@@ -35,6 +35,66 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-023 — Ollama's runner was killed after about fifteen RAG questions
+
+- **Date:** 2026-11-27
+- **Seen:** M12's acceptance test asked the question set's RAG questions in a row; after about fifteen, an answer failed with `llm_unavailable … Ollama refused POST /api/chat: 500 … model runner has unexpectedly stopped, this may be due to resource limitations`. Ollama logged `llama-server process no longer running … signal: killed`; the `ollama` cgroup showed `oom_kill 3` and its peak at the 1,000 MiB limit. With the limit raised to 2,000 MiB for a measurement the runner's anonymous memory reached 1.7 GB and it was killed again.
+- **Where:** M12, the `ollama` service (`compose.yaml`); ADR-0021 rule 11, NFR-2.
+- **Cause:** The llama-server that Ollama 0.40.16 starts keeps each finished prompt's state in RAM, up to 8,192 MiB by default (`--cache-ram`), and Ollama does not set it. Its log read `cache state: 14 prompts, 1232.685 MiB (limits: 8192.000 MiB …)`: about 80 MB per RAG prompt of 700–800 tokens. S-11's peak of 717 MiB was measured on fewer, shorter prompts. RAG prompts share only their first 63 tokens, so the cache saved nothing.
+- **Fix:** `LLAMA_ARG_CACHE_RAM: "0"` on the `ollama` service, which llama-server reads as `--cache-ram 0`. The 1,000 MiB limit is unchanged. Re-run: the runner's anonymous memory peaked at 563 MiB over the whole test, no OOM kill; NFR-6 met 20 of 20.
+- **Guard:** `tests/acceptance/test_M12_llm_acceptance.py` (over 60 RAG questions in a row on the live stack).
+- **Status:** verified
+
+### E-022 — The dataset list failed once a corpus existed
+
+- **Date:** 2026-11-27
+- **Seen:** SCR-02 showed "Datasets could not be loaded · internal_error". The API logged `ResponseValidationError: … 'modality' … Input should be 'image', 'tabular' or 'text' … input: 'text corpus'`.
+- **Where:** M12, `GET /datasets` (`stratal.api.schemas.Dataset`); DATA-5.3. Found at SCR-03 for corpora's Gate 3.
+- **Cause:** The corpus types store their modality as *text corpus* and *instruction pairs* (SCREENS.md v5 shows them so), but the response schema and DATA_MODEL.md still listed only `image`, `tabular` and `text`.
+- **Fix:** The schema and DATA_MODEL.md list both (commit `2658790`).
+- **Guard:** `test_DATA_5_3_instruction_pairs_are_ingested_cleaned_and_split` lists the datasets through the API.
+- **Status:** verified
+
+### E-021 — A stopped answer vanished from the conversation until a reload
+
+- **Date:** 2026-11-27
+- **Seen:** On SCR-12, *Stop* removed the whole turn, question and partial answer, from the conversation; after a reload it was there, with "stopped at –".
+- **Where:** M12, SCR-12 (`ChatScreen.tsx`) and `api`'s chat relay (`stratal.api.chat`); LLM-1.1.
+- **Cause:** The screen dropped its live copy and refetched the conversation at once, but `api` stores a stopped answer only when it notices the closed stream, which can be later. A stopped answer also never gets `inference`'s `done`, so it had no total time.
+- **Fix:** The live copy stays until the stored one is there, the screen polling every second for up to 30 s; `api` times a stopped answer with its own clock (commit `8042f14`).
+- **Guard:** `test_LLM_1_1_stop_keeps_the_partial_answer` (Vitest), `test_LLM_1_1_a_stopped_answer_is_stored_with_its_text_and_time`.
+- **Status:** verified (checked live with the real model)
+
+### E-020 — A restarted `inference` left the LLM on the card without the lease
+
+- **Date:** 2026-11-27
+- **Seen:** After `inference` was rebuilt and restarted with `ollama` still running, the first answer showed "cold start 0.01 s" and the load event read "card 1.8 → 1.8 GB".
+- **Where:** M12, `stratal.inference.llm.LlmAdapter`; ADR-0021 rules 4 and 5, BUG6.
+- **Cause:** Ollama kept the model loaded across `inference`'s restart (`OLLAMA_KEEP_ALIVE=-1`). The new adapter believed nothing was loaded, so the model sat in VRAM with no lease held, and the next load measured the card with the model on it as its baseline, which the idle unload would then have "returned" to.
+- **Fix:** Before its first load, the adapter unloads whatever Ollama holds and waits for it to go (commit `a9a4578`). Live: "card 1.8 → 0.2 GB" at start.
+- **Guard:** `test_LLM_1_1_a_restarted_service_unloads_what_ollama_still_holds`.
+- **Status:** verified
+
+### E-019 — Stop did not stop the model, and the next question hung for 132 s
+
+- **Date:** 2026-11-27
+- **Seen:** After *Stop* on SCR-12, Ollama's log showed the chat call running to its full 512 tokens; no idle unload followed; the next question waited and failed after 132 s with `dependency_unavailable … did not answer (timed out)`.
+- **Where:** M12, `inference`'s `/chat` (`stratal.inference.app`); LLM-1.1, ADR-0021 rule 5.
+- **Cause:** Starlette runs a plain generator's stream in a worker thread and, when the client disconnects, cancels the task without closing the generator. The generation's `finally`, which closes Ollama's stream and frees the LLM's slot, never ran, so the slot stayed taken.
+- **Fix:** `closing_stream` wraps the NDJSON in an async generator that closes the chain on cancellation, and `ndjson` closes its events (commit `a9a4578`). Live: the stopped answer ended at once, and the next answer came in 0.82 s.
+- **Guard:** `test_LLM_1_1_stop_closes_the_generation_on_disconnect`, `…_on_cancel`, `test_LLM_1_1_ndjson_closes_its_events`.
+- **Status:** verified
+
+### E-018 — Cleaning a corpus removed its headings
+
+- **Date:** 2026-11-27
+- **Seen:** The first live index of Stratal's docs had almost every chunk's section equal to the document's title: `chunk` found no `##` headings to cut at.
+- **Where:** M12, `clean_text` (`stratal.data.record_clean`) on a `text_corpus`; DATA-5.3, LLM-2.1, ADR-0022 rule 1.
+- **Cause:** `clean_text` normalised whitespace by collapsing every run, line breaks included, so a document became one line and its Markdown headings stopped being headings.
+- **Fix:** A `keep_line_breaks` setting, on for `text_corpus` only and left out of the config when off, so earlier versions keep their IDs (commit `e9e7535`; ADR-0022's As built).
+- **Guard:** `test_LLM_2_1_corpus_clean_keeps_lines_and_old_configs_keep_their_ids`; `test_LLM_2_1_corpus_is_chunked_and_indexed` checks a document's headings after cleaning.
+- **Status:** verified
+
 ### E-017 — Turning a study on changed SCR-09's estimator under its form
 
 - **Date:** 2026-11-22

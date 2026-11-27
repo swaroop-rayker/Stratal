@@ -1,0 +1,45 @@
+/* SCR-06, the retrieval report (mockup SCR-06retrieval_v1; tokens only, classes prefixed rr-). */
+.scr06 .rr-meta { font-size: var(--fs-12); color: var(--text-muted); display: flex; gap: var(--sp-1) var(--sp-3); flex-wrap: wrap; }
+.scr06 .rr-meta .mono { color: var(--text-secondary); }
+/* hit@k tiles: a share is not good or bad by itself, so no status edge. */
+.scr06 .rr-meta + .heads .head { border-left-width: var(--bw); }
+.scr06 .rr-meta + .heads .head .v { font-size: var(--fs-24); }
+
+.scr06 .t.dense td { height: 32px; }
+.scr06 .t tr.here td { background: var(--accent-soft); }
+.scr06 .t tr.here td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+.scr06 .t td.key { font: var(--fs-12) var(--font-mono); }
+.scr06 .t td.best { font-weight: var(--fw-semibold); color: var(--text-primary); }
+.scr06 .t tbody tr[tabindex]:not(.here) { cursor: pointer; }
+.scr06 .t tbody tr[tabindex]:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+.scr06 .rr-two { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: var(--sp-4); }
+.scr06 .rr-thrtable { max-height: 300px; overflow: auto; }
+.scr06 .rr-key { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); align-items: center; }
+.scr06 .rr-key i { display: inline-block; width: 14px; height: 9px; margin-right: var(--sp-1); vertical-align: middle; border-radius: var(--r-xs); }
+.scr06 .rr-key .ka { background: var(--cat-1); }
+.scr06 .rr-key .ku { border: var(--bw) solid var(--text-secondary); background: repeating-linear-gradient(45deg, var(--text-secondary) 0 1.5px, transparent 1.5px 4px); }
+.scr06 .rr-key .kt { border-top: 2px dashed var(--text-primary); height: 0; border-radius: 0; }
+.scr06 .rr-hist { position: relative; height: 160px; margin-top: var(--sp-4); border-left: var(--bw) solid var(--border-strong); border-bottom: var(--bw) solid var(--border-strong); display: grid; gap: 4px; align-items: end; padding: 0 var(--sp-1); }
+.scr06 .rr-bin { display: flex; gap: 1px; align-items: end; height: 100%; }
+.scr06 .rr-bin i { flex: 1; display: block; border-radius: var(--r-xs) var(--r-xs) 0 0; }
+.scr06 .rr-bin i.a { background: var(--cat-1); }
+.scr06 .rr-bin i.u { border: var(--bw) solid var(--text-secondary); border-bottom: 0; background: repeating-linear-gradient(45deg, var(--text-secondary) 0 1.5px, transparent 1.5px 4px); }
+.scr06 .rr-bin i.z { border: 0; background: none; }
+.scr06 .rr-thr { position: absolute; top: -4px; bottom: 0; border-left: 2px dashed var(--text-primary); }
+.scr06 .rr-thr span { position: absolute; top: -18px; left: 4px; font: var(--fw-medium) var(--fs-11) var(--font-mono); color: var(--text-primary); white-space: nowrap; }
+.scr06 .rr-ax { display: flex; justify-content: space-between; font: var(--fs-11) var(--font-mono); color: var(--text-muted); padding: 2px var(--sp-1) 0; }
+
+.scr06 .rr-miss td { white-space: normal; vertical-align: top; padding-top: var(--sp-2); padding-bottom: var(--sp-2); height: auto; }
+.scr06 .rr-miss .got { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); display: flex; flex-direction: column; gap: 2px; }
+.scr06 .rr-miss .got a { color: var(--text-secondary); text-decoration: none; }
+.scr06 .rr-miss .got a:hover { color: var(--text-primary); text-decoration: underline; }
+.scr06 .rr-miss .got b { color: var(--text-primary); font-weight: var(--fw-medium); }
+.scr06 .rr-cur { font-size: var(--fs-11); color: var(--text-secondary); }
+.scr06 .callout.info { background: var(--info-soft); border-color: color-mix(in srgb, var(--info) 45%, transparent); color: var(--text-primary); }
+.scr06 .callout.info svg.i { color: var(--info); }
+
+/* At 1024 px the threshold table moves under the chart (frame D). */
+@media (max-width: 1279px) {
+  .scr06 .rr-two { grid-template-columns: minmax(0, 1fr); }
+}

@@ -6,13 +6,18 @@ the same RFC 9457 problem documents as the API's (ADR-0011), so the API can pass
 them through unchanged.
 """
 
-from typing import Any, Protocol
+import json
+from collections.abc import AsyncGenerator, Generator, Iterator
+from typing import Any, Literal, Protocol
 
 from fastapi import FastAPI
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import StreamingResponse
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from stratal.api.problem import install_error_handlers
+from stratal.core.errors import LlmUnavailable, StratalError
 
 
 class Predictor(Protocol):
@@ -24,6 +29,116 @@ class Predictor(Protocol):
         self, version_id: str, *, record: dict[str, Any] | None = None, text: str | None = None
     ) -> dict[str, Any]: ...
     def status(self) -> dict[str, Any]: ...
+
+
+class Chatter(Protocol):
+    """What the app needs from :class:`stratal.inference.llm.LlmAdapter` (ADR-0021)."""
+
+    def start(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        route: str = "llm",
+        extra: dict[str, Any] | None = None,
+    ) -> Any: ...
+    def status(self) -> dict[str, Any]: ...
+
+
+class ChatMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["system", "user", "assistant"]
+    content: str = Field(max_length=60_000)
+
+
+class ChatBody(BaseModel):
+    """A conversation for the LLM, or a question for RAG, as the API builds it (ADR-0021
+    rule 8, ADR-0022 rules 5 to 8)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["llm", "rag", "images"] = "llm"
+    messages: list[ChatMessage] = Field(default_factory=lambda: list[ChatMessage](), max_length=64)
+    question: str | None = Field(default=None, max_length=8_000)
+    index_version_id: str | None = Field(default=None, pattern=r"^ds_[0-9a-f]{12}$")
+    labelled_version_id: str | None = Field(default=None, pattern=r"^ds_[0-9a-f]{12}$")
+    k: int | None = Field(default=None, ge=1, le=20)
+
+    @model_validator(mode="after")
+    def _complete(self) -> "ChatBody":
+        if self.mode == "llm" and not self.messages:
+            raise ValueError("llm mode needs messages")
+        if self.mode == "rag" and (not self.question or not self.index_version_id):
+            raise ValueError("rag mode needs a question and an index_version_id")
+        if self.mode == "images" and (not self.question or not self.labelled_version_id):
+            raise ValueError("images mode needs a question and a labelled_version_id")
+        return self
+
+
+class Images(Protocol):
+    """What the app needs from :class:`stratal.inference.image_search.ImageSearch`."""
+
+    def search(self, text: str, version_id: str, k: int = 10) -> Iterator[dict[str, Any]]: ...
+
+
+class Rag(Protocol):
+    """What the app needs from :class:`stratal.inference.rag.RagService`."""
+
+    def start(
+        self, question: str, index_version_id: str, k: int | None = None
+    ) -> Iterator[dict[str, Any]]: ...
+
+
+def _problem_event(exc: Exception) -> dict[str, Any]:
+    error = exc if isinstance(exc, StratalError) else LlmUnavailable(f"The answer stopped: {exc}")
+    return {
+        "event": "error",
+        "code": error.code,
+        "title": error.title,
+        "status": error.http_status,
+        "detail": str(error),
+        "suggested_action": error.suggested_action,
+    }
+
+
+def ndjson(events: Iterator[dict[str, Any]]) -> Generator[str]:
+    """One JSON object per line; a failure after the first line becomes an ``error`` event,
+    since the status line has been sent by then. Closing this closes ``events``."""
+    try:
+        for event in events:
+            yield json.dumps(event) + "\n"
+    except Exception as exc:
+        yield json.dumps(_problem_event(exc)) + "\n"
+    finally:
+        close = getattr(events, "close", None)
+        if close is not None:
+            close()
+
+
+async def closing_stream(lines: Iterator[str]) -> AsyncGenerator[str]:
+    """Stream a blocking iterator, and close it when the client goes away (LLM-1.1 Stop).
+
+    Starlette runs a plain iterator in a worker thread and, on a disconnect, cancels the
+    task without closing it, so its ``finally`` blocks never ran: Ollama kept generating
+    and the LLM stayed claimed until the next request timed out. Here the cancellation
+    reaches this generator, which closes ``lines`` (and through :func:`ndjson` the
+    events), freeing the LLM at once."""
+    try:
+        while True:
+            line = await run_in_threadpool(next, lines, None)
+            if line is None:
+                return
+            yield line
+    finally:
+        # The worker thread has finished its ``next`` by now (a cancelled
+        # ``run_in_threadpool`` waits for it), so closing cannot race it.
+        close = getattr(lines, "close", None)
+        if close is not None:
+            close()
+
+
+def _ndjson_response(events: Iterator[dict[str, Any]]) -> StreamingResponse:
+    return StreamingResponse(closing_stream(ndjson(events)), media_type="application/x-ndjson")
 
 
 ImageDecoder = Any
@@ -60,7 +175,13 @@ class PredictBody(BaseModel):
         return getattr(self, name) is not None
 
 
-def create_inference_app(holder: Predictor, decode: ImageDecoder) -> FastAPI:
+def create_inference_app(
+    holder: Predictor,
+    decode: ImageDecoder,
+    llm: Chatter | None = None,
+    rag: Rag | None = None,
+    images: Images | None = None,
+) -> FastAPI:
     app = FastAPI(title="Stratal inference", docs_url=None, redoc_url=None)
     install_error_handlers(app)
 
@@ -74,6 +195,30 @@ def create_inference_app(holder: Predictor, decode: ImageDecoder) -> FastAPI:
 
     @app.get("/status")
     def status() -> dict[str, Any]:
-        return holder.status()
+        result = holder.status()
+        if llm is not None:
+            result["llm"] = llm.status()
+        return result
+
+    @app.post("/chat")
+    def chat(body: ChatBody) -> StreamingResponse:
+        """Stream one answer from the LLM (LLM-1.1). Queueing, the lease and the load happen
+        before the response starts, so a refusal is an ordinary problem document."""
+        if body.mode == "images":
+            if images is None:
+                raise LlmUnavailable("This inference service runs without image search.")
+            assert body.question is not None and body.labelled_version_id is not None
+            found = images.search(body.question, body.labelled_version_id, body.k or 10)
+            return _ndjson_response(found)
+        if body.mode == "rag":
+            if rag is None:
+                raise LlmUnavailable("This inference service runs without retrieval.")
+            assert body.question is not None and body.index_version_id is not None
+            events = rag.start(body.question, body.index_version_id, body.k)
+            return _ndjson_response(events)
+        if llm is None:
+            raise LlmUnavailable("This inference service runs without the LLM.")
+        generation = llm.start([m.model_dump() for m in body.messages])
+        return _ndjson_response(generation.events())
 
     return app

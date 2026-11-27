@@ -83,8 +83,14 @@ def test_DATA_5_2_labelled_text_rows_validate_against_their_schema() -> None:
 
 
 def test_DATA_5_5_each_type_declares_families_and_default_metrics() -> None:
-    assert set(TYPE_INFO) == {"image_caption", "labelled_images", "tabular", "labelled_text"}
+    corpora = {"text_corpus", "instruction_pairs"}  # M12 (DATA-5.3): no model built on them here
+    assert (
+        set(TYPE_INFO) == {"image_caption", "labelled_images", "tabular", "labelled_text"} | corpora
+    )
     for info in TYPE_INFO.values():
+        if info.name in corpora:  # judged by hit@k (LLM-2.2); pairs fine-tune in M13
+            assert not info.families and not info.default_metrics and not info.trainable
+            continue
         assert info.default_metrics, info.name
         assert bool(info.families) == (info.input_kind is not None), info.name
     assert TYPE_INFO["labelled_images"].families == ("mlp", "cnn")

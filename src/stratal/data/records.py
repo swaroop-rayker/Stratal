@@ -27,8 +27,14 @@ from stratal.storage.manifest import read_metadata
 
 TABULAR = "tabular"
 LABELLED_TEXT = "labelled_text"
-RECORD_TYPES = (TABULAR, LABELLED_TEXT)
-"""Dataset types whose rows are records rather than files."""
+TEXT_CORPUS = "text_corpus"
+"""Documents for retrieval, one row per file; chunked and indexed (DATA-5.3, ADR-0022)."""
+INSTRUCTION_PAIRS = "instruction_pairs"
+"""Instruction, optional input, output (DATA-5.3); M13's QLoRA data."""
+RECORD_TYPES = (TABULAR, LABELLED_TEXT, INSTRUCTION_PAIRS)
+"""Dataset types whose rows are records rather than files, and which a split divides."""
+TEXT_TYPES = (LABELLED_TEXT, TEXT_CORPUS, INSTRUCTION_PAIRS)
+"""Dataset types whose rows carry a ``text``."""
 
 META_TABLE_SCHEMA = "stratal.table_schema"
 META_VOCAB = "stratal.vocab"
@@ -107,11 +113,23 @@ def inherited_metadata(manifest: Path) -> dict[str, str]:
 
 
 _SPACE = re.compile(r"\s+")
+_INLINE_SPACE = re.compile(r"[ \t\f\v\u00a0]+")
+_BLANK_LINES = re.compile(r"\n{3,}")
 
 
-def normalise_text(text: str, *, form: Literal["NFKC"] = "NFKC") -> str:
-    """DATA-2.4: Unicode normalised, whitespace runs collapsed to one space, ends trimmed."""
-    return _SPACE.sub(" ", unicodedata.normalize(form, text)).strip()
+def normalise_text(text: str, *, form: Literal["NFKC"] = "NFKC", keep_lines: bool = False) -> str:
+    """DATA-2.4: Unicode normalised, whitespace runs collapsed to one space, ends trimmed.
+
+    With ``keep_lines`` (documents of a corpus, ADR-0022 *As built*), line breaks stay:
+    spaces and tabs collapse within each line, lines lose their trailing spaces, and three
+    or more line breaks become two, so headings and paragraphs survive for ``chunk``."""
+    text = unicodedata.normalize(form, text)
+    if not keep_lines:
+        return _SPACE.sub(" ", text).strip()
+    lines = [
+        _INLINE_SPACE.sub(" ", line).rstrip() for line in text.replace("\r\n", "\n").split("\n")
+    ]
+    return _BLANK_LINES.sub("\n\n", "\n".join(lines)).strip()
 
 
 def row_values(row: Mapping[str, Any], schema: TableSchema) -> dict[str, Any]:

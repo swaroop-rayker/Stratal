@@ -9,6 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from stratal import __version__
 from stratal.api.builder import router as builder_router
+from stratal.api.chat import router as chat_router
 from stratal.api.datasets import router as datasets_router
 from stratal.api.health import router as health_router
 from stratal.api.jobs import router as jobs_router
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(reports_router, prefix=API_PREFIX)
     app.include_router(models_router, prefix=API_PREFIX)
     app.include_router(settings_router, prefix=API_PREFIX)
+    app.include_router(chat_router, prefix=API_PREFIX)
     app.include_router(builder_router, prefix=API_PREFIX)
     app.include_router(ml_router, prefix=API_PREFIX)
     app.include_router(studies_router, prefix=API_PREFIX)

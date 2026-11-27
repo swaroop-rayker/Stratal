@@ -45,6 +45,7 @@ from stratal.core.errors import StratalError
 from stratal.data import splitting
 from stratal.data.commit import VersionRecord, commit_version
 from stratal.data.records import (
+    INSTRUCTION_PAIRS,
     LABELLED_TEXT,
     RECORD_TYPES,
     TABULAR,
@@ -81,6 +82,7 @@ PARENT_STAGES: dict[str, str] = {
     "labelled_images": "preprocess",
     TABULAR: "clean_table",
     LABELLED_TEXT: "clean_text",
+    INSTRUCTION_PAIRS: "clean_text",
 }
 """The stage whose version the split takes, per dataset type (DATA-5.2: labelled images
 have no label or filter stage)."""

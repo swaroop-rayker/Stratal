@@ -554,6 +554,104 @@ function RetentionSection({ section, draft, setDraft, onSaved, onConflict }: {
   );
 }
 
+/** SCR-14's M12 section (LLM-2.3; ADR-0022 rule 8; SCR-06retrieval_v1 frame B): the
+ * abstention threshold of the embedding model, where it was chosen, and the default k. The
+ * threshold is the owner's (M12 decision 6): empty until set, and then RAG never abstains. */
+export function retrievalErrors(values: Values): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const t = values["abstention_threshold"];
+  if (t !== null && t !== undefined && (typeof t !== "number" || t < 0 || t > 1)) errors["abstention_threshold"] = "A number from 0 to 1, or empty.";
+  const k = values["default_k"];
+  if (typeof k !== "number" || !Number.isInteger(k)) errors["default_k"] = "A whole number is needed.";
+  else if (k < 1 || k > 20) errors["default_k"] = "From 1 to 20.";
+  return errors;
+}
+
+function RetrievalSection({ section, draft, setDraft, onSaved, onConflict }: {
+  section: SettingsSection;
+  draft: Values;
+  setDraft: (values: Values) => void;
+  onSaved: (message: string) => void;
+  onConflict: () => void;
+}) {
+  const save = useSaveSettings();
+  const props = (section.schema as { properties?: Record<string, Prop> }).properties ?? {};
+  const errors = { ...retrievalErrors(draft), ...serverErrors(save.error) };
+  const list = changes(section.values, draft);
+  const model = text(section.values["embedding_model"]);
+  const source = section.values["threshold_source"];
+  const threshold: Prop = {
+    type: "number",
+    minimum: 0,
+    maximum: 1,
+    description: props["abstention_threshold"]?.description,
+    "x-applies": "at once",
+  };
+  return (
+    <section className="sec" id="retrieval" aria-labelledby="h-retrieval">
+      <header>
+        <h2 id="h-retrieval">Retrieval</h2>
+        <span className="req">{section.requirements.join(" · ")}</span>
+      </header>
+      <NumberField
+        name="abstention_threshold"
+        prop={threshold}
+        value={draft["abstention_threshold"]}
+        saved={section.values["abstention_threshold"]}
+        error={errors["abstention_threshold"]}
+        onChange={(value) => { save.reset(); setDraft({ ...draft, abstention_threshold: value === "" ? null : value }); }}
+      >
+        <span>
+          For <span className="mono">{model}</span>.{" "}
+          {typeof source === "string" && source ? (
+            <>
+              Chosen from <Link className="mono" to={`/versions/${source}/report?kind=retrieval`}>{source}</Link>&apos;s retrieval report.
+            </>
+          ) : section.values["abstention_threshold"] === null ? (
+            "Not set: pick one from an index's retrieval report."
+          ) : null}
+        </span>
+      </NumberField>
+      <NumberField
+        name="default_k"
+        prop={{ ...(props["default_k"] ?? {}), "x-applies": "at once" }}
+        value={draft["default_k"]}
+        saved={section.values["default_k"]}
+        error={errors["default_k"]}
+        onChange={(value) => { save.reset(); setDraft({ ...draft, default_k: value }); }}
+      >
+        <span>Sources per question, 1 to 20.</span>
+      </NumberField>
+      <div className="rules-note">
+        <Icon name="info" />
+        <span>
+          Below the threshold, RAG answers &quot;I don&apos;t know&quot; with the nearest source, without asking the model (LLM-2.3). With no threshold
+          set, RAG never abstains.
+        </span>
+      </div>
+      {save.error instanceof ApiError && save.error.problem.code !== "validation_error" && save.error.problem.code !== "conflict" ? (
+        <ErrorState error={save.error} title="Retrieval was not saved" />
+      ) : null}
+      <SaveBar
+        title="Retrieval"
+        list={list}
+        problems={Object.keys(errors).length}
+        busy={save.isPending}
+        onDiscard={() => { save.reset(); setDraft(section.values); }}
+        onSave={() => {
+          save.mutate(
+            { section: "retrieval", values: draft, version: section.version },
+            {
+              onSuccess: () => { onSaved("Retrieval saved. RAG uses it from the next question."); },
+              onError: (error) => { if (error instanceof ApiError && error.problem.code === "conflict") onConflict(); },
+            },
+          );
+        }}
+      />
+    </section>
+  );
+}
+
 function AppearanceSection() {
   const [theme, toggle] = useTheme();
   return (
@@ -599,7 +697,7 @@ export function SettingsScreen() {
     const section = byName[name];
     return section ? changes(section.values, draftOf(name)).length : 0;
   };
-  const total = unsaved("training") + unsaved("retention");
+  const total = unsaved("training") + unsaved("retention") + unsaved("retrieval");
   const blocker = useBlocker(({ currentLocation, nextLocation }) => total > 0 && currentLocation.pathname !== nextLocation.pathname);
   const toastTimer = useRef<number | undefined>(undefined);
 
@@ -640,7 +738,7 @@ export function SettingsScreen() {
       ) : (
         <div className="cols">
           <nav className="index" aria-label="Sections">
-            {(["training", "retention", "monitoring"] as const).map((name) => (
+            {(["training", "retention", "monitoring", "retrieval"] as const).map((name) => (
               <a key={name} href={`#${name}`} aria-current={current === name ? "true" : undefined}>
                 {byName[name]?.title ?? name}
                 {unsaved(name) ? (
@@ -679,6 +777,15 @@ export function SettingsScreen() {
                 setDraft={(values) => { setDrafts((d) => ({ ...d, monitoring: values })); }}
                 onSaved={(message) => { saved("monitoring", message); }}
                 onConflict={() => { setStale("monitoring"); }}
+              />
+            ) : null}
+            {byName["retrieval"] ? (
+              <RetrievalSection
+                section={byName["retrieval"]}
+                draft={draftOf("retrieval")}
+                setDraft={(values) => { setDrafts((d) => ({ ...d, retrieval: values })); }}
+                onSaved={(message) => { saved("retrieval", message); }}
+                onConflict={() => { setStale("retrieval"); }}
               />
             ) : null}
             <AppearanceSection />

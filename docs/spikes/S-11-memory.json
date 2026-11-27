@@ -1,0 +1,14 @@
+{
+  "s11-qwen3-1.7b-q4km": {
+    "idle_mib": 2326.3359375,
+    "gpu_phase_peak_mib": 4096.0078125,
+    "with_cpu_phase_peak_mib": 4096.0078125,
+    "version": "ollama version is 0.40.16"
+  },
+  "s11-smollm3-3b-q4km": {
+    "idle_mib": 3527.91015625,
+    "gpu_phase_peak_mib": 4096.02734375,
+    "with_cpu_phase_peak_mib": 4096.02734375,
+    "version": "ollama version is 0.40.16"
+  }
+}

@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
 
 from stratal.data import dedupe
 from stratal.data.clean import ContractBroken, ExactGrouper, check_groups, group_id
@@ -78,12 +78,26 @@ class CleanTextConfig(BaseModel):
     unicode_form: Literal["NFKC"] = Field(
         default="NFKC", description="Unicode normal form applied before anything else."
     )
+    keep_line_breaks: bool = Field(
+        default=False,
+        description="Keep line breaks (collapse spaces within lines only), so a document's "
+        "headings and paragraphs reach the chunk stage. On for text corpora (ADR-0022).",
+    )
     algorithm_version: int = Field(
         default=dedupe.ALGORITHM_VERSION,
         ge=1,
         json_schema_extra={"readOnly": True},
         description="Version of the exact-duplicate code; a new value gives a new version ID.",
     )
+
+    @model_serializer(mode="wrap")
+    def _without_default_lines(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """``keep_line_breaks`` is written only when on, so every version made before it
+        existed keeps its config, and so its ID (DATA-3.2)."""
+        data: dict[str, Any] = handler(self)
+        if not self.keep_line_breaks:
+            data.pop("keep_line_breaks", None)
+        return data
 
 
 @dataclass(frozen=True)
@@ -113,7 +127,7 @@ class RecordCleanResult:
 
 
 def _text_decision(raw: str | None, config: CleanTextConfig) -> tuple[str, tuple[str, str] | None]:
-    text = normalise_text(raw or "", form=config.unicode_form)
+    text = normalise_text(raw or "", form=config.unicode_form, keep_lines=config.keep_line_breaks)
     if not text:
         return text, ("empty_text", "nothing left after normalising whitespace")
     if len(text) > config.max_chars:

@@ -33,6 +33,20 @@ const RETENTION = {
   lineages: [{ lineage_id: "ml_1", name: "small_cnn · cifar10", keep_intermediate: 2, source: "global", intermediates: 2, intermediates_bytes: 2_516_582 }],
 };
 
+export const RETRIEVAL = {
+  name: "retrieval", title: "Retrieval", requirements: ["LLM-2.3"],
+  values: { embedding_model: "bge-small-en-v1.5", abstention_threshold: null, threshold_source: null, default_k: 5 },
+  schema: {
+    properties: {
+      embedding_model: { type: "string", readOnly: true },
+      abstention_threshold: { anyOf: [{ type: "number", minimum: 0, maximum: 1 }, { type: "null" }], description: "Below this top-1 relevance, RAG answers \"I don't know\"." },
+      threshold_source: { anyOf: [{ type: "string" }, { type: "null" }], readOnly: true },
+      default_k: { type: "integer", minimum: 1, maximum: 20, default: 5, description: "Sources given to the model per question." },
+    },
+  },
+  version: "qv1", lineages: null, context: null,
+};
+
 const PLAN = {
   lineages: [{
     lineage_id: "ml_1", name: "small_cnn · cifar10", keep_intermediate: 0, source: "global", latest_version_id: "mv_c",
@@ -90,6 +104,30 @@ describe("SCR-14", () => {
     await vi.waitFor(() => {
       const put = calls.find((c) => c.method === "PUT");
       expect(put?.body).toMatchObject({ section: "training", version: "tv1", values: { stall_timeout_s: 600 } });
+    });
+  });
+
+  test("test_LLM_2_3_retrieval_section_saves_threshold", async () => {
+    const calls = stubApi({
+      "/api/v1/settings": { sections: [TRAINING, RETENTION, RETRIEVAL] },
+      "/api/v1/telemetry/latest": { ts: "2026-11-27T10:25:00Z", gpu_temp_c: 44 },
+    });
+    renderSettings();
+    const section = (await screen.findByRole("heading", { name: "Retrieval" })).closest("section") as HTMLElement;
+    expect(within(section).getByText(/Not set: pick one from an index's retrieval report/)).toBeTruthy();
+    expect(within(section).getByText("bge-small-en-v1.5")).toBeTruthy();
+    const threshold = within(section).getByLabelText(/abstention_threshold/);
+    expect(threshold).toHaveValue("");
+
+    fireEvent.change(threshold, { target: { value: "1.5" } });
+    expect(within(section).getByText("A number from 0 to 1, or empty.")).toBeTruthy();
+    fireEvent.change(threshold, { target: { value: "0.65" } });
+    const bar = within(section).getByRole("status");
+    expect(bar.textContent).toContain("abstention_threshold null → 0.65");
+    fireEvent.click(within(bar).getByRole("button", { name: "Save retrieval" }));
+    await vi.waitFor(() => {
+      const put = calls.find((c) => c.method === "PUT");
+      expect(put?.body).toMatchObject({ section: "retrieval", version: "qv1", values: { abstention_threshold: 0.65, default_k: 5 } });
     });
   });
 

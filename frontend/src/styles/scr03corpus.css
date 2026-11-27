@@ -1,0 +1,49 @@
+/* SCR-03 for corpora (mockup SCR-03corpora_v1; tokens only, classes prefixed co-). */
+.scr03 .co-acts { display: flex; gap: var(--sp-2); align-items: center; flex: none; }
+.scr03 .vhead:has(.co-acts) > div:first-child { min-width: 0; }
+.scr03 .co-acts .narrow-label { display: none; }
+
+/* Region 3: an index version's facts are not filters: the tile without its edge or press. */
+.scr03 .tiles.co-six { grid-template-columns: repeat(4, 1fr) 1.6fr; }
+.scr03 .stile.static { cursor: default; border-left-width: var(--bw); }
+.scr03 .stile.static:hover { border-color: var(--border); }
+.scr03 .stile .v.sm { font-size: var(--fs-14); font-family: var(--font-mono); }
+
+/* Region 4: the chunks. */
+.scr03 .co-tools .co-docsel { width: auto; min-width: 200px; max-width: 360px; height: var(--h-sm); font-size: var(--fs-12); }
+.scr03 .co-tools .aside { margin-left: auto; font-size: var(--fs-12); color: var(--text-muted); }
+.scr03 .t td.sec { color: var(--text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scr03 .t td.first { color: var(--text-muted); max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* On the selected row the muted text would fall below AA (4.45:1 in dark): the mockup's frame A. */
+.scr03 .t tr[aria-selected="true"] td.first, .scr03 .t tr[aria-selected="true"] td.sec { color: var(--text-secondary); }
+.scr03 .t td.key { font: var(--fs-12) var(--font-mono); white-space: nowrap; }
+.scr03 .t td .reason { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+
+/* Regions 5 and 8: the chunk and pair drawers. */
+.co-drawer .body { gap: var(--sp-3); }
+.co-drawer .co-cited { display: flex; gap: var(--sp-2); align-items: center; }
+.co-drawer .callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid; font-size: var(--fs-12); color: var(--text-primary); }
+.co-drawer .callout svg.i { margin-top: 2px; flex: none; }
+.co-drawer .callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); }
+.co-drawer .callout.info svg.i { color: var(--info); }
+.co-cite { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 16px; padding: 0 3px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); color: var(--accent); background: var(--accent-soft); border: var(--bw) solid color-mix(in srgb, var(--accent) 40%, transparent); }
+.callout .co-cite { color: color-mix(in srgb, var(--accent) 60%, var(--text-primary)); }
+[data-theme="light"] .callout .co-cite { color: color-mix(in srgb, var(--accent) 90%, var(--text-primary)); }
+.co-text { border: var(--bw) solid var(--border); border-radius: var(--r-md); background: var(--surface); padding: var(--sp-3); font-size: var(--fs-12); line-height: 1.6; color: var(--text-primary); max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.co-text:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.co-text .ov { background: var(--surface-sunken); color: var(--text-secondary); border-radius: var(--r-xs); padding: 1px 2px; }
+.co-text .ovtag { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-xs); padding: 0 4px; margin-right: var(--sp-1); }
+.co-nav { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.co-nav .spacer { flex: 1; }
+.co-pair { display: flex; flex-direction: column; gap: var(--sp-2); }
+.co-pair .lbl { font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); }
+.co-pair .val { font-size: var(--fs-13); color: var(--text-primary); white-space: pre-wrap; }
+.co-chat { margin: 0; font: var(--fs-12)/1.55 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface-sunken); border: var(--bw) solid var(--border); color: var(--text-primary); }
+.co-chat .tok { color: var(--text-secondary); }
+
+/* At 1024 px the drawer overlays the table, and the report action shortens (frame E). */
+@media (max-width: 1279px) {
+  .scr03 .co-acts .wide-label { display: none; }
+  .scr03 .co-acts .narrow-label { display: inline; }
+  .scr03 .tiles.co-six { grid-template-columns: repeat(3, 1fr); }
+}

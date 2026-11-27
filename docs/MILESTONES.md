@@ -30,7 +30,7 @@
 | M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
 | M11 | Dashboards and monitoring completion | 2 | L | Done 2026-11-24 |
 | M11b | Tabular transforms | 2 | M | Done 2026-11-26 (with DATA-1.4.AC2, delimited-text tables) |
-| M12 | LLM serving and RAG | 3 | L | Detailed, approved 2026-11-22 |
+| M12 | LLM serving and RAG | 3 | L | In progress (decisions 1–12 taken 2026-11-27: Qwen3-1.7B from S-11) |
 | M13 | Router, tools, caption refinement | 3 | L | Detailed, approved 2026-11-22 |
 | M14 | Text→image and LoRA | 4 | L | Outline |
 | M15 | Translation, chat UI, polish | 5 | L | Outline |
@@ -727,13 +727,24 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 | | |
 |---|---|
-| Status | **Approved by the owner on 2026-11-22** ("yes I do approve"). The decisions below are still open: they are put to the owner at M12's kickoff (M13's open points at M13's), and until then each recommendation is only a recommendation. M11b still comes before M12, as planned |
+| Status | **Approved by the owner on 2026-11-22** ("yes I do approve"). **Decisions 2 to 12 taken at M12's kickoff on 2026-11-27** ("Accept all"): the recommended option in each. **Decision 1 taken the same day from S-11's report: Qwen3-1.7B** (`docs/spikes/S-11-llm.md`). M13's open points are still open until M13's kickoff |
 | Done when (SPEC §2) | Chat answers grounded in the corpus, with citations; the router picks the correct model |
 | Requirements | All 12 phase-3 requirements: 4 P0 (LLM-1.1, LLM-2.1, LLM-2.2, LLM-3.1), 5 P1 (DATA-5.3, LLM-2.3, LLM-2.4, LLM-3.2, LABEL-1.6) and 3 P2 (LLM-4.1, LLM-5.1, LABEL-1.7), plus NFR-6. NFR-1, NFR-2, NFR-7 and NFR-8 are checked again for the new services. Each requirement stays in the milestone the outline gave it; nothing is added or dropped |
 
 ### Decisions needed before M12 starts
 
 Each has a recommendation; none is taken until the owner decides. Decision 1 is taken from spike S-11's report.
+
+> **Decided 2026-11-27** (M12's kickoff, "Accept all"): decisions 2 to 12 as recommended below. Facts checked at the kickoff:
+> - **Memory:** the running set's limits already sum to 9,024 MiB, so `ollama` has no room until ADR-0021 rebalances them from S-11's figures (decision 10).
+> - **Files for S-11:** `Qwen3-1.7B-Q4_K_M.gguf` (1,056 MiB) from `unsloth/Qwen3-1.7B-GGUF`, since Qwen publishes only an 8-bit GGUF; `SmolLM3-Q4_K_M.gguf` (1,827 MiB) from `ggml-org/SmolLM3-3B-GGUF`. Both Apache 2.0 and not gated.
+> - **Ollama:** the image pinned at `0.40.16` (2026-11-09); the newer releases were under two weeks old.
+> - **Embedding model:** `BAAI/bge-small-en-v1.5`, 127 MiB of weights, MIT.
+> - **Corpus (decision 5):** about 0.7 MB and 111,000 words.
+> - **Numbering:** M11b used SCREENS.md v4, so the phase-3 G1 revision is **v5**.
+> - **Downloads:** approved by the owner ("Yes, download") and fetched 2026-11-27.
+>
+> **Decision 1, 2026-11-27** (the owner, from S-11's report): **Qwen3-1.7B (Q4_K_M)**. SmolLM3-3B's file was deleted and its allow-list entry removed. S-11's findings for ADR-0021: keep CUDA's kernel cache on a volume (the first GPU load in a new container takes about 60 s, then 3–5 s); Ollama needs about 1 GiB of process memory (page cache aside); `inference` grows by about 75 MiB; set `OLLAMA_NO_CLOUD=1`. Open for M12's build: citations (5 of 10 answers), Qwen3's late first token in RAG, and occasional slow prompt reads.
 
 1. **The LLM (LLM-1.1).** One to three billion parameters, 4-bit, under a licence that needs no acceptance (R-20).
    - (a) **Qwen3-1.7B**, Apache 2.0, about 1.1 GB as a 4-bit GGUF file. Trained for tool calls and JSON output; its "thinking" mode is switched off for chat, where it would spend NFR-6's first-token budget.
@@ -820,7 +831,7 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 
 | Gate | Deliverable | Starts | Unblocks |
 |---|---|---|---|
-| G1 revision | SCREENS.md v4: SCR-12's phase-3 slice (decision 9); corpora, chunks and indexes on SCR-02 and SCR-03; the two reports on SCR-06 (decision 8); Flow 5 step by step | M12 kickoff | phase-3 G2 |
+| G1 revision | SCREENS.md v5 (v4 went to M11b): SCR-12's phase-3 slice (decision 9); corpora, chunks and indexes on SCR-02 and SCR-03; the two reports on SCR-06 (decision 8); Flow 5 step by step | M12 kickoff | phase-3 G2 |
 | G2 | SCR-12 in manual mode (chat, RAG with citations and abstention, image search); SCR-03 for a corpus's chunks; SCR-06's retrieval report | alongside M12 | M12's screens |
 | G2 | SCR-12's Auto mode, fallbacks and the assistant's answers; refined captions on SCR-03; the caption comparison on SCR-06 | alongside M12 | M13's screens |
 | G3 | Each screen compared with its mockup, contrast and keyboard checked | in the milestone that builds it | – |
@@ -846,19 +857,24 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 
 **Done when**
 
-- [ ] S-11 report delivered and the model chosen; decisions 1 to 12 recorded; ADR-0021 and ADR-0022 approved
-- [ ] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry
-- [ ] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading
-- [ ] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index
-- [ ] `test_LLM_2_3_*`: out-of-corpus questions get an abstention
+- [x] S-11 report delivered and the model chosen; decisions 1 to 12 recorded (2 to 12 on 2026-11-27, "Accept all"; 1 the same day, Qwen3-1.7B, `docs/spikes/S-11-llm.md`); ADR-0021 and ADR-0022 approved (both accepted 2026-11-27, "Approve both"). Decision 12 settled 2026-11-27: the owner asked the agent to write hit@k's scoring ("Agent writes it"); no phase-3 unit is the owner's
+- [x] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry (2026-11-27: `test_LLM_1_1_model_is_built_from_the_pinned_blob`, `…_an_answer_streams_meta_tokens_and_timings`, `…_chat_streams_and_stores_the_answer`, Stop's `test_LLM_1_1_stop_*`; live with Qwen3-1.7B on the card)
+- [x] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading (2026-11-27: `test_LLM_2_1_answer_cites_only_given_sources` and the citation filter's tests; live, `tests/acceptance/test_M12_llm_acceptance.py` on question set v2: 39 of 42, 93 %, in three runs; on v1 it was 76 %, then 78–81 % after the prompt's example was fixed; the owner chose v2 on 2026-11-27)
+- [x] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index (2026-11-27: `test_LLM_2_2_hit_at_k_matches_hand_computed_values`, `…_report_on_an_index_version`; on v2, 128-token chunks hit@5 0.92, 256-token 0.88)
+  - The question set (`src/stratal/eval/rag/stratal-docs-questions-v1.jsonl`: 50 answerable, 15 unanswerable; drafted by the agent, table in `docs/drafts/rag-question-set-v1.md`) approved by the owner on 2026-11-27 ("Approved as is") and frozen. Decision 12: the agent wrote hit@k's scoring at the owner's request.
+  - Question set v2 (`…-v2.jsonl`, v1 plus 56 labels where another chunk states the same fact; `docs/drafts/rag-question-set-v2.md`), chosen by the owner after decision 11's first measurement and approved the same day ("Approved as is"); frozen and the default. Both hashes are pinned in `test_LLM_2_2_the_question_set_is_well_formed`.
+- [x] `test_LLM_2_3_*`: out-of-corpus questions get an abstention (2026-11-27: `test_LLM_2_3_below_the_threshold_abstains_without_the_model`; on the real corpus a threshold of 0.65 abstains on 15 of 15 unanswerable and answers 50 of 50 answerable questions. The threshold itself is the owner's and is not set)
 - [ ] `test_LLM_2_4_*`: planted images are found from their text; live, "dogs at night" on coco10k, judged by the owner
-- [ ] `test_DATA_5_3_*`: samples of both types validate, bad rows are rejected with reasons, and the pairs' adapter gives the chat format
-- [ ] `test_NFR_6_*`: 20 queries measured, as read in decision 11
-- [ ] `test_NFR_7_*` and `test_NFR_8_*` extended: chat and RAG with every outbound connection refused; the model file pinned by hash
-- [ ] `test_BUG6_*` extended: after the adapter's unload the card is back at its baseline, and a queued training job gets the GPU
-- [ ] G3 for M12's screens
+- [x] `test_DATA_5_3_*`: samples of both types validate, bad rows are rejected with reasons, and the pairs' adapter gives the chat format (2026-11-27: `test_DATA_5_3_corpus_ingest_one_row_per_document`, `…_pairs_ingest_rejects_bad_rows_with_reasons`, `…_instruction_pairs_are_ingested_cleaned_and_split`, `…_pairs_adapter_gives_the_chat_format`)
+- [x] `test_NFR_6_*`: 20 queries measured, as read in decision 11 (2026-11-27: `test_NFR_6_twenty_queries_meet_their_targets`, 20 of 20 in each of four runs; chat first token median 22–24 ms, RAG answer median 0.5–0.6 s)
+- [x] `test_NFR_7_*` and `test_NFR_8_*` extended: chat and RAG with every outbound connection refused; the model file pinned by hash (2026-11-27: `test_NFR_7_ollama_is_only_on_the_internal_llm_network`, `test_NFR_7_rag_runs_with_outbound_connections_refused`, live probes from `ollama` reaching nothing; the GGUF pinned in `test_NFR_8_the_catalog_pins_safetensors_weights_and_every_file` and built only from its blob)
+- [x] `test_BUG6_*` extended: after the adapter's unload the card is back at its baseline, and a queued training job gets the GPU (2026-11-27: `test_BUG6_idle_release_unloads_the_llm_and_frees_the_lease`, `…_the_answer_in_progress_finishes_before_the_release`, `…_vram_not_given_back_keeps_the_lease`; live, the idle unload brought the card from 1.8 to 0.2 GB)
+- [x] G1 revision approved (SCREENS.md v5, 2026-11-27, with open point 8's recommended options)
+- [x] G2 for SCR-12, SCR-03 for corpora and SCR-06's retrieval report, in that order (all approved 2026-11-27; `docs/design/APPROVALS.md`)
+- [x] G3 for M12's screens (approved by the owner on 2026-11-27; `docs/design/g3/SCR-12.md`, `SCR-03corpora.md`, `SCR-06retrieval.md`)
 - [ ] Demo: ingest the documentation, build two index versions with different chunk sizes and read their hit@5 on SCR-06; ask SCR-12 questions with citations, and one it must decline; search "dogs at night"; start a training run and watch chat give the GPU back
-- [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS; learning notes)
+  - Run by the agent on 2026-11-27: the docs ingested (`job_0129`, `job_0131`); two index versions, 256 and 128 tokens, hit@5 0.88 and 0.92 on SCR-06 (question set v2); RAG answers with citations on SCR-12; image search ("a red bus on a city street", ten red buses); a training run (`job_0137`) took the GPU about 4 s after asking for it, chat meanwhile refused with `gpu_busy` naming it, and the LLM reloaded in 4.8 s after. Waiting for the owner: the threshold, so a question can be declined, and the verdict on "dogs at night"
+- [x] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS; learning notes) (2026-11-27; also DECISIONS, ADR-0021 and ADR-0022 As built; learning notes §30 and §5o, not committed)
 - [ ] Owner's OK to merge
 
 ## M13 — Router, tools, caption refinement

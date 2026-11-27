@@ -5,10 +5,10 @@ import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import type { JobState } from "../api/client";
 
 export type IconName =
-  | "alert" | "back" | "ban" | "branch" | "chart" | "check" | "chevron" | "clock" | "copy"
-  | "db" | "down" | "eye" | "folder" | "grid" | "heart" | "hourglass" | "info" | "keys"
+  | "alert" | "back" | "ban" | "branch" | "chart" | "chat" | "check" | "chevron" | "clock" | "copy"
+  | "db" | "down" | "eye" | "folder" | "grid" | "heart" | "hourglass" | "image" | "info" | "keys"
   | "layers" | "list" | "more" | "note" | "pause" | "pin" | "play" | "plus" | "refresh"
-  | "report" | "search" | "sliders" | "sort" | "theme" | "x";
+  | "report" | "search" | "send" | "sliders" | "sort" | "stop" | "theme" | "x";
 
 export function Icon({ name, className, style }: {
   name: IconName;

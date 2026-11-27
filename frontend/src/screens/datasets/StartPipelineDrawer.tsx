@@ -39,12 +39,16 @@ const WHAT: Record<string, string> = {
   clean_table: "marks exact duplicate records",
   clean_text: "normalises texts; marks duplicates",
   tokenize: "words to IDs, the vocabulary from train",
+  chunk: "at headings, then by size",
+  index: "embed, build the index",
 };
 const INGEST_WHAT: Record<string, string> = {
   image_caption: "reads the images",
   labelled_images: "reads the images and their labels",
   tabular: "reads the table; each record becomes a row",
   labelled_text: "reads the texts and their labels",
+  text_corpus: "one row per document",
+  instruction_pairs: "one row per pair",
 };
 /** The one setting a stage row shows (the mockup's "min_size 256"). */
 const KEY_FIELD: Record<string, [string, string]> = {
@@ -56,6 +60,7 @@ const KEY_FIELD: Record<string, [string, string]> = {
   evaluate: ["confidence", "confidence"],
   clean_text: ["max_chars", "max_chars"],
   tokenize: ["vocab_size", "vocab_size"],
+  chunk: ["chunk_tokens", "chunk_tokens"],
 };
 /** The ingest fields each type uses; the others are not shown (their defaults apply). */
 const INGEST_FIELDS: Record<string, string[]> = {
@@ -63,6 +68,8 @@ const INGEST_FIELDS: Record<string, string[]> = {
   labelled_images: ["min_size", "label_from"],
   tabular: [],
   labelled_text: ["text"],
+  text_corpus: [],
+  instruction_pairs: [],
 };
 
 function changed(values: Values, defaults: Values): Values {
@@ -224,10 +231,10 @@ export function StartPipelineDrawer({ open, onOpenChange, from }: {
   const versionsOf = from.dataset;
   const versions = useVersions(open && mode === "version" ? versionsOf : undefined);
   const types = useDatasetTypes();
-  const defaults = useStageDefaults(open);
-
   const version = versions.data?.items.find((v) => v.version_id === versionId);
   const dtype = mode === "version" ? (version ? (version.dtype ?? "image_caption") : null) : chosenType;
+  // The type's own defaults (a corpus's max_chars), as the job will resolve them.
+  const defaults = useStageDefaults(open, dtype);
   const typeInfo = types.data?.find((t) => t.name === dtype);
   const stages = useMemo(() => typeInfo?.stages ?? [], [typeInfo]);
   const after = mode === "version" && version ? stages.slice(stages.findIndex((s) => s.name === version.stage) + 1) : stages;
@@ -522,14 +529,19 @@ export function StartPipelineDrawer({ open, onOpenChange, from }: {
                 );
               }
               const notRun = last !== undefined && chain.indexOf(name) > chain.indexOf(last);
-              const isOpen = expanded.has(name) && !notRun;
               const stageDefaults = allDefaults[name] ?? {};
               const current = { ...stageDefaults, ...(values[name] ?? {}) };
               const [field, label] = KEY_FIELD[name] ?? ["", ""];
               const value = field ? current[field] : undefined;
               const hasError = Boolean(errors.stages[name]) || invalid.has(name);
               const what = name === "ingest" ? INGEST_WHAT[dtype] ?? "reads the source" : WHAT[name] ?? "";
-              const hasFields = name !== "ingest" || dtype !== "tabular" ? name !== "clean_table" : true;
+              // Ingest of a type with no ingest fields, clean_table and index have nothing to set;
+              // index's embedding model is one model (M12 decision 4), shown fixed, not editable.
+              const hasFields =
+                name === "ingest" ? dtype === "tabular" || (INGEST_FIELDS[dtype]?.length ?? 1) > 0 : name !== "clean_table" && name !== "index";
+              const isOpen = expanded.has(name) && !notRun && hasFields;
+              const model = name === "index" ? stageDefaults.embedding_model : undefined;
+              const revision = name === "index" ? stageDefaults.embedding_revision : undefined;
               return (
                 <Fragment key={name}>
                   <div className={`sp-st${notRun ? " notrun" : ""}${name === last ? " sel" : ""}`}>
@@ -556,6 +568,16 @@ export function StartPipelineDrawer({ open, onOpenChange, from }: {
                       {notRun ? "not run · " : ""}
                       {what}
                       {value !== undefined && !notRun ? <> · {label} <span className="mono">{show(value)}</span></> : null}
+                      {typeof model === "string" && !notRun ? (
+                        <>
+                          {" · embedding "}
+                          <span className="mono">
+                            {model}
+                            {typeof revision === "string" ? ` · ${revision.slice(0, 7)}` : ""}
+                          </span>{" "}
+                          fixed
+                        </>
+                      ) : null}
                     </span>
                     <label className="stop">
                       <input type="radio" name="sp-stop" checked={name === last} onChange={() => { setStop(name); }} aria-label={`Stop after ${name}`} />

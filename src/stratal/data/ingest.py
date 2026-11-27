@@ -28,7 +28,15 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from stratal.core.errors import SourceNotFound, ValidationFailed
 from stratal.data.commit import VersionRecord, commit_version
-from stratal.data.records import LABELLED_TEXT, META_TABLE_SCHEMA, TABULAR, schema_to_json
+from stratal.data.corpus import CorpusIngest, PairsIngest, corpus_rows, pairs_rows
+from stratal.data.records import (
+    INSTRUCTION_PAIRS,
+    LABELLED_TEXT,
+    META_TABLE_SCHEMA,
+    TABULAR,
+    TEXT_CORPUS,
+    schema_to_json,
+)
 from stratal.data.tables import TableIngest, build_schema, find_table, read_table, table_rows
 from stratal.data.texts import TextIngest, text_rows
 from stratal.data.versioning import VersionDeriver
@@ -90,12 +98,23 @@ class IngestConfig(BaseModel):
         default=None,
         description="The source is JSONL or TXT files: a labelled-text dataset (DATA-1.4).",
     )
+    corpus: CorpusIngest | None = Field(
+        default=None,
+        description="The source is Markdown and text documents: a text corpus, one row per "
+        "document (DATA-5.3, ADR-0022).",
+    )
+    pairs: PairsIngest | None = Field(
+        default=None,
+        description="The source is JSONL instruction pairs: instruction, optional input, "
+        "output (DATA-5.3).",
+    )
 
     @model_validator(mode="after")
     def _one_kind(self) -> "IngestConfig":
-        kinds = [n for n in ("label_from", "table", "text") if getattr(self, n) is not None]
+        names = ("label_from", "table", "text", "corpus", "pairs")
+        kinds = [n for n in names if getattr(self, n) is not None]
         if len(kinds) > 1:
-            raise ValueError(f"give at most one of label_from, table and text, not {kinds}")
+            raise ValueError(f"give at most one of {', '.join(names)}, not {kinds}")
         return self
 
     def resolved(self) -> dict[str, Any]:
@@ -116,6 +135,10 @@ def config_dtype(config: IngestConfig) -> str | None:
         return TABULAR
     if config.text is not None:
         return LABELLED_TEXT
+    if config.corpus is not None:
+        return TEXT_CORPUS
+    if config.pairs is not None:
+        return INSTRUCTION_PAIRS
     return LABELLED_IMAGES if config.label_from is not None else None
 
 
@@ -357,7 +380,7 @@ def run_ingest(
         message=f"Scanning folder… {len(relpaths):,} files found",
         metrics={"files": len(relpaths)},
     )
-    if config.table is not None or config.text is not None:
+    if any(k is not None for k in (config.table, config.text, config.corpus, config.pairs)):
         record = _ingest_records(source, relpaths, data_dir, config, derive, sink)
         return IngestResult(record, 0, round(time.monotonic() - started, 3))
 
@@ -446,6 +469,12 @@ def _ingest_records(
             key=lambda r: str(r["row_key"]),
         )
         dtype = TABULAR
+    elif config.corpus is not None:
+        rows = corpus_rows(source, relpaths, config.corpus, stage=STAGE)
+        dtype = TEXT_CORPUS
+    elif config.pairs is not None:
+        rows = pairs_rows(source, relpaths, config.pairs, stage=STAGE)
+        dtype = INSTRUCTION_PAIRS
     else:
         assert config.text is not None
         rows = text_rows(source, relpaths, config.text, stage=STAGE)

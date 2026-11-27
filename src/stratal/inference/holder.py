@@ -237,6 +237,43 @@ class ModelHolder:
         self._manager: VramManager | None = None
         self._last_gpu_use = 0.0
         self._close_written: bool | None = None
+        self._llm: Any = None  # stratal.inference.llm.LlmAdapter, once attached (ADR-0021)
+
+    # ------------------------------------------------------------------ the LLM (ADR-0021 rule 3)
+    def attach_llm(self, llm: Any) -> None:
+        """The LLM counts as this service's one GPU model and shares its lease."""
+        self._llm = llm
+
+    def claim_gpu_for_llm(self) -> None:
+        """Take the lease for the LLM and unload a ``/predict`` model from the GPU first;
+        ``gpu_busy`` naming the holder if a job has it (rule 4)."""
+        with self._lock:
+            if not self._gpu.available():
+                raise CudaUnavailable(
+                    "This container has no CUDA device, and the LLM runs only on the GPU.",
+                    suggested_action="See ERRORS.md E-012: restart Docker Desktop's GPU support.",
+                )
+            if not self._lease.try_acquire():
+                holder = current_holder(self._engine) or "another process"
+                raise GpuBusy(
+                    f"The GPU is in use by {holder}. The LLM needs the GPU and does not run on "
+                    "the CPU.",
+                    suggested_action="Try again when the job finishes, or pause it.",
+                )
+            if self._loaded is not None and self._loaded.device == "gpu":
+                self._unload()
+            self._last_gpu_use = time.monotonic()
+
+    def note_gpu_use(self) -> None:
+        self._last_gpu_use = time.monotonic()
+
+    def _llm_off_gpu(self, reason: str) -> bool:
+        """Unload the LLM if it is loaded; ``False`` if it is answering or did not give its
+        VRAM back."""
+        llm = self._llm
+        if llm is None or not llm.loaded:
+            return True
+        return bool(llm.unload(reason))
 
     # ------------------------------------------------------------------ status
     def status(self) -> dict[str, Any]:
@@ -453,7 +490,15 @@ class ModelHolder:
             return loaded, None, None
         version, lineage = self._check(version_id)
         unavailable = self._gpu_unavailable()
-        if unavailable is None and self._lease.try_acquire():
+        if unavailable is None and self._llm is not None and self._llm.busy:
+            unavailable = "the LLM is answering a chat request on the GPU"
+        if (
+            unavailable is None
+            and self._lease.try_acquire()
+            and not self._llm_off_gpu("a /predict model needs the GPU")
+        ):
+            unavailable = "the LLM did not give the GPU back"
+        if unavailable is None and self._lease.held:
             started = time.monotonic()
             self._unload()
             try:
@@ -616,12 +661,18 @@ class ModelHolder:
             wanted: str | None = None
             with contextlib.suppress(Exception):
                 wanted = self._bus.get_gpu_wanted()
-            idle = time.monotonic() - self._last_gpu_use >= self._settings.inference_idle_release_s
+            llm = self._llm
+            last = max(self._last_gpu_use, llm.last_use if llm is not None else 0.0)
+            idle = time.monotonic() - last >= self._settings.inference_idle_release_s
             if wanted is None and not idle:
                 return None
+            if llm is not None and llm.busy:
+                return None  # the answer in progress finishes first (ADR-0021 rule 5)
             reason = f"{wanted} is waiting for the GPU" if wanted else "idle"
             if self._loaded is not None and self._loaded.device == "gpu":
                 self._unload()
+            if not self._llm_off_gpu(reason):
+                return None  # VRAM not given back: keep the lease (rule 5); the event says so
             self._lease.release()
             self._sink.emit(stage="inference", message=f"Released the GPU lease: {reason}")
             return reason

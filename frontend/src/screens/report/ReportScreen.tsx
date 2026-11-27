@@ -12,6 +12,7 @@ import { ErrorState } from "../../components/states";
 import { Badge, Button, Icon, Progress, Skeleton, StatePill } from "../../components/ui";
 import { clock, count, errorDetail, stagePercent } from "../../lib/format";
 import { useCrumbs } from "../../shell/hooks";
+import { RetrievalReport } from "./RetrievalReport";
 
 type Report = Schemas["Report"];
 type Body = Schemas["ReportBody"];
@@ -412,7 +413,13 @@ function ClipPanel({ body, threshold, reviewId }: { body: Body; threshold: numbe
   );
 }
 
+/** SCR-06: the phase-1 eval report, or with ``?kind=retrieval`` an index's retrieval report. */
 export function ReportScreen() {
+  const [params] = useSearchParams();
+  return params.get("kind") === "retrieval" ? <RetrievalReport /> : <EvalReport />;
+}
+
+function EvalReport() {
   const { versionId = "" } = useParams();
   const navigate = useNavigate();
   const client = useQueryClient();
@@ -578,7 +585,7 @@ export function ReportScreen() {
     );
   }
 
-  const body = r.report;
+  const body = r.report as Body;  // the phase-1 report; a retrieval report renders apart
   const used = r.review_session_id;
   // Reviews come newest first: a newest closed review that is not the one used is newer.
   const newer = newestClosed && newestClosed.id !== used ? newestClosed : null;

@@ -19,6 +19,7 @@ import { SystemScreen } from "./screens/system/SystemScreen";
 import { VersionScreen } from "./screens/version/VersionScreen";
 import { TransformScreen } from "./screens/transform/TransformScreen";
 import { AppShell } from "./shell/AppShell";
+import { ChatScreen } from "./screens/chat/ChatScreen";
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
           { path: "studies/:studyId", element: <StudyScreen /> },
           { path: "system", element: <SystemScreen /> },
           { path: "settings", element: <SettingsScreen /> },
+          { path: "chat/:sessionId?", element: <ChatScreen /> },
           { path: "*", element: <Placeholder screen="Not found" crumb="Not found" /> },
         ],
       },
