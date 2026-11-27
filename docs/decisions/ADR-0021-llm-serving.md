@@ -144,3 +144,20 @@
 - **Two copies of the model on disk:** the verified file in the data volume and Ollama's blob in its store, about 1.1 GB each.
 - **Less memory for the workers.** `worker-gpu` loses 500 MiB and `worker-cpu` 600 MiB. Both are measured again in M12.
 - **Phase 4.** Stable Diffusion needs the card and a large memory share. It will take the lease through the same adapter rules, and ADR-0007 will be rebalanced again then.
+
+## As built (M12, 2026-11-27)
+
+Built as decided, with these differences and measurements.
+
+- **`ollama` mounts no data volume.** Rule 1 gave it `stratal-data` read-only; `inference` uploads the verified GGUF over HTTP to `POST /api/blobs/sha256:…` (rule 2), so Ollama never reads the data volume. Its only volume is `stratal-ollama`.
+- **`vram_insufficient` is 409, not 503.** The code already existed (ADR-0006) as a 409 `Conflict` and is reused; `llm_unavailable` and `llm_busy` are 503, and `no_image_embeddings` (ADR-0022) is 409. `llm_busy` carries no `Retry-After` header; its suggested action says to try again in a few seconds.
+- **The baseline** for rule 5's check is the card's used memory measured just before each load, not at `inference`'s start.
+- **A restarted `inference` unloads what Ollama still holds** before its first load. Found live: with `ollama` left running, the LLM stayed on the card without the lease and the next load took that card as its baseline ("card 1.8 → 1.8 GB"). Now: "card 1.8 → 0.2 GB" at start (commit `a9a4578`).
+- **Stop closes the generation.** Starlette cancels a plain generator's stream on a disconnect without closing it, so the adapter's `finally` (close Ollama's stream, release the slot) never ran: Ollama generated all 512 tokens and the next request waited 132 s. The stream is now an async generator that closes the chain on cancellation (`closing_stream`, `test_LLM_1_1_stop_*`).
+- **The request** gained the mode `images` (`labelled_version_id`, ADR-0022 rule 12) and SCR-12's stream gained the events `session` (first, with the conversation's ID) and `images`.
+- **What is stored** gained, beyond rule 9: `chat_messages.mode` (`llm`, `rag`, `images`) and `details` (sources, abstention, images, stopped, error), and `inference_requests.status` `stopped` for an answer the person stopped. A stopped answer gets no `done` from `inference`, so its total time is `api`'s own clock.
+- **Ollama's `raw` mode was not needed.** Warm, a RAG answer took 2.8 s in all (34 ms of retrieval); the template stays the GGUF's.
+- **Measured live** (Qwen3-1.7B Q4_K_M on the RTX 4050): first load in a new container 61 s, then 4.3–6.7 s for a reload with the kernel cache kept; warm, the first token in 21 ms at 103–124 tokens/s; after an idle minute the card returned to its baseline (1.8 → 0.2 GB) before the lease was released.
+- **`ollama` gains `LLAMA_ARG_CACHE_RAM=0`** (rule 1's environment). The llama-server Ollama 0.40.16 starts keeps every finished prompt in RAM, up to 8 GiB by default, and Ollama does not set the limit: each RAG prompt added about 80 MB until the 1,000 MiB limit killed the runner after about fifteen questions (ERRORS E-023). With the prompt cache off, the runner's anonymous memory peaked at 563 MiB over 60 RAG questions in a row, and the limit stays 1,000 MiB.
+- **Memory:** rule 11's limits are in `compose.yaml` (sum 9,024 MiB). Their re-measurement under load is part of M12's final check (MILESTONES).
+- **NFR-6, measured** (`tests/acceptance/test_M12_llm_acceptance.py`, the 128-token index): 20 of 20 met; chat first token median 22 ms, max 44 ms; RAG answer median 510 ms, max 1.35 s. The warm-up query after a restart, reported apart: a 5.2 s load, first token at 5.4 s.

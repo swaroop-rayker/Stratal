@@ -138,3 +138,20 @@
 - **Citations:** every citation traces to a chunk, a section and a source file through lineage (DATA-3.3).
 - **Chat without the GPU:** retrieval and abstention need no GPU, so "I don't know" still works while a job trains. Only the generated answer waits for the card.
 - **The threshold:** it is set by the owner from measured relevance, and must be chosen again if the embedding model changes.
+
+## As built (M12, 2026-11-27)
+
+Built as decided, with these differences and measurements.
+
+- **`clean_text` keeps line breaks for corpora** (rule 1 said the existing stage, unchanged). The existing stage collapsed all whitespace, which removed the Markdown headings `chunk` needs. It gained `keep_line_breaks`, set for `text_corpus` only and left out of the config when off, so earlier versions keep their IDs. The owner was told when it was found.
+- **The question set lives in the package**, at `src/stratal/eval/rag/stratal-docs-questions-v1.jsonl` (a resource of `stratal.eval`), not `evals/rag/` (rule 9): the `worker-cpu` image copies the package, not the repository. v1, with 50 answerable and 15 unanswerable questions, was approved by the owner on 2026-11-27 and is frozen; reports name it and its SHA-256.
+- **Chunk rows** carry `token_count` (rule 3 said `tokens`, a name the labelled-text type already uses for token IDs), plus `title`, `document`, `section`, `char_start`, `char_end`.
+- **`stratal.rag_index`** records the order as "accepted rows by row key" rather than listing the keys; the rows are read in that order when the index is loaded.
+- **API added for SCR-03:** `GET /versions/{id}/index` (the index's facts), the rows filters `document` and `text`, and an instruction pair's `chat_format`, made by the pairs' adapter when rows are read. SCR-06 lists a corpus's reports with `GET /datasets/{slug}/reports?kind=retrieval`.
+- **A dataset's modality** reads `text corpus` or `instruction pairs` (SCREENS.md v5); DATA_MODEL.md and the API's schema were updated when the dataset list failed on it.
+- **Measured on Stratal's docs** (43 files, 36 documents, 7 `.json` rejected `unsupported_format`):
+  - 256-token chunks: 1,273 chunks, embedded in 106 s on the CPU; hit@1 0.28, hit@5 0.76, hit@10 0.86.
+  - 128-token chunks: 2,555 chunks (157 vectors from the cache); hit@1 0.38, hit@5 0.68, hit@10 0.86.
+  - Top-1 relevance on the 128-token index: answerable 0.650–0.861, unanswerable 0.396–0.626, so a threshold of 0.65 separates them completely. **No threshold is set:** it is the owner's (decision 6), from SCR-06 or SCR-14.
+  - Warm RAG: 2.8 s in all, 34 ms of retrieval.
+  - Image search on coco10k's split (9,830 images): 6.6 s for the first query (CLIP's text tower and the index loading), 22 ms after; "a red bus on a city street" returned ten red buses.

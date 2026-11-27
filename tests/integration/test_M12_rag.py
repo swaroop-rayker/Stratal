@@ -4,6 +4,7 @@ exercised by the demo and NFR-6's test."""
 # pyright: basic, reportMissingImports=false
 
 import os
+import socket
 from pathlib import Path
 from typing import Any
 
@@ -140,3 +141,31 @@ def test_LLM_2_3_below_the_threshold_abstains_without_the_model(
     assert citations["nearest"]["relevance"] < 0.75
     assert not any(c[0] == "chat" for c in ollama.calls)
     _set_threshold(None)
+
+
+def test_NFR_7_rag_runs_with_outbound_connections_refused(
+    index_version: str, tmp_path: Path
+) -> None:
+    """Embedding the question, the index and the answer need no network: every connection
+    but the database's is refused (the LLM's own route is ADR-0021's ``llm`` network)."""
+    _set_threshold(None)
+    service, *_ = _service(tmp_path, ["It hashes rows and config [1]."])
+    database = socket.gethostbyname(get_engine().url.host or "localhost")
+    attempts: list[str] = []
+    original = socket.socket.connect
+
+    def guarded(self: socket.socket, address: Any) -> None:
+        host = address[0] if isinstance(address, tuple) else None
+        if host is not None and host not in (database, "127.0.0.1"):
+            attempts.append(repr(address))
+            raise OSError("network disabled for NFR-7")
+        original(self, address)
+
+    socket.socket.connect = guarded  # type: ignore[method-assign]
+    try:
+        events = _events(service, "How is a dataset version ID computed?", index_version)
+    finally:
+        socket.socket.connect = original  # type: ignore[method-assign]
+    assert attempts == [], "nothing tried to reach outside"
+    assert [c["n"] for c in events[-2]["citations"]] == [1]
+    assert events[-1]["event"] == "done"

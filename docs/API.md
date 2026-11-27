@@ -50,6 +50,9 @@ Every error response uses RFC 9457 problem details with media type `application/
 | `weights_deleted` | 409 | The version's weights were deleted by retention; re-train it (REG-2.7) |
 | `weights_unreadable` | 409 | A weights or checkpoint file is not valid safetensors (a planted pickle, say); it was refused before any of it was used. Re-train the version, or cancel the run and start it again (NFR-8) |
 | `model_not_pulled` | 409 | An allowed model that has not been downloaded; run time never downloads (NFR-7) |
+| `llm_unavailable` | 503 | The LLM service is down, timed out, is still preparing its model, or did not give VRAM back after an unload (M12, ADR-0021) |
+| `llm_busy` | 503 | Answers run one at a time and four already wait; try again in a few seconds (M12, ADR-0021 rule 8) |
+| `no_image_embeddings` | 409 | Image search on a version with no CLIP image vectors; the label stage computes them, a query never does (M12, LLM-2.4) |
 | `internal_error` | 500 | Anything unexpected. The detail carries the request ID, not a stack trace |
 
 A problem may carry extension members (RFC 9457 §3.2) beside the standard ones, such as `plan` or `version` above; each is named where the error is described.
@@ -292,9 +295,10 @@ Built in M5 (2026-11-16). Details:
 
 | Method and path | Purpose | Success |
 |---|---|---|
-| `POST /versions/{version_id}/reports` | Build a report. Body: `{kind: "phase1_dataset", review_id?}` | `202` Job |
+| `POST /versions/{version_id}/reports` | Build a report. Body: `{kind: "phase1_dataset" \| "retrieval", review_id?, question_set?}` | `202` Job |
 | `GET /versions/{version_id}/reports/latest` | The newest report of a kind (`?kind=`) | `200` Report |
 | `GET /reports/{report_id}` | One report | `200` Report |
+| `GET /datasets/{slug}/reports?kind=retrieval` | The latest retrieval report of each index version of a corpus, newest first: `{items: [{report_id, version_id, question_set, question_set_sha256, chunk_tokens, overlap_tokens, chunks, hits, created_at}]}` (M12, SCR-06) | `200` |
 
 Built in M5 (2026-11-16). Details:
 
@@ -303,6 +307,7 @@ Built in M5 (2026-11-16). Details:
 - **Report:** `{id, version_id, kind, review_session_id, job_id, created_at, report}`. `report` is `{kind, version_id, stage, algorithm_version, confidence, rows: {total, accepted, by_split}, rejections: {total, accepted, by_stage: {stage: {reason: rows}}}, filter_rate, clip_scores: {edges, labelled, accepted, by_split: {split: …}}, review}`. Each distribution is `{count, mean, std, minimum, maximum, quantiles: {p05…p95}, edges, histogram, below, above}`. `review` is `{review_id, status, sample_size, seed, decided, acceptance: {sampled, undecided, overall, by_split}}`, or null. Each rate is `{decided, accepted, interval: {estimate, low, high, confidence}}`. `by_split` is null for a version that has not been split. The statistics are the owner's (§5), so the stage fails with the usual owner-unit message until they are written.
 - **Config** (`stages.evaluate`): `kind`, `review_id`, `score_edges` (default 0 to 0.5 in steps of 0.025, strictly increasing), `confidence` (0.95).
 - `GET …/reports/latest` gives `404 not_found` until the version has a report.
+- **Retrieval reports** (M12, LLM-2.2, LLM-2.3; ADR-0022 rule 11): `kind: "retrieval"` on an index version queues a job whose one stage, `retrieval_eval` (cpu queue), scores the frozen question set (`question_set`, default `stratal-docs-questions-v1`) with no LLM call. Its `report` is `{ks, hits: {"hit@k": {hits, share, questions}}, index: {version_id, model, revision, chunks, chunk_tokens, overlap_tokens}, missed: [{id, question, labels, retrieved}], relevance: {bin_edges, answerable, unanswerable, answerable_bins, unanswerable_bins}, thresholds: [{threshold, answered, abstained}], per_question, question_set: {name, sha256, answerable, unanswerable}}`. On a version that is not an index it is `422 validation_error`.
 
 ### 3.9 Model registry (M8, REG-1.1, REG-1.2, [ADR-0015](decisions/ADR-0015-model-registry-and-retention.md))
 
@@ -343,6 +348,7 @@ Since M11 a version's detail has `children` (`[{id, lineage_id, lineage_name, we
 - **Retention** (`retention`, REG-2.3, REG-2.4, REG-2.10): `values` is `{keep_intermediate: 0–100 | "all", overrides: {lineage_id: 0–100 | "all"}}`; `schema` is its JSON Schema, with `x-applies` on each field; `lineages` lists each lineage's `keep_intermediate` in force, its `source` and its current `intermediates` and `intermediates_bytes`. 
 - **Training** (`training`, RUN-1.3, RUN-1.6, RUN-1.7): `values` is `{checkpoint_interval_min: 1–60, thermal_pause_c: 60–100, thermal_resume_c, stall_timeout_s: 60–3600}`; `thermal_resume_c` must be at least 5 below `thermal_pause_c`, and `thermal_pause_c` at most the card's slowdown point. A field's problem is `422 validation_error` with `errors[].loc` = `["values", field]`. `context` is `{gpu_slowdown_c, gpu_temp_high_7d: {celsius, job_id, at} | null, running_jobs}`; `lineages` is null. The section is the retention section's sibling in `sections`; retention's `context` is null. The watchdog applies a saved section from its next check; the checkpoint interval applies to new runs (NFR-4).
 - **Monitoring** (`monitoring`, MON-2.2, MON-2.6, MON-3.2; M11, ADR-0020 rule 14): `values` is `{sample_interval_active_s: 0.5–10, sample_interval_idle_s: 2–60 and at least the active one, vram_alert_percent: 50–99, ram_alert_percent: 50–99, disk_bottleneck_mb_s: 5–2000}`; `context` and `lineages` are null. The alerts use a save within 5 s, the sampler within 30 s.
+- **Retrieval** (`retrieval`, LLM-2.3; M12, ADR-0022 rule 8): `values` is `{embedding_model (read-only), abstention_threshold: 0–1 | null, threshold_source: an index version | null, default_k: 1–20}`; `context` and `lineages` are null. With no threshold RAG never abstains; the threshold is the owner's to set (M12 decision 6). RAG reads the section for every question.
 - `version` must be the one read; otherwise `409 conflict` with the current `version`.
 - A save that would delete weights is refused with `409 confirmation_required` and the `plan`; the same body with `confirm: plan.token` saves it and queues a retention job that deletes only that plan's versions (`job_id`). If anything changed in between, the token no longer matches and a new plan is returned the same way (ADR-0015 rule 7).
 - An unknown lineage in `overrides` is `422 validation_error`.
@@ -420,6 +426,21 @@ Built in M6 (2026-11-16) for the Start pipeline drawer. The names are the stage 
 | `GET /system/compare?a=&b=&align=time\|epoch&max_points=` | Two jobs' machine and process series on one axis: seconds spent running (pauses and queueing removed), or the epoch reached for two training runs over the epochs both ran; each side's means and peaks. `epoch_unavailable` says why epoch alignment cannot be used | `200 {align, common_epochs, epoch_unavailable, a, b}`; `422 validation_error` for `align=epoch` when it cannot be used; `404 not_found` for an unknown job |
 
 Built in M11 (2026-11-22). A range whose `from` is not before `to` is `422 validation_error`. New alerts, diagnoses and loads are ordinary events on the global stream (§4). Every Event gains `caused_by` (DATA_MODEL.md §4.6), and process samples gain `cpu_cores`. The settings gain a `monitoring` section (§3.10).
+
+### 3.14 Chat (M12, LLM-1.1, LLM-2.1, LLM-2.3, LLM-2.4, NFR-6; SCR-12; [ADR-0021](decisions/ADR-0021-llm-serving.md), [ADR-0022](decisions/ADR-0022-corpora-and-retrieval.md))
+
+| Method and path | Purpose | Success |
+|---|---|---|
+| `POST /chat` | Ask: the answer streams as server-sent events. Body `{session_id?, mode: "llm" \| "rag" \| "images", message, index_version_id?, labelled_version_id?}` | `200 text/event-stream` |
+| `GET /chat/sources` | What *RAG* and *Images* can ask: `{indexes: [{version_id, dataset, chunks, chunk_tokens, created_at}], images: [{version_id, dataset, stage, images, created_at}]}`; image versions with no accepted image left out | `200` |
+| `GET /chat/sessions` | Conversations, newest first: `{items: [{id, title, mode, created_at, updated_at}], next_cursor}` | `200` |
+| `GET /chat/sessions/{session_id}` | One conversation with its messages, each `{id, role, mode, content, citations, details, request, created_at}`; `request` is the answer's timings (route, model, revision, device, index version, cold start, load, first token, total, tokens, tokens/s, status, error code) | `200` |
+| `DELETE /chat/sessions/{session_id}` | Delete a conversation and its messages; its requests' timings stay (NFR-6) | `204` |
+
+- **The stream.** `api` forwards to `inference`'s `/chat` and relays it. Events, in order: `session` (`{session_id, message_id}`, the conversation created or continued), `meta` (route, model, revision, device, cold start and load time; for RAG the index), `token` (`{text}`, repeated), then `citations` for RAG (`{citations, sources, removed, uncited, abstained, nearest, threshold}`) or `images` for image search (`{images: [{row_key, sha256, derived_sha256, similarity}], searched, version_id}`), and `done` (first token, total, prompt and output tokens, tokens/s). A refusal or failure after the stream began is an `error` event carrying the problem; it is stored as `refused` or `failed`.
+- **Modes.** *LLM* sends the conversation's earlier *LLM* turns, up to about 4,000 characters; *RAG* and *Images* send the message only. *RAG* needs `index_version_id` and *Images* `labelled_version_id` (`422 validation_error` otherwise).
+- **Stop.** Closing the stream stops the answer: `inference` closes Ollama's stream and frees the LLM at once, and `api` stores the partial answer as `stopped`, timed with its own clock.
+- **Refusals** before any token: `gpu_busy` (a job holds the GPU, named), `llm_busy` (four answers already wait), `llm_unavailable`, `vram_insufficient`; for *Images*, `no_image_embeddings`.
 
 ### 3.8 Host script
 
@@ -598,6 +619,6 @@ Listed so the phase-1 design leaves room. Each is specified at its phase kickoff
 | Phase | Interfaces |
 |---|---|
 | 2 | `hpo_study` and `eval` jobs; comparison views. Train jobs, pause and resume (§3.3), the registry and retention (§3.9), settings (§3.10) and the model builder (§3.11) are built |
-| 3 | Chat with token streaming over SSE; RAG corpora and indexes; router decisions; image search |
+| 3 | Router decisions (M13). Chat with token streaming over SSE, RAG corpora and indexes, and image search are built in M12 (§3.14, §3.6, §3.2) |
 | 4 | Image generation; LoRA jobs; export and import of remote bundles |
 | 5 | Translation; full chat with manual and auto mode |

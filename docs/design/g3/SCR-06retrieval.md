@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-06retrieval_v1.html`](../screens/SCR-06retrieval_v1.html), G2 approved 2026-11-27 (low-fi [`SCR-06retrieval-lofi_v1.html`](../screens/SCR-06retrieval-lofi_v1.html)) |
 | Built | `frontend/src/screens/report/RetrievalReport.tsx` (SCR-06 with `?kind=retrieval`), `frontend/src/styles/scr06retrieval.css`, the Retrieval section in `frontend/src/screens/settings/SettingsScreen.tsx`. API: `GET /versions/{id}/reports/latest?kind=retrieval`, `GET /datasets/{slug}/reports?kind=retrieval`, `GET` / `PUT /settings` |
 | Checked | 2026-11-27, live at 1280 × 800, dark and light, on the two real retrieval reports of `stratal-docs` (`ds_710b60b40962`: hit@1 38 %, hit@5 68 %, hit@10 86 %; `ds_fff2e02e87a5`: 28 %, 76 %, 86 %) |
-| Status | **Proposed for the owner's approval** |
+| Status | **Approved by the owner, 2026-11-27** |
 
 ## Screenshots (in `SCR-06retrieval/`)
 

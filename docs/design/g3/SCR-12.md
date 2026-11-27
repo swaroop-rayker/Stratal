@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-12_v1.html`](../screens/SCR-12_v1.html), G2 approved 2026-11-27 (low-fi [`SCR-12-lofi_v1.html`](../screens/SCR-12-lofi_v1.html)) |
 | Built | `frontend/src/screens/chat/ChatScreen.tsx`, `frontend/src/api/chat.ts`, `frontend/src/styles/scr12.css`; route `/chat/:sessionId?` (`?index=ds_…` opens *RAG* on that index). API: `POST /chat` (server-sent events), `GET /chat/sources`, `GET` / `DELETE /chat/sessions…` |
 | Checked | 2026-11-27, live at 1280 × 800, dark and light, with the real model: Qwen3-1.7B on the GPU through `ollama`, the real `stratal-docs` indexes and coco10k's CLIP vectors |
-| Status | **Proposed for the owner's approval** |
+| Status | **Approved by the owner, 2026-11-27** |
 
 ## What was run live
 

@@ -5,7 +5,7 @@
 | Mockup | [`screens/SCR-03corpora_v1.html`](../screens/SCR-03corpora_v1.html), G2 approved 2026-11-27 (low-fi [`SCR-03corpora-lofi_v1.html`](../screens/SCR-03corpora-lofi_v1.html)) |
 | Built | `frontend/src/screens/version/Corpus.tsx`, with `VersionScreen.tsx`, `RowsPanel.tsx`, `rows.ts`, `datasets/StartPipelineDrawer.tsx` and `frontend/src/styles/scr03corpus.css`. API: `GET /versions/{id}/index`; the rows filters `document` and `text`; the Row's corpus columns and an instruction pair's `chat_format`; `GET /config/defaults?dataset_type=` |
 | Checked | 2026-11-27, live at 1280 × 800 and 1024 × 768, dark and light, on the real `stratal-docs` corpus: documents `ds_4a91744afd05` (36 accepted, 7 `.json` rejected), indexes `ds_710b60b40962` (2,555 chunks at 128 tokens) and `ds_fff2e02e87a5` (1,273 at 256) |
-| Status | **Proposed for the owner's approval** |
+| Status | **Approved by the owner, 2026-11-27** |
 
 ## Found and fixed at this gate
 
