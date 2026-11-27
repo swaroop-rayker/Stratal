@@ -35,6 +35,17 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-024 — Opening a 2-million-row table's version killed the api
+
+- **Date:** 2026-11-27
+- **Seen:** SCR-03 for `ds_1c0761f1fe23` (the split of the household power table, 2,075,259 rows) showed "Version ds_1c0761f1fe23 could not be loaded · dependency_unavailable · The Stratal API did not answer". Docker logged `oom` and `die 137` for `api`, at its 400 MiB limit, about 20 s after the page's first requests; it restarted on its own.
+- **Where:** M11b's tabular data meeting M3/M11's version screen: `GET /versions/{id}/rows` (`stratal.storage.manifest.select_rows`) and `GET /versions/{id}/distributions` (`stratal.data.profile`); NFR-2, UI-2.1, UI-2.2.
+- **Cause:** Both read the whole manifest: `select_rows` with `pq.read_table` even for a page of 50 rows, and distributions as a list of one Python dict per row. That was cheap for image datasets (1 to 2 MB per 10,000 rows), but this manifest is 348 MB on disk, and 2 million dicts take several GB. M11b made ingest and the Columns tab stream; these two endpoints were missed.
+- **Fix:** `select_rows` counts matches over the filter columns alone, in batches, then reads whole rows in `row_key` order, 2,000 at a time, until the page is full. `distributions` makes one pass over a stream of the 17 columns it uses, keeping counters and each numeric column as 8-byte floats. Batches are decoded on one thread. Live, on a restarted api: the first page in 0.4 s, a filtered page in 0.6 s, distributions in 7 s (then cached); the api's anonymous memory peaked at 265 MiB while the page loaded everything at once, and no restart followed.
+- **Guard:** `tests/unit/test_NFR_2_large_manifest_reads.py`: pages and distributions with whole-file reads forbidden and batches of 7 rows, compared with a whole read.
+- **Still open:** the version diff (`GET /versions/{a}/diff/{b}`) still reads both manifests whole, so comparing two versions of this table would hit the same limit.
+- **Status:** verified
+
 ### E-023 — Ollama's runner was killed after about fifteen RAG questions
 
 - **Date:** 2026-11-27

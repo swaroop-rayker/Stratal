@@ -29,6 +29,11 @@ SCHEMA_VERSION = 1
 Row = dict[str, Any]
 """One manifest row. Keys are the column names below; absent keys are null."""
 
+_READ_BATCH = 20_000
+"""Rows per batch when a few columns of a manifest are read back (NFR-2, E-024)."""
+_PAGE_BATCH = 2_000
+"""Rows per batch when whole rows are read for a page: the row group size (NFR-2, E-024)."""
+
 STATUS_ACCEPTED = "accepted"
 STATUS_REJECTED = "rejected"
 STATUS_DUPLICATE = "duplicate"
@@ -186,7 +191,7 @@ def iter_rows(
         present = set(parquet.schema_arrow.names)
         wanted = None if columns is None else [c for c in columns if c in present]
         missing = [] if columns is None else [c for c in columns if c not in present]
-        for batch in parquet.iter_batches(batch_size=batch_size, columns=wanted):
+        for batch in parquet.iter_batches(batch_size=batch_size, columns=wanted, use_threads=False):
             rows = batch.to_pylist()
             if missing:
                 for row in rows:
@@ -218,39 +223,77 @@ def select_rows(
     ``equals`` maps column names to the value they must equal; ``key_contains``
     is a substring of ``row_key``; ``text_contains`` a substring of ``text``, any case
     (a corpus's chunks, DATA-5.3); ``after_key`` is the cursor, the last key of
-    the previous page; ``not_null`` names columns that must have a value. The
-    manifest is read whole: at 1 to 2 MB per 10,000 rows
-    (DATA_MODEL.md §10) that is cheaper than streaming it in batches.
+    the previous page; ``not_null`` names columns that must have a value.
+
+    The manifest is streamed in batches, never read whole (E-024: a 2-million-row table's
+    manifest is 348 MB, which killed the api at its 400 MiB limit). Matches are counted
+    over the filter columns alone; then full rows are read in ``row_key`` order (the
+    order ``write_manifest`` enforces) until the page is full.
     """
-    table = pq.read_table(path)
-    mask: Any = None
-
-    def both(condition: Any) -> None:
-        nonlocal mask
-        mask = condition if mask is None else pc.and_(mask, condition)
-
-    for name, value in equals.items():
-        if name not in table.column_names:  # an older manifest: the column is all null
-            return RowPage(rows=[], matched=0)
-        both(pc.equal(table[name], value))
-    for name in not_null:
-        if name not in table.column_names:
-            return RowPage(rows=[], matched=0)
-        both(pc.is_valid(table[name]))
-    if key_contains:
-        both(pc.match_substring(table["row_key"], key_contains))
-    if text_contains:
-        if "text" not in table.column_names:
-            return RowPage(rows=[], matched=0)
-        both(
-            pc.fill_null(pc.match_substring(table["text"], text_contains, ignore_case=True), False)
+    with pq.ParquetFile(path) as parquet:
+        return _select(
+            parquet,
+            equals=equals,
+            key_contains=key_contains,
+            text_contains=text_contains,
+            after_key=after_key,
+            limit=limit,
+            not_null=not_null,
         )
-    if mask is not None:
-        table = table.filter(mask)
-    matched = table.num_rows
-    if after_key is not None:
-        table = table.filter(pc.greater(table["row_key"], after_key))
-    return RowPage(rows=table.slice(0, limit).to_pylist(), matched=matched)
+
+
+def _select(
+    parquet: pq.ParquetFile,
+    *,
+    equals: Mapping[str, str],
+    key_contains: str | None,
+    text_contains: str | None,
+    after_key: str | None,
+    limit: int,
+    not_null: Sequence[str],
+) -> RowPage:
+    names = set(parquet.schema_arrow.names)
+    needed = {*equals, *not_null, *(["text"] if text_contains else [])}
+    if not needed <= names:  # an older manifest: the column is all null
+        return RowPage(rows=[], matched=0)
+
+    def mask_of(batch: Any) -> Any:
+        mask: Any = None
+
+        def both(condition: Any) -> None:
+            nonlocal mask
+            mask = condition if mask is None else pc.and_(mask, condition)
+
+        for name, value in equals.items():
+            both(pc.equal(batch.column(name), value))
+        for name in not_null:
+            both(pc.is_valid(batch.column(name)))
+        if key_contains:
+            both(pc.match_substring(batch.column("row_key"), key_contains))
+        if text_contains:
+            found = pc.match_substring(batch.column("text"), text_contains, ignore_case=True)
+            both(pc.fill_null(found, False))
+        return mask
+
+    filtered = bool(equals or not_null or key_contains or text_contains)
+    matched = parquet.metadata.num_rows
+    if filtered:
+        matched = 0
+        columns = sorted(needed | {"row_key"})
+        for batch in parquet.iter_batches(
+            batch_size=_READ_BATCH, columns=columns, use_threads=False
+        ):
+            matched += int(pc.sum(mask_of(batch)).as_py() or 0)
+    rows: list[Row] = []
+    for batch in parquet.iter_batches(batch_size=_PAGE_BATCH, use_threads=False):
+        if filtered:
+            batch = batch.filter(mask_of(batch))
+        if after_key is not None:
+            batch = batch.filter(pc.greater(batch.column("row_key"), after_key))
+        rows.extend(batch.slice(0, limit - len(rows)).to_pylist())
+        if len(rows) >= limit:
+            break
+    return RowPage(rows=rows, matched=matched)
 
 
 def read_all(path: Path) -> list[Row]:

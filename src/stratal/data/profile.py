@@ -10,6 +10,8 @@ ID, since a version never changes.
 """
 
 import math
+from array import array
+from bisect import bisect_right
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -17,7 +19,7 @@ from typing import Any
 
 from stratal.storage.manifest import COLUMNS, STATUS_ACCEPTED, Row, read_all
 
-__all__ = ["Step", "diff", "distributions", "read_all"]
+__all__ = ["DISTRIBUTION_FIELDS", "Step", "diff", "distributions", "read_all"]
 
 Json = dict[str, Any]
 
@@ -72,13 +74,14 @@ def nice_edges(low: float, high: float, bins: int = 8) -> list[float]:
 
 
 def histogram(values: Sequence[float], edges: Sequence[float]) -> list[int]:
+    """Counts per bin ``[edges[i], edges[i+1])``; the last bin also holds ``edges[-1]``."""
     counts = [0] * (len(edges) - 1)
     for v in values:
-        for i in range(len(edges) - 1):
-            last = i == len(edges) - 2
-            if edges[i] <= v < edges[i + 1] or (last and v == edges[-1]):
-                counts[i] += 1
-                break
+        i = bisect_right(edges, v) - 1
+        if 0 <= i < len(counts):
+            counts[i] += 1
+        elif counts and v == edges[-1]:
+            counts[-1] += 1
     return counts
 
 
@@ -139,15 +142,34 @@ def _columns_for(dtype: str | None) -> tuple[_Column, ...]:
     return _IMAGE_COLUMNS
 
 
-def _column(col: _Column, rows: Sequence[Row]) -> Json | None:
-    raw = [v for r in rows if (v := col.value(r)) is not None]
-    here = [v for r in rows if r["status"] == STATUS_ACCEPTED and (v := col.value(r)) is not None]
-    removed = [
-        v for r in rows if r["status"] != STATUS_ACCEPTED and (v := col.value(r)) is not None
-    ]
+DISTRIBUTION_FIELDS = (
+    "status",
+    "decided_at_stage",
+    "reason_code",
+    "split",
+    "label",
+    "format",
+    "tokens",
+    "token_count",
+    "width",
+    "height",
+    "size_bytes",
+    "derived_width",
+    "derived_height",
+    "caption",
+    "clip_score",
+    "text",
+    "target_value",
+)
+"""The manifest columns :func:`distributions` reads; the rest need not be loaded (NFR-2, E-024)."""
+
+
+def _column(
+    col: _Column, raw: Sequence[float], here: Sequence[float], removed: Sequence[float]
+) -> Json | None:
     if not here and not raw:
         return None
-    if len(set(raw)) <= 1:
+    if min(raw) == max(raw):
         bins = None  # one value: a line, not a chart (SCR-03 v2 frame E: all 32 × 32)
     else:
         edges = nice_edges(min(raw), max(raw))
@@ -169,14 +191,14 @@ def _column(col: _Column, rows: Sequence[Row]) -> Json | None:
     }
 
 
-def _funnel(rows: Sequence[Row], lineage: Sequence[Step]) -> list[Json]:
-    decided: dict[str, Counter[tuple[str, str]]] = defaultdict(Counter)
-    for row in rows:
-        if row["status"] != STATUS_ACCEPTED:
-            stage = str(row["decided_at_stage"] or "")
-            decided[stage][(str(row["reason_code"] or ""), str(row["status"]))] += 1
+def _funnel(
+    total: int,
+    decided: Mapping[str, Counter[tuple[str, str]]],
+    counted: Counter[str],
+    lineage: Sequence[Step],
+) -> list[Json]:
     steps: list[Json] = []
-    rows_in = len(rows)
+    rows_in = total
     for index, step in enumerate(lineage):
         reasons = sorted(decided.get(step.stage, Counter()).items(), key=lambda kv: (-kv[1], kv[0]))
         removed = [
@@ -185,9 +207,6 @@ def _funnel(rows: Sequence[Row], lineage: Sequence[Step]) -> list[Json]:
         out = rows_in - sum(n for _key, n in reasons)
         parts: dict[str, int] | None = None
         if step.stage == "split" and index == len(lineage) - 1:
-            counted = Counter(
-                str(r["split"]) for r in rows if r["status"] == STATUS_ACCEPTED and r["split"]
-            )
             parts = {name: counted.get(name, 0) for name in ("train", "val", "test")}
         steps.append(
             {
@@ -203,16 +222,56 @@ def _funnel(rows: Sequence[Row], lineage: Sequence[Step]) -> list[Json]:
     return steps
 
 
-def distributions(rows: Sequence[Row], *, dtype: str | None, lineage: Sequence[Step]) -> Json:
-    """The funnel from raw to the version, then each column raw against here (UI-2.2)."""
-    accepted = [r for r in rows if r["status"] == STATUS_ACCEPTED]
-    columns = [c for col in _columns_for(dtype) if (c := _column(col, rows)) is not None]
+def distributions(rows: Iterable[Row], *, dtype: str | None, lineage: Sequence[Step]) -> Json:
+    """The funnel from raw to the version, then each column raw against here (UI-2.2).
+
+    One pass over ``rows``, which may be a stream (:func:`stratal.storage.manifest.iter_rows`
+    over :data:`DISTRIBUTION_FIELDS`): only counters and each column's numbers, as 8-byte
+    floats, are kept, so a table of millions of rows fits the api's memory (NFR-2, E-024).
+    """
+    cols = _columns_for(dtype)
+    raw = {c.key: array("d") for c in cols}
+    here = {c.key: array("d") for c in cols}
+    removed = {c.key: array("d") for c in cols}
+    decided: dict[str, Counter[tuple[str, str]]] = defaultdict(Counter)
+    splits: Counter[str] = Counter()
+    by: dict[str, Counter[str]] = defaultdict(Counter)
+    formats: Counter[str] = Counter()
+    total = accepted = 0
+    token_length: int | None = None
+    token_rows = token_cut_rows = 0
+    for r in rows:
+        total += 1
+        ok = r.get("status") == STATUS_ACCEPTED
+        for col in cols:
+            v = col.value(r)
+            if v is not None:
+                raw[col.key].append(v)
+                (here if ok else removed)[col.key].append(v)
+        if r.get("format"):
+            formats[str(r["format"])] += 1
+        if not ok:
+            stage = str(r.get("decided_at_stage") or "")
+            decided[stage][(str(r.get("reason_code") or ""), str(r.get("status")))] += 1
+            continue
+        accepted += 1
+        if r.get("split"):
+            splits[str(r["split"])] += 1
+        if r.get("label"):
+            by[str(r["label"])][str(r.get("split") or "all")] += 1
+        if r.get("tokens"):
+            if token_length is None:
+                token_length = len(str(r["tokens"]).split())
+            token_rows += 1
+            if int(r.get("token_count") or 0) > token_length:
+                token_cut_rows += 1
+    columns = [
+        c
+        for col in cols
+        if (c := _column(col, raw[col.key], here[col.key], removed[col.key])) is not None
+    ]
     classes: list[Json] | None = None
-    if any(r.get("label") for r in accepted):
-        by: dict[str, Counter[str]] = defaultdict(Counter)
-        for r in accepted:
-            if r.get("label"):
-                by[str(r["label"])][str(r.get("split") or "all")] += 1
+    if by:
         classes = [
             {
                 "label": label,
@@ -223,22 +282,18 @@ def distributions(rows: Sequence[Row], *, dtype: str | None, lineage: Sequence[S
             }
             for label, c in sorted(by.items(), key=lambda kv: (-sum(kv[1].values()), kv[0]))
         ]
-    formats = Counter(str(r.get("format")) for r in rows if r.get("format"))
     markers: Json = {}
     for step in lineage:
         if step.stage == "filter" and "clip_threshold" in step.config:
             markers["clip_score"] = step.config["clip_threshold"]
     token_cut: Json | None = None
-    with_tokens = [r for r in accepted if r.get("tokens")]
-    if with_tokens:
-        length = len(str(with_tokens[0]["tokens"]).split())
-        cut = sum(1 for r in with_tokens if int(r.get("token_count") or 0) > length)
-        token_cut = {"length": length, "cut": cut, "rows": len(with_tokens)}
+    if token_length is not None:
+        token_cut = {"length": token_length, "cut": token_cut_rows, "rows": token_rows}
     return {
-        "row_count": len(rows),
-        "accepted": len(accepted),
-        "removed": len(rows) - len(accepted),
-        "funnel": _funnel(rows, lineage),
+        "row_count": total,
+        "accepted": accepted,
+        "removed": total - accepted,
+        "funnel": _funnel(total, decided, splits, lineage),
         "columns": columns,
         "classes": classes,
         "formats": dict(sorted(formats.items())),
