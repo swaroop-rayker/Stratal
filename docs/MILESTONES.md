@@ -861,6 +861,7 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 - [ ] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry
 - [ ] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading
 - [ ] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index
+  - The question set (`src/stratal/eval/rag/stratal-docs-questions-v1.jsonl`: 50 answerable, 15 unanswerable; drafted by the agent, table in `docs/drafts/rag-question-set-v1.md`) approved by the owner on 2026-11-27 ("Approved as is") and frozen. Decision 12: the agent wrote hit@k's scoring at the owner's request.
 - [ ] `test_LLM_2_3_*`: out-of-corpus questions get an abstention
 - [ ] `test_LLM_2_4_*`: planted images are found from their text; live, "dogs at night" on coco10k, judged by the owner
 - [ ] `test_DATA_5_3_*`: samples of both types validate, bad rows are rejected with reasons, and the pairs' adapter gives the chat format

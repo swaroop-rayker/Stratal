@@ -1,4 +1,6 @@
-# RAG question set v1 — draft for the owner's check
+# RAG question set v1
+
+**Approved by the owner on 2026-11-27 ("Approved as is"); frozen.** A change makes v2.
 
 M12 decision 6: the agent drafts, the owner checks every question and label before the first measurement; then the file is frozen (`src/stratal/eval/rag/stratal-docs-questions-v1.jsonl`, SHA-256 named in every report).
 
