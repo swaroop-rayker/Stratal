@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-06 retrieval report — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. Same sheet as the earlier low-fi files. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; background: #fff; font-family: var(--mono); white-space: nowrap; }
+.select.bad { border: 2px solid var(--ink); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+.t th .sub { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.t td { padding: 0 8px; height: 28px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); }
+.t td.pin, .t th.pin { position: sticky; left: 0; background: #fff; border-right: 1px solid var(--line); } .t th.pin { background: var(--fill); }
+.t .chg { font-weight: 700; } .t .new { outline: 1.5px dashed var(--ink-2); outline-offset: -3px; }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.ask { border: 2px solid var(--note); border-radius: 6px; padding: 10px 14px; background: #fff; max-width: 1280px; margin-top: 12px; } .ask li { color: var(--ink); margin: 4px 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.callout { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--fill); font-size: 12px; } .callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.faint { opacity: .45; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 50%; vertical-align: middle; } .box.on { background: radial-gradient(var(--ink-2) 45%, transparent 50%); }
+/* SCR-06 retrieval report (prefixed rr-) */
+.rr-tiles { display: flex; gap: 10px; }
+.rr-tile { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; min-width: 150px; } .rr-tile b { display: block; font: 600 22px var(--mono); } .rr-tile span { font-size: 11px; color: var(--ink-3); }
+.rr-grid { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 14px; }
+.rr-hist { position: relative; height: 150px; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; align-items: end; padding: 0 4px; }
+.rr-bin { display: flex; gap: 1px; align-items: end; height: 100%; }
+.rr-bin i { flex: 1; display: block; }
+.rr-bin i.a { background: var(--ink-2); } .rr-bin i.u { background: repeating-linear-gradient(45deg, var(--ink-3) 0 2px, transparent 2px 4px); border: 1px solid var(--ink-3); }
+.rr-thr { position: absolute; top: -6px; bottom: 0; border-left: 2px dashed var(--ink); }
+.rr-thr span { position: absolute; top: -14px; left: 4px; font: 600 10px var(--mono); white-space: nowrap; }
+.rr-ax { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--ink-3); padding: 2px 4px 0; }
+.rr-key { display: flex; gap: 14px; font-size: 11px; color: var(--ink-2); align-items: center; }
+.rr-key i { display: inline-block; width: 14px; height: 9px; margin-right: 4px; vertical-align: middle; }
+.rr-miss td { white-space: normal; vertical-align: top; padding-top: 4px; padding-bottom: 4px; }
+.rr-modal { position: absolute; inset: 0; background: rgba(0,0,0,.25); display: grid; place-items: center; z-index: 4; }
+.rr-modal .box { width: 480px; background: #fff; border: 1px solid var(--ink-2); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.2); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.rr-states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 1280px; }
+.rr-mini { border: 1px solid var(--line); background: #fff; min-height: 200px; display: flex; flex-direction: column; } .rr-mini .lbl { font-size: 11px; font-weight: 600; padding: 6px 10px; background: var(--fill); border-bottom: 1px solid var(--soft); }
+.rr-set { display: grid; grid-template-columns: 220px 1fr; gap: 10px 16px; align-items: center; font-size: 12px; }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-06 — the retrieval report, and SCR-14's retrieval section · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: LLM-2.2 (hit@k per index version), LLM-2.3 (the abstention threshold)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> v5, "SCR-06 — the retrieval report" and "SCR-14: the retrieval section" (approved 2026-11-27)</span><span>Route: <span class="mono">/versions/:version_id/report?kind=retrieval</span></span><span>Design: ADR-0022 rules 8–11; open point 8e</span><span>2026-11-27</span></div>
+<p>Layout and hierarchy only. Blue numbers are annotations. <b>The figures are illustrative:</b> the question set is not written yet (decision 6: I draft it, the owner checks it), so hit@k, the relevances and the missed questions are invented in plausible ranges, not measured. The questions themselves and the sections they are labelled with are real: each is answered by the named section of Stratal's docs. Index versions as on SCR-03: chunk size 256 (about 970 chunks) and 128 (about 1,920), IDs placeholders.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>The report is SCR-06 with a different body:</b> the same header, rebuild action and layout as the phase-1 eval report, so a version's reports look like one family. The kind is in the title ("Retrieval report").</li>
+<li><b>hit@1, hit@5 and hit@10 are three tiles at the top,</b> each as a share and a count; nothing else competes with them.</li>
+<li><b><i>Other index versions</i> sits directly under the tiles</b>, before the detail, because comparing chunk sizes is the demo's question (Flow 7): one row per index version of the same corpus and question set, this one marked, the best hit@5 in bold.</li>
+<li><b>Relevance and the threshold share one card:</b> on the left the two histograms on one axis (answerable filled, unanswerable hatched, so they are told apart without colour) with the current threshold as a dashed line; on the right the threshold table, 0.30 to 0.80 in steps of 0.05, each row with how many answerable questions would still be answered and how many unanswerable ones would abstain. A row's <i>Use</i> sets it, after a confirmation.</li>
+<li><b>Missed questions are a table at the bottom:</b> the question, its labelled section, the top 3 retrieved instead (section and relevance). Unanswerable questions are not "missed"; they appear only in the relevance chart.</li>
+<li><b>The confirmation says what the threshold does</b> in the counts of this report, and that it applies to every index built with this embedding model.</li>
+<li><b>SCR-14's retrieval section</b> is a form like its others: the threshold for <span class="mono">bge-small-en-v1.5</span> (empty until set, with what that means), the default k, and a link to the report it was chosen from.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · The report on the 256-token index</h2>
+<div class="frame" style="height:1000px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div class="nav">Chat</div><div class="nav">System</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / stratal-docs / ds_… (index) / Retrieval report</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><span class="n in">1</span><b>Retrieval report</b><span class="mono">ds_…</span><span class="k">index · 256 tokens</span><span class="spacer"></span><span class="btn sm">Rebuild</span><span class="btn sm ghost">Open the index</span></div>
+      <div class="muted" style="font-size:12px">Question set <span class="mono">evals/rag/stratal-docs-questions-v1.jsonl</span> · v1 · sha256 <span class="mono">3f9a…c21e</span> · 50 answerable, 15 unanswerable · k = 1, 5, 10 · built by <span class="mono">job_01…</span>, 27 Nov 2026, 14 s</div>
+      <div class="rr-tiles"><span class="n in">2</span>
+        <div class="rr-tile"><b>66%</b><span>hit@1 · 33 of 50</span></div><div class="rr-tile"><b>88%</b><span>hit@5 · 44 of 50</span></div><div class="rr-tile"><b>94%</b><span>hit@10 · 47 of 50</span></div></div>
+      <div class="card"><h3><span class="n in">3</span>Other index versions <span class="muted" style="font-weight:400">same corpus, same question set</span></h3>
+        <table class="t"><tr><th>Index version</th><th class="r">Chunk tokens</th><th class="r">Overlap</th><th class="r">Chunks</th><th class="r">hit@1</th><th class="r">hit@5</th><th class="r">hit@10</th><th>Built</th></tr>
+          <tr class="on"><td class="m">ds_… (this)</td><td class="r m">256</td><td class="r m">32</td><td class="r m">970</td><td class="r m">66%</td><td class="r m"><b>88%</b></td><td class="r m">94%</td><td>27 Nov 14:02</td></tr>
+          <tr><td class="m">ds_…</td><td class="r m">128</td><td class="r m">32</td><td class="r m">1,920</td><td class="r m">70%</td><td class="r m">84%</td><td class="r m">92%</td><td>27 Nov 14:20</td></tr></table></div>
+      <div class="card"><h3><span class="n in">4</span>Top-1 relevance, and the abstention threshold <span class="muted" style="font-weight:400">current threshold 0.55 (set 27 Nov from this report)</span></h3>
+        <div class="rr-grid">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="rr-key"><span><i style="background:var(--ink-2)"></i>answerable (50)</span><span><i style="background:repeating-linear-gradient(45deg,var(--ink-3) 0 2px,transparent 2px 4px);border:1px solid var(--ink-3)"></i>unanswerable (15)</span><span>dashed: threshold</span></div>
+            <div class="rr-hist">
+              <div class="rr-bin"><i class="a" style="height:0%"></i><i class="u" style="height:8%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:0%"></i><i class="u" style="height:17%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:0%"></i><i class="u" style="height:25%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:0%"></i><i class="u" style="height:33%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:0%"></i><i class="u" style="height:17%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:8%"></i><i class="u" style="height:0%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:8%"></i><i class="u" style="height:8%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:17%"></i><i class="u" style="height:17%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:33%"></i><i class="u" style="height:0%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:50%"></i><i class="u" style="height:0%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:83%"></i><i class="u" style="height:0%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:100%"></i><i class="u" style="height:0%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:75%"></i><i class="u" style="height:0%"></i></div>
+              <div class="rr-bin"><i class="a" style="height:42%"></i><i class="u" style="height:0%"></i></div>
+              <div class="rr-thr" style="left:50%"><span>0.55</span></div>
+            </div>
+            <div class="rr-ax"><span>0.20</span><span>0.35</span><span>0.50</span><span>0.65</span><span>0.80</span><span>0.90</span></div>
+            <div class="muted" style="font-size:11px">Cosine of the best chunk for each question. A text table of the same bins follows the chart for screen readers.</div>
+          </div>
+          <table class="t"><tr><th class="r">Threshold</th><th class="r">Answerable still answered</th><th class="r">Unanswerable abstained</th><th></th></tr>
+            <tr><td class="r m">0.40</td><td class="r m">50 of 50</td><td class="r m">10 of 15</td><td><span class="btn sm ghost">Use</span></td></tr>
+            <tr><td class="r m">0.45</td><td class="r m">50 of 50</td><td class="r m">12 of 15</td><td><span class="btn sm ghost">Use</span></td></tr>
+            <tr><td class="r m">0.50</td><td class="r m">49 of 50</td><td class="r m">12 of 15</td><td><span class="btn sm ghost">Use</span></td></tr>
+            <tr class="on"><td class="r m"><b>0.55</b></td><td class="r m">48 of 50</td><td class="r m">13 of 15</td><td class="muted">current</td></tr>
+            <tr><td class="r m">0.60</td><td class="r m">46 of 50</td><td class="r m">15 of 15</td><td><span class="btn sm ghost">Use</span></td></tr>
+            <tr><td class="r m">0.65</td><td class="r m">42 of 50</td><td class="r m">15 of 15</td><td><span class="btn sm ghost">Use</span></td></tr>
+            <tr class="off"><td colspan="4">0.30 to 0.80 in steps of 0.05; scrolls</td></tr></table>
+        </div></div>
+      <div class="card"><h3><span class="n in">5</span>Missed questions <span class="muted" style="font-weight:400">6 answerable questions with no hit in the top 5</span></h3>
+        <table class="t rr-miss"><tr><th>Question</th><th>Labelled section</th><th>Retrieved instead (top 3)</th></tr>
+          <tr><td>What happens to a running job when the laptop goes to sleep?</td><td class="m">ADR-0008 › Decision</td><td class="m">ARCHITECTURE.md › 8. Sleep and suspend · 0.71<br>RISKS.md › Risks · 0.64<br>ERRORS.md › Log · 0.61</td></tr>
+          <tr><td>Which memory limit does worker-gpu have?</td><td class="m">ARCHITECTURE.md › 2. Components</td><td class="m">ADR-0016 › Memory moved in M11 · 0.78<br>ADR-0021 › Decision · 0.74<br>ADR-0007 › Decision · 0.69</td></tr>
+          <tr class="off"><td colspan="3">4 more</td></tr></table></div>
+    </section>
+    <footer class="status">CPU 2% · RAM 3.9 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Header</td><td>The kind, the index version and its chunk size, <i>Rebuild</i>, <i>Open the index</i>; under it the question set (file, version, hash, counts), k and the building job</td><td><span class="mono">GET /versions/{id}/reports/latest?kind=retrieval</span> <i>planned</i></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>hit@k</td><td>hit@1, hit@5, hit@10 as a share and a count of the answerable questions</td><td>report body (ADR-0022 rule 10)</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Other index versions</td><td>Every retrieval report on this corpus with this question set: version, chunk size, overlap, chunks, hit@k, built; this one highlighted, the best hit@5 bold; a row opens its report</td><td><span class="mono">GET /datasets/{slug}/reports?kind=retrieval</span> <i>planned</i></td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Relevance and threshold</td><td>The two top-1 relevance histograms on one axis with the threshold; the threshold table with <i>Use</i> per row (frame B); the current one marked</td><td>report body; the threshold from <span class="mono">GET /settings</span></td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Missed questions</td><td>Answerable questions with no hit in the top 5: the question, the labelled section, the top 3 retrieved with relevance</td><td>report body</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Setting the threshold from the report, and SCR-14's retrieval section</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;width:1280px">
+<div class="frame" style="width:auto;height:420px">
+  <div style="padding:16px;display:flex;flex-direction:column;gap:10px" class="faint">
+    <b>Top-1 relevance, and the abstention threshold</b>
+    <table class="t"><tr><th class="r">Threshold</th><th class="r">Answered</th><th class="r">Abstained</th><th></th></tr><tr><td class="r m">0.55</td><td class="r m">48 of 50</td><td class="r m">13 of 15</td><td>current</td></tr><tr><td class="r m">0.60</td><td class="r m">46 of 50</td><td class="r m">15 of 15</td><td>Use</td></tr></table>
+  </div>
+  <div class="rr-modal"><div class="box"><span class="n in">6</span>
+    <b style="font-size:15px">Set the abstention threshold to 0.60?</b>
+    <div>Below 0.60, RAG answers "I don't know" without asking the model. On this report's questions: <b>46 of 50</b> answerable questions would still be answered (2 fewer than now), and <b>15 of 15</b> unanswerable ones would abstain (2 more).</div>
+    <div class="muted" style="font-size:12px">Applies to every index built with <span class="mono">bge-small-en-v1.5</span>. Change it on Settings at any time.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><span class="btn ghost">Cancel</span><span class="btn primary">Set to 0.60</span></div></div></div>
+</div>
+<div class="frame" style="width:auto;height:420px">
+  <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+    <div class="phead"><span class="n in">7</span><b>Settings</b><span class="muted">/ Retrieval</span></div>
+    <div class="rr-set">
+      <span>Abstention threshold <span class="mono muted">bge-small-en-v1.5</span></span><span><span class="select" style="width:80px">0.55</span> <span class="muted" style="font-size:11px">set 27 Nov from the report on <u>ds_…</u></span></span>
+      <span>Default k</span><span><span class="select" style="width:80px">5</span> <span class="muted" style="font-size:11px">sources given to the model per question (1–20)</span></span>
+    </div>
+    <div class="callout">Below the threshold, RAG answers "I don't know" with the nearest source, without asking the model (LLM-2.3). With no threshold set, RAG never abstains.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><span class="btn ghost">Reset</span><span class="btn primary">Save</span></div>
+  </div>
+</div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">6</span></td><td>Confirmation</td><td>The value, what it does, its effect on this report's questions against the current value, and its scope (the embedding model)</td><td><span class="mono">PUT /settings</span> (the retrieval section)</td><td>–</td></tr>
+<tr><td><span class="num">7</span></td><td>SCR-14, Retrieval</td><td>The threshold per embedding model (empty until set), where it was chosen, the default k; generated from the section's schema like SCR-14's other sections</td><td><span class="mono">GET /settings</span>, <span class="mono">PUT /settings</span>; <span class="mono">GET /config/schemas/settings</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · States</h2>
+<div class="rr-states">
+  <div class="rr-mini"><div class="lbl">No report yet</div><div style="padding:14px"><div class="empty"><div><b>No retrieval report for this index yet.</b><br><span class="muted">It scores retrieval on the question set <span class="mono">stratal-docs-questions-v1</span>: no model is asked, so it takes seconds and needs no GPU.</span><br><br><span class="btn primary">Build report</span></div></div></div></div>
+  <div class="rr-mini"><div class="lbl">Building, and not an index</div><div style="padding:14px;display:flex;flex-direction:column;gap:10px;font-size:12px"><div class="callout">Building the report: <span class="mono">job_01…</span> · 38 of 65 questions <u>Open the job</u></div><div class="callout">Retrieval reports are built on an index version. <span class="mono">ds_…</span> is a <span class="mono">chunk</span> version: <u>open its index</u>.</div></div></div>
+  <div class="rr-mini"><div class="lbl">No threshold set, and an error</div><div style="padding:14px;display:flex;flex-direction:column;gap:10px;font-size:12px"><div class="callout">No abstention threshold is set: RAG never says "I don't know". Pick one from the table above.</div><div class="empty err">The report could not be loaded · <span class="mono">service_unavailable</span>. <span class="btn sm">Retry</span></div></div></div>
+</div>
+
+<h2>Not in this wireframe</h2>
+<p>The phase-1 eval report (unchanged); M13's caption comparison report (LABEL-1.7), the other new SCR-06 kind, drawn at M13. The hi-fi mockup adds both themes and the 1024 px layout.</p>
+</main>
+</body>
+</html>
