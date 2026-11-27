@@ -873,7 +873,8 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 - [x] G2 for SCR-12, SCR-03 for corpora and SCR-06's retrieval report, in that order (all approved 2026-11-27; `docs/design/APPROVALS.md`)
 - [x] G3 for M12's screens (approved by the owner on 2026-11-27; `docs/design/g3/SCR-12.md`, `SCR-03corpora.md`, `SCR-06retrieval.md`)
 - [ ] Demo: ingest the documentation, build two index versions with different chunk sizes and read their hit@5 on SCR-06; ask SCR-12 questions with citations, and one it must decline; search "dogs at night"; start a training run and watch chat give the GPU back
-- [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS; learning notes)
+  - Run by the agent on 2026-11-27: the docs ingested (`job_0129`, `job_0131`); two index versions, 256 and 128 tokens, hit@5 0.88 and 0.92 on SCR-06 (question set v2); RAG answers with citations on SCR-12; image search ("a red bus on a city street", ten red buses); a training run (`job_0137`) took the GPU about 4 s after asking for it, chat meanwhile refused with `gpu_busy` naming it, and the LLM reloaded in 4.8 s after. Waiting for the owner: the threshold, so a question can be declined, and the verdict on "dogs at night"
+- [x] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS; learning notes) (2026-11-27; also DECISIONS, ADR-0021 and ADR-0022 As built; learning notes §30 and §5o, not committed)
 - [ ] Owner's OK to merge
 
 ## M13 — Router, tools, caption refinement
