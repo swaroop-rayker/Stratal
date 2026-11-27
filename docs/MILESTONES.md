@@ -857,7 +857,7 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 
 **Done when**
 
-- [x] S-11 report delivered and the model chosen; decisions 1 to 12 recorded (2 to 12 on 2026-11-27, "Accept all"; 1 the same day, Qwen3-1.7B, `docs/spikes/S-11-llm.md`); ADR-0021 and ADR-0022 approved (both accepted 2026-11-27, "Approve both"). Decision 12's one open point, whether the owner writes hit@k's scoring, is asked again with G1
+- [x] S-11 report delivered and the model chosen; decisions 1 to 12 recorded (2 to 12 on 2026-11-27, "Accept all"; 1 the same day, Qwen3-1.7B, `docs/spikes/S-11-llm.md`); ADR-0021 and ADR-0022 approved (both accepted 2026-11-27, "Approve both"). Decision 12 settled 2026-11-27: the owner asked the agent to write hit@k's scoring ("Agent writes it"); no phase-3 unit is the owner's
 - [ ] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry
 - [ ] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading
 - [ ] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index
@@ -868,7 +868,7 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 - [ ] `test_NFR_7_*` and `test_NFR_8_*` extended: chat and RAG with every outbound connection refused; the model file pinned by hash
 - [ ] `test_BUG6_*` extended: after the adapter's unload the card is back at its baseline, and a queued training job gets the GPU
 - [x] G1 revision approved (SCREENS.md v5, 2026-11-27, with open point 8's recommended options)
-- [ ] G2 for SCR-12, SCR-03 for corpora and SCR-06's retrieval report, in that order
+- [x] G2 for SCR-12, SCR-03 for corpora and SCR-06's retrieval report, in that order (all approved 2026-11-27; `docs/design/APPROVALS.md`)
 - [ ] G3 for M12's screens
 - [ ] Demo: ingest the documentation, build two index versions with different chunk sizes and read their hit@5 on SCR-06; ask SCR-12 questions with citations, and one it must decline; search "dogs at night"; start a training run and watch chat give the GPU back
 - [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS; learning notes)

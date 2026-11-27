@@ -101,7 +101,7 @@
       - the top-1 relevance of answerable against unanswerable questions;
       - how many unanswerable questions fall below a given threshold.
     - No LLM call is made, so the report is quick and needs no GPU.
-    - **Owner unit:** hit@k's scoring (rule 10) is a candidate under SPEC §9.1's "scoring, evaluation". Decision 12 left it to the owner. If the owner takes it, it gets a stub and strict expected-failure tests first (ADR-0012).
+    - **Owner unit:** hit@k's scoring (rule 10) was a candidate under SPEC §9.1's "scoring, evaluation". On 2026-11-27 the owner asked the agent to write it (decision 12, "Agent writes it"); the owner reviews it like any other change.
 
 ### Image search (LLM-2.4)
 
