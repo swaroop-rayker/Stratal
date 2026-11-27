@@ -56,10 +56,11 @@ class ChatBody(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    mode: Literal["llm", "rag"] = "llm"
+    mode: Literal["llm", "rag", "images"] = "llm"
     messages: list[ChatMessage] = Field(default_factory=lambda: list[ChatMessage](), max_length=64)
     question: str | None = Field(default=None, max_length=8_000)
     index_version_id: str | None = Field(default=None, pattern=r"^ds_[0-9a-f]{12}$")
+    labelled_version_id: str | None = Field(default=None, pattern=r"^ds_[0-9a-f]{12}$")
     k: int | None = Field(default=None, ge=1, le=20)
 
     @model_validator(mode="after")
@@ -68,7 +69,15 @@ class ChatBody(BaseModel):
             raise ValueError("llm mode needs messages")
         if self.mode == "rag" and (not self.question or not self.index_version_id):
             raise ValueError("rag mode needs a question and an index_version_id")
+        if self.mode == "images" and (not self.question or not self.labelled_version_id):
+            raise ValueError("images mode needs a question and a labelled_version_id")
         return self
+
+
+class Images(Protocol):
+    """What the app needs from :class:`stratal.inference.image_search.ImageSearch`."""
+
+    def search(self, text: str, version_id: str, k: int = 10) -> Iterator[dict[str, Any]]: ...
 
 
 class Rag(Protocol):
@@ -140,6 +149,7 @@ def create_inference_app(
     decode: ImageDecoder,
     llm: Chatter | None = None,
     rag: Rag | None = None,
+    images: Images | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Stratal inference", docs_url=None, redoc_url=None)
     install_error_handlers(app)
@@ -163,6 +173,12 @@ def create_inference_app(
     def chat(body: ChatBody) -> StreamingResponse:
         """Stream one answer from the LLM (LLM-1.1). Queueing, the lease and the load happen
         before the response starts, so a refusal is an ordinary problem document."""
+        if body.mode == "images":
+            if images is None:
+                raise LlmUnavailable("This inference service runs without image search.")
+            assert body.question is not None and body.labelled_version_id is not None
+            found = images.search(body.question, body.labelled_version_id, body.k or 10)
+            return StreamingResponse(ndjson(found), media_type="application/x-ndjson")
         if body.mode == "rag":
             if rag is None:
                 raise LlmUnavailable("This inference service runs without retrieval.")

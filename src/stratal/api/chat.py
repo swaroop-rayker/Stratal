@@ -149,6 +149,14 @@ class _Turn:
         elif name == "citations":
             self.citations = list(data.get("citations") or [])
             self.details.update({k: v for k, v in data.items() if k != "citations"})
+        elif name == "images":
+            self.details.update(
+                {
+                    "images": list(data.get("images") or []),
+                    "searched": data.get("searched"),
+                    "version_id": data.get("version_id"),
+                }
+            )
         elif name == "done":
             self.done = data
         elif name == "error":
@@ -219,7 +227,8 @@ def _store(turn: _Turn) -> None:
             model=turn.meta.get("model"),
             revision=turn.meta.get("revision"),
             device=turn.meta.get("device"),
-            index_version_id=turn.meta.get("index_version_id"),
+            index_version_id=turn.meta.get("index_version_id")
+            or turn.meta.get("labelled_version_id"),
             cold_start=bool(turn.meta.get("cold_start")),
             load_ms=turn.meta.get("load_ms"),
             ttft_ms=timings.get("ttft_ms"),
@@ -258,6 +267,12 @@ def _payload(body: ChatRequest, messages: list[Json]) -> Json:
     (open point 8b), so a RAG answer's sources are its own."""
     if body.mode == "rag":
         return {"mode": "rag", "question": body.message, "index_version_id": body.index_version_id}
+    if body.mode == "images":
+        return {
+            "mode": "images",
+            "question": body.message,
+            "labelled_version_id": body.labelled_version_id,
+        }
     return {"mode": "llm", "messages": messages}
 
 
@@ -311,10 +326,17 @@ async def chat(
 ) -> StreamingResponse:
     """Ask the LLM (LLM-1.1). The answer streams as server-sent events: ``session``,
     ``meta``, ``token``…, ``done``; or ``error`` with a problem document."""
-    if body.mode == "images":
+    if body.mode == "images" and body.labelled_version_id is None:
         raise ValidationFailed(
-            "Image search is built later in M12 (ADR-0022 rule 12).",
-            errors=[{"loc": ["body", "mode"], "msg": "not built yet", "code": "not_built"}],
+            "Image search needs a labelled version to search; none was given.",
+            suggested_action="Pick a version with CLIP vectors (one made by label or after it).",
+            errors=[
+                {
+                    "loc": ["body", "labelled_version_id"],
+                    "msg": "required for images",
+                    "code": "missing",
+                }
+            ],
         )
     if body.mode == "rag" and body.index_version_id is None:
         raise ValidationFailed(

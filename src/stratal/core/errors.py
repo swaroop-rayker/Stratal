@@ -190,3 +190,12 @@ class LlmBusy(StratalError):
     code = "llm_busy"
     title = "LLM busy"
     http_status = 503
+
+
+class NoImageEmbeddings(StratalError):
+    """Image search on a version with no CLIP image vectors: the label stage computes them,
+    a query never does (LLM-2.4, ADR-0022 rule 12)."""
+
+    code = "no_image_embeddings"
+    title = "No image vectors to search"
+    http_status = 409

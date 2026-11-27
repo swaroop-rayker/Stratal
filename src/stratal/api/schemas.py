@@ -527,7 +527,9 @@ class Report(_Model):
     review_session_id: str | None
     job_id: str | None
     created_at: str
-    report: ReportBody
+    report: ReportBody | dict[str, Any]
+    """``phase1_dataset``: :class:`ReportBody`; ``retrieval``: hit@k, missed questions,
+    relevance and thresholds (LLM-2.2, ADR-0022 rule 11)."""
 
 
 class ReviewSummary(_Model):

@@ -19,6 +19,7 @@ from stratal.core.settings import get_settings
 from stratal.db.engine import get_engine
 from stratal.inference.app import create_inference_app
 from stratal.inference.holder import ModelHolder, decode_image
+from stratal.inference.image_search import ImageSearch
 from stratal.inference.llm import LlmAdapter, NvmlCard, OllamaHttp
 from stratal.inference.rag import RagService, Retriever
 from stratal.mon.emitter import StreamEmitter
@@ -72,7 +73,11 @@ def main() -> int:
 
     signal.signal(signal.SIGTERM, _stop)
     app = create_inference_app(
-        holder, functools.partial(decode_image, data_dir=settings.data_dir), llm, rag
+        holder,
+        functools.partial(decode_image, data_dir=settings.data_dir),
+        llm,
+        rag,
+        ImageSearch(engine=get_engine(), data_dir=settings.data_dir),
     )
     log.info("inference_started", port=settings.inference_port, status=holder.status())
     uvicorn.run(app, host="0.0.0.0", port=settings.inference_port, log_config=None)
