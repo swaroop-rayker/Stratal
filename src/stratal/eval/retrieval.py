@@ -28,7 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from stratal.data.corpus import SECTION_SEPARATOR
 
 Json = dict[str, Any]
-DEFAULT_SET = "stratal-docs-questions-v1"
+DEFAULT_SET = "stratal-docs-questions-v2"  # v2 approved and frozen 2026-11-27; v1 kept
 KS = (1, 5, 10)
 THRESHOLDS = tuple(round(0.30 + 0.05 * i, 2) for i in range(11))
 BIN_EDGES = tuple(round(0.20 + 0.05 * i, 2) for i in range(15))

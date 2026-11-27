@@ -1,6 +1,7 @@
 """LLM-2.2 (ADR-0022 rules 9 and 10): hit@k against hand-computed values on a planted set."""
 
 from stratal.eval.retrieval import (
+    DEFAULT_SET,
     Label,
     Question,
     QuestionSet,
@@ -68,8 +69,26 @@ def test_LLM_2_2_hit_at_k_matches_hand_computed_values() -> None:
     assert report["relevance"]["unanswerable_bins"][4] == 1  # 0.40–0.45
 
 
+FROZEN = {  # approved by the owner on 2026-11-27; a change makes a new version
+    "stratal-docs-questions-v1": "851a9b0d94757c882bc928ac89b4f7f1198f1860b3f8da4ae03ec142ce1601c5",
+    "stratal-docs-questions-v2": "957b5a5529f0049726636ad648cefeeb28dfd264b9f06a9ef8bda4354f80133b",
+}
+
+
 def test_LLM_2_2_the_question_set_is_well_formed() -> None:
-    questions = load_question_set("stratal-docs-questions-v1")
-    assert len(questions.sha256) == 64
-    assert len(questions.answerable) >= 45
-    assert sum(1 for q in questions.questions if not q.answerable) >= 12
+    for name, sha256 in FROZEN.items():
+        questions = load_question_set(name)
+        assert questions.sha256 == sha256, f"{name} is frozen"
+        assert len(questions.answerable) >= 45
+        assert sum(1 for q in questions.questions if not q.answerable) >= 12
+    assert DEFAULT_SET == "stratal-docs-questions-v2"
+
+
+def test_LLM_2_2_v2_only_adds_labels_to_v1() -> None:
+    v1 = load_question_set("stratal-docs-questions-v1").questions
+    v2 = load_question_set("stratal-docs-questions-v2").questions
+    assert [(q.id, q.question, q.answerable) for q in v1] == [
+        (q.id, q.question, q.answerable) for q in v2
+    ]
+    assert all(set(a.labels) <= set(b.labels) for a, b in zip(v1, v2, strict=True))
+    assert sum(len(b.labels) - len(a.labels) for a, b in zip(v1, v2, strict=True)) == 56

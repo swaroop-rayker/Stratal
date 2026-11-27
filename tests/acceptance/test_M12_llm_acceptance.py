@@ -35,7 +35,7 @@ pytestmark = pytest.mark.acceptance
 
 API = os.environ.get("STRATAL_ACCEPTANCE_API", "http://api:8000/api/v1")
 INDEX = os.environ.get("STRATAL_ACCEPTANCE_INDEX", "ds_710b60b40962")
-QUESTION_SET = "stratal-docs-questions-v1"
+QUESTION_SET = "stratal-docs-questions-v2"
 FIRST_TOKEN_MS = 2000
 RAG_TOTAL_MS = 8000
 CITED_SHARE = 0.9

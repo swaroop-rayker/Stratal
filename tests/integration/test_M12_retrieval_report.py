@@ -81,7 +81,7 @@ def test_LLM_2_2_report_on_an_index_version(runner: Runner, tmp_path: Path) -> N
         row = session.scalars(select(EvalReport).where(EvalReport.kind == "retrieval")).one()
         report = row.report
     assert row.version_id == stages["index"]
-    assert report["question_set"]["name"] == "stratal-docs-questions-v1"
+    assert report["question_set"]["name"] == "stratal-docs-questions-v2"
     assert report["question_set"]["answerable"] == 50
     assert set(report["hits"]) == {"hit@1", "hit@5", "hit@10"}
     # The two planted sections answer a01 and a19 (IDs and the VM's memory cap).

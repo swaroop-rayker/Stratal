@@ -1,6 +1,6 @@
 # RAG question set v2 — draft for the owner's check
 
-**Draft, 2026-11-27.** v1 stays frozen and unchanged. v2 is v1 with labels added; no question is added, removed or reworded, and the 15 unanswerable questions are untouched. File: `src/stratal/eval/rag/stratal-docs-questions-v2.jsonl`. Once approved, v2 is frozen, becomes the default set, and both reports are rebuilt.
+**Approved by the owner on 2026-11-27 ("Approved as is"); frozen** (SHA-256 `957b5a55…80133b`, pinned in `test_LLM_2_2_the_question_set_is_well_formed`). v2 is the default set from then on. v1 stays frozen and unchanged. v2 is v1 with labels added; no question is added, removed or reworded, and the 15 unanswerable questions are untouched. File: `src/stratal/eval/rag/stratal-docs-questions-v2.jsonl`. Once approved, v2 is frozen, becomes the default set, and both reports are rebuilt.
 
 ## Why a v2
 
