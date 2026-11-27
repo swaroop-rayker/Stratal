@@ -6,7 +6,7 @@
 | Run | 2026-11-27, RTX 4050 Laptop (6 GB), driver 621.24, Ollama 0.40.16 (`sha256:910d0d8107b5…`) |
 | Scripts | `scripts/spikes/s11_llm.ps1` and `s11_llm.py` (the measurements), `s11_followup.sh` (repeated loads, memory without page cache), `s11_stream_probe.py` (what Qwen3 streams before its first token) |
 | Raw results | `S-11-results.json`, `S-11-memory.json` |
-| Status | **Proposed for the owner's choice of model** |
+| Status | **Decided 2026-11-27: the owner chose Qwen3-1.7B.** SmolLM3-3B's file was deleted and its allow-list entry removed |
 
 ## How it was run
 

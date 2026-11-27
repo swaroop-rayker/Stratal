@@ -181,30 +181,15 @@ CATALOG = _catalog(
         display="Qwen3-1.7B (Q4_K_M)",
         licence="Apache-2.0",
         purpose=(
-            "LLM candidate for spike S-11 (LLM-1.1, M12 decision 1). Qwen publishes only an"
-            " 8-bit GGUF, so Unsloth's 4-bit conversion of the same weights is used"
+            "The LLM (LLM-1.1), chosen by the owner from spike S-11 on 2026-11-27 (M12"
+            " decision 1). Qwen publishes only an 8-bit GGUF, so Unsloth's 4-bit conversion of"
+            " the same weights is used. SmolLM3-3B, the other candidate, was removed after S-11"
         ),
         files=(
             ModelFile(
                 "Qwen3-1.7B-Q4_K_M.gguf",
                 1107409472,
                 sha256="b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897",
-            ),
-        ),
-    ),
-    PretrainedModel(
-        name="smollm3-3b-q4km",
-        repo_id="ggml-org/SmolLM3-3B-GGUF",
-        revision="4965cb60b150737b68a0408c36aeefb65078f894",
-        role="llm",
-        display="SmolLM3-3B (Q4_K_M)",
-        licence="Apache-2.0",
-        purpose="LLM candidate for spike S-11 (LLM-1.1, M12 decision 1), from llama.cpp's org",
-        files=(
-            ModelFile(
-                "SmolLM3-Q4_K_M.gguf",
-                1915305312,
-                sha256="8334b850b7bd46238c16b0c550df2138f0889bf433809008cc17a8b05761863e",
             ),
         ),
     ),

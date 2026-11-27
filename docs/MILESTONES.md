@@ -30,7 +30,7 @@
 | M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
 | M11 | Dashboards and monitoring completion | 2 | L | Done 2026-11-24 |
 | M11b | Tabular transforms | 2 | M | Done 2026-11-26 (with DATA-1.4.AC2, delimited-text tables) |
-| M12 | LLM serving and RAG | 3 | L | In progress (kickoff decisions 2–12, 2026-11-27; decision 1 after S-11) |
+| M12 | LLM serving and RAG | 3 | L | In progress (decisions 1–12 taken 2026-11-27: Qwen3-1.7B from S-11) |
 | M13 | Router, tools, caption refinement | 3 | L | Detailed, approved 2026-11-22 |
 | M14 | Text→image and LoRA | 4 | L | Outline |
 | M15 | Translation, chat UI, polish | 5 | L | Outline |
@@ -727,7 +727,7 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 | | |
 |---|---|
-| Status | **Approved by the owner on 2026-11-22** ("yes I do approve"). **Decisions 2 to 12 taken at M12's kickoff on 2026-11-27** ("Accept all"): the recommended option in each. Decision 1 is taken from S-11's report. M13's open points are still open until M13's kickoff |
+| Status | **Approved by the owner on 2026-11-22** ("yes I do approve"). **Decisions 2 to 12 taken at M12's kickoff on 2026-11-27** ("Accept all"): the recommended option in each. **Decision 1 taken the same day from S-11's report: Qwen3-1.7B** (`docs/spikes/S-11-llm.md`). M13's open points are still open until M13's kickoff |
 | Done when (SPEC §2) | Chat answers grounded in the corpus, with citations; the router picks the correct model |
 | Requirements | All 12 phase-3 requirements: 4 P0 (LLM-1.1, LLM-2.1, LLM-2.2, LLM-3.1), 5 P1 (DATA-5.3, LLM-2.3, LLM-2.4, LLM-3.2, LABEL-1.6) and 3 P2 (LLM-4.1, LLM-5.1, LABEL-1.7), plus NFR-6. NFR-1, NFR-2, NFR-7 and NFR-8 are checked again for the new services. Each requirement stays in the milestone the outline gave it; nothing is added or dropped |
 
@@ -742,7 +742,9 @@ Each has a recommendation; none is taken until the owner decides. Decision 1 is 
 > - **Embedding model:** `BAAI/bge-small-en-v1.5`, 127 MiB of weights, MIT.
 > - **Corpus (decision 5):** about 0.7 MB and 111,000 words.
 > - **Numbering:** M11b used SCREENS.md v4, so the phase-3 G1 revision is **v5**.
-> - **Downloads:** S-11's still need their own approval.
+> - **Downloads:** approved by the owner ("Yes, download") and fetched 2026-11-27.
+>
+> **Decision 1, 2026-11-27** (the owner, from S-11's report): **Qwen3-1.7B (Q4_K_M)**. SmolLM3-3B's file was deleted and its allow-list entry removed. S-11's findings for ADR-0021: keep CUDA's kernel cache on a volume (the first GPU load in a new container takes about 60 s, then 3–5 s); Ollama needs about 1 GiB of process memory (page cache aside); `inference` grows by about 75 MiB; set `OLLAMA_NO_CLOUD=1`. Open for M12's build: citations (5 of 10 answers), Qwen3's late first token in RAG, and occasional slow prompt reads.
 
 1. **The LLM (LLM-1.1).** One to three billion parameters, 4-bit, under a licence that needs no acceptance (R-20).
    - (a) **Qwen3-1.7B**, Apache 2.0, about 1.1 GB as a 4-bit GGUF file. Trained for tool calls and JSON output; its "thinking" mode is switched off for chat, where it would spend NFR-6's first-token budget.
@@ -855,7 +857,7 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 
 **Done when**
 
-- [ ] S-11 report delivered and the model chosen; decisions 1 to 12 recorded (2 to 12 on 2026-11-27, "Accept all"); ADR-0021 and ADR-0022 approved
+- [ ] S-11 report delivered and the model chosen; decisions 1 to 12 recorded (2 to 12 on 2026-11-27, "Accept all"; 1 the same day, Qwen3-1.7B, `docs/spikes/S-11-llm.md`); ADR-0021 and ADR-0022 approved
 - [ ] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry
 - [ ] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading
 - [ ] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index
