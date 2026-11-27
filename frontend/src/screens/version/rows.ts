@@ -72,6 +72,22 @@ export function nodeFact(v: Version, current = false): string {
   }
   const n = (k: string) => count(v, k).toLocaleString("en-US");
   const config = v.config as Record<string, unknown>;
+  if (v.dtype === "text_corpus" || v.dtype === "instruction_pairs") {
+    // SCR-03 for corpora: one corpus fact per node (mockup SCR-03corpora_v1, region 2).
+    const what = v.dtype === "text_corpus" ? "documents" : "pairs";
+    switch (v.stage) {
+      case "ingest":
+        return count(v, "rejected") ? `${n("accepted")} ${what} · ${n("rejected")} rejected` : `${n("accepted")} ${what}`;
+      case "clean_text":
+        return `${n("accepted")} kept · ${n("duplicate")} duplicates`;
+      case "chunk":
+        return `${n("accepted")} chunks${typeof config.chunk_tokens === "number" ? ` · ${String(config.chunk_tokens)} tokens` : ""}`;
+      case "index": {
+        const model = typeof config.embedding_model === "string" ? config.embedding_model.replace(/-en-v[\d.]+$/, "") : "";
+        return `${n("accepted")} vectors${model ? ` · ${model}` : ""}`;
+      }
+    }
+  }
   switch (v.stage) {
     case "ingest":
       return `${n("accepted")} accepted`;

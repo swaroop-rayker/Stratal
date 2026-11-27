@@ -5,11 +5,13 @@ import json
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from stratal.api.app import create_app
 from stratal.core.settings import get_settings
 from stratal.data import registry
-from stratal.data.corpus import chat_messages
+from stratal.data.corpus import chat_messages, qwen_chat_format
 from stratal.db.engine import get_engine
 from stratal.storage.manifest import iter_rows
 from stratal.testing.harness import Runner
@@ -56,3 +58,19 @@ def test_DATA_5_3_instruction_pairs_are_ingested_cleaned_and_split(
     messages = chat_messages(record)
     assert messages[0]["role"] == "user" and record["instruction"] in messages[0]["content"]
     assert messages[1] == {"role": "assistant", "content": record["output"]}
+
+    # SCR-03's pair drawer: the API gives each pair as the model will see it.
+    client = TestClient(create_app())
+    # The dataset list reads the corpus modality (SCREENS.md v5); it was a 500 before.
+    listed = client.get("/api/v1/datasets")
+    assert listed.status_code == 200
+    assert {"pairs": "instruction pairs"}.items() <= {
+        d["slug"]: d["modality"] for d in listed.json()["items"]
+    }.items()
+    page = client.get(
+        f"/api/v1/versions/{versions['split']}/rows", params={"status": "accepted", "limit": 1}
+    ).json()
+    shown = page["items"][0]
+    given = json.loads(shown["record"])
+    assert shown["chat_format"] == qwen_chat_format(chat_messages(given))
+    assert shown["chat_format"].startswith(f"<|im_start|>user\n{given['instruction']}\n\n")

@@ -13,8 +13,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from stratal.api.app import create_app
 from stratal.core.settings import get_settings
 from stratal.data import registry
 from stratal.db.engine import get_engine
@@ -136,6 +138,23 @@ def test_LLM_2_1_corpus_is_chunked_and_indexed(runner: Runner, tmp_path: Path) -
     best = ordered[int(positions[0][0])]
     assert best["section"] == "Stratal — Data Model › 3. Identifiers"
     assert 0.5 < float(scores[0][0]) <= 1.0001
+
+    # SCR-03's corpus facts and its chunk filters, through the API.
+    client = TestClient(create_app())
+    facts = client.get(f"/api/v1/versions/{versions['index']}/index").json()
+    assert facts["vectors"] == len(chunks) and facts["dimension"] == 384
+    assert facts["model"] == "bge-small-en-v1.5" and facts["size_bytes"] > 0
+    assert facts["documents"] == 2
+    assert facts["characters"] == sum(
+        len(r["text"]) for r in documents.values() if r["status"] == "accepted"
+    )
+    gone = client.get(f"/api/v1/versions/{versions['chunk']}/index")
+    assert gone.status_code == 404 and "not an index version" in gone.json()["detail"]
+    rows = f"/api/v1/versions/{versions['index']}/rows"
+    adr = client.get(rows, params={"document": "decisions/ADR-0008-sleep.md"}).json()
+    assert adr["matched"] == sum(r["document"] == "decisions/ADR-0008-sleep.md" for r in chunks)
+    found = client.get(rows, params={"text": "HEARTBEAT"}).json()["items"]
+    assert found and all("heartbeat" in r["text"].lower() for r in found)
 
 
 def test_LLM_2_1_another_chunk_size_is_another_version_and_reuses_vectors(

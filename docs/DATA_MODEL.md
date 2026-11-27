@@ -84,7 +84,7 @@ Types are PostgreSQL types. All timestamps are `timestamptz` in UTC.
 | `id` | bigint identity | no | PK |
 | `slug` | text | no | unique |
 | `display_name` | text | yes | |
-| `modality` | text | no | `image`, `tabular`, `text` |
+| `modality` | text | no | `image`, `tabular`, `text`; from M12 `text corpus`, `instruction pairs` (the corpus types, ADR-0022) |
 | `source_uri` | text | yes | where the raw data came from; informational |
 | `created_at` | timestamptz | no | |
 

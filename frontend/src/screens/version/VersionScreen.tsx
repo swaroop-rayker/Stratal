@@ -17,6 +17,7 @@ import { useCrumbs } from "../../shell/hooks";
 import { TrainDrawer, trainable } from "../build/TrainDrawer";
 import { StartPipelineDrawer } from "../datasets/StartPipelineDrawer";
 import { ColumnsTab, transformOf } from "./ColumnsTab";
+import { CorpusActions, CorpusDrawer, corpusKind, documentsVersion, GoneCitation, IndexFacts } from "./Corpus";
 import { CompareTab } from "./CompareVersions";
 import { DistributionsTab } from "./Distributions";
 import { LineageStrip } from "./LineageStrip";
@@ -67,6 +68,8 @@ function semanticOf(version: Version, lineage: Lineage | undefined): SemanticCou
   return s.clusters > 0 ? s : null;
 }
 
+const NO_FILTER: Partial<Record<string, string>> = { tabular: "tables", labelled_text: "texts", text_corpus: "corpora", instruction_pairs: "pairs" };
+
 function Tiles({ version, stats, lineage, pressed, onPress, semantic, onSemantic }: {
   version: Version;
   stats: Stats | undefined;
@@ -86,18 +89,23 @@ function Tiles({ version, stats, lineage, pressed, onPress, semantic, onSemantic
   const rejectStages = [...new Set(rejected.map((r) => r.decided_at_stage))];
   const context: Record<Status, string> = {
     accepted: `${((versionCount(version, "accepted") / total) * 100).toFixed(1)}%${pre && typeof pre.max_side === "number" ? ` · copies ≤ ${String(pre.max_side)} px` : ""}`,
-    rejected: rejected.length ? `at ${rejectStages.join(", ")} · ${String(rejected.length)} ${rejected.length === 1 ? "reason" : "reasons"}` : "none",
+    rejected:
+      rejected.length === 1 && corpusKind(version)
+        ? (rejected[0]?.reason_code ?? "")
+        : rejected.length
+          ? `at ${rejectStages.join(", ")} · ${String(rejected.length)} ${rejected.length === 1 ? "reason" : "reasons"}`
+          : "none",
     duplicate: configOf(lineage, version, "clean")
       ? `${count(rows("exact_duplicate"))} exact · ${count(rows("near_duplicate"))} near`
       : configOf(lineage, version, "clean_table") ?? configOf(lineage, version, "clean_text")
-        ? `${count(rows("exact_duplicate"))} exact · checked at ${version.dtype === "labelled_text" ? "clean_text" : "clean_table"}`
+        ? `${count(rows("exact_duplicate"))} exact · checked at ${configOf(lineage, version, "clean_text") ? "clean_text" : "clean_table"}`
         : "no clean stage yet",
     filtered: filter
       ? `${((versionCount(version, "filtered") / total) * 100).toFixed(1)}% · CLIP below ${String(filter.clip_threshold)}`
       : rows("transform_filter")
         ? `by the transform's filter (DATA-7.4)`
-        : version.dtype === "tabular" || version.dtype === "labelled_text"
-          ? `no filter for ${version.dtype === "tabular" ? "tables" : "texts"}`
+        : version.dtype && NO_FILTER[version.dtype]
+          ? `no filter for ${NO_FILTER[version.dtype] ?? ""}`
           : "no filter stage yet",
   };
   return (
@@ -492,7 +500,9 @@ export function VersionScreen() {
   useFeedMessage("job", onJob);
 
   const accepted = v ? versionCount(v, "accepted") : 1;
-  const modelsHere = v ? trainable(v) : false;
+  const kind = v ? corpusKind(v) : null;
+  // Corpora are not trained on here (M13 fine-tunes from pairs): no Models tab, no Train.
+  const modelsHere = v ? trainable(v) && kind === null : false;
   const models = useVersionModels(versionId, modelsHere);
   const status = (params.get("status") ?? (v && accepted === 0 ? "rejected" : null)) as Status | null;
   const filters: RowFilters = useMemo(() => {
@@ -504,6 +514,10 @@ export function VersionScreen() {
     if (split === "train" || split === "val" || split === "test") f.split = split;
     const q = params.get("q");
     if (q) f.q = q;
+    const document = params.get("document");
+    if (document) f.document = document;
+    const text = params.get("text");
+    if (text) f.text = text;
     if (params.get("semantic") === "1") f.semantic = true;
     return f;
   }, [params, status]);
@@ -521,7 +535,7 @@ export function VersionScreen() {
         }
         return next;
       }, { replace: true });
-      if ("status" in patch || "reason" in patch || "split" in patch || "q" in patch || "semantic" in patch) setSelected(0);
+      if (["status", "reason", "split", "q", "semantic", "document", "text"].some((k) => k in patch)) setSelected(0);
     },
     [setParams],
   );
@@ -532,6 +546,9 @@ export function VersionScreen() {
     loaded.find((r) => r.row_key === openKey) ??
     lookup.data?.pages.flatMap((p) => p.items).find((r) => r.row_key === openKey) ??
     null;
+  const docsId = v && kind === "chunks" ? documentsVersion(lineage.data, v) : null;
+  const docRows = useRows(docsId ?? versionId, { status: "accepted" }, docsId !== null);
+  const documents = useMemo(() => docRows.data?.pages.flatMap((p) => p.items.map((r) => r.row_key)) ?? [], [docRows.data]);
   const threshold = (() => {
     const c = v ? configOf(lineage.data, v, "clean") : null;
     return c && typeof c.phash_max_distance === "number" ? c.phash_max_distance : null;
@@ -555,7 +572,9 @@ export function VersionScreen() {
     const notFound = version.error instanceof ApiError && version.error.problem.status === 404;
     return (
       <div className="scr03">
-        {notFound ? (
+        {notFound && params.get("cited") ? (
+          <GoneCitation row={openKey} chat={params.get("chat")} />
+        ) : notFound ? (
           <div className="state err" role="alert">
             <Icon name="alert" />
             <b>Version {versionId} not found</b>
@@ -594,7 +613,8 @@ export function VersionScreen() {
             {v.version_id} <span className="stage-tag">{v.stage}</span>
           </h1>
           <div className="sub">
-            {v.dataset} · made {when(v.created_at)}
+            {v.dataset}
+            {kind ? ` · ${v.dtype === "instruction_pairs" ? "instruction pairs" : "text corpus"}` : ""} · made {when(v.created_at)}
             {v.created_by_job_id ? (
               <>
                 {" by "}
@@ -619,7 +639,11 @@ export function VersionScreen() {
           </div>
         </div>
         <span className="spacer" />
-        <Actions version={v} stats={stats.data} lineage={lineage.data} onContinue={() => { setDrawer(true); }} onReview={() => { setReview(true); }} onTrain={() => { setTraining(true); }} />
+        {kind ? (
+          <CorpusActions version={v} onContinue={() => { setDrawer(true); }} />
+        ) : (
+          <Actions version={v} stats={stats.data} lineage={lineage.data} onContinue={() => { setDrawer(true); }} onReview={() => { setReview(true); }} onTrain={() => { setTraining(true); }} />
+        )}
       </div>
 
       {lineage.data ? (
@@ -639,9 +663,24 @@ export function VersionScreen() {
         <div className="notice" role="status">
           <Icon name="alert" />
           <div>
-            <b>No row was accepted.</b>{" "}
-            {topReason.rows === v.row_count ? `All ${count(v.row_count)} rows were` : `${count(topReason.rows)} of ${count(v.row_count)} rows were`}{" "}
-            {topReason.status} as <span className="mono">{topReason.reason_code}</span>.{" "}
+            {kind ? (
+              <>
+                <b>No {kind === "pairs" ? "pair" : "document"} could be read.</b> {count(versionCount(v, "rejected"))} rejected:{" "}
+                {(stats.data?.reasons ?? []).filter((r) => r.status === "rejected").map((r, i) => (
+                  <span key={r.reason_code}>
+                    {i ? ", " : ""}
+                    {count(r.rows)} <span className="mono">{r.reason_code}</span>
+                  </span>
+                ))}
+                . Rows opens filtered to <i>rejected</i>.{" "}
+              </>
+            ) : (
+              <>
+                <b>No row was accepted.</b>{" "}
+                {topReason.rows === v.row_count ? `All ${count(v.row_count)} rows were` : `${count(topReason.rows)} of ${count(v.row_count)} rows were`}{" "}
+                {topReason.status} as <span className="mono">{topReason.reason_code}</span>.{" "}
+              </>
+            )}
             {ADVICE[topReason.reason_code] ? (
               <>
                 <b>Do:</b> {ADVICE[topReason.reason_code]}
@@ -651,6 +690,9 @@ export function VersionScreen() {
         </div>
       ) : null}
 
+      {kind === "chunks" && v.stage === "index" ? (
+        <IndexFacts version={v} lineage={lineage.data} />
+      ) : (
       <Tiles
         version={v}
         stats={stats.data}
@@ -660,6 +702,7 @@ export function VersionScreen() {
         semantic={params.get("semantic") === "1"}
         onSemantic={(on) => { set({ semantic: on ? "1" : null, status: null, tab: null }); }}
       />
+      )}
 
       <Tabs.Root className="panel" value={tab} onValueChange={(t) => { set({ tab: t === "rows" ? null : t }); }}>
         <Tabs.List className="tabs" aria-label="Version detail">
@@ -705,8 +748,11 @@ export function VersionScreen() {
             onOpen={(i, rows) => {
               setSelected(i);
               setLoaded(rows);
-              set({ row: rows[i]?.row_key ?? null });
+              set({ row: rows[i]?.row_key ?? null, cited: null, chat: null });
             }}
+            corpus={kind}
+            documents={documents}
+            drawerOpen={openRow !== null}
           />
         </Tabs.Content>
         {v.dtype === "tabular" ? (
@@ -761,7 +807,24 @@ export function VersionScreen() {
         </Tabs.Content>
       </Tabs.Root>
 
-      {openRow ? (
+      {openRow && kind ? (
+        <CorpusDrawer
+          kind={kind}
+          version={v}
+          lineage={lineage.data}
+          row={openRow}
+          onClose={() => { set({ row: null, cited: null, chat: null }); }}
+          onMove={(delta) => {
+            const i = loaded.findIndex((r) => r.row_key === openRow.row_key);
+            const next = loaded[i + delta];
+            if (i >= 0 && next) {
+              setSelected(i + delta);
+              set({ row: next.row_key });
+            }
+          }}
+          onOpenRow={(key) => { set({ row: key, cited: null, chat: null }); }}
+        />
+      ) : openRow ? (
         <RowDrawer
           versionId={v.version_id}
           row={openRow}

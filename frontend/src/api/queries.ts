@@ -64,10 +64,11 @@ export function useStageSchemas(enabled: boolean) {
   });
 }
 
-export function useStageDefaults(enabled: boolean) {
+export function useStageDefaults(enabled: boolean, datasetType: string | null = null) {
   return useQuery({
-    queryKey: keys.defaults,
-    queryFn: () => call(() => api.GET("/api/v1/config/defaults")),
+    queryKey: [...keys.defaults, datasetType],
+    queryFn: () =>
+      call(() => api.GET("/api/v1/config/defaults", { params: { query: datasetType ? { dataset_type: datasetType } : {} } })),
     enabled,
     staleTime: Infinity,
   });
@@ -121,6 +122,10 @@ export interface RowFilters {
   /** Only rows in a semantic cluster (DATA-2.3, SCR-03 v2). */
   semantic?: boolean;
   q?: string;
+  /** A corpus's chunks of one document (SCR-03 for corpora). */
+  document?: string;
+  /** A substring of the rows' text, any case. */
+  text?: string;
 }
 
 export const ROW_PAGE = 200;

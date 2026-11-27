@@ -208,6 +208,7 @@ def select_rows(
     *,
     equals: Mapping[str, str],
     key_contains: str | None = None,
+    text_contains: str | None = None,
     after_key: str | None = None,
     limit: int,
     not_null: Sequence[str] = (),
@@ -215,7 +216,8 @@ def select_rows(
     """One page of rows, in ``row_key`` order, that match every filter (DATA-3.1, UI-2.1).
 
     ``equals`` maps column names to the value they must equal; ``key_contains``
-    is a substring of ``row_key``; ``after_key`` is the cursor, the last key of
+    is a substring of ``row_key``; ``text_contains`` a substring of ``text``, any case
+    (a corpus's chunks, DATA-5.3); ``after_key`` is the cursor, the last key of
     the previous page; ``not_null`` names columns that must have a value. The
     manifest is read whole: at 1 to 2 MB per 10,000 rows
     (DATA_MODEL.md §10) that is cheaper than streaming it in batches.
@@ -237,6 +239,12 @@ def select_rows(
         both(pc.is_valid(table[name]))
     if key_contains:
         both(pc.match_substring(table["row_key"], key_contains))
+    if text_contains:
+        if "text" not in table.column_names:
+            return RowPage(rows=[], matched=0)
+        both(
+            pc.fill_null(pc.match_substring(table["text"], text_contains, ignore_case=True), False)
+        )
     if mask is not None:
         table = table.filter(mask)
     matched = table.num_rows
@@ -261,3 +269,18 @@ def read_metadata(path: Path) -> dict[str, str]:
     raw = pq.read_schema(path).metadata or {}
     decoded = {key.decode(): value.decode() for key, value in raw.items()}
     return {key: value for key, value in decoded.items() if key.startswith("stratal.")}
+
+
+def corpus_extent(path: Path) -> tuple[int, int]:
+    """Documents and their characters behind a chunk manifest's accepted rows (SCR-03's
+    corpus facts). Chunks overlap, so a document's length is its last chunk's end."""
+    if not {"document", "char_end"} <= set(pq.read_schema(path).names):
+        return 0, 0
+    table = pq.read_table(path, columns=["status", "document", "char_end"])
+    table = table.filter(
+        pc.and_(pc.equal(table["status"], "accepted"), pc.is_valid(table["document"]))
+    )
+    if table.num_rows == 0:
+        return 0, 0
+    ends = table.group_by("document").aggregate([("char_end", "max")])
+    return ends.num_rows, int(pc.sum(ends["char_end_max"]).as_py() or 0)

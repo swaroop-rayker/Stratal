@@ -239,7 +239,8 @@ class VersionList(_Model):
 class Dataset(_Model):
     slug: str
     display_name: str | None
-    modality: Literal["image", "tabular", "text"]
+    modality: Literal["image", "tabular", "text", "text corpus", "instruction pairs"]
+    """M12 (SCREENS.md v5): a corpus's dataset reads *text corpus* or *instruction pairs*."""
     source_uri: str | None
     created_at: str
     updated_at: str
@@ -301,6 +302,21 @@ class Row(BaseModel):
     split_stratum: str | None = None
     semantic_cluster_id: str | None = None
     """M11 (DATA-2.3): the semantic cluster an accepted row is in."""
+    record: str | None = None
+    """JSON text: a table's row, or an instruction pair (instruction, input, output)."""
+    text: str | None = None
+    token_count: int | None = None
+    title: str | None = None
+    """M12 (DATA-5.3): a corpus document's title, its first heading."""
+    document: str | None = None
+    """M12: the document a chunk comes from, its path in the source folder."""
+    section: str | None = None
+    """M12: the chunk's heading path, "Title › Section › Subsection"."""
+    char_start: int | None = None
+    char_end: int | None = None
+    chat_format: str | None = None
+    """M12: an instruction pair as the model will see it (the pairs' adapter, ADR-0022 rule 2).
+    Not in the manifest; made from ``record`` when the rows are read."""
 
 
 class RowPage(_Model):
@@ -339,6 +355,22 @@ class Stats(_Model):
     by_split: dict[str, int] | None
     size_bytes: Distribution
     clip_score: Distribution | None
+
+
+class IndexFacts(_Model):
+    """An index version's vectors and the documents behind them (DATA-5.3, LLM-2.1)."""
+
+    version_id: str
+    vectors: int
+    dimension: int
+    model: str
+    revision: str
+    query_prefix: str | None
+    metric: str
+    sha256: str
+    size_bytes: int | None = Field(description="The index file on disk; null if it is gone.")
+    documents: int
+    characters: int = Field(description="The documents' length: each one's last chunk end.")
 
 
 class Source(_Model):

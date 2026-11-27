@@ -1,11 +1,12 @@
 """Datasets, versions, rows, blobs and sources (docs/API.md §3.2; DATA-3.1 to 3.4, UI-2.1)."""
 
 import io
+import json
 import os
 from collections import OrderedDict
 from collections.abc import Callable
 from pathlib import Path as FsPath
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 from fastapi import APIRouter, Path, Query, Response
 from fastapi.responses import FileResponse
@@ -18,6 +19,7 @@ from stratal.api.jobs import Db, Limit
 from stratal.core.errors import Conflict, NotFound, ValidationFailed
 from stratal.core.settings import get_settings
 from stratal.data import browse, columns, profile, registry, transform, transform_stage
+from stratal.data.corpus import META_RAG_INDEX, chat_messages, qwen_chat_format
 from stratal.data.delimited import DELIMITED_SUFFIXES, sniff
 from stratal.data.tables import TABLE_FORMATS, table_columns
 from stratal.db.models import Dataset, Derivation
@@ -26,7 +28,7 @@ from stratal.registry import store as model_store
 from stratal.runtime.jobs import field_problems
 from stratal.storage.blobs import BlobStore
 from stratal.storage.derivations import KIND_CLIP_IMAGE
-from stratal.storage.manifest import select_rows
+from stratal.storage.manifest import corpus_extent, read_metadata, select_rows
 
 router = APIRouter(tags=["datasets"])
 Json = dict[str, Any]
@@ -108,6 +110,19 @@ def version_lineage(version_id: str, session: Db) -> Json:
     return browse.lineage_view(session, version_id)
 
 
+def _pair(record: object) -> Json | None:
+    """An instruction pair's record (JSON text in the manifest), or None for anything else."""
+    if not isinstance(record, str) or '"instruction"' not in record:
+        return None
+    try:
+        value = json.loads(record)
+    except ValueError:
+        return None
+    if isinstance(value, dict) and "instruction" in value and "output" in value:
+        return cast(Json, value)
+    return None
+
+
 @router.get("/versions/{version_id}/rows", response_model=schemas.RowPage)
 def version_rows(
     version_id: str,
@@ -121,6 +136,12 @@ def version_rows(
         bool | None, Query(description="Only rows in a semantic cluster (DATA-2.3).")
     ] = None,
     q: Annotated[str | None, Query(max_length=200, description="Row-key substring.")] = None,
+    document: Annotated[
+        str | None, Query(max_length=500, description="A corpus's chunks of one document.")
+    ] = None,
+    text: Annotated[
+        str | None, Query(max_length=200, description="Substring of the row's text, any case.")
+    ] = None,
     limit: Limit = 50,
     cursor: str | None = None,
 ) -> Json:
@@ -133,16 +154,22 @@ def version_rows(
         "split": split,
         "dup_group_id": dup_group_id,
         "semantic_cluster_id": semantic_cluster_id,
+        "document": document,
     }
     page = select_rows(
         path,
         equals={k: v for k, v in given.items() if v is not None},
         key_contains=q,
+        text_contains=text,
         after_key=cursor,
         limit=limit,
         not_null=["semantic_cluster_id"] if semantic else [],
     )
     full = len(page.rows) == limit
+    for row in page.rows:
+        pair = _pair(row.get("record"))
+        if pair is not None:
+            row["chat_format"] = qwen_chat_format(chat_messages(pair))
     return {
         "items": page.rows,
         "matched": page.matched,
@@ -155,6 +182,36 @@ def version_stats(version_id: str, session: Db) -> Json:
     """Counts by status, reason and deciding stage; size and CLIP-score distributions."""
     version, path = registry.manifest_for(session, get_settings().data_dir, version_id)
     return {"version_id": version_id, **browse.version_stats(path, version.row_count)}
+
+
+@router.get("/versions/{version_id}/index", response_model=schemas.IndexFacts)
+def version_index(version_id: str, session: Db) -> Json:
+    """What an index version holds (DATA-5.3, LLM-2.1; SCR-03's corpus facts): its vectors,
+    the embedding model, the index's size on disk, and the documents behind its chunks."""
+    settings = get_settings()
+    _, path = registry.manifest_for(session, settings.data_dir, version_id)
+    text = read_metadata(path).get(META_RAG_INDEX)
+    if text is None:
+        raise NotFound(
+            f"{version_id} is not an index version: it has no vectors.",
+            suggested_action="Open the version made by the index stage.",
+        )
+    info: Json = json.loads(text)
+    blob = BlobStore(settings.data_dir).path_for(str(info["sha256"]))
+    documents, characters = corpus_extent(path)
+    return {
+        "version_id": version_id,
+        "vectors": int(info["count"]),
+        "dimension": int(info["dimension"]),
+        "model": str(info["model"]),
+        "revision": str(info["revision"]),
+        "query_prefix": info.get("query_prefix") or None,
+        "metric": str(info.get("metric") or ""),
+        "sha256": str(info["sha256"]),
+        "size_bytes": blob.stat().st_size if blob.is_file() else None,
+        "documents": documents,
+        "characters": characters,
+    }
 
 
 # -- blobs and sources ---------------------------------------------------------

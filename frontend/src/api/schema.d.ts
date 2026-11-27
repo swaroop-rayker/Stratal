@@ -470,6 +470,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/versions/{version_id}/index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Version Index
+         * @description What an index version holds (DATA-5.3, LLM-2.1; SCR-03's corpus facts): its vectors,
+         *     the embedding model, the index's size on disk, and the documents behind its chunks.
+         */
+        get: operations["version_index_api_v1_versions__version_id__index_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/blobs/{sha256}": {
         parameters: {
             query?: never;
@@ -713,7 +734,8 @@ export interface paths {
         };
         /**
          * Config Defaults
-         * @description Each stage's default config, as a pipeline would resolve it with no overrides.
+         * @description Each stage's default config, as a pipeline would resolve it with no overrides. With
+         *     ``dataset_type``, that type's own defaults are applied too (a corpus's ``max_chars``).
          */
         get: operations["config_defaults_api_v1_config_defaults_get"];
         put?: never;
@@ -2055,7 +2077,7 @@ export interface components {
              * Modality
              * @enum {string}
              */
-            modality: "image" | "tabular" | "text";
+            modality: "image" | "tabular" | "text" | "text corpus" | "instruction pairs";
             /** Source Uri */
             source_uri: string | null;
             /** Created At */
@@ -2711,6 +2733,40 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * IndexFacts
+         * @description An index version's vectors and the documents behind them (DATA-5.3, LLM-2.1).
+         */
+        IndexFacts: {
+            /** Version Id */
+            version_id: string;
+            /** Vectors */
+            vectors: number;
+            /** Dimension */
+            dimension: number;
+            /** Model */
+            model: string;
+            /** Revision */
+            revision: string;
+            /** Query Prefix */
+            query_prefix: string | null;
+            /** Metric */
+            metric: string;
+            /** Sha256 */
+            sha256: string;
+            /**
+             * Size Bytes
+             * @description The index file on disk; null if it is gone.
+             */
+            size_bytes: number | null;
+            /** Documents */
+            documents: number;
+            /**
+             * Characters
+             * @description The documents' length: each one's last chunk end.
+             */
+            characters: number;
         };
         /** Interval */
         Interval: {
@@ -4277,6 +4333,24 @@ export interface components {
             split_stratum?: string | null;
             /** Semantic Cluster Id */
             semantic_cluster_id?: string | null;
+            /** Record */
+            record?: string | null;
+            /** Text */
+            text?: string | null;
+            /** Token Count */
+            token_count?: number | null;
+            /** Title */
+            title?: string | null;
+            /** Document */
+            document?: string | null;
+            /** Section */
+            section?: string | null;
+            /** Char Start */
+            char_start?: number | null;
+            /** Char End */
+            char_end?: number | null;
+            /** Chat Format */
+            chat_format?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -6159,6 +6233,10 @@ export interface operations {
                 semantic?: boolean | null;
                 /** @description Row-key substring. */
                 q?: string | null;
+                /** @description A corpus's chunks of one document. */
+                document?: string | null;
+                /** @description Substring of the row's text, any case. */
+                text?: string | null;
                 limit?: number;
                 cursor?: string | null;
             };
@@ -6208,6 +6286,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Stats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    version_index_api_v1_versions__version_id__index_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexFacts"];
                 };
             };
             /** @description Validation Error */
@@ -6542,7 +6651,9 @@ export interface operations {
     };
     config_defaults_api_v1_config_defaults_get: {
         parameters: {
-            query?: never;
+            query?: {
+                dataset_type?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6558,6 +6669,15 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

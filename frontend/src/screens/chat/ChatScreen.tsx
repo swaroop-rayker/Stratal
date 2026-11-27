@@ -686,9 +686,12 @@ function CitedText({ text, onCite }: { text: string; onCite: (n: number) => void
 }
 
 function SourceRow({ id, source, index, hot, uncited }: { id: string; source: Source; index: string | null | undefined; hot: boolean; uncited?: boolean }) {
+  const { sessionId } = useParams();
   const percent = `${Math.round(Math.max(0, Math.min(1, source.relevance)) * 100)}%`;
+  // SCR-03 opens the chunk "cited as [n]" with the way back here (SCR-03 for corpora, region 5).
+  const back = `${uncited ? "" : `&cited=${String(source.n)}`}${sessionId ? `&chat=${sessionId}` : ""}`;
   return (
-    <Link id={id} className={`ch-s${uncited ? " unc" : ""}${hot ? " is-hover" : ""}`} to={rowLink(index, source.row_key)}>
+    <Link id={id} className={`ch-s${uncited ? " unc" : ""}${hot ? " is-hover" : ""}`} to={`${rowLink(index, source.row_key)}${index ? back : ""}`}>
       <span className="no">{source.n}</span>
       <span>
         <span className="where">

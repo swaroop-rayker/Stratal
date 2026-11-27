@@ -140,7 +140,8 @@ describe("SCR-12", () => {
     const sourcesBox = screen.getByText("Sources").closest("div") as HTMLElement;
     expect(sourcesBox).toHaveTextContent("1 cited of 4 given");
     const row = within(sourcesBox).getByRole("link", { name: /Rule 1/ });
-    expect(row).toHaveAttribute("href", `/versions/${INDEX}?row=${encodeURIComponent("decisions/ADR-0016-inference-service.md#1")}`);
+    // The chunk opens "cited as [1]" with the way back here (SCR-03 for corpora, region 5).
+    expect(row).toHaveAttribute("href", `/versions/${INDEX}?row=${encodeURIComponent("decisions/ADR-0016-inference-service.md#1")}&cited=1&chat=${SESSION}`);
     fireEvent.click(cite);
     await waitFor(() => { expect(document.activeElement).toBe(row); });
     expect(row).toHaveClass("is-hover");
