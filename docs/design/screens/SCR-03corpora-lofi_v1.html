@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-03 for corpora — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. Same sheet as the earlier low-fi files. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; background: #fff; font-family: var(--mono); white-space: nowrap; }
+.select.bad { border: 2px solid var(--ink); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+.t th .sub { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.t td { padding: 0 8px; height: 28px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); }
+.t td.pin, .t th.pin { position: sticky; left: 0; background: #fff; border-right: 1px solid var(--line); } .t th.pin { background: var(--fill); }
+.t .chg { font-weight: 700; } .t .new { outline: 1.5px dashed var(--ink-2); outline-offset: -3px; }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.ask { border: 2px solid var(--note); border-radius: 6px; padding: 10px 14px; background: #fff; max-width: 1280px; margin-top: 12px; } .ask li { color: var(--ink); margin: 4px 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.callout { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--fill); font-size: 12px; } .callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.faint { opacity: .45; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 50%; vertical-align: middle; } .box.on { background: radial-gradient(var(--ink-2) 45%, transparent 50%); }
+/* SCR-03 for corpora (prefixed co-) */
+.co-strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+.co-node { border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; display: flex; flex-direction: column; gap: 1px; background: #fff; }
+.co-node b { font: 600 11px var(--mono); } .co-node span { font-size: 10px; color: var(--ink-3); }
+.co-node.on { border: 2px solid var(--ink); }
+.co-tiles { display: flex; gap: 8px; flex-wrap: wrap; }
+.co-tile { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-width: 120px; } .co-tile b { display: block; font: 600 16px var(--mono); } .co-tile span { font-size: 11px; color: var(--ink-3); }
+.co-split { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 14px; flex: 1; min-height: 0; }
+.co-drawer { border-left: 1px solid var(--line); padding: 0 0 0 14px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.co-drawer h3 { margin: 0; font-size: 14px; display: flex; gap: 8px; align-items: center; }
+.co-text { border: 1px solid var(--soft); border-radius: 6px; padding: 10px 12px; font-size: 12px; line-height: 1.55; background: #fff; overflow: hidden; }
+.co-text .ov { background: var(--fill-2); color: var(--ink-3); }
+.co-kv { display: grid; grid-template-columns: 110px 1fr; gap: 3px 10px; font-size: 12px; } .co-kv span:nth-child(odd) { color: var(--ink-3); }
+.co-drw { position: absolute; top: 0; right: 0; bottom: 0; width: 480px; background: #fff; border-left: 1px solid var(--ink-2); box-shadow: -6px 0 18px rgba(0,0,0,.12); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; z-index: 3; }
+.co-type { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; display: grid; grid-template-columns: 16px 1fr; gap: 2px 8px; font-size: 12px; } .co-type.on { border: 2px solid var(--ink); } .co-type span { grid-column: 2; color: var(--ink-3); font-size: 11px; }
+.co-stage { border: 1px solid var(--soft); border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.co-stage .hd { display: flex; gap: 8px; align-items: center; } .co-stage .hd b { font-family: var(--mono); }
+.co-stage .fields { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-left: 22px; font-size: 11px; } .co-stage .fields label { font: 10px var(--mono); color: var(--ink-3); }
+.co-chat { font: 11px/1.5 var(--mono); border: 1px solid var(--soft); border-radius: 6px; padding: 8px 10px; background: var(--fill); white-space: pre-wrap; }
+.co-states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 1280px; }
+.co-mini { border: 1px solid var(--line); background: #fff; min-height: 220px; display: flex; flex-direction: column; } .co-mini .lbl { font-size: 11px; font-weight: 600; padding: 6px 10px; background: var(--fill); border-bottom: 1px solid var(--soft); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-03 for corpora — documents, chunks, indexes, instruction pairs · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: DATA-5.3, LLM-2.1 (chunk and index), LLM-2.1's citations (a chunk opened from SCR-12)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> v5, "SCR-03 for corpora" and the drawer's two types (approved 2026-11-27)</span><span>Routes: <span class="mono">/versions/:version_id</span>, <span class="mono">?row=&lt;row key&gt;</span></span><span>Design: ADR-0022 rules 1–4, 13</span><span>2026-11-27</span></div>
+<p>Layout and hierarchy only, inside the approved SCR-03: its header, lineage strip, tiles, tabs and row drawer are reused, faint where unchanged. Blue numbers are annotations. The corpus is Stratal's documentation as decision 5 defines it, the 36 Markdown files of <span class="mono">docs/</span>, <span class="mono">docs/decisions/</span> and <span class="mono">docs/spikes/</span> without MILESTONES and KICKOFF (752,552 characters); the documents, titles, sizes and the seven <span class="mono">.json</span> files under <span class="mono">docs/spikes/</span> are real. The chunk counts are estimates from the sections and their word counts (about 970 chunks at 256 tokens, 1,920 at 128), since <span class="mono">chunk</span> is not built; version IDs are placeholders (<span class="mono">ds_…</span>). The instruction pair in frame D is written for the mockup: there is no instruction-pairs source yet.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>SCR-03 stays one screen for every stage;</b> what changes by stage is the Rows tab's columns and the tiles (SCREENS v5's table). No tab is added for corpora; <i>Columns</i>, <i>Models</i> and the train and transform actions are hidden, as they are for images.</li>
+<li><b>The lineage strip says what each corpus stage did in one fact</b>: "36 documents" → "35 kept" → "≈ 970 chunks · 256 tokens" → "≈ 970 vectors · bge-small"; the open version outlined.</li>
+<li><b>An index version's tiles</b> are chunks, documents, vectors, dimension, the index's size on disk, and the embedding model with its revision. Its two actions lead the header: <i>Ask this index</i> (to SCR-12, <i>RAG</i>, this version) and <i>Build the retrieval report</i> (to SCR-06).</li>
+<li><b>A chunk row</b> is: chunk key, document, section path, tokens, the text's first line. The table filters by document (a select) and searches the text (<kbd>/</kbd>). Rows are virtualised.</li>
+<li><b>The row drawer shows the whole chunk</b>, with the part it shares with the previous chunk (the overlap) shaded and labelled, its offsets in the document, its tokens, and <i>Previous chunk</i> / <i>Next chunk</i>. Opened from a citation (<span class="mono">?row=</span>), it opens at once and says "Cited as [1] in a chat answer" with a link back.</li>
+<li><b>A documents version</b> (ingest, clean_text) lists files: path, title (the first heading), characters, status and reason. Non-text files are kept as <i>rejected · unsupported_format</i>, as for any type.</li>
+<li><b>The <i>Start pipeline</i> drawer gains two type cards</b>, <i>Text corpus</i> and <i>Instruction pairs</i>, each with what its folder holds; the chosen type's stages follow the approved chain (one <i>Stop after</i>). <span class="mono">chunk</span>'s three fields are shown; <span class="mono">index</span>'s embedding model is read-only text.</li>
+<li><b>An instruction pair's row drawer</b> shows instruction, input and output, then the chat format the pairs' adapter makes (ADR-0022 rule 2), so the owner can check what M13's fine-tuning will see.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · An index version: chunks, with one opened from a chat citation</h2>
+<div class="frame" style="height:820px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div class="nav">Chat</div><div class="nav">System</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / stratal-docs / ds_… (index)</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead"><span class="n in">1</span><b class="mono">ds_…</b><span class="k">index</span><span class="muted">stratal-docs · made by job_01…</span><span class="spacer"></span><span class="btn primary">Ask this index</span><span class="btn">Build the retrieval report</span><span class="btn ghost">Continue the pipeline</span></div>
+      <div class="co-strip"><span class="n in">2</span>
+        <span class="co-node"><b>ingest</b><span>36 documents · 7 rejected</span></span>→
+        <span class="co-node"><b>clean_text</b><span>36 kept · 0 duplicates</span></span>→
+        <span class="co-node"><b>chunk</b><span>≈ 970 chunks · 256 tokens</span></span>→
+        <span class="co-node on"><b>index</b><span>≈ 970 vectors · bge-small</span></span></div>
+      <div class="co-tiles"><span class="n in">3</span>
+        <div class="co-tile"><b>970</b><span>chunks</span></div><div class="co-tile"><b>36</b><span>documents</span></div><div class="co-tile"><b>970</b><span>vectors, 384 dimensions</span></div><div class="co-tile"><b>1.5 MB</b><span>index on disk</span></div><div class="co-tile" style="min-width:220px"><b style="font-size:13px">bge-small-en-v1.5</b><span>revision 5c38ec7 · 912 from cache</span></div></div>
+      <div class="group" style="align-self:flex-start"><span class="btn sm on">Rows 970</span><span class="btn sm">Reasons</span><span class="btn sm">Distributions</span><span class="btn sm">Compare</span><span class="btn sm">Config</span></div>
+      <div class="co-split">
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+          <div style="display:flex;gap:8px;align-items:center"><span class="n in">4</span><span class="select">Document: all 36 ▾</span><span class="select" style="width:220px;color:var(--ink-3)">Search the text  /</span><span class="spacer"></span><span class="muted" style="font-size:11px">970 chunks · 256 tokens, 32 overlap</span></div>
+          <table class="t">
+            <tr><th>Chunk</th><th>Document</th><th>Section</th><th class="r">Tokens</th><th>Text</th></tr>
+            <tr><td class="m">DATA_MODEL.md#0010</td><td class="m">DATA_MODEL.md</td><td>2. Entity overview</td><td class="r m">238</td><td class="muted">The model has four groups: data (datasets, versions, …</td></tr>
+            <tr><td class="m">DATA_MODEL.md#0011</td><td class="m">DATA_MODEL.md</td><td>2. Entity overview</td><td class="r m">141</td><td class="muted">Jobs own stages and transitions; events and samples …</td></tr>
+            <tr class="on"><td class="m">DATA_MODEL.md#0012</td><td class="m">DATA_MODEL.md</td><td><b>3. Identifiers</b></td><td class="r m">241</td><td class="muted">| Entity | Format | Example | Generated by | Dataset …</td></tr>
+            <tr><td class="m">DATA_MODEL.md#0013</td><td class="m">DATA_MODEL.md</td><td>3. Identifiers</td><td class="r m">252</td><td class="muted">Version ID contract (owner implements, DATA-3.2). The …</td></tr>
+            <tr><td class="m">DATA_MODEL.md#0014</td><td class="m">DATA_MODEL.md</td><td>3. Identifiers</td><td class="r m">197</td><td class="muted">As implemented (stratal.data.versioning): A row is …</td></tr>
+            <tr><td class="m">DATA_MODEL.md#0015</td><td class="m">DATA_MODEL.md</td><td>4. PostgreSQL schema</td><td class="r m">64</td><td class="muted">Tables are created by Alembic migrations; every …</td></tr>
+            <tr><td class="m">DATA_MODEL.md#0016</td><td class="m">DATA_MODEL.md</td><td>4. … › 4.1 datasets</td><td class="r m">173</td><td class="muted">| Column | Type | Notes | slug | text | PK …</td></tr>
+            <tr><td class="m">DATA_MODEL.md#0017</td><td class="m">DATA_MODEL.md</td><td>4. … › 4.2 dataset_versions</td><td class="r m">249</td><td class="muted">| version_id | text | PK, ds_ + 12 hex …</td></tr>
+            <tr class="off"><td colspan="5">… 962 more (virtualised)</td></tr>
+          </table>
+        </div>
+        <div class="co-drawer"><span class="n in">5</span>
+          <h3><span class="mono">DATA_MODEL.md#0012</span><span class="spacer"></span><span class="btn sm ghost">✕</span></h3>
+          <div class="callout">Cited as <b>[1]</b> in a chat answer · <u>Back to the conversation</u></div>
+          <div class="co-kv"><span>Document</span><span class="mono">DATA_MODEL.md</span><span>Section</span><span>Stratal — Data Model › 3. Identifiers</span><span>Offsets</span><span class="mono">2,318–3,402 of 39,730 characters</span><span>Tokens</span><span class="mono">241 (32 shared with the previous chunk)</span></div>
+          <div class="co-text"><span class="ov" title="overlap with DATA_MODEL.md#0011">… are stored with the version. ## 3. Identifiers </span>| Entity | Format | Example | Generated by | | Dataset | slug chosen by the user | <span class="mono">coco10k</span> | user, validated … | | Dataset version | <span class="mono">ds_</span> + 12 hex characters | <span class="mono">ds_7f3a9c21b04e</span> | derived from content hash and config hash (DATA-3.2) | | Job | <span class="mono">job_</span> + zero-padded sequence | … | Model lineage | <span class="mono">ml_</span> + 12 hex characters | … SHA-256 of the lineage key … | Blob | 64 hex characters (SHA-256 of the file's bytes) …</div>
+          <div class="muted" style="font-size:11px">Shaded: the 32 tokens this chunk shares with the one before it (overlap).</div>
+          <div style="display:flex;gap:8px"><span class="btn sm">← Previous chunk</span><span class="btn sm">Next chunk →</span><span class="spacer"></span><span class="btn sm ghost">Open the document's row</span></div>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 2% · RAM 3.9 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Header</td><td>The version, its stage, dataset and job; on an index, <i>Ask this index</i> (SCR-12 in <i>RAG</i> with this version) and <i>Build the retrieval report</i> (SCR-06, <span class="mono">?kind=retrieval</span>); <i>Continue the pipeline</i> as for any version (e.g. a second chunk size from the clean version)</td><td><span class="mono">GET /versions/{id}</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Lineage strip</td><td>One fact per corpus stage; the open version outlined</td><td><span class="mono">GET /versions/{id}/lineage</span></td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Tiles (index)</td><td>Chunks, documents, vectors and dimension, size on disk, the model and revision, and how many vectors came from the derivation cache</td><td><span class="mono">GET /versions/{id}</span> (the manifest's <span class="mono">stratal.rag_index</span>), <span class="mono">/stats</span></td><td>–</td></tr>
+<tr><td><span class="num">4</span></td><td>Rows: chunks</td><td>Chunk key, document, section path, tokens, the first line; filter by document, search the text</td><td><span class="mono">GET /versions/{id}/rows</span> (<span class="mono">document</span>, <span class="mono">q</span> filters <i>planned</i>)</td><td>–</td></tr>
+<tr><td><span class="num">5</span></td><td>Row drawer: a chunk</td><td>The whole chunk with its overlap shaded, offsets, tokens, previous and next; from a citation, "Cited as [n]" and the way back</td><td><span class="mono">GET /versions/{id}/rows?row=</span></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · Ingesting the corpus: the drawer's new types, and the documents version</h2>
+<div class="frame" style="height:780px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div class="nav">Chat</div><div class="nav">System</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / stratal-docs / ds_… (ingest)</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="phead faint"><b class="mono">ds_…</b><span class="k">ingest</span><span class="muted">stratal-docs</span></div>
+      <div class="co-tiles faint"><div class="co-tile"><b>43</b><span>files</span></div><div class="co-tile"><b>36</b><span>documents accepted</span></div><div class="co-tile"><b>7</b><span>rejected</span></div><div class="co-tile"><b>752,552</b><span>characters</span></div></div>
+      <div style="width:740px;display:flex;flex-direction:column;gap:8px"><span class="n in">6</span>
+        <table class="t">
+          <tr><th>Path</th><th>Title</th><th class="r">Characters</th><th>Status</th></tr>
+          <tr><td class="m">API.md</td><td>Stratal — Interfaces</td><td class="r m">85,666</td><td>accepted</td></tr>
+          <tr><td class="m">ARCHITECTURE.md</td><td>Stratal — Architecture</td><td class="r m">36,367</td><td>accepted</td></tr>
+          <tr><td class="m">DATA_MODEL.md</td><td>Stratal — Data Model</td><td class="r m">39,730</td><td>accepted</td></tr>
+          <tr><td class="m">DECISIONS.md</td><td>Stratal — Decisions Log</td><td class="r m">116,222</td><td>accepted</td></tr>
+          <tr><td class="m">decisions/ADR-0004-immutable-content-addressed-storage.md</td><td>ADR-0004 — Immutable, content-addressed…</td><td class="r m">2,802</td><td>accepted</td></tr>
+          <tr><td class="m">decisions/ADR-0021-llm-serving.md</td><td>ADR-0021 — LLM serving</td><td class="r m">12,492</td><td>accepted</td></tr>
+          <tr class="off"><td class="m">spikes/S-06-results.json</td><td>—</td><td class="r m">—</td><td>rejected · unsupported_format</td></tr>
+          <tr class="off"><td class="m">spikes/S-11-results.json</td><td>—</td><td class="r m">—</td><td>rejected · unsupported_format</td></tr>
+          <tr><td class="m">spikes/S-11-llm.md</td><td>S-11 — Which LLM, and what serving it costs</td><td class="r m">8,482</td><td>accepted</td></tr>
+          <tr class="off"><td colspan="4">… 32 more</td></tr>
+        </table></div>
+      <div class="co-drw"><span class="n in">7</span>
+        <h3 style="margin:0;font-size:15px">Start pipeline</h3>
+        <div class="muted" style="font-size:12px">From the folder <span class="mono">/sources/stratal-docs</span> · 43 files</div>
+        <b style="font-size:12px">What the folder holds</b>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div class="co-type"><span class="box"></span><b>Image–caption pairs</b><span>image files</span></div>
+          <div class="co-type"><span class="box"></span><b>Labelled images</b><span>class folders, or images and a labels CSV</span></div>
+          <div class="co-type"><span class="box"></span><b>Tabular</b><span>one .csv or .parquet table</span></div>
+          <div class="co-type"><span class="box"></span><b>Labelled text</b><span>.jsonl, or .txt in class folders</span></div>
+          <div class="co-type on"><span class="box on"></span><b>Text corpus</b><span>.md and .txt files, at any depth</span></div>
+          <div class="co-type"><span class="box"></span><b>Instruction pairs</b><span>.jsonl: instruction, input, output</span></div>
+        </div>
+        <b style="font-size:12px">Stages <span class="muted" style="font-weight:400">· each reads the one before it</span></b>
+        <div class="co-stage"><div class="hd"><span class="box"></span><b>ingest</b><span class="muted">one row per document</span></div></div>
+        <div class="co-stage"><div class="hd"><span class="box"></span><b>clean_text</b><span class="muted">normalise; exact duplicates</span></div><div class="fields"><label>max_chars</label><span class="select">1,000,000</span></div></div>
+        <div class="co-stage"><div class="hd"><span class="box"></span><b>chunk</b><span class="muted">at headings, then by size</span></div><div class="fields"><label>chunk_tokens</label><span class="select">256</span><label>overlap_tokens</label><span class="select">32</span><label>min_tokens</label><span class="select">32</span></div></div>
+        <div class="co-stage" style="border-color:var(--ink-2)"><div class="hd"><span class="box on"></span><b>index</b><span class="muted">embed and build the index · stop after</span></div><div class="fields"><label>embedding</label><span class="mono" style="font-size:11px">bge-small-en-v1.5 · 5c38ec7</span><span class="muted">(fixed)</span></div></div>
+        <div class="spacer"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><span class="btn ghost">Cancel</span><span class="btn primary">Start job · to index</span></div>
+      </div>
+    </section>
+    <footer class="status">CPU 2% · RAM 3.9 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">6</span></td><td>Rows: documents</td><td>Path, title (first heading, else the file name), characters, status and reason; the seven <span class="mono">.json</span> files in <span class="mono">spikes/</span> and <span class="mono">spikes/data/</span> rejected as <span class="mono">unsupported_format</span></td><td><span class="mono">GET /versions/{id}/rows</span></td><td>–</td></tr>
+<tr><td><span class="num">7</span></td><td>Drawer: corpus types</td><td>Two more type cards in the approved drawer; the chain <span class="mono">ingest → clean_text → chunk → index</span> with one <i>Stop after</i>; <span class="mono">chunk</span>'s fields; the embedding model read-only</td><td><span class="mono">GET /dataset-types</span> (<span class="mono">text_corpus</span>, <span class="mono">instruction_pairs</span>), <span class="mono">GET /config/schemas/chunk</span>, <span class="mono">/index</span> <i>planned</i></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · An instruction pair, and the chat format it becomes</h2>
+<div class="frame" style="height:470px">
+  <div class="shell">
+    <aside class="side"><div class="nav on">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div class="nav">Chat</div><div class="nav">System</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Datasets</b> / stratal-pairs / ds_… (clean_text)</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content">
+      <div class="co-split" style="grid-template-columns:minmax(0,1fr) 520px">
+        <table class="t" style="align-self:start">
+          <tr><th>Row</th><th>Instruction</th><th>Input</th><th>Output</th><th>Status</th></tr>
+          <tr class="on"><td class="m">pairs.jsonl#0000001</td><td>Summarise what ADR-0006 decides…</td><td class="muted">—</td><td>One process per GPU job, one lease…</td><td>accepted</td></tr>
+          <tr><td class="m">pairs.jsonl#0000002</td><td>Turn this caption into JSON…</td><td>A plane is flying over…</td><td>{"subject": "plane", …</td><td>accepted</td></tr>
+          <tr class="off"><td class="m">pairs.jsonl#0000003</td><td>Explain hit@5.</td><td class="muted">—</td><td class="muted">—</td><td>rejected · empty_output</td></tr>
+        </table>
+        <div class="co-drawer"><span class="n in">8</span>
+          <h3><span class="mono">pairs.jsonl#0000001</span></h3>
+          <div class="co-kv"><span>Instruction</span><span>Summarise what ADR-0006 decides about the GPU, in two sentences.</span><span>Input</span><span class="muted">none</span><span>Output</span><span>Every GPU job runs in its own process and takes one GPU lease, so only one holder uses the card at a time. Each process caps PyTorch at 0.85 of the card and verifies its unloads.</span></div>
+          <b style="font-size:12px">As the model will see it <span class="muted" style="font-weight:400">· the pairs' adapter, Qwen3's chat template</span></b>
+          <div class="co-chat">&lt;|im_start|&gt;user
+Summarise what ADR-0006 decides about the GPU, in two sentences.&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+Every GPU job runs in its own process and takes one GPU lease, …&lt;|im_end|&gt;</div>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 2% · RAM 3.9 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">8</span></td><td>Row drawer: a pair</td><td>Instruction, input, output in full; then the chat-format text the adapter makes from it, in the model's own template (ADR-0022 rule 2). Rejected pairs show their reason (<span class="mono">missing_field</span>, <span class="mono">empty_output</span>, <span class="mono">not_json</span>, <span class="mono">text_too_long</span>)</td><td><span class="mono">GET /versions/{id}/rows?row=</span>; the chat format from <span class="mono">GET /versions/{id}/rows/{key}/chat-format</span> <i>planned</i></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · States</h2>
+<div class="co-states">
+  <div class="co-mini"><div class="lbl">Every document rejected</div><div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:12px"><div class="co-tiles"><div class="co-tile"><b>0</b><span>accepted</span></div><div class="co-tile"><b>12</b><span>rejected</span></div></div><div class="empty">No document in this version could be read: 12 rejected, 9 <span class="mono">not_utf8</span>, 3 <span class="mono">unsupported_format</span>. The Rows tab opens filtered to <i>rejected</i>.</div></div></div>
+  <div class="co-mini"><div class="lbl">Loading chunks</div><div style="padding:12px;display:flex;flex-direction:column;gap:10px"><span class="skel" style="width:70%"></span><span class="skel" style="width:95%"></span><span class="skel" style="width:90%"></span><span class="skel" style="width:95%"></span><span class="skel" style="width:60%"></span></div></div>
+  <div class="co-mini"><div class="lbl">A citation to a chunk that is gone</div><div style="padding:12px;font-size:12px"><div class="empty err">The cited chunk <span class="mono">DATA_MODEL.md#0012</span> is not in <span class="mono">ds_…</span>. The conversation was answered from an index version that has since been deleted; its sources are kept in the conversation.</div></div></div>
+</div>
+<p class="caption">The <i>Distributions</i> tab shows tokens per chunk and chunks per document as histograms, as it shows text lengths today; <i>Compare</i> between two chunk versions lists chunks added, removed and changed by key.</p>
+
+<h2>Not in this wireframe</h2>
+<p>SCR-06's retrieval report (the next Gate 2 screen) and SCR-14's retrieval section, which is drawn with SCR-06 (open point 8g). The hi-fi mockup adds both themes and the 1024 px layout.</p>
+</main>
+</body>
+</html>
