@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-12 chat, phase-3 slice — low-fi wireframe v1</title>
+<style>
+/* Low-fi wireframe: layout and hierarchy only (SPEC §9.5). Greys on purpose. Same sheet as the earlier low-fi files. */
+:root {
+  --page: #ececec; --frame: #ffffff; --line: #9a9a9a; --soft: #d6d6d6; --fill: #f3f3f3; --fill-2: #e6e6e6;
+  --ink: #222; --ink-2: #555; --ink-3: #888; --note: #1f5fbf; --note-soft: #e4ecf9;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, "Segoe UI", sans-serif; }
+main.doc { max-width: 1340px; margin: 0 auto; padding: 24px 28px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 40px 0 6px; } h3 { font-size: 13px; margin: 0 0 6px; }
+p, li { color: var(--ink-2); max-width: 900px; } .mono { font-family: var(--mono); }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; margin-bottom: 16px; }
+.frame { position: relative; width: 1280px; background: var(--frame); border: 1px solid var(--line); overflow: hidden; }
+.frame.w1024 { width: 1024px; }
+.caption { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; max-width: 1280px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.side { grid-row: 1 / 3; border-right: 1px solid var(--soft); background: var(--fill); padding: 12px 10px; color: var(--ink-3); }
+.side .nav { height: 30px; display: flex; align-items: center; padding: 0 8px; border-radius: 4px; } .side .nav.on { background: var(--soft); color: var(--ink-2); font-weight: 600; }
+.top { grid-column: 2; border-bottom: 1px solid var(--soft); display: flex; align-items: center; padding: 0 16px; gap: 12px; color: var(--ink-3); }
+.status { grid-column: 1 / 3; border-top: 1px solid var(--soft); background: var(--fill); font: 11px var(--mono); color: var(--ink-3); display: flex; align-items: center; padding: 0 12px; gap: 20px; }
+.content { grid-column: 2; position: relative; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.spacer { flex: 1; }
+.phead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .phead b { font-size: 18px; }
+.k { font: 10px var(--mono); border: 1px solid var(--soft); border-radius: 3px; padding: 0 4px; color: var(--ink-3); white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--ink-2); border-radius: 4px; font-size: 12px; background: #fff; white-space: nowrap; }
+.btn.primary { background: var(--ink-2); color: #fff; } .btn.sm { height: 24px; padding: 0 8px; font-size: 11px; } .btn.ghost { border-color: transparent; color: var(--ink-2); } .btn.off { color: var(--ink-3); border-color: var(--soft); background: var(--fill); }
+.group { display: inline-flex; } .group .btn { border-radius: 0; margin-left: -1px; } .group .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .group .btn:last-child { border-radius: 0 4px 4px 0; } .group .btn.on { background: var(--fill-2); font-weight: 600; border-color: var(--ink); z-index: 1; position: relative; }
+.select { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; gap: 4px; background: #fff; font-family: var(--mono); white-space: nowrap; }
+.select.bad { border: 2px solid var(--ink); }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border: 1px solid var(--ink-2); border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; } .pill.dash { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid var(--line); }
+.t th { text-align: left; font-size: 10px; letter-spacing: .05em; color: var(--ink-3); background: var(--fill); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+.t th .sub { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.t td { padding: 0 8px; height: 28px; border-bottom: 1px solid var(--soft); white-space: nowrap; } .t td.r, .t th.r { text-align: right; } .t td.m { font-family: var(--mono); }
+.t tr.on td { background: var(--fill-2); } .t tr.off td { color: var(--ink-3); }
+.t td.pin, .t th.pin { position: sticky; left: 0; background: #fff; border-right: 1px solid var(--line); } .t th.pin { background: var(--fill); }
+.t .chg { font-weight: 700; } .t .new { outline: 1.5px dashed var(--ink-2); outline-offset: -3px; }
+.muted { color: var(--ink-3); }
+.empty { display: grid; place-items: center; text-align: center; padding: 24px; border: 1.5px dashed var(--line); border-radius: 8px; } .empty.err { border-style: solid; border-color: var(--ink); background: #f7f7f7; }
+.skel { display: inline-block; height: 10px; background: var(--soft); border-radius: 3px; }
+.n { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; z-index: 5; }
+.n.in { position: static; display: inline-block; margin-right: 4px; flex: none; }
+.legend { width: 1280px; border-collapse: collapse; margin-top: 12px; background: #fff; border: 1px solid var(--line); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--soft); font-size: 12px; }
+.legend th { background: var(--fill); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.legend .num { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: #fff; font: 600 11px/20px system-ui; text-align: center; }
+.choices { background: var(--note-soft); border: 1px solid #b9cdee; border-radius: 6px; padding: 12px 16px; max-width: 1280px; } .choices li { margin: 4px 0; color: var(--ink); }
+.ask { border: 2px solid var(--note); border-radius: 6px; padding: 10px 14px; background: #fff; max-width: 1280px; margin-top: 12px; } .ask li { color: var(--ink); margin: 4px 0; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card h3 { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.callout { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--fill); font-size: 12px; } .callout.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.faint { opacity: .45; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink-2); border-radius: 50%; vertical-align: middle; } .box.on { background: radial-gradient(var(--ink-2) 45%, transparent 50%); }
+/* SCR-12 specific (prefixed, as the screens are) */
+.ch-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); height: 100%; min-height: 0; }
+.ch-sess { border-right: 1px solid var(--soft); padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; background: #fff; min-height: 0; }
+.ch-sess .it { padding: 6px 8px; border-radius: 4px; display: flex; flex-direction: column; gap: 1px; }
+.ch-sess .it.on { background: var(--fill-2); }
+.ch-sess .it b { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ch-sess .it span { font-size: 10px; color: var(--ink-3); }
+.ch-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.ch-conv { flex: 1; overflow: hidden; padding: 16px 0; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.ch-col { width: 760px; max-width: 100%; display: flex; flex-direction: column; gap: 14px; }
+.ch-q { align-self: flex-end; max-width: 560px; background: var(--fill-2); border-radius: 10px 10px 2px 10px; padding: 8px 12px; font-size: 13px; }
+.ch-a { align-self: flex-start; max-width: 760px; border: 1px solid var(--line); border-radius: 10px 10px 10px 2px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; background: #fff; }
+.ch-a.abst { border-style: dashed; }
+.ch-a.bad { border: 2px solid var(--ink); background: #f7f7f7; }
+.ch-cite { font: 600 11px var(--mono); border: 1px solid var(--ink-2); border-radius: 3px; padding: 0 3px; margin: 0 1px; }
+.ch-src { border-top: 1px solid var(--soft); padding-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.ch-src .s { display: grid; grid-template-columns: 26px 1fr 46px; gap: 8px; font-size: 11px; align-items: start; }
+.ch-src .s .no { font: 600 11px var(--mono); border: 1px solid var(--ink-2); border-radius: 3px; text-align: center; }
+.ch-src .s.unc .no { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+.ch-src .s .where { font-family: var(--mono); font-size: 11px; }
+.ch-src .s .snip { color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.ch-src .s .rel { font-family: var(--mono); text-align: right; }
+.ch-foot { font: 10px var(--mono); color: var(--ink-3); display: flex; gap: 10px; flex-wrap: wrap; }
+.ch-grid { display: grid; grid-template-columns: repeat(5, 112px); gap: 8px; }
+.ch-img { display: flex; flex-direction: column; gap: 2px; font: 10px var(--mono); color: var(--ink-3); }
+.ch-img .ph { width: 112px; height: 84px; background: var(--fill-2); border: 1px solid var(--soft); display: grid; place-items: center; color: var(--ink-3); font-size: 9px; }
+.ch-comp { border-top: 1px solid var(--soft); padding: 10px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: #fff; }
+.ch-comp .row { width: 760px; display: flex; gap: 8px; align-items: center; }
+.ch-box { flex: 1; height: 64px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--ink-3); font-size: 13px; }
+.ch-gpu { width: 760px; border: 1px solid var(--ink-2); border-radius: 6px; background: var(--fill); padding: 6px 10px; font-size: 12px; }
+.caret { display: inline-block; width: 7px; height: 14px; background: var(--ink-2); vertical-align: -2px; }
+.ch-states { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ch-mini { position: relative; height: 330px; border: 1px solid var(--line); background: #fff; overflow: hidden; display: flex; flex-direction: column; }
+.ch-mini .lbl { font-size: 11px; font-weight: 600; padding: 6px 10px; background: var(--fill); border-bottom: 1px solid var(--soft); }
+</style>
+</head>
+<body>
+<main class="doc">
+<h1>SCR-12 — Chat, the phase-3 slice · low-fi wireframe v1</h1>
+<div class="meta"><span>Gate 2, step 1 of 2</span><span>Serves: LLM-1.1, LLM-2.1, LLM-2.3, LLM-2.4, NFR-6 (UI-1.1's test stays owed in phase 5)</span><span>Inventory: <span class="mono">docs/SCREENS.md</span> v5, SCR-12 (approved 2026-11-27, open point 8)</span><span>Routes: <span class="mono">/chat</span>, <span class="mono">/chat/:session_id</span>, <span class="mono">/chat?index=ds_…</span></span><span>Design: ADR-0021, ADR-0022</span><span>2026-11-27</span></div>
+<p>Layout and hierarchy only. Blue numbers are annotations. The questions are real questions about Stratal's documentation and the cited sections are real sections of it (<span class="mono">DATA_MODEL.md § 3. Identifiers</span>, <span class="mono">ADR-0004 § Decision</span>); the answers are written in the style S-11's Qwen3-1.7B gave, not generated, since chat is not built. The corpus index version ID, relevances and timings are illustrative, in the ranges S-11 measured (first token 25 ms in chat and about 1 s in RAG, 98–124 tokens/s, a 3–5 s reload). The images are real coco10k files whose COCO captions mention a dog at night; the labelled version <span class="mono">ds_859d0861ae19</span> is coco10k's real <span class="mono">label</span> version.</p>
+
+<div class="choices">
+<h3>Layout decisions to review</h3>
+<ol>
+<li><b>Two columns: sessions (240 px) and the conversation.</b> The conversation is one centred reading column of 760 px, so a line of an answer stays readable at 1280 px and at 1024 px alike; the space beside it stays empty rather than holding a side panel (open point 8c).</li>
+<li><b>The composer is fixed at the bottom</b>, with the mode as a segmented control (<i>LLM</i> · <i>RAG</i> · <i>Images</i>, <span class="mono">Alt+1</span>–<span class="mono">3</span>) and, beside it, the one version the mode needs: the index in <i>RAG</i>, the labelled version in <i>Images</i>, nothing in <i>LLM</i>. <i>Send</i> becomes <i>Stop</i> while an answer streams.</li>
+<li><b>The person's message is a filled bubble on the right; an answer is an outlined bubble on the left</b>, with everything about it inside its border: the text, then the sources (RAG), then the footer. An abstention's border is dashed; a refused or failed answer has the dark error border.</li>
+<li><b>Citations are small boxed numbers in the text</b>, links that scroll to their source under the answer and, with a second click, open SCR-03 on the chunk. The sources list puts the cited ones first, each on one line: number, <span class="mono">document › section</span>, the chunk's first words, relevance; the sources given but not cited are folded into "3 more sources given" with dashed numbers.</li>
+<li><b>The footer is always shown,</b> one line of small mono text: route, model and revision, device, cold start when there was one, time to the first token, total time, tokens per second, and the index version for RAG. NFR-6 is then read on screen for every answer.</li>
+<li><b>Images are a 5 × 2 grid inside the answer bubble</b>, 112 px thumbnails with the similarity and the file name under each; one opens SCR-03 on its row.</li>
+<li><b>The GPU line sits above the composer only when it matters</b> (a job holds the GPU, or the model is loading), says which job and what still works, and links to SCR-04. A <span class="mono">gpu_busy</span> refusal then appears in the answer's place with <i>Retry</i>, the person's message kept.</li>
+<li><b>Sessions are listed newest first</b>, titled by the first question, with the last mode and the time; <i>New chat</i> at the top. At 1024 px the list folds to a 48 px rail with <i>New chat</i> and a button that opens it over the conversation.</li>
+</ol>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · Populated: a RAG answer with its sources, after an LLM answer in the same session</h2>
+<div class="frame" style="height:800px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div class="nav on">Chat</div><div class="nav">System</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Chat</b> / How are dataset version IDs computed?</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content" style="padding:0">
+      <div class="ch-body">
+        <div class="ch-sess"><span class="n in">1</span>
+          <span class="btn sm" style="align-self:stretch;justify-content:center">+ New chat</span>
+          <div class="it on"><b>How are dataset version IDs computed?</b><span>RAG · 2 min ago</span></div>
+          <div class="it"><b>dogs at night</b><span>Images · 1 h ago</span></div>
+          <div class="it"><b>Explain overfitting to a beginner</b><span>LLM · yesterday</span></div>
+          <div class="it"><b>What does ADR-0006 say about VRAM?</b><span>RAG · yesterday</span></div>
+          <div class="it"><b>Which milestone added tabular transforms?</b><span>RAG · 25 Nov</span></div>
+        </div>
+        <div class="ch-main">
+          <div class="ch-conv"><div class="ch-col">
+            <div class="ch-q">What does a content hash mean, in one sentence?</div>
+            <div class="ch-a"><div>A content hash is a fingerprint computed from the data itself, so identical content always gives the same hash and any change gives a different one.</div>
+              <div class="ch-foot"><span>LLM</span><span>qwen3-1.7b · d7f544e</span><span>GPU</span><span>cold start 3.4 s</span><span>first token 0.03 s</span><span>0.4 s</span><span>121 tok/s</span></div></div>
+            <div class="ch-q"><span class="n in">2</span>How are dataset version IDs computed?</div>
+            <div class="ch-a"><span class="n in">3</span>
+              <div>A version ID is <span class="mono">ds_</span> followed by the first twelve hex characters of a SHA-256 over two hashes: the content hash of the rows and the hash of the config <span class="ch-cite">1</span>. Each row is encoded with its non-null columns in name order and hashed, and the row digests are added together, so row order and file compression do not change the ID <span class="ch-cite">1</span>. Because versions are immutable and stages exchange version IDs, the same parent and config reuse the existing version <span class="ch-cite">2</span>.</div>
+              <div class="ch-src"><span class="n in">4</span>
+                <div class="s"><span class="no">1</span><span><span class="where">DATA_MODEL.md › 3. Identifiers</span><span class="snip">Version ID contract (owner implements, DATA-3.2). The function that derives a version ID must satisfy…</span></span><span class="rel">0.83</span></div>
+                <div class="s"><span class="no">2</span><span><span class="where">ADR-0004 › Decision</span><span class="snip">Blob store. Every file Stratal uses is stored once, under the SHA-256 of its bytes… Memoized stages…</span></span><span class="rel">0.71</span></div>
+                <div class="s unc"><span class="no">▸</span><span class="muted">3 more sources given, not cited: [3] ARCHITECTURE.md › 7. Storage · [4] DECISIONS.md › M1 · [5] SPEC.md › DATA-3</span><span class="rel"></span></div>
+              </div>
+              <div class="ch-foot"><span class="n in" style="margin:0">5</span><span>RAG</span><span>qwen3-1.7b · d7f544e</span><span>GPU</span><span>first token 0.9 s</span><span>4.1 s</span><span>98 tok/s</span><span>index ds_5e1c08b2a4f7</span></div></div>
+          </div></div>
+          <div class="ch-comp"><span class="n in">6</span>
+            <div class="row"><span class="group"><span class="btn sm">LLM</span><span class="btn sm on">RAG</span><span class="btn sm">Images</span></span><span class="select">stratal-docs · ds_5e1c08b2a4f7 · index · 1,482 chunks ▾</span><span class="spacer"></span><span class="k">/</span><span class="muted" style="font-size:11px">to type</span></div>
+            <div class="row"><div class="ch-box">Ask about the documents…</div><span class="btn primary">Send</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 4% · RAM 4.1 / 9.7 GB · GPU 0% · VRAM 1.9 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Sessions</td><td>Conversations newest first: the first question as title, the last mode, when; <i>New chat</i>; delete from a session's ⋮ menu with a confirmation (open point 8a)</td><td><span class="mono">GET /chat/sessions</span> <i>planned</i></td><td>a new session appears when its first answer starts</td></tr>
+<tr><td><span class="num">2</span></td><td>The person's message</td><td>As typed; the mode it was sent in is in its answer's footer</td><td><span class="mono">GET /chat/sessions/{id}</span> <i>planned</i></td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Answer</td><td>Streams token by token; <span class="mono">[n]</span> markers as boxed links. RAG answers each question alone (open point 8b), so its sources are this answer's own; <i>LLM</i> sends the last turns, up to 1,000 tokens</td><td><span class="mono">POST /chat</span> <i>planned</i>, SSE: <span class="mono">meta</span>, <span class="mono">token</span>, <span class="mono">citations</span>, <span class="mono">done</span>, <span class="mono">error</span> (ADR-0021 rule 8)</td><td>yes, while streaming</td></tr>
+<tr><td><span class="num">4</span></td><td>Sources</td><td>Cited first: number, <span class="mono">document › section</span>, the chunk's first words, relevance; the uncited folded. A citation the model invented was removed before it got here (ADR-0022 rule 7); an answer with none says "No source cited"</td><td>the <span class="mono">citations</span> event; a source opens <span class="mono">/versions/{index}?row=&lt;chunk key&gt;</span> (SCR-03)</td><td>after <span class="mono">done</span></td></tr>
+<tr><td><span class="num">5</span></td><td>Footer</td><td>Route, model and revision, device, cold start, first token, total, tokens/s; the index version for RAG</td><td><span class="mono">meta</span> and <span class="mono">done</span>; stored in <span class="mono">inference_requests</span> (NFR-6)</td><td>fills in as events arrive</td></tr>
+<tr><td><span class="num">6</span></td><td>Composer</td><td>Mode, the version the mode needs (the latest index preselected), the message box (<span class="mono">Enter</span> sends, <span class="mono">Shift+Enter</span> a new line), <i>Send</i> / <i>Stop</i></td><td>the index versions of <span class="mono">text_corpus</span> datasets; labelled versions with CLIP vectors</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== B -->
+<h2>B · An abstention, then image search</h2>
+<div class="frame" style="height:780px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div class="nav on">Chat</div><div class="nav">System</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Chat</b> / What is the capital of Peru?</span><span class="spacer"></span><span>[ Idle ]</span></header>
+    <section class="content" style="padding:0">
+      <div class="ch-body">
+        <div class="ch-sess"><span class="btn sm" style="align-self:stretch;justify-content:center">+ New chat</span>
+          <div class="it on"><b>What is the capital of Peru?</b><span>Images · just now</span></div>
+          <div class="it"><b>How are dataset version IDs computed?</b><span>RAG · 5 min ago</span></div>
+        </div>
+        <div class="ch-main">
+          <div class="ch-conv"><div class="ch-col">
+            <div class="ch-q">What is the capital of Peru?</div>
+            <div class="ch-a abst"><span class="n in">1</span>
+              <div><b>I don't know.</b> The documents don't seem to cover this.</div>
+              <div class="muted" style="font-size:12px">Nearest source: <span class="mono">SPEC.md › 9.4 Screen inventory</span>, relevance <span class="mono">0.38</span>, below the threshold <span class="mono">0.55</span>. The model was not asked.</div>
+              <div class="ch-foot"><span>RAG · abstained</span><span>CPU</span><span>retrieval 0.02 s</span><span>index ds_5e1c08b2a4f7</span></div></div>
+            <div class="ch-q">dogs at night</div>
+            <div class="ch-a"><span class="n in">2</span>
+              <div>10 images from <span class="mono">coco10k · ds_859d0861ae19</span> nearest to "dogs at night":</div>
+              <div class="ch-grid">
+                <div class="ch-img"><div class="ph">image</div>0.33 · 000000040466</div>
+                <div class="ch-img"><div class="ph">image</div>0.31 · 000000229342</div>
+                <div class="ch-img"><div class="ph">image</div>0.30 · 000000516396</div>
+                <div class="ch-img"><div class="ph">image</div>0.29 · 000000184321</div>
+                <div class="ch-img"><div class="ph">image</div>0.29 · 000000312586</div>
+                <div class="ch-img"><div class="ph">image</div>0.28 · 000000078915</div>
+                <div class="ch-img"><div class="ph">image</div>0.28 · 000000456903</div>
+                <div class="ch-img"><div class="ph">image</div>0.27 · 000000213035</div>
+                <div class="ch-img"><div class="ph">image</div>0.27 · 000000565878</div>
+                <div class="ch-img"><div class="ph">image</div>0.27 · 000000099053</div>
+              </div>
+              <div class="ch-foot"><span>Images</span><span>CLIP ViT-B/32 · 1a25a44</span><span>CPU</span><span>0.05 s</span><span>9,932 images searched</span></div></div>
+          </div></div>
+          <div class="ch-comp"><span class="n in">3</span>
+            <div class="row"><span class="group"><span class="btn sm">LLM</span><span class="btn sm">RAG</span><span class="btn sm on">Images</span></span><span class="select">coco10k · ds_859d0861ae19 · label · 9,932 with CLIP vectors ▾</span></div>
+            <div class="row"><div class="ch-box">Describe the images to find…</div><span class="btn primary">Send</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 3% · RAM 4.0 / 9.7 GB · GPU 0% · VRAM 0.3 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>Abstention</td><td>"I don't know.", the nearest source with its relevance and the threshold, and that the model was not asked; dashed border. An answer where the model itself said it doesn't know is an ordinary answer bubble. Before the owner sets a threshold, RAG never abstains, and the composer's RAG mode says "No abstention threshold set (Settings)"</td><td>retrieval only (ADR-0022 rule 8); the threshold from <span class="mono">GET /settings</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>Image results</td><td>The 10 nearest images: thumbnail, similarity, file name; one opens SCR-03 on its row. On the CPU, so it works while a job trains</td><td><span class="mono">POST /chat</span> with <span class="mono">mode: images</span> <i>planned</i> (ADR-0022 rule 12); thumbnails from <span class="mono">GET /blobs/{sha256}?w=224</span></td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>Composer in <i>Images</i></td><td>The labelled version, among versions with CLIP vectors; none → <i>Images</i> disabled (frame D)</td><td>versions with <span class="mono">clip_image_embedding</span> derivations</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · Streaming, stopping, and the GPU held by a job</h2>
+<div class="frame" style="height:720px">
+  <div class="shell">
+    <aside class="side"><div class="nav">Datasets</div><div class="nav">Jobs</div><div class="nav">Models</div><div class="nav on">Chat</div><div class="nav">System</div></aside>
+    <header class="top"><span><b style="color:var(--ink-2)">Chat</b> / Explain overfitting to a beginner</span><span class="spacer"></span><span>[ ● job_0131 train · epoch 3/10 ]</span></header>
+    <section class="content" style="padding:0">
+      <div class="ch-body">
+        <div class="ch-sess"><span class="btn sm" style="align-self:stretch;justify-content:center">+ New chat</span>
+          <div class="it on"><b>Explain overfitting to a beginner</b><span>LLM · just now</span></div>
+        </div>
+        <div class="ch-main">
+          <div class="ch-conv"><div class="ch-col">
+            <div class="ch-q">Explain overfitting to a beginner in two sentences.</div>
+            <div class="ch-a"><span class="n in">1</span>
+              <div>Overfitting is when a model learns the training examples so closely, noise included, that it does well on them but poorly on new data. It is like memorising the answers to last year's exam instead of</div>
+              <div class="muted" style="font-size:11px">■ stopped</div>
+              <div class="ch-foot"><span>LLM</span><span>qwen3-1.7b · d7f544e</span><span>GPU</span><span>first token 0.03 s</span><span>stopped at 0.3 s</span><span>118 tok/s</span></div></div>
+            <div class="ch-q">Give me an example with a decision tree.</div>
+            <div class="ch-a bad"><span class="n in">2</span>
+              <div><b>gpu_busy</b> · The GPU is in use by <span class="mono">job_0131</span> (train, Small CNN · cifar10).</div>
+              <div class="muted" style="font-size:12px">The LLM needs the GPU and does not run on the CPU. Try again when the job finishes, or pause it on SCR-04.</div>
+              <div style="display:flex;gap:8px"><span class="btn sm">Retry</span><span class="btn sm ghost">Open job_0131</span></div></div>
+          </div></div>
+          <div class="ch-comp">
+            <div class="ch-gpu"><span class="n in">3</span>The GPU is in use by <span class="mono">job_0131</span> (train). LLM and RAG answers wait for it; questions below the threshold and <i>Images</i> still work. <span class="btn sm ghost">Open job</span></div>
+            <div class="row"><span class="group"><span class="btn sm on">LLM</span><span class="btn sm">RAG</span><span class="btn sm">Images</span></span></div>
+            <div class="row"><div class="ch-box">Message the model…</div><span class="btn primary">Send</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer class="status">CPU 38% · RAM 6.2 / 9.7 GB · GPU 97% · VRAM 2.1 / 6.0 GB<span class="spacer"></span>● live</footer>
+  </div>
+</div>
+<p class="caption">While an answer streams, its bubble ends in a caret <span class="caret"></span> and the composer's <i>Send</i> reads <i>Stop</i> (<span class="mono">Esc</span>). The first answer above was stopped: the text so far is kept and marked "stopped", and the request is stored as <span class="mono">stopped</span> (open point 8f).</p>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Live</th></tr>
+<tr><td><span class="num">1</span></td><td>A stopped answer</td><td>The partial text, "■ stopped", the footer with the time it stopped</td><td>the stream cancelled by the client; the request's status <span class="mono">stopped</span></td><td>–</td></tr>
+<tr><td><span class="num">2</span></td><td>A refusal</td><td>The problem's <span class="mono">code</span>, <span class="mono">detail</span> naming the job, <span class="mono">suggested_action</span>; <i>Retry</i> resends the kept message; a link to the job. Same bubble for <span class="mono">llm_busy</span>, <span class="mono">llm_unavailable</span>, <span class="mono">vram_insufficient</span>, <span class="mono">no_image_embeddings</span></td><td>the <span class="mono">error</span> event (ADR-0011, ADR-0021 rule 10)</td><td>–</td></tr>
+<tr><td><span class="num">3</span></td><td>GPU line</td><td>Only while a job holds the GPU, or "Loading the LLM… (cold start)" during a load; what still works; a link to SCR-04</td><td><span class="mono">GET /system</span>; the <span class="mono">meta</span> event's <span class="mono">cold_start</span></td><td>yes</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · States</h2>
+<div class="ch-states" style="width:1280px">
+  <div class="ch-mini"><div class="lbl">Empty: no session yet</div>
+    <div style="flex:1;display:grid;place-items:center"><div class="empty" style="width:560px"><div><b>Ask the local model, ask your documents, or find images.</b><br><span class="muted"><i>LLM</i> answers from the model alone. <i>RAG</i> answers from an index of documents and cites them. <i>Images</i> finds images in a labelled version from a description.</span></div></div></div>
+    <div class="ch-comp"><div class="row" style="width:560px"><div class="ch-box" style="height:40px">Message the model…</div><span class="btn primary">Send</span></div></div></div>
+  <div class="ch-mini"><div class="lbl">Empty: no index, no CLIP vectors</div>
+    <div style="flex:1"></div>
+    <div class="ch-comp"><div class="row" style="width:560px"><span class="group"><span class="btn sm on">LLM</span><span class="btn sm off">RAG</span><span class="btn sm off">Images</span></span></div>
+      <div class="callout" style="width:560px">No index yet: ingest a corpus as <i>Text corpus</i> and run it to <span class="mono">index</span> (<u>Datasets</u>). <i>Images</i> needs a labelled version with CLIP vectors.</div>
+      <div class="row" style="width:560px"><div class="ch-box" style="height:40px">Message the model…</div><span class="btn primary">Send</span></div></div></div>
+  <div class="ch-mini"><div class="lbl">Loading</div>
+    <div style="display:grid;grid-template-columns:160px 1fr;flex:1">
+      <div style="border-right:1px solid var(--soft);padding:10px;display:flex;flex-direction:column;gap:10px"><span class="skel" style="width:120px"></span><span class="skel" style="width:90px"></span><span class="skel" style="width:110px"></span></div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px"><span class="skel" style="width:220px;align-self:flex-end;height:28px"></span><span class="skel" style="width:420px;height:60px"></span><span class="skel" style="width:180px;align-self:flex-end;height:28px"></span></div></div></div>
+  <div class="ch-mini"><div class="lbl">Error, and the stream lost</div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div class="ch-q" style="max-width:360px">What does ADR-0006 say about VRAM?</div>
+      <div class="ch-a bad" style="max-width:460px"><div><b>llm_unavailable</b> · The LLM service did not answer within 30 s.</div><div class="muted" style="font-size:12px">Check that the <span class="mono">ollama</span> service is running (System), then retry.</div><div><span class="btn sm">Retry</span></div></div>
+      <div class="callout" style="max-width:460px">Reconnecting… The answer will be fetched from the session when it has finished.</div></div></div>
+</div>
+<p class="caption">The sessions list's own error (the list cannot load) is the error state in its column with <i>Retry</i>; the conversation stays usable. A session URL that does not exist shows "This conversation was deleted or never existed." with <i>New chat</i>.</p>
+
+<h2>Not in this wireframe</h2>
+<p><i>Auto</i> (the router, M13) and its fallback messages; the assistant's tools (LLM-4.1, M13); image generation and translation (phases 4 and 5); a choice of LLM (one model, decision 1); editing or regenerating an answer. The hi-fi mockup adds both themes and the 1024 px layout.</p>
+</main>
+</body>
+</html>
