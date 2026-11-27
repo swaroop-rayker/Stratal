@@ -28,7 +28,7 @@ from stratal.registry import store as model_store
 from stratal.runtime.jobs import field_problems
 from stratal.storage.blobs import BlobStore
 from stratal.storage.derivations import KIND_CLIP_IMAGE
-from stratal.storage.manifest import corpus_extent, read_metadata, select_rows
+from stratal.storage.manifest import corpus_extent, iter_rows, read_metadata, select_rows
 
 router = APIRouter(tags=["datasets"])
 Json = dict[str, Any]
@@ -355,7 +355,7 @@ def version_distributions(version_id: str, session: Db) -> Json:
     steps = _steps(session, version_id)
 
     def build() -> Json:
-        rows = profile.read_all(path)
+        rows = iter_rows(path, columns=list(profile.DISTRIBUTION_FIELDS), batch_size=20_000)
         return {
             "version_id": version_id,
             "stage": version.stage,
