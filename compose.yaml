@@ -1,7 +1,7 @@
 # Stratal development stack.
 #
 #   docker compose up -d                      postgres, redis, api, worker-cpu, monitor
-#   docker compose --profile gpu up -d        the same plus the GPU worker and inference
+#   docker compose --profile gpu up -d        the same plus the GPU worker, inference and ollama
 #   docker compose run --rm dev <command>     lint, type-check, tests
 #   docker compose run --rm worker-gpu <cmd>  anything that needs the GPU
 #
@@ -111,7 +111,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    mem_limit: 2500m
+    mem_limit: 1900m  # M12 (ADR-0021 rule 11): 600 MiB to ollama and inference; power.parquet peaked at 753 MiB
     restart: unless-stopped
 
   # Scheduled maintenance (NFR-12): a worker on its own queue with the Celery Beat
@@ -236,7 +236,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    mem_limit: 3250m  # M11 (K12): 0.25 GB more to inference; peaks measured 1.6 GB training, 2.2 GB labelling (ADR-0016)
+    mem_limit: 2750m  # M12 (ADR-0021 rule 11): peaks 2.08 GiB (phase-2 acceptance), 2.2 GB labelling
 
   inference:
     # REG-1.4, ADR-0016: holds at most one model and serves the API's /predict. The
@@ -265,11 +265,52 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    mem_limit: 1250m  # M11 (K12): tables and texts are served too (REG-1.4); the sum of limits is unchanged
+    mem_limit: 1350m  # M12 (ADR-0021 rule 11): bge-small and CLIP's text tower on the CPU; the sum stays 9,024 MiB
     restart: unless-stopped
+    networks: [default, llm]  # ADR-0021 rule 1: the only service that reaches ollama
+
+  ollama:
+    # LLM-1.1, ADR-0021: serves the LLM to `inference` only. Pinned by digest; on the
+    # internal `llm` network, which has no gateway, so it cannot reach any registry
+    # (NFR-7). Its model is built by `inference` from the allow-list's verified GGUF file
+    # (rule 2); it never pulls. `inference` decides when it loads and unloads (rule 5).
+    profiles: ["gpu"]
+    image: ollama/ollama:0.40.16@sha256:910d0d8107b538fb0894e63163eb195de0cc7aefcbc666dc62d3b18f71124592
+    environment:
+      OLLAMA_NO_CLOUD: "1"
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_CONTEXT_LENGTH: "4096"
+      OLLAMA_KEEP_ALIVE: "-1"
+      # S-11: without a kept kernel cache the first GPU load in a new container takes ~60 s.
+      CUDA_CACHE_PATH: /root/.ollama/cuda-cache
+      CUDA_CACHE_MAXSIZE: "1073741824"
+    volumes:
+      - stratal-ollama:/root/.ollama
+    networks: [llm]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    mem_limit: 1000m  # ADR-0021 rule 11: 717 MiB of process memory at most (S-11); page cache is reclaimed
+    restart: unless-stopped
+
+networks:
+  llm:
+    internal: true  # no gateway: nothing on it reaches outside the host (ADR-0021 rule 1)
 
 volumes:
   stratal-pg:
   stratal-redis:
   stratal-data:
   stratal-node-modules:
+  stratal-ollama:

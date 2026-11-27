@@ -173,3 +173,20 @@ class NotServable(StratalError):
     code = "not_servable"
     title = "This model cannot serve predictions"
     http_status = 409
+
+
+class LlmUnavailable(StratalError):
+    """The LLM service is down, timed out, is still preparing its model, or did not give
+    VRAM back after an unload (ADR-0021 rules 5 and 10)."""
+
+    code = "llm_unavailable"
+    title = "LLM unavailable"
+    http_status = 503
+
+
+class LlmBusy(StratalError):
+    """Answers run one at a time and the queue of waiting requests is full (ADR-0021 rule 8)."""
+
+    code = "llm_busy"
+    title = "LLM busy"
+    http_status = 503

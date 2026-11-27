@@ -67,6 +67,20 @@ class Settings(BaseSettings):
     inference_check_interval_s: float = 1.0
     # How long the API waits for a prediction, including a model load on the CPU.
     inference_timeout_s: float = 120.0
+    # LLM serving (LLM-1.1, ADR-0021). Reached only from `inference`, on the `llm` network.
+    ollama_url: str = "http://ollama:11434"
+    llm_model: str = "qwen3-1.7b-q4km"
+    """The allow-list name of the LLM's GGUF file (M12 decision 1)."""
+    llm_timeout_s: float = 30.0
+    """How long a single read from Ollama may take before the answer is llm_unavailable."""
+    llm_vram_estimate_mb: float = 1900.0
+    """Free VRAM needed before loading: the model and a 4,096-token cache (S-11: 1,657 MiB)."""
+    llm_unload_wait_s: float = 10.0
+    llm_baseline_margin_mb: float = 64.0
+    llm_max_waiting: int = 4
+    llm_num_ctx: int = 4096
+    llm_max_tokens: int = 512
+    llm_temperature: float = 0.3
 
 
 @lru_cache

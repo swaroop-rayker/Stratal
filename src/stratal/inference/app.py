@@ -6,13 +6,17 @@ the same RFC 9457 problem documents as the API's (ADR-0011), so the API can pass
 them through unchanged.
 """
 
-from typing import Any, Protocol
+import json
+from collections.abc import Iterator
+from typing import Any, Literal, Protocol
 
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from stratal.api.problem import install_error_handlers
+from stratal.core.errors import LlmUnavailable, StratalError
 
 
 class Predictor(Protocol):
@@ -24,6 +28,56 @@ class Predictor(Protocol):
         self, version_id: str, *, record: dict[str, Any] | None = None, text: str | None = None
     ) -> dict[str, Any]: ...
     def status(self) -> dict[str, Any]: ...
+
+
+class Chatter(Protocol):
+    """What the app needs from :class:`stratal.inference.llm.LlmAdapter` (ADR-0021)."""
+
+    def start(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        route: str = "llm",
+        extra: dict[str, Any] | None = None,
+    ) -> Any: ...
+    def status(self) -> dict[str, Any]: ...
+
+
+class ChatMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["system", "user", "assistant"]
+    content: str = Field(max_length=60_000)
+
+
+class ChatBody(BaseModel):
+    """A conversation for the LLM, as the API builds it (ADR-0021 rule 8)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    messages: list[ChatMessage] = Field(min_length=1, max_length=64)
+
+
+def _problem_event(exc: Exception) -> dict[str, Any]:
+    error = exc if isinstance(exc, StratalError) else LlmUnavailable(f"The answer stopped: {exc}")
+    return {
+        "event": "error",
+        "code": error.code,
+        "title": error.title,
+        "status": error.http_status,
+        "detail": str(error),
+        "suggested_action": error.suggested_action,
+    }
+
+
+def ndjson(events: Iterator[dict[str, Any]]) -> Iterator[str]:
+    """One JSON object per line; a failure after the first line becomes an ``error`` event,
+    since the status line has been sent by then."""
+    try:
+        for event in events:
+            yield json.dumps(event) + "\n"
+    except Exception as exc:
+        yield json.dumps(_problem_event(exc)) + "\n"
 
 
 ImageDecoder = Any
@@ -60,7 +114,9 @@ class PredictBody(BaseModel):
         return getattr(self, name) is not None
 
 
-def create_inference_app(holder: Predictor, decode: ImageDecoder) -> FastAPI:
+def create_inference_app(
+    holder: Predictor, decode: ImageDecoder, llm: Chatter | None = None
+) -> FastAPI:
     app = FastAPI(title="Stratal inference", docs_url=None, redoc_url=None)
     install_error_handlers(app)
 
@@ -74,6 +130,18 @@ def create_inference_app(holder: Predictor, decode: ImageDecoder) -> FastAPI:
 
     @app.get("/status")
     def status() -> dict[str, Any]:
-        return holder.status()
+        result = holder.status()
+        if llm is not None:
+            result["llm"] = llm.status()
+        return result
+
+    @app.post("/chat")
+    def chat(body: ChatBody) -> StreamingResponse:
+        """Stream one answer from the LLM (LLM-1.1). Queueing, the lease and the load happen
+        before the response starts, so a refusal is an ordinary problem document."""
+        if llm is None:
+            raise LlmUnavailable("This inference service runs without the LLM.")
+        generation = llm.start([m.model_dump() for m in body.messages])
+        return StreamingResponse(ndjson(generation.events()), media_type="application/x-ndjson")
 
     return app
