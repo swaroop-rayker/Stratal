@@ -642,3 +642,81 @@ class ModelTemplate(Base):
     builtin: Mapped[bool] = mapped_column(Boolean, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# -- chat (M12, ADR-0021 rule 9, DATA_MODEL §4.16) ------------------------------------
+
+CHAT_ROLES = ("user", "assistant")
+CHAT_MODES = ("llm", "rag", "images")
+REQUEST_STATUSES = ("ok", "refused", "failed", "stopped")
+
+
+class ChatSession(Base):
+    """A conversation on SCR-12 (open point 8a): kept and listed until the owner deletes it."""
+
+    __tablename__ = "chat_sessions"
+    __table_args__ = (Index("ix_chat_sessions_updated", text("updated_at DESC")),)
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    title: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class InferenceRequest(Base):
+    """One chat, RAG or image-search request with its route and timings (NFR-6). Kept when
+    its conversation is deleted: the timings are the NFR-6 record."""
+
+    __tablename__ = "inference_requests"
+    __table_args__ = (
+        CheckConstraint(_one_of("kind", CHAT_MODES), name="ck_inference_requests_kind"),
+        CheckConstraint(_one_of("status", REQUEST_STATUSES), name="ck_inference_requests_status"),
+        Index("ix_inference_requests_created", text("created_at DESC")),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    kind: Mapped[str] = mapped_column(Text)
+    session_id: Mapped[str | None] = mapped_column(
+        Text, ForeignKey("chat_sessions.id", ondelete="SET NULL")
+    )
+    route: Mapped[str] = mapped_column(Text)
+    model: Mapped[str | None] = mapped_column(Text)
+    revision: Mapped[str | None] = mapped_column(Text)
+    device: Mapped[str | None] = mapped_column(Text)
+    index_version_id: Mapped[str | None] = mapped_column(Text)
+    cold_start: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    load_ms: Mapped[float | None] = mapped_column(Float)
+    ttft_ms: Mapped[float | None] = mapped_column(Float)
+    total_ms: Mapped[float | None] = mapped_column(Float)
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer)
+    output_tokens: Mapped[int | None] = mapped_column(Integer)
+    tokens_per_s: Mapped[float | None] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(Text)
+    error_code: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ChatMessage(Base):
+    """A message of a conversation. An answer keeps its citations (RAG), and in ``details``
+    its image results, an abstention, a refusal, or that it was stopped."""
+
+    __tablename__ = "chat_messages"
+    __table_args__ = (
+        CheckConstraint(_one_of("role", CHAT_ROLES), name="ck_chat_messages_role"),
+        CheckConstraint(_one_of("mode", CHAT_MODES), name="ck_chat_messages_mode"),
+        Index("ix_chat_messages_session", "session_id", "id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    session_id: Mapped[str] = mapped_column(
+        Text, ForeignKey("chat_sessions.id", ondelete="CASCADE")
+    )
+    role: Mapped[str] = mapped_column(Text)
+    mode: Mapped[str] = mapped_column(Text)
+    content: Mapped[str] = mapped_column(Text)
+    citations: Mapped[list[Any] | None] = mapped_column(JSONB)
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    request_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("inference_requests.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
