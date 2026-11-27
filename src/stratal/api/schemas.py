@@ -755,7 +755,7 @@ class TrainingContext(_Model):
 
 
 class SettingsSection(_Model):
-    name: Literal["retention", "training", "monitoring"]
+    name: Literal["retention", "training", "monitoring", "retrieval"]
     title: str
     requirements: list[str]
     values: Json

@@ -51,11 +51,32 @@ class ChatMessage(BaseModel):
 
 
 class ChatBody(BaseModel):
-    """A conversation for the LLM, as the API builds it (ADR-0021 rule 8)."""
+    """A conversation for the LLM, or a question for RAG, as the API builds it (ADR-0021
+    rule 8, ADR-0022 rules 5 to 8)."""
 
     model_config = ConfigDict(extra="forbid")
 
-    messages: list[ChatMessage] = Field(min_length=1, max_length=64)
+    mode: Literal["llm", "rag"] = "llm"
+    messages: list[ChatMessage] = Field(default_factory=lambda: list[ChatMessage](), max_length=64)
+    question: str | None = Field(default=None, max_length=8_000)
+    index_version_id: str | None = Field(default=None, pattern=r"^ds_[0-9a-f]{12}$")
+    k: int | None = Field(default=None, ge=1, le=20)
+
+    @model_validator(mode="after")
+    def _complete(self) -> "ChatBody":
+        if self.mode == "llm" and not self.messages:
+            raise ValueError("llm mode needs messages")
+        if self.mode == "rag" and (not self.question or not self.index_version_id):
+            raise ValueError("rag mode needs a question and an index_version_id")
+        return self
+
+
+class Rag(Protocol):
+    """What the app needs from :class:`stratal.inference.rag.RagService`."""
+
+    def start(
+        self, question: str, index_version_id: str, k: int | None = None
+    ) -> Iterator[dict[str, Any]]: ...
 
 
 def _problem_event(exc: Exception) -> dict[str, Any]:
@@ -115,7 +136,10 @@ class PredictBody(BaseModel):
 
 
 def create_inference_app(
-    holder: Predictor, decode: ImageDecoder, llm: Chatter | None = None
+    holder: Predictor,
+    decode: ImageDecoder,
+    llm: Chatter | None = None,
+    rag: Rag | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Stratal inference", docs_url=None, redoc_url=None)
     install_error_handlers(app)
@@ -139,6 +163,12 @@ def create_inference_app(
     def chat(body: ChatBody) -> StreamingResponse:
         """Stream one answer from the LLM (LLM-1.1). Queueing, the lease and the load happen
         before the response starts, so a refusal is an ordinary problem document."""
+        if body.mode == "rag":
+            if rag is None:
+                raise LlmUnavailable("This inference service runs without retrieval.")
+            assert body.question is not None and body.index_version_id is not None
+            events = rag.start(body.question, body.index_version_id, body.k)
+            return StreamingResponse(ndjson(events), media_type="application/x-ndjson")
         if llm is None:
             raise LlmUnavailable("This inference service runs without the LLM.")
         generation = llm.start([m.model_dump() for m in body.messages])

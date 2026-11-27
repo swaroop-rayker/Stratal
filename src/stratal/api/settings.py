@@ -25,6 +25,7 @@ from stratal.api.jobs import Db, Queue, Redis
 from stratal.core.bus import Bus
 from stratal.core.errors import ConfirmationRequired, Conflict, FieldProblem, ValidationFailed
 from stratal.core.settings import get_settings
+from stratal.data import retrieval_settings as retrieval
 from stratal.db.models import Job, ModelLineage, ModelVersion, ResourceSample
 from stratal.registry import retention, store
 from stratal.runtime import jobs as job_service
@@ -135,6 +136,20 @@ def _monitoring_section(session: Db) -> Json:
     }
 
 
+def _retrieval_section(session: Db) -> Json:
+    values = retrieval.read_retrieval(session)
+    return {
+        "name": "retrieval",
+        "title": "Retrieval",
+        "requirements": ["LLM-2.3"],
+        "values": values.model_dump(mode="json"),
+        "schema": retrieval.RetrievalValues.model_json_schema(),
+        "version": retrieval.retrieval_version(values),
+        "lineages": None,
+        "context": None,
+    }
+
+
 @router.get("/settings", response_model=schemas.SettingsList)
 def get_settings_sections(session: Db, bus: Redis) -> Json:
     """Each section's values, its JSON schema and a version to send back when saving."""
@@ -143,6 +158,7 @@ def get_settings_sections(session: Db, bus: Redis) -> Json:
             _training_section(session, bus),
             _retention_section(session),
             _monitoring_section(session),
+            _retrieval_section(session),
         ]
     }
 
@@ -174,7 +190,7 @@ def _validated[M: BaseModel](model: type[M], values: dict[str, Any]) -> M:
 class SaveSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    section: Literal["retention", "training", "monitoring"]
+    section: Literal["retention", "training", "monitoring", "retrieval"]
     values: dict[str, Any]
     version: str = Field(description="The section's version as read; a stale one is refused.")
     confirm: str | None = Field(
@@ -190,6 +206,8 @@ def save_settings(body: SaveSettings, session: Db, enqueue: Queue, bus: Redis) -
         return _save_training(body, session, bus)
     if body.section == "monitoring":
         return _save_monitoring(body, session)
+    if body.section == "retrieval":
+        return _save_retrieval(body, session)
     new = _validated(retention.RetentionValues, body.values)
     queued = None
     with session.begin():
@@ -245,6 +263,22 @@ def _save_training(body: SaveSettings, session: Db, bus: Bus) -> Json:
             )
         limits.write(session, new, slowdown_c=_slowdown(bus))
         section = _training_section(session, bus)
+    return {"section": section, "job_id": None}
+
+
+def _save_retrieval(body: SaveSettings, session: Db) -> Json:
+    """The threshold applies to the next RAG question (LLM-2.3)."""
+    new = _validated(retrieval.RetrievalValues, body.values)
+    with session.begin():
+        current = retrieval.read_retrieval(session)
+        if retrieval.retrieval_version(current) != body.version:
+            raise Conflict(
+                "The retrieval settings changed since they were read.",
+                suggested_action="Reload the settings and make the change again.",
+                extensions={"version": retrieval.retrieval_version(current)},
+            )
+        retrieval.write_retrieval(session, new)
+        section = _retrieval_section(session)
     return {"section": section, "job_id": None}
 
 

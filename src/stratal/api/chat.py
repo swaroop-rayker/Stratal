@@ -253,6 +253,14 @@ def _store(turn: _Turn) -> None:
             chat.updated_at = func.now()  # type: ignore[assignment]
 
 
+def _payload(body: ChatRequest, messages: list[Json]) -> Json:
+    """What ``inference`` is sent: the conversation for *LLM*, the question alone for *RAG*
+    (open point 8b), so a RAG answer's sources are its own."""
+    if body.mode == "rag":
+        return {"mode": "rag", "question": body.message, "index_version_id": body.index_version_id}
+    return {"mode": "llm", "messages": messages}
+
+
 async def _relay(
     request: Request, forward: ChatForward, body: ChatRequest, prepared: tuple[str, int, list[Json]]
 ) -> AsyncIterator[str]:
@@ -262,7 +270,7 @@ async def _relay(
     try:
         yield sse("session", {"session_id": session_id, "message_id": message_id})
         try:
-            upstream = await run_in_threadpool(forward, {"messages": messages})
+            upstream = await run_in_threadpool(forward, _payload(body, messages))
         except DependencyUnavailable as exc:
             problem = {
                 "code": exc.code,
@@ -303,10 +311,18 @@ async def chat(
 ) -> StreamingResponse:
     """Ask the LLM (LLM-1.1). The answer streams as server-sent events: ``session``,
     ``meta``, ``token``…, ``done``; or ``error`` with a problem document."""
-    if body.mode != "llm":
+    if body.mode == "images":
         raise ValidationFailed(
-            f"Mode {body.mode!r} is built later in M12 (ADR-0022).",
+            "Image search is built later in M12 (ADR-0022 rule 12).",
             errors=[{"loc": ["body", "mode"], "msg": "not built yet", "code": "not_built"}],
+        )
+    if body.mode == "rag" and body.index_version_id is None:
+        raise ValidationFailed(
+            "RAG answers from an index version; none was given.",
+            suggested_action="Pick the corpus's index version.",
+            errors=[
+                {"loc": ["body", "index_version_id"], "msg": "required for rag", "code": "missing"}
+            ],
         )
     prepared = await run_in_threadpool(_prepare, body)
     return StreamingResponse(

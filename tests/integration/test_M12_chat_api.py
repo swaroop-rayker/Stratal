@@ -140,10 +140,10 @@ def test_LLM_1_1_gpu_busy_is_an_error_event_and_stored_as_refused(chat: Chat) ->
         assert answer.details is not None and answer.details["error"]["code"] == "gpu_busy"
 
 
-def test_LLM_1_1_other_modes_wait_for_their_build(chat: Chat) -> None:
+def test_LLM_2_1_rag_needs_an_index_version(chat: Chat) -> None:
     response = chat.client.post("/api/v1/chat", json={"mode": "rag", "message": "Hi"})
     assert response.status_code == 422
-    assert response.json()["errors"][0]["loc"] == ["body", "mode"]
+    assert response.json()["errors"][0]["loc"] == ["body", "index_version_id"]
 
 
 def test_NFR_6_deleting_a_conversation_keeps_its_timings(chat: Chat) -> None:
