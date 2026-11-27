@@ -867,6 +867,8 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 - [ ] `test_NFR_6_*`: 20 queries measured, as read in decision 11
 - [ ] `test_NFR_7_*` and `test_NFR_8_*` extended: chat and RAG with every outbound connection refused; the model file pinned by hash
 - [ ] `test_BUG6_*` extended: after the adapter's unload the card is back at its baseline, and a queued training job gets the GPU
+- [x] G1 revision approved (SCREENS.md v5, 2026-11-27, with open point 8's recommended options)
+- [ ] G2 for SCR-12, SCR-03 for corpora and SCR-06's retrieval report, in that order
 - [ ] G3 for M12's screens
 - [ ] Demo: ingest the documentation, build two index versions with different chunk sizes and read their hit@5 on SCR-06; ask SCR-12 questions with citations, and one it must decline; search "dogs at night"; start a training run and watch chat give the GPU back
 - [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS; learning notes)
