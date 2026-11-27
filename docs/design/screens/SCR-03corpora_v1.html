@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCR-03 for corpora — hi-fi mockup v1</title>
+<style>
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-display: swap; src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+/* ============================================================================
+   TOKENS: copied unchanged from docs/design/system-preview.html (design system v1).
+   ========================================================================== */
+:root {
+  --bg: #0e1116; --surface: #161a22; --surface-raised: #1d222c; --surface-sunken: #0a0d11;
+  --border: #2a313d; --border-strong: #66728a;
+  --text-primary: #e6e9ef; --text-secondary: #a9b1bf; --text-muted: #8a93a3;
+  --accent: #a596ff; --accent-hover: #b9adff; --accent-soft: #a596ff24; --on-accent: #14102e;
+  --success: #3fb97f; --warning: #e0a23a; --danger: #f4737b; --info: #58a6f0; --on-danger: #2b0b0e;
+  --success-soft: #3fb97f22; --warning-soft: #e0a23a22; --danger-soft: #f4737b22; --info-soft: #58a6f022;
+  --state-queued: #98a2b3; --state-running: #58a6f0; --state-paused: #e0a23a;
+  --state-completed: #3fb97f; --state-failed: #f4737b; --state-cancelled: #8a93a3; --state-stalled: #e58ad6;
+  --res-cpu: #5aa9f5; --res-ram: #3cc4b4; --res-gpu: #a3d35c; --res-vram: #f29e4c; --res-temp: #f4737b;
+  --cat-1: #5aa9f5; --cat-2: #f29e4c; --cat-3: #3cc4b4; --cat-4: #e58ad6; --cat-5: #a3d35c; --cat-6: #b79cff; --cat-7: #f0d264; --cat-8: #f4737b;
+  --seq-1: #1b2440; --seq-2: #27356a; --seq-3: #374a96; --seq-4: #4d64c0; --seq-5: #6f86e0; --seq-6: #9fb0f2; --seq-7: #d3dcfb;
+  --shadow-1: 0 1px 2px #00000066; --shadow-2: 0 4px 12px #00000080; --shadow-3: 0 12px 32px #000000a6;
+  --scrim: #05070ab3; --focus: #a596ff;
+  --font-ui: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --lh-tight: 1.25; --lh-normal: 1.5; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px; --bw: 1px; --focus-width: 2px;
+  --h-sm: 24px; --h-md: 32px; --h-lg: 40px;
+  --z-sticky: 100; --z-drawer: 200; --z-modal: 300; --z-toast: 400; --z-tooltip: 500;
+  --dur-fast: 80ms; --dur-base: 160ms; --dur-slow: 240ms; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+[data-theme="light"] {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #eceef2;
+  --border: #d9dde4; --border-strong: #79828f;
+  --text-primary: #171b22; --text-secondary: #4a5361; --text-muted: #5f6877;
+  --accent: #5a45d6; --accent-hover: #4a36c2; --accent-soft: #5a45d61a; --on-accent: #ffffff;
+  --success: #177a4b; --warning: #8a5800; --danger: #c22f3d; --info: #1c69bd; --on-danger: #ffffff;
+  --success-soft: #177a4b1a; --warning-soft: #8a58001a; --danger-soft: #c22f3d1a; --info-soft: #1c69bd1a;
+  --state-queued: #566070; --state-running: #1c69bd; --state-paused: #8a5800;
+  --state-completed: #177a4b; --state-failed: #c22f3d; --state-cancelled: #5f6877; --state-stalled: #a8348f;
+  --res-cpu: #1f6fc4; --res-ram: #0b7d70; --res-gpu: #4d7a12; --res-vram: #b0560a; --res-temp: #c2364a;
+  --cat-1: #1f6fc4; --cat-2: #b0560a; --cat-3: #0b7d70; --cat-4: #a8348f; --cat-5: #4d7a12; --cat-6: #6a4fd8; --cat-7: #7d6300; --cat-8: #c2364a;
+  --seq-1: #e4e9fb; --seq-2: #c2cdf5; --seq-3: #9aabec; --seq-4: #7087de; --seq-5: #4d64c8; --seq-6: #3548a3; --seq-7: #222f72;
+  --shadow-1: 0 1px 2px #171b221f; --shadow-2: 0 4px 12px #171b2224; --shadow-3: 0 12px 32px #171b2233;
+  --scrim: #171b2266; --focus: #5a45d6;
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } .pulse, .skeleton { animation: none !important; } }
+
+/* ============================================================================ design-system components (from the preview, unchanged) */
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; } [data-theme="light"] { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: var(--fw-regular) var(--fs-13)/var(--lh-normal) var(--font-ui); }
+.mono, code, kbd, .num { font-family: var(--font-mono); } .num { font-variant-numeric: tabular-nums; }
+svg.i { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible, .is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-primary); font: var(--fw-medium) var(--fs-13)/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.sm { height: var(--h-sm); padding: 0 var(--sp-2); font-size: var(--fs-12); }
+.btn:disabled, .btn.is-disabled { opacity: .45; cursor: not-allowed; }
+.tabs { display: flex; gap: var(--sp-1); border-bottom: var(--bw) solid var(--border); }
+.tab { padding: var(--sp-2) var(--sp-3); border: 0; background: none; color: var(--text-secondary); font: var(--fw-medium) var(--fs-13) var(--font-ui); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: var(--sp-2); align-items: center; }
+.tab[aria-selected=true] { color: var(--text-primary); border-bottom-color: var(--accent); }
+.count { font: var(--fs-11) var(--font-mono); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--surface-raised); color: var(--text-secondary); }
+.table-wrap { border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+.t th { text-align: left; font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface-raised); padding: var(--sp-2); border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.t td { padding: 0 var(--sp-2); border-bottom: var(--bw) solid var(--border); height: 44px; white-space: nowrap; }
+.t tr:last-child td { border-bottom: 0; }
+.t tbody tr:hover, .t tr.is-hover { background: var(--accent-soft); }
+.t tr[aria-selected=true] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.t .r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t td.id { font-family: var(--font-mono); font-size: var(--fs-12); }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; padding: 0 var(--sp-2) 0 6px; border-radius: var(--r-pill); font: var(--fw-medium) var(--fs-11)/1 var(--font-ui); letter-spacing: .02em; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: var(--bw) solid color-mix(in srgb, var(--c) 40%, transparent); white-space: nowrap; }
+.pill.running { --c: var(--state-running); } .pill.completed { --c: var(--state-completed); }
+.pill svg.i { width: 12px; height: 12px; }
+.pulse { width: 6px; height: 6px; border-radius: var(--r-pill); background: currentColor; animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); background: var(--surface-raised); color: var(--text-secondary); border: var(--bw) solid var(--border); }
+.badge.err { color: var(--danger); background: var(--danger-soft); border-color: transparent; } .badge.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; }
+kbd { display: inline-block; min-width: 20px; padding: 0 5px; text-align: center; font-size: var(--fs-11); line-height: 18px; border: var(--bw) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-secondary); }
+.node { display: inline-flex; flex-direction: column; gap: 2px; min-width: 168px; padding: var(--sp-2) var(--sp-3); background: var(--surface-raised); border: var(--bw) solid var(--border-strong); border-left: 3px solid var(--c, var(--accent)); border-radius: var(--r-md); box-shadow: var(--shadow-1); }
+.node small { font-size: var(--fs-11); color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.node b { font: var(--fw-medium) var(--fs-13) var(--font-mono); } .node span { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-1); }
+.edge { width: 28px; height: 1px; background: var(--border-strong); position: relative; flex: none; }
+.edge::after { content: ""; position: absolute; right: 0; top: -3px; border: 3.5px solid transparent; border-left-color: var(--border-strong); }
+pre.code { margin: 0; background: var(--surface-sunken); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); font: var(--fs-12)/1.6 var(--font-mono); }
+pre.code .k { color: var(--cat-6); } pre.code .s { color: var(--cat-5); } pre.code .n { color: var(--cat-2); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; background: var(--surface-raised); border-left: var(--bw) solid var(--border); box-shadow: var(--shadow-3); z-index: var(--z-drawer); display: flex; flex-direction: column; }
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: var(--sp-8) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+.state > svg.i { width: 28px; height: 28px; color: var(--text-muted); } .state b { font-size: var(--fs-14); } .state p { margin: 0; font-size: var(--fs-12); max-width: 46ch; color: var(--text-secondary); }
+.state.err { border-style: solid; border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .state.err > svg.i { color: var(--danger); }
+.skeleton { display: inline-block; height: 12px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-raised) 25%, var(--border) 50%, var(--surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.tip { position: absolute; padding: var(--sp-1) var(--sp-2); background: var(--text-primary); color: var(--bg); border-radius: var(--r-sm); font-size: var(--fs-12); box-shadow: var(--shadow-2); z-index: var(--z-tooltip); white-space: nowrap; }
+
+/* ============================================================================ SCR-01 shell (approved v1, unchanged) */
+.frame { position: relative; width: 1280px; background: var(--bg); color: var(--text-primary); border: var(--bw) solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.frame.compact { width: 1024px; }
+.shell { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: 48px 1fr 28px; height: 100%; }
+.shell.rail { grid-template-columns: 56px 1fr; }
+.side { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2); background: var(--surface); border-right: var(--bw) solid var(--border); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-sm); padding: 0 var(--sp-2); margin-bottom: var(--sp-4); font-weight: var(--fw-semibold); font-size: var(--fs-14); } .brand svg.i { width: 18px; height: 18px; color: var(--accent); }
+.group { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.nav { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); border-radius: var(--r-sm); color: var(--text-secondary); font-weight: var(--fw-medium); }
+.nav[aria-current=page] { background: var(--accent-soft); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent); } .nav kbd { margin-left: auto; }
+.top { grid-column: 2; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); } .crumbs b { color: var(--text-primary); font-weight: var(--fw-semibold); } .crumbs svg.i { width: 12px; height: 12px; } .crumbs .mono { color: var(--text-primary); font-size: var(--fs-12); }
+.spacer { flex: 1; }
+.jobind { display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2) 0 var(--sp-1); border: var(--bw) solid var(--border); border-radius: var(--r-pill); background: var(--surface); font: var(--fs-12) var(--font-ui); } .jobind .stage { color: var(--text-secondary); } .jobind svg.i { color: var(--text-muted); }
+.progress { height: 6px; border-radius: var(--r-pill); background: var(--surface-sunken); border: var(--bw) solid var(--border); overflow: hidden; } .progress > i { display: block; height: 100%; width: var(--p, 0%); background: var(--c, var(--state-running)); }
+.status { grid-column: 1 / 3; display: flex; align-items: stretch; background: var(--surface); border-top: var(--bw) solid var(--border); font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.m { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border-right: var(--bw) solid var(--border); white-space: nowrap; } .m .sq { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--res); } .m b { color: var(--text-primary); font-weight: var(--fw-medium); } .m small { color: var(--text-muted); }
+.conn { margin-left: auto; border-right: 0; border-left: var(--bw) solid var(--border); color: var(--text-muted); } .conn .live { color: var(--success); display: inline-flex; gap: var(--sp-1); align-items: center; }
+
+/* ============================================================================ SCR-03 (tokens only) */
+.content { grid-column: 2; position: relative; overflow: hidden; padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); background: var(--bg); }
+.vhead { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.vhead h1 { margin: 0; font: var(--fw-semibold) var(--fs-20)/var(--lh-tight) var(--font-mono); display: flex; align-items: center; gap: var(--sp-2); }
+.vhead .sub { color: var(--text-muted); font-size: var(--fs-12); margin-top: var(--sp-1); display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; } .vhead .sub .mono { color: var(--text-secondary); }
+.vhead .sub svg.i { width: 12px; height: 12px; color: var(--state-completed); }
+.stage-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-12) var(--font-mono); color: var(--text-secondary); border: var(--bw) solid var(--border); background: var(--surface-raised); }
+.lineage { display: flex; align-items: center; padding: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.node.pending { --c: var(--state-running); border-style: dashed; background: transparent; box-shadow: none; }
+.node.done { --c: var(--state-completed); }
+.fork { display: flex; flex-direction: column; gap: var(--sp-2); } .fork .row { display: flex; align-items: center; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
+.stile { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-2) var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--c); border-radius: var(--r-md); text-align: left; cursor: pointer; }
+.stile:hover, .stile.is-hover { border-color: var(--border-strong); border-left-color: var(--c); }
+.stile[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); border-left-color: var(--c); }
+.stile .k { font-size: var(--fs-11); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); display: flex; gap: var(--sp-2); align-items: center; }
+.stile .k i { width: 8px; height: 8px; border-radius: var(--r-xs); background: var(--c); }
+.stile .v { font: var(--fw-medium) var(--fs-20)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.stile .d { font-size: var(--fs-11); color: var(--text-muted); }
+.toolbar { display: flex; align-items: center; gap: var(--sp-2); }
+.group-btns { display: inline-flex; }
+.group-btns .btn { border-radius: 0; margin-left: -1px; } .group-btns .btn:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); margin-left: 0; } .group-btns .btn:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--text-primary); position: relative; z-index: 1; }
+.search { position: relative; width: 200px; } .search .input { height: var(--h-sm); padding: 0 var(--sp-2) 0 26px; border: var(--bw) solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--text-muted); font-size: var(--fs-12); display: flex; align-items: center; }
+.search svg.i { position: absolute; left: var(--sp-2); top: 5px; color: var(--text-muted); width: 13px; height: 13px; } .search kbd { position: absolute; right: var(--sp-1); top: 2px; }
+.thumb { width: 32px; height: 32px; border-radius: var(--r-sm); border: var(--bw) solid var(--border); display: block; background: linear-gradient(135deg, var(--a, var(--seq-3)), var(--b, var(--seq-5))); }
+.rs { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-12); } .rs i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.rs.acc { --c: var(--success); } .rs.rej { --c: var(--danger); } .rs.dup { --c: var(--text-muted); } .rs.fil { --c: var(--warning); }
+.reason { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+.muted { color: var(--text-muted); }
+.t td.hash { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); text-align: right; }
+.notice { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--warning-soft); border: var(--bw) solid color-mix(in srgb, var(--warning) 45%, transparent); font-size: var(--fs-12); }
+.notice svg.i { color: var(--warning); margin-top: 2px; }
+.kv { display: grid; grid-template-columns: 150px 1fr; gap: var(--sp-2) var(--sp-3); font-size: var(--fs-12); } .kv > span:nth-child(odd) { color: var(--text-muted); } .kv .mono { word-break: break-all; font-size: var(--fs-12); }
+h3.sec { margin: 0 0 var(--sp-2); font-size: var(--fs-12); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.reason-bar { display: inline-block; height: 6px; border-radius: var(--r-pill); background: var(--c); vertical-align: middle; }
+/* row drawer */
+.drawer { width: 540px; }
+.drawer > header { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); }
+.drawer > header b { font: var(--fw-medium) var(--fs-14) var(--font-mono); }
+.drawer .body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); overflow: hidden; }
+.group-head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-secondary); }
+.group-head b { color: var(--text-primary); }
+.dist { font: var(--fw-medium) var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.card-img { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-12); }
+.photo { height: 190px; border-radius: var(--r-md); border: var(--bw) solid var(--border); background: radial-gradient(circle at 30% 35%, var(--cat-5) 0 16%, transparent 17%), radial-gradient(circle at 68% 60%, var(--cat-2) 0 13%, transparent 14%), linear-gradient(160deg, var(--seq-2), var(--seq-4)); position: relative; }
+.photo.kept { box-shadow: 0 0 0 2px var(--success); }
+.photo .tag { position: absolute; left: var(--sp-2); top: var(--sp-2); }
+.card-img .mono { font-size: var(--fs-12); color: var(--text-primary); } .card-img span { color: var(--text-secondary); } .card-img .hash { font: var(--fs-11) var(--font-mono); color: var(--text-muted); }
+.hash mark { background: var(--warning-soft); color: var(--warning); border-radius: var(--r-xs); }
+
+
+/* ============================================================================ SCR-03 v2 (M11), tokens only.
+   Callouts as SCR-09 v2 and SCR-11 v2 (approved); data-viz categorical 1 as SCR-10 and SCR-11. */
+:root { --cat-1: #5aa9f5; }
+[data-theme="light"] { --cat-1: #1f6fc4; }
+.card { background: var(--surface); border: var(--bw) solid var(--border); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.card > h2 { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-semibold); display: flex; align-items: center; gap: var(--sp-2); }
+.card > h2 .sub2 { font-weight: var(--fw-regular); font-size: var(--fs-11); color: var(--text-secondary); }
+.note2 { font-size: var(--fs-12); color: var(--text-secondary); margin: 0; }
+.callout { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); border: var(--bw) solid var(--border); font-size: var(--fs-12); color: var(--text-primary); background: var(--surface); }
+.callout svg.i { margin-top: 2px; flex: none; }
+.callout.info { border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-soft); } .callout.info svg.i { color: var(--info); }
+.callout.err { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-soft); } .callout.err svg.i { color: var(--danger); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.t.dense td { height: 32px; }
+.t td.r, .t th.r { text-align: right; } .t td.r { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t tr.here td { background: var(--accent-soft); }
+.t tr.here td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+.t td.lab { color: var(--text-secondary); }
+.t td.gone { color: var(--text-secondary); }
+/* the funnel's reason chips: a status dot, the code, the rows; they filter Rows */
+.chip { display: inline-flex; align-items: center; gap: var(--sp-1); height: 22px; padding: 0 var(--sp-2); border: var(--bw) solid var(--border-strong); border-radius: var(--r-pill); background: var(--surface-raised); font: var(--fs-11) var(--font-mono); color: var(--text-primary); cursor: pointer; }
+.chip i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--c); }
+.chip b { font-weight: var(--fw-medium); }
+.chip.rej { --c: var(--danger); } .chip.dup { --c: var(--text-muted); } .chip.fil { --c: var(--warning); }
+.parts { font: var(--fs-12) var(--font-mono); color: var(--text-secondary); }
+/* histogram: raw as an outline, here filled (decision 3) */
+.hist { display: grid; grid-template-columns: 64px 1fr 110px; gap: 4px var(--sp-2); align-items: center; font: var(--fs-11) var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.hist .track { position: relative; height: 14px; }
+.hist .raw { position: absolute; left: 0; top: 0; bottom: 0; border: var(--bw) solid var(--text-secondary); border-radius: var(--r-xs); min-width: 1px; }
+.hist .here { position: absolute; left: 0; top: 3px; bottom: 3px; background: var(--cat-1); border-radius: var(--r-xs); min-width: 1px; }
+.hist .n { color: var(--text-primary); text-align: right; }
+.key { display: flex; gap: var(--sp-4); font-size: var(--fs-11); color: var(--text-secondary); align-items: center; }
+.key i { display: inline-block; width: 14px; height: 8px; margin-right: var(--sp-1); vertical-align: middle; border-radius: var(--r-xs); }
+.key .k-raw { border: var(--bw) solid var(--text-secondary); } .key .k-here { background: var(--cat-1); }
+.mark-line { font-size: var(--fs-11); color: var(--text-secondary); }
+/* compare */
+.cmp-pick { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); flex-wrap: wrap; }
+.counts { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-12); }
+.counts > span:nth-child(even) { font-family: var(--font-mono); text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.counts > span:nth-child(odd) { color: var(--text-secondary); }
+.counts b { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.arrow { color: var(--text-secondary); }
+/* semantic cluster tile and chip */
+.stile.sem { --c: var(--cat-1); }
+.scchip { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: var(--r-xs); font: var(--fs-11) var(--font-mono); color: var(--text-primary); background: color-mix(in srgb, var(--cat-1) 16%, transparent); border: var(--bw) solid color-mix(in srgb, var(--cat-1) 45%, transparent); }
+.simline { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); }
+.simline .dist { color: var(--text-primary); }
+/* lineage end chip */
+.endchip { display: inline-flex; align-items: center; gap: var(--sp-1); margin-left: var(--sp-3); height: 24px; padding: 0 var(--sp-2); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-pill); font-size: var(--fs-12); color: var(--text-primary); background: transparent; }
+.endchip svg.i { width: 12px; height: 12px; color: var(--text-secondary); }
+.split-frames { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: flex-start; }
+/* Secondary text on a selected surface uses text-secondary (design system, SCR-02 G3); a pressed tile measured 4.50:1 in light with text-muted. */
+.stile[aria-pressed=true] .d { color: var(--text-secondary); }
+
+/* ============================================================================ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: var(--sp-6) var(--sp-8) var(--sp-16); }
+.doc > header { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); background: var(--bg); border-bottom: var(--bw) solid var(--border); }
+.doc > header h1 { font-size: var(--fs-20); line-height: var(--lh-tight); margin: 0; }
+.doc > h2 { font-size: var(--fs-16); margin: var(--sp-10) 0 var(--sp-2); }
+.doc > p, .doc li { color: var(--text-secondary); max-width: 92ch; }
+.cap { font-size: var(--fs-12); color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 1280px; }
+.n { position: absolute; z-index: var(--z-tooltip); width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--text-primary); color: var(--bg); font: var(--fw-semibold) var(--fs-11)/20px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--accent); }
+body.no-notes .n { display: none; }
+table.legend { width: 1280px; border-collapse: collapse; margin-top: var(--sp-3); background: var(--surface); border: var(--bw) solid var(--border); }
+.legend th, .legend td { text-align: left; vertical-align: top; padding: var(--sp-2) var(--sp-3); border-bottom: var(--bw) solid var(--border); font-size: var(--fs-12); }
+.legend th { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); background: var(--surface-raised); }
+.legend td .n { position: static; display: inline-block; }
+.changes { background: var(--surface); border: var(--bw) solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); max-width: 1280px; } .changes li { color: var(--text-primary); margin: var(--sp-1) 0; }
+
+/* ============================================================================ shell additions (SCR-12 approved: Chat under Work) */
+.grp { margin: var(--sp-3) var(--sp-2) var(--sp-1); font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.side .foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-2); border-top: var(--bw) solid var(--border); }
+.health { display: flex; align-items: center; gap: var(--sp-2); height: var(--h-md); padding: 0 var(--sp-2); font-size: var(--fs-12); color: var(--text-secondary); } .health svg.i { color: var(--success); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+[data-theme="light"] .badge.info { color: color-mix(in srgb, var(--info) 80%, var(--text-primary)); }
+
+/* ============================================================================ SCR-03 for corpora (tokens only; classes prefixed co-) */
+.co-acts { display: flex; gap: var(--sp-2); align-items: center; }
+.tiles.co-six { grid-template-columns: repeat(4, 1fr) 1.6fr; }
+.stile.static { cursor: default; } .stile .v.sm { font-size: var(--fs-14); font-family: var(--font-mono); }
+.co-table { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; flex: 1; min-height: 0; }
+.co-tools { display: flex; align-items: center; gap: var(--sp-2); }
+.co-tools .aside { margin-left: auto; font-size: var(--fs-12); color: var(--text-muted); }
+.t td.sec { color: var(--text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.t td.first { color: var(--text-muted); max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.t td.key { font: var(--fs-12) var(--font-mono); }
+.co-drawer .body { gap: var(--sp-3); }
+.co-cited { display: flex; gap: var(--sp-2); align-items: center; }
+.co-cite { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 16px; padding: 0 3px; border-radius: var(--r-xs); font: var(--fw-medium) var(--fs-11)/1 var(--font-mono); color: var(--accent); background: var(--accent-soft); border: var(--bw) solid color-mix(in srgb, var(--accent) 40%, transparent); }
+.callout .co-cite { color: color-mix(in srgb, var(--accent) 60%, var(--text-primary)); }
+.co-text { border: var(--bw) solid var(--border); border-radius: var(--r-md); background: var(--surface); padding: var(--sp-3); font-size: var(--fs-12); line-height: 1.6; color: var(--text-primary); max-height: 260px; overflow: hidden; position: relative; }
+.co-text .ov { background: var(--surface-sunken); color: var(--text-secondary); border-radius: var(--r-xs); padding: 1px 2px; }
+.co-text .ovtag { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-xs); padding: 0 4px; margin-right: var(--sp-1); }
+.co-text code { font-size: var(--fs-11); color: var(--text-primary); }
+.co-nav { display: flex; gap: var(--sp-2); align-items: center; }
+.co-docs { width: 760px; }
+.co-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.co-type { display: grid; grid-template-columns: 16px 1fr; gap: 2px var(--sp-2); padding: var(--sp-2) var(--sp-3); border: var(--bw) solid var(--border); border-radius: var(--r-md); background: var(--surface); font-size: var(--fs-12); }
+.co-type input { margin: 2px 0 0; accent-color: var(--accent); }
+.co-type b { font-weight: var(--fw-medium); color: var(--text-primary); }
+.co-type span { grid-column: 2; color: var(--text-secondary); font-size: var(--fs-11); }
+.co-type.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.co-chain { display: flex; flex-direction: column; gap: var(--sp-1); }
+.co-stage { border: var(--bw) solid var(--border); border-radius: var(--r-md); background: var(--surface); padding: var(--sp-2) var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-1); }
+.co-stage .hd { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-12); }
+.co-stage .hd b { font: var(--fw-medium) var(--fs-13) var(--font-mono); }
+.co-stage .hd .what { color: var(--text-secondary); }
+.co-stage .hd label { margin-left: auto; display: inline-flex; gap: var(--sp-1); align-items: center; color: var(--text-secondary); font-size: var(--fs-11); }
+.co-stage .hd input { accent-color: var(--accent); margin: 0; }
+.co-stage.stop { box-shadow: inset 2px 0 0 var(--accent); border-color: var(--accent); }
+.co-stage .fields { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; font-size: var(--fs-11); color: var(--text-secondary); }
+.co-stage .fields .lab { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
+.co-stage .fields .input { width: 64px; height: var(--h-sm); font: var(--fs-12) var(--font-mono); }
+.co-stage .fixed { font: var(--fs-12) var(--font-mono); color: var(--text-primary); }
+.co-why { font-size: var(--fs-11); color: var(--text-muted); }
+.co-pair { display: flex; flex-direction: column; gap: var(--sp-2); }
+.co-pair .lbl { font-size: var(--fs-11); font-weight: var(--fw-semibold); letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); }
+.co-pair .val { font-size: var(--fs-13); color: var(--text-primary); }
+.co-chat { font: var(--fs-12)/1.55 var(--font-mono); white-space: pre-wrap; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--surface-sunken); border: var(--bw) solid var(--border); color: var(--text-primary); }
+.co-chat .tok { color: var(--text-secondary); }
+.co-states { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); padding: var(--sp-4); height: 100%; }
+.co-mini { border: var(--bw) solid var(--border); border-radius: var(--r-md); background: var(--surface); display: flex; flex-direction: column; overflow: hidden; }
+.co-mini > h3 { margin: 0; padding: var(--sp-2) var(--sp-3); font-size: var(--fs-12); font-weight: var(--fw-semibold); color: var(--text-secondary); border-bottom: var(--bw) solid var(--border); background: var(--surface-raised); }
+.co-mini > .in { padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-3); flex: 1; }
+.co-strip-note { font-size: var(--fs-11); color: var(--text-muted); }
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5l6 10.5H2zM8 6.5v3M8 11.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5v.3"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2.5l6 3-6 3-6-3zM2 8.5l6 3 6-3M2 11.5l6 3 6-3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5" ry="1.8"/><path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M6 4h7M6 8h7M6 12h7M3 4h.3M3 8h.3M3 12h.3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M3.5 10.5h-1v-8h8v1"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="6.5" r="1.5"/><path d="M4.5 5v6M11.5 8c0 2-3 2.5-5.5 3.5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><path d="M3.5 8h.3M8 8h.3M12.5 8h.3" stroke-width="2.4"/></symbol>
+  <!-- New in this mockup, same style -->
+  <symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-report" viewBox="0 0 16 16"><path d="M3.5 2.5h6l3 3v8h-9zM9.5 2.5v3h3M5.5 11v-2M8 11V7.5M10.5 11V9"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".8"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".8"/><rect x="9" y="9" width="4.5" height="4.5" rx=".8"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M3.8 3.8l8.4 8.4"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 16 16"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M2 8h3l1.5-3 3 6L11 8h3"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 16 16"><path d="M2.5 4h2M7.5 4h6M2.5 8h7M12.5 8h1M2.5 12h4M9.5 12h4"/><circle cx="6" cy="4" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="8" cy="12" r="1.5"/></symbol>
+</svg>
+<div class="doc">
+<header>
+  <svg class="i" style="width:18px;height:18px;color:var(--accent)"><use href="#i-layers"/></svg>
+  <h1>SCR-03 for corpora — documents, chunks, indexes, instruction pairs · hi-fi mockup v1</h1>
+  <span class="badge">Gate 2, step 2 of 2</span>
+  <span class="spacer"></span>
+  <button class="btn sm" id="notes" aria-pressed="true">Hide annotations</button>
+  <button class="btn sm" id="theme" aria-pressed="false">Switch to light</button>
+</header>
+
+<p>Serves DATA-5.3 and LLM-2.1 (and the citation path from SCR-12) at <span class="mono">/versions/:version_id</span> and <span class="mono">?row=</span>. It follows the approved low-fi wireframe (<span class="mono">SCR-03corpora-lofi_v1.html</span>, 2026-11-27), SCREENS.md v5 and ADR-0022 rules 1–4 and 13, inside the approved SCR-03 (v1, v2 and v4 mockups): its header, lineage nodes, tiles, tabs and row drawer are reused unchanged. Data as in the low-fi: the 36 real documents of Stratal's corpus and their sizes, the seven <span class="mono">.json</span> files under <span class="mono">docs/spikes/</span> rejected, chunk counts estimated from the sections (about 970 at 256 tokens), placeholder version IDs (<span class="mono">ds_…</span>), and an instruction pair written for the mockup.</p>
+
+<div class="changes">
+<b>Decisions to review (beyond the approved low-fi)</b>
+<ul>
+<li><b>The tiles on a corpus are facts, not filters:</b> chunks, documents, vectors, the index's size and the model are not row statuses, so they use the tile's shape without its coloured edge or pressed state (the status tiles of images and tables keep theirs). On a documents version the usual status tiles return (accepted, rejected), since those do filter the rows.</li>
+<li><b><i>Ask this index</i> is the header's primary button</b> (it is what an index is for); <i>Build the retrieval report</i> is secondary with the report icon; <i>Continue the pipeline</i> stays where it is.</li>
+<li><b>The overlap in a chunk is the sunken surface with a dashed "overlap" tag</b> before it, in text-secondary, so it reads as "repeated from the previous chunk" without a colour of its own.</li>
+<li><b>"Cited as [1]"</b> is an info callout at the top of the drawer, with the citation number drawn exactly as in SCR-12 (accent box), and <i>Back to the conversation</i> as a link.</li>
+<li><b>The drawer's two new type cards</b> are the approved drawer's radio cards; the corpus chain uses the approved stage rows with one <i>Stop after</i> radio, the stop row with the accent edge. The embedding model is plain mono text with "fixed" (one model, decision 4): not a disabled input that looks editable.</li>
+<li><b>The chat format</b> of an instruction pair is a sunken mono block; the template's own tokens (<span class="mono">&lt;|im_start|&gt;</span>…) are in text-secondary, the pair's text in text-primary, so the content stands out from the format.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== A -->
+<h2>A · An index version, a chunk opened from a chat citation (dark)</h2>
+<div class="frame" id="frameA" style="height:820px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Data</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></div><div class="grp">Work</div><div class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></div><div class="nav"><svg class="i"><use href="#i-grid"/></svg>Models</div><div class="nav"><svg class="i"><use href="#i-chat"/></svg>Chat<kbd>g c</kbd></div><div class="nav"><svg class="i"><use href="#i-heart"/></svg>System</div><div class="foot"><div class="nav"><svg class="i"><use href="#i-sliders"/></svg>Settings</div><div class="health"><svg class="i"><use href="#i-check"/></svg>All services up</div></div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>stratal-docs</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_…</span></div><span class="spacer"></span><span class="jobind idle"><svg class="i"><use href="#i-check"/></svg>Idle</span></header>
+    <main class="content">
+      <div class="vhead"><div><h1><span class="n" style="position:static;display:inline-block">1</span>ds_…<span class="stage-tag">index</span></h1><div class="sub">stratal-docs · text corpus · made by <span class="mono">job_01…</span> · 27 Nov 2026</div></div><span class="spacer"></span>
+        <div class="co-acts"><button class="btn primary"><svg class="i"><use href="#i-chat"/></svg>Ask this index</button><button class="btn"><svg class="i"><use href="#i-report"/></svg>Build the retrieval report</button><button class="btn ghost">Continue the pipeline</button></div></div>
+      <div class="lineage" aria-label="Lineage"><span class="n" style="position:static;display:inline-block;margin-right:8px">2</span><div class="node done"><small>ingest</small><b>ds_…</b><span>36 documents · 7 rejected</span></div><span class="edge"></span><div class="node done"><small>clean_text</small><b>ds_…</b><span>36 kept · 0 duplicates</span></div><span class="edge"></span><div class="node done"><small>chunk</small><b>ds_…</b><span>≈ 970 chunks · 256 tokens</span></div><span class="edge"></span><div class="node done selected" aria-current="true"><small>index · this version</small><b>ds_…</b><span>≈ 970 vectors · bge-small</span></div></div>
+      <div class="tiles co-six"><span class="n" style="position:absolute;margin:-8px 0 0 -26px">3</span>
+        <div class="stile static" style="border-left-width:1px"><span class="k">Chunks</span><span class="v">970</span><span class="d">256 tokens, 32 overlap</span></div>
+        <div class="stile static" style="border-left-width:1px"><span class="k">Documents</span><span class="v">36</span><span class="d">752,552 characters</span></div>
+        <div class="stile static" style="border-left-width:1px"><span class="k">Vectors</span><span class="v">970</span><span class="d">384 dimensions · 912 from cache</span></div>
+        <div class="stile static" style="border-left-width:1px"><span class="k">Index on disk</span><span class="v">1.5 MB</span><span class="d">exact search (IndexFlatIP)</span></div>
+        <div class="stile static" style="border-left-width:1px"><span class="k">Embedding model</span><span class="v sm">bge-small-en-v1.5</span><span class="d">revision 5c38ec7 · query prefix set</span></div></div>
+      <div class="tabs" role="tablist"><span class="tab" role="tab" aria-selected="true">Rows <span class="count">970</span></span><span class="tab" role="tab">Reasons <span class="count">0</span></span><span class="tab" role="tab">Distributions</span><span class="tab" role="tab">Compare</span><span class="tab" role="tab">Config</span></div>
+      <div class="co-table" style="padding-right:552px">
+        <div class="co-tools"><span class="n" style="position:static;display:inline-block">4</span><span class="select"><span>Document: all 36</span><svg class="i"><use href="#i-down"/></svg></span><div class="search"><svg class="i"><use href="#i-search"/></svg><div class="input">Search the text</div><kbd>/</kbd></div></div>
+        <div class="table-wrap"><table class="t dense">
+          <thead><tr><th>Chunk</th><th>Section</th><th class="r">Tokens</th><th>Text</th></tr></thead>
+          <tbody>
+          <tr><td class="key">DATA_MODEL.md#0010</td><td class="sec">2. Entity overview</td><td class="r">238</td><td class="first">The model has four groups: data (datasets, …</td></tr>
+          <tr><td class="key">DATA_MODEL.md#0011</td><td class="sec">2. Entity overview</td><td class="r">141</td><td class="first">Jobs own stages and transitions; events …</td></tr>
+          <tr aria-selected="true"><td class="key">DATA_MODEL.md#0012</td><td class="sec" style="color:var(--text-primary)">3. Identifiers</td><td class="r">241</td><td class="first" style="color:var(--text-secondary)">| Entity | Format | Example | Generated …</td></tr>
+          <tr><td class="key">DATA_MODEL.md#0013</td><td class="sec">3. Identifiers</td><td class="r">252</td><td class="first">Version ID contract (owner implements, …</td></tr>
+          <tr><td class="key">DATA_MODEL.md#0014</td><td class="sec">3. Identifiers</td><td class="r">197</td><td class="first">As implemented (stratal.data.versioning) …</td></tr>
+          <tr><td class="key">DATA_MODEL.md#0015</td><td class="sec">4. PostgreSQL schema</td><td class="r">64</td><td class="first">Tables are created by Alembic migrations …</td></tr>
+          <tr><td class="key">DATA_MODEL.md#0016</td><td class="sec">4. … › 4.1 datasets</td><td class="r">173</td><td class="first">| Column | Type | Notes | slug | text …</td></tr>
+          <tr><td class="key">DATA_MODEL.md#0017</td><td class="sec">4. … › 4.2 dataset_versions</td><td class="r">249</td><td class="first">| version_id | text | PK, ds_ + 12 hex …</td></tr>
+          </tbody></table></div>
+        <span class="co-strip-note">962 more, virtualised. The document column is dropped while the drawer is open; it returns when it closes.</span>
+      </div>
+      <aside class="drawer co-drawer" aria-label="Chunk DATA_MODEL.md#0012"><span class="n" style="position:absolute;margin:10px 0 0 -26px">5</span>
+        <header><svg class="i" style="color:var(--text-muted)"><use href="#i-list"/></svg><b>DATA_MODEL.md#0012</b><span class="spacer"></span><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+        <div class="body">
+          <div class="callout info co-cited"><svg class="i"><use href="#i-info"/></svg><span>Cited as <span class="co-cite">1</span> in a chat answer · <a class="mono" style="color:var(--accent)" href="#">Back to the conversation</a></span></div>
+          <div class="kv"><span>Document</span><span class="mono">DATA_MODEL.md</span><span>Section</span><span>Stratal — Data Model › 3. Identifiers</span><span>Offsets</span><span class="mono">2,318–3,402 of 39,730 characters</span><span>Tokens</span><span class="mono">241 · 32 shared with the previous chunk</span></div>
+          <div class="co-text"><span class="ovtag">overlap</span><span class="ov">… are stored with the version. ## 3. Identifiers</span> | Entity | Format | Example | Generated by | | Dataset | slug chosen by the user | <code>coco10k</code> | user, validated <code>[a-z0-9][a-z0-9_-]{1,62}</code> | | Dataset version | <code>ds_</code> + 12 hex characters | <code>ds_7f3a9c21b04e</code> | derived from content hash and config hash (DATA-3.2) | | Job | <code>job_</code> + zero-padded sequence | <code>job_0142</code> | Postgres sequence | | Review session | <code>rev_</code> + zero-padded sequence | … | Model lineage | <code>ml_</code> + 12 hex characters | … SHA-256 of the lineage key (model spec, dataset slug, input shape, classes) as canonical JSON (M8) | | Blob | 64 hex characters (SHA-256 of the file's bytes) …</div>
+          <div class="co-nav"><button class="btn sm"><svg class="i" style="transform:rotate(180deg)"><use href="#i-chevron"/></svg>Previous chunk</button><button class="btn sm">Next chunk<svg class="i"><use href="#i-chevron"/></svg></button><span class="spacer"></span><button class="btn sm ghost">Open the document's row</button></div>
+        </div>
+      </aside>
+    </main>
+    <footer class="status"><div class="m"><span class="sq" style="--res:var(--res-cpu)"></span>CPU <b>2%</b></div><div class="m"><span class="sq" style="--res:var(--res-ram)"></span>RAM <b>3.9</b><small>/ 9.7 GB</small></div><div class="m"><span class="sq" style="--res:var(--res-gpu)"></span>GPU <b>0%</b></div><div class="m"><span class="sq" style="--res:var(--res-vram)"></span>VRAM <b>0.3</b><small>/ 6.0 GB</small></div><div class="m conn"><span class="live"><span class="pulse"></span>live</span></div></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">1</span></td><td>Header</td><td>The version, its stage, dataset, type and job; <i>Ask this index</i> (SCR-12, <i>RAG</i>, this version), <i>Build the retrieval report</i> (SCR-06), <i>Continue the pipeline</i></td><td><span class="mono">GET /versions/{id}</span></td><td>–</td></tr>
+<tr><td><span class="n">2</span></td><td>Lineage</td><td>The approved lineage nodes with one corpus fact each; this version selected</td><td><span class="mono">GET /versions/{id}/lineage</span></td><td>–</td></tr>
+<tr><td><span class="n">3</span></td><td>Facts</td><td>Chunks (size and overlap), documents (characters), vectors (dimension, from cache), the index on disk (exact search), the model (revision, the query prefix)</td><td>the manifest's <span class="mono">stratal.rag_index</span>; <span class="mono">/stats</span></td><td>–</td></tr>
+<tr><td><span class="n">4</span></td><td>Chunks</td><td>Key, section path, tokens, the first line; filter by document; search the text (<kbd>/</kbd>); with the drawer closed a <i>Document</i> column follows the key</td><td><span class="mono">GET /versions/{id}/rows</span> (<span class="mono">document</span>, <span class="mono">q</span> <i>planned</i>)</td><td>–</td></tr>
+<tr><td><span class="n">5</span></td><td>Chunk drawer</td><td>"Cited as [1]" and the way back when opened from SCR-12; document, section, offsets, tokens; the text with its overlap marked; previous and next; the document's row</td><td><span class="mono">GET /versions/{id}/rows?row=</span></td><td>–</td></tr>
+</table>
+
+<h2>A · The same, light</h2>
+<div id="lightA"></div>
+
+<!-- ===================================================================== B -->
+<h2>B · Ingesting the corpus: the drawer's new types, over the documents version (light)</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame" style="height:820px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Data</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></div><div class="grp">Work</div><div class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></div><div class="nav"><svg class="i"><use href="#i-grid"/></svg>Models</div><div class="nav"><svg class="i"><use href="#i-chat"/></svg>Chat<kbd>g c</kbd></div><div class="nav"><svg class="i"><use href="#i-heart"/></svg>System</div><div class="foot"><div class="nav"><svg class="i"><use href="#i-sliders"/></svg>Settings</div><div class="health"><svg class="i"><use href="#i-check"/></svg>All services up</div></div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>stratal-docs</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_…</span></div><span class="spacer"></span><span class="jobind idle"><svg class="i"><use href="#i-check"/></svg>Idle</span></header>
+    <main class="content">
+      <div class="vhead"><div><h1>ds_…<span class="stage-tag">ingest</span></h1><div class="sub">stratal-docs · text corpus · 43 files from <span class="mono">/sources/stratal-docs</span></div></div></div>
+      <div class="tiles" style="width:760px"><button class="stile" style="--c:var(--success)"><span class="k"><i></i>Accepted</span><span class="v">36</span><span class="d">752,552 characters</span></button><button class="stile" style="--c:var(--danger)"><span class="k"><i></i>Rejected</span><span class="v">7</span><span class="d">unsupported_format</span></button><button class="stile" style="--c:var(--text-muted)"><span class="k"><i></i>Duplicate</span><span class="v">0</span><span class="d">checked at clean_text</span></button><button class="stile" style="--c:var(--warning)"><span class="k"><i></i>Filtered</span><span class="v">0</span><span class="d">no filter for corpora</span></button></div>
+      <div class="co-docs"><span class="n" style="position:absolute;margin:4px 0 0 -26px">6</span>
+        <div class="table-wrap"><table class="t dense">
+          <thead><tr><th>Path</th><th>Title</th><th class="r">Characters</th><th>Status</th></tr></thead>
+          <tbody>
+          <tr><td class="key">API.md</td><td>Stratal — Interfaces</td><td class="r">85,666</td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+          <tr><td class="key">ARCHITECTURE.md</td><td>Stratal — Architecture</td><td class="r">36,367</td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+          <tr><td class="key">DATA_MODEL.md</td><td>Stratal — Data Model</td><td class="r">39,730</td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+          <tr><td class="key">DECISIONS.md</td><td>Stratal — Decisions Log</td><td class="r">116,222</td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+          <tr><td class="key">decisions/ADR-0004-immutable-content-…</td><td>ADR-0004 — Immutable, content-addressed…</td><td class="r">2,802</td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+          <tr><td class="key">decisions/ADR-0021-llm-serving.md</td><td>ADR-0021 — LLM serving</td><td class="r">12,492</td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+          <tr><td class="key">spikes/S-06-results.json</td><td class="muted">—</td><td class="r muted">—</td><td><span class="rs rej"><i></i>rejected</span> <span class="reason">unsupported_format</span></td></tr>
+          <tr><td class="key">spikes/data/semantic-threshold-coco10k.json</td><td class="muted">—</td><td class="r muted">—</td><td><span class="rs rej"><i></i>rejected</span> <span class="reason">unsupported_format</span></td></tr>
+          <tr><td class="key">spikes/S-11-llm.md</td><td>S-11 — Which LLM, and what serving it costs</td><td class="r">8,482</td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+          </tbody></table></div></div>
+      <div class="scrim" style="justify-content:end;place-items:stretch end"></div>
+      <aside class="drawer" style="width:480px" aria-label="Start pipeline"><span class="n" style="position:absolute;margin:10px 0 0 -26px">7</span>
+        <header><b style="font:var(--fw-semibold) var(--fs-16) var(--font-ui)">Start pipeline</b><span class="spacer"></span><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+        <div class="body" style="gap:var(--sp-3)">
+          <div class="field"><label>Source</label><div class="input mono">/sources/stratal-docs<span class="spacer"></span><span class="muted">43 files</span></div></div>
+          <fieldset style="border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--sp-2)"><legend style="font-size:var(--fs-12);font-weight:var(--fw-medium);color:var(--text-secondary);margin-bottom:var(--sp-2)">What the folder holds <span class="mono" style="color:var(--text-muted)">dataset_type</span></legend>
+            <div class="co-type-grid">
+              <label class="co-type"><input type="radio" name="t"><b>Image–caption pairs</b><span>image files</span></label>
+              <label class="co-type"><input type="radio" name="t"><b>Labelled images</b><span>class folders, or images and a CSV</span></label>
+              <label class="co-type"><input type="radio" name="t"><b>Tabular</b><span>one .csv or .parquet table</span></label>
+              <label class="co-type"><input type="radio" name="t"><b>Labelled text</b><span>.jsonl, or .txt in class folders</span></label>
+              <label class="co-type on"><input type="radio" name="t" checked><b>Text corpus</b><span>.md and .txt files, at any depth</span></label>
+              <label class="co-type"><input type="radio" name="t"><b>Instruction pairs</b><span>.jsonl: instruction, input, output</span></label>
+            </div></fieldset>
+          <div class="field"><label>Dataset</label><div class="input mono">stratal-docs</div></div>
+          <div class="co-chain"><div style="display:flex;gap:var(--sp-2);align-items:baseline"><b style="font-size:var(--fs-12);color:var(--text-secondary)">Stages</b><span class="co-why">Each stage reads the one before it.</span></div>
+            <div class="co-stage"><div class="hd"><b>ingest</b><span class="what">one row per document</span><label><input type="radio" name="s">Stop after</label></div></div>
+            <div class="co-stage"><div class="hd"><b>clean_text</b><span class="what">normalise, exact duplicates</span><label><input type="radio" name="s">Stop after</label></div><div class="fields"><span class="lab">max_chars</span><span class="input" style="width:96px">1000000</span></div></div>
+            <div class="co-stage"><div class="hd"><b>chunk</b><span class="what">at headings, then by size</span><label><input type="radio" name="s">Stop after</label></div><div class="fields"><span class="lab">chunk_tokens</span><span class="input">256</span><span class="lab">overlap_tokens</span><span class="input">32</span><span class="lab">min_tokens</span><span class="input">32</span></div></div>
+            <div class="co-stage stop"><div class="hd"><b>index</b><span class="what">embed, build the index</span><label><input type="radio" name="s" checked>Stop after</label></div><div class="fields"><span class="lab">embedding</span><span class="fixed">bge-small-en-v1.5 · 5c38ec7</span><span>fixed</span></div></div>
+          </div>
+        </div>
+        <footer style="margin-top:auto;padding:var(--sp-3) var(--sp-4);border-top:var(--bw) solid var(--border);display:flex;gap:var(--sp-2);justify-content:flex-end"><button class="btn ghost">Cancel</button><button class="btn primary"><svg class="i"><use href="#i-play"/></svg>Start job · to index</button></footer>
+      </aside>
+    </main>
+    <footer class="status"><div class="m"><span class="sq" style="--res:var(--res-cpu)"></span>CPU <b>2%</b></div><div class="m"><span class="sq" style="--res:var(--res-ram)"></span>RAM <b>3.9</b><small>/ 9.7 GB</small></div><div class="m"><span class="sq" style="--res:var(--res-gpu)"></span>GPU <b>0%</b></div><div class="m"><span class="sq" style="--res:var(--res-vram)"></span>VRAM <b>0.3</b><small>/ 6.0 GB</small></div><div class="m conn"><span class="live"><span class="pulse"></span>live</span></div></footer>
+  </div>
+</div>
+</div>
+<p class="cap">Drawn together: the documents version is what this drawer's job makes at <span class="mono">ingest</span>; in use the drawer opens from SCR-02's <i>Ingest a folder</i> before the version exists.</p>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">6</span></td><td>Documents</td><td>The status tiles as for any type; path, title, characters, status and reason; the seven <span class="mono">.json</span> files rejected</td><td><span class="mono">GET /versions/{id}/rows</span>, <span class="mono">/stats</span></td><td>–</td></tr>
+<tr><td><span class="n">7</span></td><td>Drawer, corpus types</td><td>Six type cards; the corpus chain with one <i>Stop after</i> (the last by default); <span class="mono">clean_text</span>'s <span class="mono">max_chars</span> at the corpus default; <span class="mono">chunk</span>'s three fields; the embedding model fixed; <i>Start job · to index</i> naming the stop</td><td><span class="mono">GET /dataset-types</span>; <span class="mono">GET /config/schemas/chunk</span>, <span class="mono">/index</span> <i>planned</i></td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== C -->
+<h2>C · An instruction pair, and the chat format it becomes (dark)</h2>
+<div class="frame" style="height:560px">
+  <div class="shell">
+    <nav class="side"><div class="brand"><svg class="i"><use href="#i-layers"/></svg>Stratal</div><div class="grp">Data</div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg>Datasets<kbd>g d</kbd></div><div class="grp">Work</div><div class="nav"><svg class="i"><use href="#i-list"/></svg>Jobs<kbd>g j</kbd></div><div class="nav"><svg class="i"><use href="#i-grid"/></svg>Models</div><div class="nav"><svg class="i"><use href="#i-chat"/></svg>Chat<kbd>g c</kbd></div><div class="nav"><svg class="i"><use href="#i-heart"/></svg>System</div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>stratal-pairs</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_…</span></div><span class="spacer"></span><span class="jobind idle"><svg class="i"><use href="#i-check"/></svg>Idle</span></header>
+    <main class="content">
+      <div class="vhead"><div><h1>ds_…<span class="stage-tag">clean_text</span></h1><div class="sub">stratal-pairs · instruction pairs · 3 pairs</div></div></div>
+      <div class="table-wrap" style="margin-right:552px"><table class="t dense">
+        <thead><tr><th>Row</th><th>Instruction</th><th>Output</th><th>Status</th></tr></thead>
+        <tbody>
+        <tr aria-selected="true"><td class="key">pairs.jsonl#0000001</td><td>Summarise what ADR-0006 decides…</td><td class="first" style="color:var(--text-secondary)">Every GPU job runs in its own…</td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+        <tr><td class="key">pairs.jsonl#0000002</td><td>Turn this caption into JSON…</td><td class="first">{"subject": "plane", …</td><td><span class="rs acc"><i></i>accepted</span></td></tr>
+        <tr><td class="key">pairs.jsonl#0000003</td><td>Explain hit@5.</td><td class="first">—</td><td><span class="rs rej"><i></i>rejected</span> <span class="reason">empty_output</span></td></tr>
+        </tbody></table></div>
+      <aside class="drawer co-drawer" aria-label="Pair pairs.jsonl#0000001"><span class="n" style="position:absolute;margin:10px 0 0 -26px">8</span>
+        <header><svg class="i" style="color:var(--text-muted)"><use href="#i-list"/></svg><b>pairs.jsonl#0000001</b><span class="spacer"></span><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+        <div class="body">
+          <div class="co-pair"><span class="lbl">Instruction</span><span class="val">Summarise what ADR-0006 decides about the GPU, in two sentences.</span><span class="lbl">Input</span><span class="val muted">none</span><span class="lbl">Output</span><span class="val">Every GPU job runs in its own process and takes one GPU lease, so only one holder uses the card at a time. Each process caps PyTorch at 0.85 of the card and verifies its unloads.</span></div>
+          <h3 class="sec" style="margin:0">As the model will see it <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text-muted)">· the pairs' adapter, Qwen3's chat template</span></h3>
+          <div class="co-chat"><span class="tok">&lt;|im_start|&gt;user</span>
+Summarise what ADR-0006 decides about the GPU, in two sentences.<span class="tok">&lt;|im_end|&gt;</span>
+<span class="tok">&lt;|im_start|&gt;assistant</span>
+Every GPU job runs in its own process and takes one GPU lease, so only one holder uses the card at a time. …<span class="tok">&lt;|im_end|&gt;</span></div>
+        </div>
+      </aside>
+    </main>
+    <footer class="status"><div class="m"><span class="sq" style="--res:var(--res-cpu)"></span>CPU <b>2%</b></div><div class="m"><span class="sq" style="--res:var(--res-ram)"></span>RAM <b>3.9</b><small>/ 9.7 GB</small></div><div class="m conn"><span class="live"><span class="pulse"></span>live</span></div></footer>
+  </div>
+</div>
+<table class="legend">
+<tr><th></th><th>Region</th><th>Shows</th><th>Fed by</th><th>Updates</th></tr>
+<tr><td><span class="n">8</span></td><td>Pair drawer</td><td>Instruction, input, output in full; the chat format the adapter makes, the template's tokens in text-secondary; a rejected pair shows its reason instead of the format</td><td><span class="mono">GET /versions/{id}/rows?row=</span>; the format from the adapter (<i>planned</i>)</td><td>–</td></tr>
+</table>
+
+<!-- ===================================================================== D -->
+<h2>D · States (dark)</h2>
+<div class="frame" style="height:330px">
+  <div class="co-states">
+    <div class="co-mini"><h3>Every document rejected</h3><div class="in"><div class="state"><svg class="i"><use href="#i-ban"/></svg><b>No document could be read.</b><p>12 rejected: 9 <span class="mono">not_utf8</span>, 3 <span class="mono">unsupported_format</span>. Rows opens filtered to <i>rejected</i>.</p></div></div></div>
+    <div class="co-mini"><h3>Loading chunks</h3><div class="in"><span class="skeleton" style="width:70%"></span><span class="skeleton" style="width:95%"></span><span class="skeleton" style="width:90%"></span><span class="skeleton" style="width:95%"></span><span class="skeleton" style="width:60%"></span></div></div>
+    <div class="co-mini"><h3>A citation to a chunk that is gone</h3><div class="in"><div class="state err"><svg class="i"><use href="#i-alert"/></svg><b>This chunk is not here any more.</b><p><span class="mono">DATA_MODEL.md#0012</span> was cited from an index version since deleted. The conversation keeps the source as it was given.</p></div></div></div>
+  </div>
+</div>
+
+<!-- ===================================================================== E -->
+<h2>E · At 1024 px: the drawer over the chunks (light)</h2>
+<div data-theme="light" style="width:max-content">
+<div class="frame compact" style="height:520px">
+  <div class="shell rail">
+    <nav class="side" style="align-items:center"><div class="brand" style="padding:0;margin-bottom:var(--sp-3)"><svg class="i"><use href="#i-layers"/></svg></div><div class="nav" aria-current="page"><svg class="i"><use href="#i-db"/></svg></div><div class="nav"><svg class="i"><use href="#i-list"/></svg></div><div class="nav"><svg class="i"><use href="#i-grid"/></svg></div><div class="nav"><svg class="i"><use href="#i-chat"/></svg></div></nav>
+    <header class="top"><div class="crumbs"><b>Datasets</b><svg class="i"><use href="#i-chevron"/></svg><span>stratal-docs</span><svg class="i"><use href="#i-chevron"/></svg><span class="mono">ds_…</span></div></header>
+    <main class="content">
+      <div class="vhead"><div><h1>ds_…<span class="stage-tag">index</span></h1></div><span class="spacer"></span><div class="co-acts"><button class="btn primary"><svg class="i"><use href="#i-chat"/></svg>Ask this index</button><button class="btn"><svg class="i"><use href="#i-report"/></svg>Retrieval report</button></div></div>
+      <div class="table-wrap"><table class="t dense"><thead><tr><th>Chunk</th><th>Section</th><th class="r">Tokens</th></tr></thead><tbody>
+        <tr><td class="key">DATA_MODEL.md#0011</td><td class="sec">2. Entity overview</td><td class="r">141</td></tr>
+        <tr aria-selected="true"><td class="key">DATA_MODEL.md#0012</td><td class="sec">3. Identifiers</td><td class="r">241</td></tr>
+        <tr><td class="key">DATA_MODEL.md#0013</td><td class="sec">3. Identifiers</td><td class="r">252</td></tr></tbody></table></div>
+      <aside class="drawer co-drawer" style="width:460px"><header><b>DATA_MODEL.md#0012</b><span class="spacer"></span><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+        <div class="body"><div class="kv"><span>Section</span><span>Data Model › 3. Identifiers</span><span>Tokens</span><span class="mono">241 · 32 shared</span></div>
+          <div class="co-text" style="max-height:150px"><span class="ovtag">overlap</span><span class="ov">… are stored with the version.</span> | Entity | Format | Example | Generated by | | Dataset | slug chosen by the user | <code>coco10k</code> …</div></div></aside>
+    </main>
+    <footer class="status"><div class="m"><span class="sq" style="--res:var(--res-cpu)"></span>CPU <b>2%</b></div><div class="m conn"><span class="live"><span class="pulse"></span>live</span></div></footer>
+  </div>
+</div>
+</div>
+<p class="cap">At 1024 px the drawer overlays the table instead of sharing the width; <i>Build the retrieval report</i> shortens to <i>Retrieval report</i> with its full name as the tooltip, and the tiles wrap to two rows (not drawn).</p>
+
+<h2>Accessibility notes</h2>
+<div class="changes">
+<ul>
+<li><b>Keyboard path.</b> The header's actions, the lineage nodes, the tabs (arrow keys), the filter and search (<kbd>/</kbd>), then the rows (<kbd>j</kbd> / <kbd>k</kbd>, <kbd>Enter</kbd> opens the drawer). In the drawer: <i>Back to the conversation</i>, <i>Previous</i> / <i>Next</i> (<kbd>[</kbd> / <kbd>]</kbd>), close with <kbd>Esc</kbd>, focus returning to the row.</li>
+<li><b>Opened from a citation</b>, the drawer has focus and its title is announced with "cited as 1".</li>
+<li><b>Never colour alone:</b> the overlap has a written tag; statuses read <i>accepted</i> / <i>rejected</i> with their reason; the chosen type and stop are native radios.</li>
+<li><b>Contrast</b> uses the approved text tokens on surface, raised and sunken; the citation number in light uses the 90 % mix approved with SCR-12. Checked by measurement before review.</li>
+</ul>
+</div>
+
+<h2>Tests, at Gate 3</h2>
+<div class="changes">
+<ul>
+<li>Vitest, <span class="mono">VersionScreen.test.tsx</span>: <span class="mono">test_DATA_5_3_corpus_versions_hide_columns_models_and_train</span>, <span class="mono">test_LLM_2_1_citation_opens_the_chunk_drawer</span>, <span class="mono">test_LLM_2_1_index_actions_open_chat_and_report</span>; <span class="mono">StartPipelineDrawer.test.tsx</span>: <span class="mono">test_DATA_5_3_corpus_types_offer_their_stages</span>.</li>
+<li>Python: <span class="mono">test_DATA_5_3_pairs_adapter_chat_format</span>, <span class="mono">test_LLM_2_1_chunk_offsets_and_overlap</span>.</li>
+</ul>
+</div>
+</div>
+<script>
+(function () {
+  var a = document.getElementById('frameA'), slot = document.getElementById('lightA');
+  var wrap = document.createElement('div'); wrap.setAttribute('data-theme', 'light'); wrap.style.width = 'max-content';
+  var c = a.cloneNode(true); c.id = 'frameA-light';
+  c.querySelectorAll('.n').forEach(function (n) { n.remove(); });
+  wrap.appendChild(c); slot.replaceWith(wrap);
+  var root = document.documentElement, btn = document.getElementById('theme');
+  function set(light) { root.setAttribute('data-theme', light ? 'light' : 'dark'); btn.textContent = light ? 'Switch to dark' : 'Switch to light'; btn.setAttribute('aria-pressed', String(light)); }
+  btn.addEventListener('click', function () { set(root.getAttribute('data-theme') !== 'light'); });
+  if (location.hash === '#light') set(true);
+  var notes = document.getElementById('notes');
+  notes.addEventListener('click', function () { var off = document.body.classList.toggle('no-notes'); notes.textContent = off ? 'Show annotations' : 'Hide annotations'; notes.setAttribute('aria-pressed', String(!off)); });
+})();
+</script>
+</body>
+</html>
