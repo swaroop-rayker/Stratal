@@ -125,6 +125,7 @@ def pull(
             present += 1
             continue
         target.unlink(missing_ok=True)
+        target.parent.mkdir(parents=True, exist_ok=True)  # e.g. 1_Pooling/config.json
         progress(f"Downloading {model.name}/{file.path} ({file.size / 1e6:.1f} MB)")
         _download(file_url(model, file), target, file, opener)
         downloaded += 1

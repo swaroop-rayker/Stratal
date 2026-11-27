@@ -11,6 +11,9 @@ the SHA-256 of the content. Small files are plain git blobs, identified by git's
 SHA-1 of ``"blob <size>\\0" + content``. Both are checked after download.
 
 Adding a model is a reviewed change to this file (ADR-0009 for the captioner).
+
+LLMs (LLM-1.1, M12 decision 2) are single 4-bit GGUF files, which Ollama builds
+its model from; GGUF, like safetensors, holds tensors and metadata, no code.
 """
 
 from dataclasses import dataclass
@@ -19,7 +22,9 @@ from typing import Literal
 
 from stratal.core.errors import ModelNotAllowed, ModelNotPulled
 
-Role = Literal["captioner", "clip"]
+Role = Literal["captioner", "clip", "llm", "embedding"]
+WEIGHT_SUFFIXES = (".safetensors", ".gguf")
+"""The weight formats allowed: neither can carry code (NFR-8)."""
 STAMP = "stratal-model.json"
 """Written last by a successful pull; its presence means every file was verified."""
 
@@ -53,7 +58,7 @@ class PretrainedModel:
 
     @property
     def weights_bytes(self) -> int:
-        return sum(f.size for f in self.files if f.path.endswith(".safetensors"))
+        return sum(f.size for f in self.files if f.path.endswith(WEIGHT_SUFFIXES))
 
 
 def _catalog(*models: PretrainedModel) -> dict[str, PretrainedModel]:
@@ -164,6 +169,78 @@ CATALOG = _catalog(
             ModelFile("tokenizer.json", 711396, git_oid="688882a79f44442ddc1f60d70334a7ff5df0fb47"),
             ModelFile(
                 "tokenizer_config.json", 527, git_oid="3529d5f768b8b1ccc65b80b78fb43e16069109c1"
+            ),
+            ModelFile("vocab.txt", 231508, git_oid="fb140275c155a9c7c5a3b3e0e77a9e839594a938"),
+        ),
+    ),
+    PretrainedModel(
+        name="qwen3-1.7b-q4km",
+        repo_id="unsloth/Qwen3-1.7B-GGUF",
+        revision="d7f544eead698dbd1f15126ef60b45a1e1933222",
+        role="llm",
+        display="Qwen3-1.7B (Q4_K_M)",
+        licence="Apache-2.0",
+        purpose=(
+            "LLM candidate for spike S-11 (LLM-1.1, M12 decision 1). Qwen publishes only an"
+            " 8-bit GGUF, so Unsloth's 4-bit conversion of the same weights is used"
+        ),
+        files=(
+            ModelFile(
+                "Qwen3-1.7B-Q4_K_M.gguf",
+                1107409472,
+                sha256="b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897",
+            ),
+        ),
+    ),
+    PretrainedModel(
+        name="smollm3-3b-q4km",
+        repo_id="ggml-org/SmolLM3-3B-GGUF",
+        revision="4965cb60b150737b68a0408c36aeefb65078f894",
+        role="llm",
+        display="SmolLM3-3B (Q4_K_M)",
+        licence="Apache-2.0",
+        purpose="LLM candidate for spike S-11 (LLM-1.1, M12 decision 1), from llama.cpp's org",
+        files=(
+            ModelFile(
+                "SmolLM3-Q4_K_M.gguf",
+                1915305312,
+                sha256="8334b850b7bd46238c16b0c550df2138f0889bf433809008cc17a8b05761863e",
+            ),
+        ),
+    ),
+    PretrainedModel(
+        name="bge-small-en-v1.5",
+        repo_id="BAAI/bge-small-en-v1.5",
+        revision="5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+        role="embedding",
+        display="bge-small-en-v1.5",
+        licence="MIT",
+        purpose="Text embeddings for RAG (LLM-2.1, M12 decision 4), through sentence-transformers",
+        files=(
+            ModelFile(
+                "1_Pooling/config.json", 190, git_oid="1da070f0993788c8851a652170ff013aa54dd519"
+            ),
+            ModelFile("config.json", 743, git_oid="3992bf890728a92476c700e6e657fd696eb94160"),
+            ModelFile(
+                "config_sentence_transformers.json",
+                124,
+                git_oid="dcb0c0d97d09b930d13600b1a773ddb27e441aab",
+            ),
+            ModelFile(
+                "model.safetensors",
+                133466304,
+                sha256="3c9f31665447c8911517620762200d2245a2518d6e7208acc78cd9db317e21ad",
+            ),
+            ModelFile("modules.json", 349, git_oid="952a9b81c0bfd99800fabf352f69c7ccd46c5e43"),
+            ModelFile(
+                "sentence_bert_config.json", 52, git_oid="ea85692bff64b0d1917833c31ddbca8ab10f5455"
+            ),
+            ModelFile(
+                "special_tokens_map.json", 125, git_oid="a8b3208c2884c4efb86e49300fdd3dc877220cdf"
+            ),
+            ModelFile("tokenizer.json", 711396, git_oid="688882a79f44442ddc1f60d70334a7ff5df0fb47"),
+            ModelFile(
+                "tokenizer_config.json", 366, git_oid="37fca74771bc76a8e01178ce3a6055a0995f8093"
             ),
             ModelFile("vocab.txt", 231508, git_oid="fb140275c155a9c7c5a3b3e0e77a9e839594a938"),
         ),

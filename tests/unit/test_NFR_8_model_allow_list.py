@@ -15,6 +15,7 @@ from stratal.core.errors import ModelIntegrityFailed, ModelNotAllowed, ModelNotP
 from stratal.pretrained.catalog import (
     CATALOG,
     STAMP,
+    WEIGHT_SUFFIXES,
     ModelFile,
     PretrainedModel,
     get_model,
@@ -79,11 +80,12 @@ def test_NFR_8_the_catalog_pins_safetensors_weights_and_every_file() -> None:
     for model in CATALOG.values():
         assert re.fullmatch(r"[0-9a-f]{40}", model.revision), model.name
         paths = [f.path for f in model.files]
-        assert any(p.endswith(".safetensors") for p in paths), model.name
+        weights = WEIGHT_SUFFIXES if model.role == "llm" else (".safetensors",)
+        assert any(p.endswith(weights) for p in paths), model.name
         assert not [p for p in paths if p.endswith(PICKLE_SUFFIXES)], model.name
         for file in model.files:
             assert (file.sha256 is None) != (file.git_oid is None), (model.name, file.path)
-            if file.path.endswith(".safetensors"):
+            if file.path.endswith(WEIGHT_SUFFIXES):
                 assert file.sha256 is not None and re.fullmatch(r"[0-9a-f]{64}", file.sha256)
 
 

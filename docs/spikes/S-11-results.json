@@ -1,0 +1,973 @@
+{
+  "s11-qwen3-1.7b-q4km": {
+    "gpu": {
+      "think_field_supported": true,
+      "vram_baseline_mib": 221.0,
+      "vram_loaded_mib": 1878.1875,
+      "vram_model_mib": 1657.1875,
+      "vram_peak_seen_mib": 1884.1875,
+      "ollama_ps": [
+        {
+          "name": "s11-qwen3-1.7b-q4km:latest",
+          "model": "s11-qwen3-1.7b-q4km:latest",
+          "size": 1629948476,
+          "digest": "d53d07b150812ae97d1bdf1c8d1f2ed4b2f8015bffb37d011a361bf8be7ccdf9",
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "qwen3",
+            "families": [
+              "qwen3"
+            ],
+            "parameter_size": "1.7B",
+            "quantization_level": "Q4_K_M"
+          },
+          "expires_at": "2026-11-27T05:17:42.743393666Z",
+          "size_vram": 1629948476,
+          "context_length": 4096,
+          "runner": "llamacpp"
+        }
+      ],
+      "cold": {
+        "ttft_s": 64.03096900199989,
+        "total_s": 66.23324207399992,
+        "thinking_chars": 0,
+        "load_s": 41.332984369,
+        "prompt_tokens": 35,
+        "prompt_s": 22.685897,
+        "tokens": 8,
+        "tokens_per_s": 3.628631352826341
+      },
+      "chat": {
+        "ttft_s": {
+          "median": 0.024931391499876554,
+          "max": 0.02783241299994188,
+          "min": 0.023153738000019075,
+          "p95": 0.02783241299994188
+        },
+        "total_s": {
+          "median": 0.2960478330001024,
+          "max": 0.5870178410000335,
+          "min": 0.045376814999599446,
+          "p95": 0.5870178410000335
+        },
+        "tokens_per_s": {
+          "median": 123.6398883671647,
+          "max": 143.5612767382878,
+          "min": 113.33157039779381,
+          "p95": 143.5612767382878
+        },
+        "under_2s": 10,
+        "thinking_chars": 0,
+        "runs": [
+          {
+            "ttft_s": 0.0272426159999668,
+            "total_s": 0.18614088799995443,
+            "text": "A dataset version is a specific iteration of a dataset that includes changes made over time.",
+            "thinking_chars": 0,
+            "load_s": 0.001213986,
+            "prompt_tokens": 39,
+            "prompt_s": 0.016082999,
+            "tokens": 18,
+            "tokens_per_s": 113.33157039779381
+          },
+          {
+            "ttft_s": 0.024650559999827237,
+            "total_s": 0.5870178410000335,
+            "text": "1. **Memory leaks** \u2013 if the GPU runs out of memory, it can crash or become unstable.  \n2. **High memory usage** \u2013 if the GPU uses too much memory, it can slow down or cause lag.  \n3. **Driver issues** \u2013 outdated or buggy drivers can cause unexpected behavior or crashes.",
+            "thinking_chars": 0,
+            "load_s": 0.000862603,
+            "prompt_tokens": 46,
+            "prompt_s": 0.014645,
+            "tokens": 67,
+            "tokens_per_s": 119.13885722719424
+          },
+          {
+            "ttft_s": 0.025345089999973425,
+            "total_s": 0.3850716410001951,
+            "text": "Overfitting happens when a model learns too much from the training data, including details that don't generalize to new data. This makes the model perform well on training data but poorly on new, unseen data.",
+            "thinking_chars": 0,
+            "load_s": 0.000903699,
+            "prompt_tokens": 41,
+            "prompt_s": 0.012545,
+            "tokens": 43,
+            "tokens_per_s": 119.52977542301032
+          },
+          {
+            "ttft_s": 0.027556340000046475,
+            "total_s": 0.4426679289999811,
+            "text": "Hit@5 measures how many of the top 5 results in a retrieval system are relevant (i.e., relevant documents or items). It tells you how many of the first five results are relevant, which helps assess the quality of a retrieval system.",
+            "thinking_chars": 0,
+            "load_s": 0.00084511,
+            "prompt_tokens": 38,
+            "prompt_s": 0.014107,
+            "tokens": 51,
+            "tokens_per_s": 123.07217096896409
+          },
+          {
+            "ttft_s": 0.02377201600029366,
+            "total_s": 0.1477875190003033,
+            "text": "Raw captions can provide insight into the original content or audience's initial reaction.",
+            "thinking_chars": 0,
+            "load_s": 0.000999276,
+            "prompt_tokens": 40,
+            "prompt_s": 0.012516,
+            "tokens": 16,
+            "tokens_per_s": 129.15203616257014
+          },
+          {
+            "ttft_s": 0.02783241299994188,
+            "total_s": 0.32460643200010963,
+            "text": "A training run might resume from a checkpoint to save time and resources by continuing from where it left off, especially if the model has already learned important patterns or achieved a certain goal.",
+            "thinking_chars": 0,
+            "load_s": 0.0010438,
+            "prompt_tokens": 39,
+            "prompt_s": 0.012718,
+            "tokens": 37,
+            "tokens_per_s": 124.7656429139859
+          },
+          {
+            "ttft_s": 0.024008816999867122,
+            "total_s": 0.24048300699996616,
+            "text": "Precision is how many of the predicted positive results are actually correct. Recall is how many of the actual positive results are correctly identified.",
+            "thinking_chars": 0,
+            "load_s": 0.001197756,
+            "prompt_tokens": 38,
+            "prompt_s": 0.013109,
+            "tokens": 27,
+            "tokens_per_s": 124.69173432347806
+          },
+          {
+            "ttft_s": 0.024159936999694764,
+            "total_s": 0.045376814999599446,
+            "text": "AIhub",
+            "thinking_chars": 0,
+            "load_s": 0.000864527,
+            "prompt_tokens": 40,
+            "prompt_s": 0.01276,
+            "tokens": 3,
+            "tokens_per_s": 143.5612767382878
+          },
+          {
+            "ttft_s": 0.02521222299992587,
+            "total_s": 0.26748923400009517,
+            "text": "4-bit quantisation trades away precision and range. It reduces the number of possible values, which means it loses some detail and can introduce distortion.",
+            "thinking_chars": 0,
+            "load_s": 0.001079305,
+            "prompt_tokens": 39,
+            "prompt_s": 0.013521,
+            "tokens": 30,
+            "tokens_per_s": 123.89987238313144
+          },
+          {
+            "ttft_s": 0.023153738000019075,
+            "total_s": 0.3634641100002227,
+            "text": "Retrieval-augmented generation is a technique that combines retrieval (fetching information from the web or other sources) with generation (creating new content) to improve the quality and relevance of the output.",
+            "thinking_chars": 0,
+            "load_s": 0.000936271,
+            "prompt_tokens": 41,
+            "prompt_s": 0.013122,
+            "tokens": 42,
+            "tokens_per_s": 123.37990435119796
+          }
+        ]
+      },
+      "rag": {
+        "prompt_tokens": {
+          "median": 2897.5,
+          "max": 3134,
+          "min": 2541,
+          "p95": 3134
+        },
+        "ttft_s": {
+          "median": 2.942110744000047,
+          "max": 6.915948735000256,
+          "min": 0.4153446319996874,
+          "p95": 6.915948735000256
+        },
+        "total_s": {
+          "median": 4.098001635499941,
+          "max": 8.533541269000125,
+          "min": 2.0246439620000274,
+          "p95": 8.533541269000125
+        },
+        "tokens_per_s": {
+          "median": 97.49768853123692,
+          "max": 99.73925309547897,
+          "min": 89.76139309682087,
+          "p95": 99.73925309547897
+        },
+        "under_8s": 9,
+        "cites": 5,
+        "runs": [
+          {
+            "ttft_s": 0.4153446319996874,
+            "total_s": 2.650490537999758,
+            "text": "SPEC.md \u00a7 How to read this document explains the structure of the document, including:\n\n- **Requirement IDs (F-IDs):** Functional requirements are identified by their module ID, e.g., `DATA-2.2`.\n- **Acceptance criteria (AC-IDs):** Each criterion is the requirement ID plus `.AC<n>`, e.g., `DATA-2.2.AC1`.\n- **Tags:** `[P0][1]` indicates priority P0 (must-have), P1 (should-have), P2 (nice-to-have).\n- **Flags:** `\u2691 CL-nn` marks text reworded from the input, `\u271a CL-nn` marks text added, `\u2295 CL-nn` marks duplicated input blocks merged into one.\n- **Tests:** Every P0 requirement needs at least one aut",
+            "thinking_chars": 0,
+            "load_s": 0.001321125,
+            "prompt_tokens": 2944,
+            "prompt_s": 0.389044,
+            "tokens": 220,
+            "tokens_per_s": 98.43043719668324
+          },
+          {
+            "ttft_s": 3.212003311999979,
+            "total_s": 4.012120372000027,
+            "text": "ADR-0013-semantic-duplicates.md \u00a7 Context discusses semantic duplicates detected by clustering CLIP embeddings, with issues related to the existing workflow and the need for changes to handle them properly. It mentions the owner asking for both units, the problem with `clean` and `label` stages, and the need for a new approach to handle semantic clusters. [1]",
+            "thinking_chars": 0,
+            "load_s": 0.001034773,
+            "prompt_tokens": 2541,
+            "prompt_s": 0.560144,
+            "tokens": 77,
+            "tokens_per_s": 96.20430295609586
+          },
+          {
+            "ttft_s": 2.672218176000115,
+            "total_s": 4.183882898999855,
+            "text": "ADR-0016-inference-service.md \u00a7 Context discusses the inference service for a registered model, noting that SPEC CL-07 added it due to per-job GPU worker limitations. It mentions that ADR-0006 left a consequence where a training job holding the GPU lease makes inference unavailable. The owner's decision to fallback to CPU for models small enough and fail fast for the rest is outlined. Additionally, it mentions that a long-lived process verifies every unload and restarts itself if memory did not return to baseline (BUG5). The inference service requires memory from another service due to the con",
+            "thinking_chars": 0,
+            "load_s": 0.001726508,
+            "prompt_tokens": 2953,
+            "prompt_s": 0.601583,
+            "tokens": 148,
+            "tokens_per_s": 97.92990733051674
+          },
+          {
+            "ttft_s": 3.2727501320000556,
+            "total_s": 5.860844737000207,
+            "text": "- **One holder, three kinds of model.** The `model.json` specifies what is needed: a skops pipeline or a network with a `vector` input takes a `record`, a `tokens` input a `text`, anything else an image. A classical model loads with `stratal.ml.persist` under the lineage's lock, counts as the one loaded model, and never touches the GPU lease. A table network loads its `preprocess.json` and a text network its dataset version's vocabulary, so `/predict` encodes with the very code training used (`stratal.train.table_prep`, `stratal.data.tokenize`); a text is normalised as `clean_text` does first.",
+            "thinking_chars": 0,
+            "load_s": 0.001152953,
+            "prompt_tokens": 2641,
+            "prompt_s": 0.390716,
+            "tokens": 256,
+            "tokens_per_s": 98.93364219179755
+          },
+          {
+            "ttft_s": 3.2372876590002306,
+            "total_s": 5.9149606109999695,
+            "text": " DESIGN-SYSTEM.md \u00a7 d) Patterns describes several UI elements and their behaviors:\n- **Forms from JSON schema**: The label is the property name in mono with its type as a badge; the schema's `description`, range, and default are the helper text; validation errors come from the API's `errors[].loc` and are placed on the matching field.\n- **Live-updating numbers**: Tabular mono, fixed-width containers, right-aligned in tables. Values update in place with no animation of the digits. A value older than three sample intervals is dimmed to `text-muted`.\n- **Long-running jobs**: Always visible togeth",
+            "thinking_chars": 0,
+            "load_s": 0.001470824,
+            "prompt_tokens": 3081,
+            "prompt_s": 0.627065,
+            "tokens": 256,
+            "tokens_per_s": 95.59583276853373
+          },
+          {
+            "ttft_s": 1.638880644999972,
+            "total_s": 2.7304285889999846,
+            "text": "ARCHITECTURE.md \u00a7 6. Storage explains that everything Stratal owns is stored in a single Docker volume called `stratal-data`, located on the Linux side. It describes the structure of the volume, including directories for blobs, converted data, manifests, jobs, models, and tmp. It emphasizes that files are byte-identical and stored once, and that versions are managed through manifests with status and reason fields. Writes are atomic, with files written to `tmp/` and then renamed into place. [1]",
+            "thinking_chars": 0,
+            "load_s": 0.000987352,
+            "prompt_tokens": 2851,
+            "prompt_s": 0.376085,
+            "tokens": 108,
+            "tokens_per_s": 98.96272404061136
+          },
+          {
+            "ttft_s": 1.1584063730001617,
+            "total_s": 3.2825095309999597,
+            "text": "SPEC.md \u00a7 Appendix A \u2014 Change log v0.1 \u2192 v0.2 summarizes changes, citing the sources as follows:\n\n- **CL-01**: Updated the gpu queue to use the prefork pool with concurrency 1, and changed revoke() to only apply to hard cancel. This addresses VRAM release issues. Cited [ADR-0003](decisions/ADR-0003-job-execution-model.md).\n- **CL-03**: Adjusted RAM limits to peak < 9 GB across all Stratal containers, with WSL VM capped at 10 GB. Cited [ADR-0007](decisions/ADR-0007-memory-budget.md).\n- **CL-04**: Changed the Phase-1 slice to use RUN-1.1\u20131.5 and UI-2.1. Cited [ADR-0002](decisions/ADR-0002-postgr",
+            "thinking_chars": 0,
+            "load_s": 0.001171037,
+            "prompt_tokens": 3035,
+            "prompt_s": 0.397553,
+            "tokens": 206,
+            "tokens_per_s": 96.98471694915493
+          },
+          {
+            "ttft_s": 1.322492796000006,
+            "total_s": 2.0246439620000274,
+            "text": "ADR-0019-tabular-and-text-models.md \u00a7 Alternatives discusses alternatives for serving skops models, including options like using a separate CPU inference container, serving via Celery tasks, and serving from the `api` service. It also addresses tokenization, preprocessing, and model management. The summary is cited as [1].",
+            "thinking_chars": 0,
+            "load_s": 0.001024415,
+            "prompt_tokens": 2793,
+            "prompt_s": 0.37365,
+            "tokens": 70,
+            "tokens_per_s": 99.73925309547897
+          },
+          {
+            "ttft_s": 6.915948735000256,
+            "total_s": 8.533541269000125,
+            "text": "ADR-0005-event-and-telemetry-pipeline.md \u00a7 As built in M7 (2026-11-17) discusses the backfill process and telemetry retention. The backfill ensures that events are inserted into PostgreSQL if they are not present, using the same `event_uid` key. If a job's events never reached Redis, they are all present when the stage ends, and late copies are stored. A worker that died is covered by the next attempt's backfill. A job failed by the watchdog after its last worker died is backfilled by hand. Telemetry retention (NFR-12) averages raw samples older than 7 days into `resource_samples_1m` and `proc",
+            "thinking_chars": 0,
+            "load_s": 0.001008084,
+            "prompt_tokens": 2628,
+            "prompt_s": 6.166437,
+            "tokens": 157,
+            "tokens_per_s": 97.06546973195711
+          },
+          {
+            "ttft_s": 6.495885558000282,
+            "total_s": 7.821920262000276,
+            "text": "ADR-0018-hpo-execution.md \u00a7 As measured (S-09, 2026-11-19) discusses the performance of Optuna's default importance evaluator, noting that the correct evaluator is fANOVA, which ranks parameters correctly, while PED-ANOVA ranks them incorrectly. It also mentions that deep-learning trials cost about 19 seconds beyond their training, with specific details on the cost structure and the impact of using deep-learning trials versus classical trials. The text cites [1] and [5] for the relevant information.",
+            "thinking_chars": 0,
+            "load_s": 0.001172409,
+            "prompt_tokens": 3134,
+            "prompt_s": 5.69656,
+            "tokens": 119,
+            "tokens_per_s": 89.76139309682087
+          }
+        ]
+      },
+      "refine": {
+        "valid": 50,
+        "count": 50,
+        "total_s": {
+          "median": 0.7105915059999006,
+          "max": 1.91974027499964,
+          "min": 0.46124355099982495,
+          "p95": 0.9350282250002238
+        },
+        "examples": [
+          {
+            "caption": "A plane is flying over a small island",
+            "output": "{\n  \"attributes\": [\n    \"airplane\",\n    \"flying\",\n    \"over\",\n    \"island\"\n  ],\n  \"setting\": \"sky\",\n  \"style\": \"neutral, descriptive, simple\",\n  \"subject\": \"plane\"\n}",
+            "valid": true
+          },
+          {
+            "caption": "Elderly adults standing in kitchen with modern appliances.",
+            "output": "{\n  \"attributes\": [\n    \"elderly adults\",\n    \"kitchen\",\n    \"modern appliances\"\n  ],\n  \"setting\": \"kitchen\",\n  \"style\": \"modern\",\n  \"subject\": \"elderly adults\"\n}",
+            "valid": true
+          },
+          {
+            "caption": "Large couch tied to the back of a truck bed.",
+            "output": "{\n  \"attributes\": [\n    \"large couch\",\n    \"tied to the back of a truck bed\"\n  ],\n  \"setting\": \"truck bed\",\n  \"style\": \"static, realistic, detailed illustration of a couch attached to a truck bed\",\n  \"subject\": \"couch\"\n}",
+            "valid": true
+          },
+          {
+            "caption": "A green broccoli plant with lots of green leaves.",
+            "output": "{\n  \"attributes\": [\n    \"green broccoli plant\",\n    \"lots of green leaves\"\n  ],\n  \"setting\": \"vegetable garden\",\n  \"style\": \"naturalistic, detailed description of a plant in a garden setting with vibrant green coloration and abundant foliage\",\n  \"subject\": \"green broccoli plant with lots of green leaves\"\n}",
+            "valid": true
+          },
+          {
+            "caption": "A batter at a baseball game swinging his bat.",
+            "output": "{\n  \"attributes\": [\n    \"batter\",\n    \"baseball game\",\n    \"swinging bat\"\n  ],\n  \"setting\": \"baseball game\",\n  \"style\": \"action-oriented, dynamic, visual focus on motion and movement\",\n  \"subject\": \"batter\"\n}",
+            "valid": true
+          }
+        ],
+        "invalid": []
+      },
+      "routing": {
+        "correct": 9,
+        "count": 12,
+        "total_s": {
+          "median": 0.07753110699991339,
+          "max": 0.12084927699970649,
+          "min": 0.07172664100016846,
+          "p95": 0.08563118599977315
+        },
+        "runs": [
+          {
+            "request": "Write a haiku about autumn.",
+            "expected": "llm",
+            "got": "llm"
+          },
+          {
+            "request": "According to Stratal's docs, how are version IDs computed?",
+            "expected": "rag",
+            "got": "rag"
+          },
+          {
+            "request": "Draw a watercolour of a lighthouse at dusk.",
+            "expected": "image_generation",
+            "got": "image_generation"
+          },
+          {
+            "request": "Describe what is in this picture: [image attached]",
+            "expected": "captioner",
+            "got": "captioner"
+          },
+          {
+            "request": "Translate 'where is the station?' into French.",
+            "expected": "translator",
+            "got": "translator"
+          },
+          {
+            "request": "What does ADR-0006 say about VRAM?",
+            "expected": "rag",
+            "got": "rag"
+          },
+          {
+            "request": "Generate an image of a red bicycle on a beach.",
+            "expected": "image_generation",
+            "got": "image_generation"
+          },
+          {
+            "request": "Caption the attached photo of a kitchen. [image attached]",
+            "expected": "captioner",
+            "got": "captioner"
+          },
+          {
+            "request": "How do I say 'thank you very much' in Japanese?",
+            "expected": "translator",
+            "got": "rag"
+          },
+          {
+            "request": "Explain what a learning rate is.",
+            "expected": "llm",
+            "got": "rag"
+          },
+          {
+            "request": "Which milestone added tabular transforms, according to the project docs?",
+            "expected": "rag",
+            "got": "rag"
+          },
+          {
+            "request": "Tell me a fun fact about octopuses.",
+            "expected": "llm",
+            "got": "rag"
+          }
+        ]
+      },
+      "unload_back_to_baseline_s": 0.8083487610001612,
+      "vram_after_unload_mib": 221.0
+    },
+    "cpu": {
+      "cold_load_s": 3.58610765,
+      "cold_total_s": 3.93143352900006,
+      "ollama_ps": [
+        {
+          "name": "s11-qwen3-1.7b-q4km:latest",
+          "model": "s11-qwen3-1.7b-q4km:latest",
+          "size": 1634761440,
+          "digest": "d53d07b150812ae97d1bdf1c8d1f2ed4b2f8015bffb37d011a361bf8be7ccdf9",
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "qwen3",
+            "families": [
+              "qwen3"
+            ],
+            "parameter_size": "1.7B",
+            "quantization_level": "Q4_K_M"
+          },
+          "expires_at": "2026-11-27T05:19:47.05395856Z",
+          "size_vram": 0,
+          "context_length": 4096,
+          "runner": "llamacpp"
+        }
+      ],
+      "chat_ttft_s": {
+        "median": 0.1332908160002262,
+        "max": 0.15895788399984667,
+        "min": 0.1186973300000318,
+        "p95": 0.15895788399984667
+      },
+      "chat_tokens_per_s": {
+        "median": 37.75777547968107,
+        "max": 40.72940550654717,
+        "min": 35.896181564555945,
+        "p95": 40.72940550654717
+      },
+      "rag": {
+        "ttft_s": 14.143371835999915,
+        "total_s": 25.39286872399998,
+        "thinking_chars": 0,
+        "load_s": 0.002049719,
+        "prompt_tokens": 2944,
+        "prompt_s": 14.107922,
+        "tokens": 217,
+        "tokens_per_s": 19.289240381713622
+      }
+    }
+  },
+  "s11-smollm3-3b-q4km": {
+    "gpu": {
+      "think_field_supported": true,
+      "vram_baseline_mib": 221.0,
+      "vram_loaded_mib": 2514.1875,
+      "vram_model_mib": 2293.1875,
+      "vram_peak_seen_mib": 2522.1875,
+      "ollama_ps": [
+        {
+          "name": "s11-smollm3-3b-q4km:latest",
+          "model": "s11-smollm3-3b-q4km:latest",
+          "size": 2298080132,
+          "digest": "724b07a69b80844908ad4f9c1e88d9792df2a528db5f9cf6beddf0ea6ce3122a",
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "smollm3",
+            "families": [
+              "smollm3"
+            ],
+            "parameter_size": "3.1B",
+            "quantization_level": "Q4_K_M"
+          },
+          "expires_at": "2026-11-27T05:21:13.279568796Z",
+          "size_vram": 2298080132,
+          "context_length": 4096,
+          "runner": "llamacpp"
+        }
+      ],
+      "cold": {
+        "ttft_s": 59.93875627499983,
+        "total_s": 62.0089405409999,
+        "thinking_chars": 0,
+        "load_s": 36.1910164,
+        "prompt_tokens": 69,
+        "prompt_s": 23.740515,
+        "tokens": 9,
+        "tokens_per_s": 4.346570411059994
+      },
+      "chat": {
+        "ttft_s": {
+          "median": 0.026961819500002093,
+          "max": 0.03104201699989062,
+          "min": 0.025460083999860217,
+          "p95": 0.03104201699989062
+        },
+        "total_s": {
+          "median": 0.3944801820000521,
+          "max": 0.6698063880003247,
+          "min": 0.05472634000034304,
+          "p95": 0.6698063880003247
+        },
+        "tokens_per_s": {
+          "median": 79.2142835501439,
+          "max": 105.67473317129874,
+          "min": 72.01477964862327,
+          "p95": 105.67473317129874
+        },
+        "under_2s": 10,
+        "thinking_chars": 0,
+        "runs": [
+          {
+            "ttft_s": 0.029872854000132065,
+            "total_s": 0.39055722400007653,
+            "text": "\nA dataset version refers to a specific release or update of a dataset, often including changes in data, metadata, or structure.",
+            "thinking_chars": 0,
+            "load_s": 0.001099884,
+            "prompt_tokens": 73,
+            "prompt_s": 0.021657,
+            "tokens": 26,
+            "tokens_per_s": 72.01477964862327
+          },
+          {
+            "ttft_s": 0.0294959990001189,
+            "total_s": 0.2193218170000364,
+            "text": "\n1. GPU temperature\n2. Power consumption\n3. Memory usage",
+            "thinking_chars": 0,
+            "load_s": 0.001020998,
+            "prompt_tokens": 80,
+            "prompt_s": 0.02226,
+            "tokens": 15,
+            "tokens_per_s": 79.13061827389744
+          },
+          {
+            "ttft_s": 0.02669685099999697,
+            "total_s": 0.6698063880003247,
+            "text": "\nOverfitting occurs when a model learns the training data too well, including its noise and random fluctuations, so it performs poorly on new, unseen data. To prevent it, use techniques like cross-validation and regularization to ensure the model generalizes well.",
+            "thinking_chars": 0,
+            "load_s": 0.001078123,
+            "prompt_tokens": 75,
+            "prompt_s": 0.019858,
+            "tokens": 51,
+            "tokens_per_s": 79.29794882639035
+          },
+          {
+            "ttft_s": 0.03104201699989062,
+            "total_s": 0.5874128609998479,
+            "text": "\nHit@5 measures the percentage of documents retrieved within the top 5 results in a search engine's results page. It indicates how well the search algorithm is able to provide relevant results in the initial few positions.",
+            "thinking_chars": 0,
+            "load_s": 0.000985562,
+            "prompt_tokens": 72,
+            "prompt_s": 0.018199,
+            "tokens": 43,
+            "tokens_per_s": 77.28030825856912
+          },
+          {
+            "ttft_s": 0.029013278000093123,
+            "total_s": 0.33974440300016795,
+            "text": "\nRaw captions provide a backup in case refined captions contain errors or are not suitable, ensuring that the original text remains accessible.",
+            "thinking_chars": 0,
+            "load_s": 0.000830143,
+            "prompt_tokens": 74,
+            "prompt_s": 0.018462,
+            "tokens": 25,
+            "tokens_per_s": 80.44638087821706
+          },
+          {
+            "ttft_s": 0.025460083999860217,
+            "total_s": 0.48385417500003314,
+            "text": "\nA training run might resume from a checkpoint due to weather conditions, fatigue, or safety concerns, allowing the runner to recover and continue the workout without compromising their safety or performance.",
+            "thinking_chars": 0,
+            "load_s": 0.000858335,
+            "prompt_tokens": 73,
+            "prompt_s": 0.018597,
+            "tokens": 36,
+            "tokens_per_s": 78.5508245654612
+          },
+          {
+            "ttft_s": 0.026605637000102433,
+            "total_s": 0.35465484999986074,
+            "text": "\nPrecision measures the proportion of true positives among all predicted positives, while recall measures the proportion of true positives among all actual positives.",
+            "thinking_chars": 0,
+            "load_s": 0.000990751,
+            "prompt_tokens": 72,
+            "prompt_s": 0.018788,
+            "tokens": 26,
+            "tokens_per_s": 79.29899686768962
+          },
+          {
+            "ttft_s": 0.02633478699999614,
+            "total_s": 0.05472634000034304,
+            "text": "\nLocalML",
+            "thinking_chars": 0,
+            "load_s": 0.000925569,
+            "prompt_tokens": 74,
+            "prompt_s": 0.018698,
+            "tokens": 3,
+            "tokens_per_s": 105.67473317129874
+          },
+          {
+            "ttft_s": 0.025698355000258744,
+            "total_s": 0.39840314000002763,
+            "text": "\n4-bit quantisation trades away a higher dynamic range for a reduced number of distinct values, sacrificing precision in representing the full range of possible values.",
+            "thinking_chars": 0,
+            "load_s": 0.000829532,
+            "prompt_tokens": 73,
+            "prompt_s": 0.019323,
+            "tokens": 30,
+            "tokens_per_s": 80.52459086797455
+          },
+          {
+            "ttft_s": 0.027226788000007218,
+            "total_s": 0.42020850299968515,
+            "text": "\nRetrieval-augmented generation is a technique that combines pre-trained language models with retrieval-based information to improve the quality and relevance of generated text.",
+            "thinking_chars": 0,
+            "load_s": 0.000976185,
+            "prompt_tokens": 75,
+            "prompt_s": 0.019955,
+            "tokens": 31,
+            "tokens_per_s": 78.73255819859908
+          }
+        ]
+      },
+      "rag": {
+        "prompt_tokens": {
+          "median": 2862.5,
+          "max": 3032,
+          "min": 2524,
+          "p95": 3032
+        },
+        "ttft_s": {
+          "median": 1.015593653499991,
+          "max": 1.551174741000068,
+          "min": 0.7266960019996986,
+          "p95": 1.551174741000068
+        },
+        "total_s": {
+          "median": 4.491104703000019,
+          "max": 5.132495244999973,
+          "min": 3.731784107999829,
+          "p95": 5.132495244999973
+        },
+        "tokens_per_s": {
+          "median": 71.31108214700973,
+          "max": 71.90250149770009,
+          "min": 71.01079724579036,
+          "p95": 71.90250149770009
+        },
+        "under_8s": 10,
+        "cites": 9,
+        "runs": [
+          {
+            "ttft_s": 0.7266960019996986,
+            "total_s": 4.3238672039997255,
+            "text": "\n[1] SPEC.md \u00a7 How to read this document\n\n- **Requirement IDs (F-IDs).** A functional requirement is identified by its module ID, for example `DATA-2.2`. These are the IDs used in commits, tests and pull requests.\n- **Acceptance criteria (AC-IDs).** Each criterion is the requirement ID plus `.AC<n>`, for example `DATA-2.2.AC1`.\n- **Tags.** `[P0][1]` means priority P0, delivered in phase 1. P0 is must-have, P1 should-have, P2 nice-to-have.\n- **Flags.** `\u2691 CL-nn` marks text reworded from the input. `\u271a CL-nn` marks text added. `\u2295 CL-nn` marks duplicated input blocks merged into one. The number po",
+            "thinking_chars": 0,
+            "load_s": 0.001284147,
+            "prompt_tokens": 2904,
+            "prompt_s": 0.702719,
+            "tokens": 256,
+            "tokens_per_s": 71.1718444183481
+          },
+          {
+            "ttft_s": 0.8899551819999942,
+            "total_s": 4.479313402000116,
+            "text": "\n[1] ADR-0013-semantic-duplicates.md \u00a7 Context\n\n- **DATA-2.3** `[P2]` \ud83d\udc64: detect semantic duplicates by clustering CLIP embeddings. AC1: cropped variants grouped together; a report generated.\n- **DATA-4.8** `[P2]` \ud83d\udc64: rows in one semantic cluster also join one split group. AC1: two photos of one scene from different angles (far apart by pHash, close by CLIP) land in the same split group.\n- The owner asked the agent to write both units (2026-11-17).\n- ARCHITECTURE.md \u00a73 says semantic duplicates \"add a GPU sub-step\" to `clean`. This cannot work as written: `clean` runs on `worker-cpu`, which has n",
+            "thinking_chars": 0,
+            "load_s": 0.001347485,
+            "prompt_tokens": 2524,
+            "prompt_s": 0.565294,
+            "tokens": 256,
+            "tokens_per_s": 71.3254241982089
+          },
+          {
+            "ttft_s": 0.957284558000083,
+            "total_s": 3.731784107999829,
+            "text": "\n[1] ADR-0016-inference-service.md \u00a7 Context\n- REG-1.4: a FastAPI inference endpoint for every registered model. SPEC CL-07 added an `inference` service for it, because a per-job GPU worker cannot serve requests. - ADR-0006 left one consequence open: while a training job holds the GPU lease, GPU inference is unavailable. The owner's decision 2: fall back to the CPU for models small enough, and fail fast for the rest. - ADR-0006 rule 6: a long-lived process verifies every unload and restarts itself if memory did not return to baseline (BUG5). - ADR-0007: the containers' limits sum to 9 GB. The ",
+            "thinking_chars": 0,
+            "load_s": 0.001202449,
+            "prompt_tokens": 2909,
+            "prompt_s": 0.659155,
+            "tokens": 197,
+            "tokens_per_s": 71.01079724579036
+          },
+          {
+            "ttft_s": 0.9123298109998359,
+            "total_s": 4.502896003999922,
+            "text": "\n[1] ADR-0019-tabular-and-text-models.md \u00a7 As built (part E, 2026-11-20) says:\n\n- The version's `model.json` specifies what it takes: a skops pipeline or a network with a `vector` input takes a `record`, a `tokens` input a `text`, anything else an image. A classical model loads with `stratal.ml.persist` under the lineage's lock, counts as the one loaded model, and never touches the GPU lease. A table network loads its `preprocess.json` and a text network its dataset version's vocabulary, so `/predict` encodes with the very code training used (`stratal.train.table_prep`, `stratal.data.tokenize`",
+            "thinking_chars": 0,
+            "load_s": 0.000945406,
+            "prompt_tokens": 2604,
+            "prompt_s": 0.584614,
+            "tokens": 256,
+            "tokens_per_s": 71.29674009581056
+          },
+          {
+            "ttft_s": 1.551174741000068,
+            "total_s": 5.132495244999973,
+            "text": "\nAccording to [1] DESIGN-SYSTEM.md \u00a7 d) Patterns:\n\n- **Forms from JSON schema (UI-2.3):** The label is the property name in mono with its type as a badge; the schema's `description`, range, and default are the helper text; validation errors come from the API's `errors[].loc` and are placed on the matching field. Two columns at \u2265 1280, one below. No per-form styling: a new parameter needs no UI change.\n\n- **Live-updating numbers:** Tabular mono, fixed-width containers, right-aligned in tables. Values update in place with no animation of the digits. A value older than three sample intervals is d",
+            "thinking_chars": 0,
+            "load_s": 0.001068607,
+            "prompt_tokens": 2989,
+            "prompt_s": 0.678791,
+            "tokens": 256,
+            "tokens_per_s": 71.48902992458187
+          },
+          {
+            "ttft_s": 1.099544516000151,
+            "total_s": 4.224744511000154,
+            "text": "\nAccording to ARCHITECTURE.md \u00a7 6. Storage [1], everything Stratal owns lives on one Docker volume called `stratal-data`. This volume contains the following directories:\n\n- `/data`: This directory contains blobs, converted files, manifests, jobs, models, and tmp directories. The blobs directory stores immutable files identified by their SHA256 hash. The converted directory stores Parquet files derived from ingest data. The manifests directory contains immutable Parquet files that reference datasets versions. The jobs directory stores per-job logs and event spools. The models directory stores p",
+            "thinking_chars": 0,
+            "load_s": 0.001060352,
+            "prompt_tokens": 2821,
+            "prompt_s": 0.639706,
+            "tokens": 224,
+            "tokens_per_s": 71.68844203093356
+          },
+          {
+            "ttft_s": 1.1249347980001403,
+            "total_s": 4.724792352999884,
+            "text": "\nSPEC.md \u00a7 Appendix A \u2014 Change log v0.1 \u2192 v0.2 says:\n\n- **CL-01:** The GPU queue now uses the prefork pool with concurrency 1, and the task supervises one child process per job. Hard cancel kills the child, releasing VRAM. Previously, the GPU queue used the solo pool, and VRAM was never released.\n- **CL-02:** The system of record for stored data is PostgreSQL, while Parquet + DuckDB hold manifests and the telemetry archive. Previously, SQLite registry tables were used for stored data.\n- **CL-03:** The RAM usage is limited to a peak of 9 GB across all Stratal containers, with a WSL VM capped at",
+            "thinking_chars": 0,
+            "load_s": 0.00212435,
+            "prompt_tokens": 2995,
+            "prompt_s": 0.681508,
+            "tokens": 256,
+            "tokens_per_s": 71.11948740629452
+          },
+          {
+            "ttft_s": 1.073902748999899,
+            "total_s": 4.639253020999604,
+            "text": "\n[1] ADR-0019-tabular-and-text-models.md \u00a7 Alternatives:\n\nThe document discusses alternatives for handling skops models in the Stratal architecture. The main options are:\n\n1. **A separate CPU inference container for skops models**: This option requires about 400 MB more of the 9 GB budget, which has no room for models of a few MB (ADR-0007). This is rejected due to the lack of available memory.\n\n2. **Serve skops models from `worker-cpu` through a Celery task per request**: This option involves a process start and model load per request, which was rejected for networks in ADR-0016.\n\n3. **Serve ",
+            "thinking_chars": 0,
+            "load_s": 0.000939416,
+            "prompt_tokens": 2737,
+            "prompt_s": 0.617664,
+            "tokens": 256,
+            "tokens_per_s": 71.80208652375808
+          },
+          {
+            "ttft_s": 0.9403481449999163,
+            "total_s": 4.041884535999998,
+            "text": "\n[1] ADR-0005-event-and-telemetry-pipeline.md \u00a7 As built in M7 (2026-11-17) says:\n\n- **Backfill (decision 2).** After every stage, the supervisor reads the job's spool (`jobs/<job_id>/events.jsonl`) and inserts the events that PostgreSQL lacks, using the same `event_uid` key that the collector uses. A job whose events never reached Redis will have all its events inserted when the stage ends. A worker that dies is covered by the next attempt's backfill, as the spool is per job. A job failed by the watchdog after its last worker died is backfilled by hand using `python -m stratal.cli events back",
+            "thinking_chars": 0,
+            "load_s": 0.000988117,
+            "prompt_tokens": 2583,
+            "prompt_s": 0.574473,
+            "tokens": 223,
+            "tokens_per_s": 71.90250149770009
+          },
+          {
+            "ttft_s": 1.1379524869998932,
+            "total_s": 4.737276610000208,
+            "text": "\n[1] ADR-0018-hpo-execution.md \u00a7 As measured (S-09, 2026-11-19) states that the default importance evaluator in Optuna 5.0 is PED-ANOVA, not fANOVA. PED-ANOVA ranked the wrong parameter first at 20 trials, while fANOVA ranked the right one first at 20 and 200 trials, in 0.14 s and 1.7 s. Therefore, the importance evaluator should be set explicitly to FanovaImportanceEvaluator with the study's seed. Additionally, it mentions that a deep-learning trial costs about 19 seconds beyond its training, with about 16 seconds from its job's creation to its first training step and about 3 seconds for the ",
+            "thinking_chars": 0,
+            "load_s": 0.001053919,
+            "prompt_tokens": 3032,
+            "prompt_s": 0.699041,
+            "tokens": 256,
+            "tokens_per_s": 71.13488201751863
+          }
+        ]
+      },
+      "refine": {
+        "valid": 50,
+        "count": 50,
+        "total_s": {
+          "median": 0.5463348619998669,
+          "max": 0.9758429290000095,
+          "min": 0.4274236960000053,
+          "p95": 0.8002818820000357
+        },
+        "examples": [
+          {
+            "caption": "A plane is flying over a small island",
+            "output": "{\n  \"attributes\": [],\n  \"setting\": \"over a small island\",\n  \"style\": \"flying\",\n  \"subject\": \"a plane\"\n}",
+            "valid": true
+          },
+          {
+            "caption": "Elderly adults standing in kitchen with modern appliances.",
+            "output": "{\n  \"attributes\": [],\n  \"setting\": \"kitchen\",\n  \"style\": \"modern\",\n  \"subject\": \"elderly adults\"\n}",
+            "valid": true
+          },
+          {
+            "caption": "Large couch tied to the back of a truck bed.",
+            "output": "{\n  \"attributes\": [],\n  \"setting\": \"Outdoor\",\n  \"style\": \"Transportation\",\n  \"subject\": \"Couch\"\n}",
+            "valid": true
+          },
+          {
+            "caption": "A green broccoli plant with lots of green leaves.",
+            "output": "{\n  \"attributes\": [],\n  \"setting\": \"garden\",\n  \"style\": \"natural\",\n  \"subject\": \"green broccoli plant\"\n}",
+            "valid": true
+          },
+          {
+            "caption": "A batter at a baseball game swinging his bat.",
+            "output": "{\n  \"attributes\": [],\n  \"setting\": \"Baseball game\",\n  \"style\": \"Action\",\n  \"subject\": \"Batter\"\n}",
+            "valid": true
+          }
+        ],
+        "invalid": []
+      },
+      "routing": {
+        "correct": 5,
+        "count": 12,
+        "total_s": {
+          "median": 0.2424613015000432,
+          "max": 0.4240526130001854,
+          "min": 0.22092667000015354,
+          "p95": 0.2873889069996949
+        },
+        "runs": [
+          {
+            "request": "Write a haiku about autumn.",
+            "expected": "llm",
+            "got": "llm"
+          },
+          {
+            "request": "According to Stratal's docs, how are version IDs computed?",
+            "expected": "rag",
+            "got": "llm"
+          },
+          {
+            "request": "Draw a watercolour of a lighthouse at dusk.",
+            "expected": "image_generation",
+            "got": "llm"
+          },
+          {
+            "request": "Describe what is in this picture: [image attached]",
+            "expected": "captioner",
+            "got": "llm"
+          },
+          {
+            "request": "Translate 'where is the station?' into French.",
+            "expected": "translator",
+            "got": "llm"
+          },
+          {
+            "request": "What does ADR-0006 say about VRAM?",
+            "expected": "rag",
+            "got": "llm"
+          },
+          {
+            "request": "Generate an image of a red bicycle on a beach.",
+            "expected": "image_generation",
+            "got": "image_generation"
+          },
+          {
+            "request": "Caption the attached photo of a kitchen. [image attached]",
+            "expected": "captioner",
+            "got": "captioner"
+          },
+          {
+            "request": "How do I say 'thank you very much' in Japanese?",
+            "expected": "translator",
+            "got": "llm"
+          },
+          {
+            "request": "Explain what a learning rate is.",
+            "expected": "llm",
+            "got": "llm"
+          },
+          {
+            "request": "Which milestone added tabular transforms, according to the project docs?",
+            "expected": "rag",
+            "got": "llm"
+          },
+          {
+            "request": "Tell me a fun fact about octopuses.",
+            "expected": "llm",
+            "got": "llm"
+          }
+        ]
+      },
+      "unload_back_to_baseline_s": 0.5435843529999147,
+      "vram_after_unload_mib": 221.0
+    },
+    "cpu": {
+      "cold_load_s": 4.821450376,
+      "cold_total_s": 5.705509484999766,
+      "ollama_ps": [
+        {
+          "name": "s11-smollm3-3b-q4km:latest",
+          "model": "s11-smollm3-3b-q4km:latest",
+          "size": 2302788238,
+          "digest": "724b07a69b80844908ad4f9c1e88d9792df2a528db5f9cf6beddf0ea6ce3122a",
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "smollm3",
+            "families": [
+              "smollm3"
+            ],
+            "parameter_size": "3.1B",
+            "quantization_level": "Q4_K_M"
+          },
+          "expires_at": "2026-11-27T05:23:29.049998435Z",
+          "size_vram": 0,
+          "context_length": 4096,
+          "runner": "llamacpp"
+        }
+      ],
+      "chat_ttft_s": {
+        "median": 0.2535677030000443,
+        "max": 0.26971859800005404,
+        "min": 0.2364664339997944,
+        "p95": 0.26971859800005404
+      },
+      "chat_tokens_per_s": {
+        "median": 24.739756789160182,
+        "max": 25.54761308650933,
+        "min": 24.049196178747394,
+        "p95": 25.54761308650933
+      },
+      "rag": {
+        "ttft_s": 24.09999492499992,
+        "total_s": 40.66306667799972,
+        "thinking_chars": 0,
+        "load_s": 0.001193436,
+        "prompt_tokens": 2904,
+        "prompt_s": 24.072449,
+        "tokens": 256,
+        "tokens_per_s": 15.45631447803845
+      }
+    }
+  },
+  "embed": {
+    "bge_dim": 384,
+    "bge_load_s": 0.4332860230001643,
+    "clip_text_load_s": 0.5292320329999711,
+    "rss_start_mib": 786.91015625,
+    "rss_after_bge_mib": 816.16015625,
+    "rss_after_clip_text_mib": 858.65625,
+    "cgroup_memory_peak_mib": 1181.62109375,
+    "bge_per_question_s": {
+      "median": 0.01595176899991202,
+      "max": 0.02325819899988346,
+      "min": 0.013962782000362495,
+      "p95": 0.022746167000150308
+    },
+    "clip_text_per_query_s": {
+      "median": 0.016255276999800117,
+      "max": 0.02348802500000602,
+      "min": 0.014030267000180174,
+      "p95": 0.02161083300006794
+    }
+  }
+}

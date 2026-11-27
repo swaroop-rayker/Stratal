@@ -32,6 +32,8 @@ gpu = [
     "skops>=0.16",              # ML-1.5 safe persistence of scikit-learn models (NFR-8)
     "optuna>=5.0",              # HPO-1.2 TPE and the median pruner (ADR-0018)
     "sacrebleu>=2.6",           # EVAL-1.2 BLEU and chrF (K2)
+    "sentence-transformers>=5.0", # LLM-2.1 embeddings (bge-small-en-v1.5, M12 decision 4; SPEC 7.2)
+    "faiss-cpu>=1.12",          # LLM-2.1, LLM-2.4 exact search (IndexFlatIP; SPEC 7.2)
 ]
 # Installed only in the CPU worker image (ADR-0014 rule 11): CPU training, RUN-1.9.
 # PyTorch's CPU-only build, from its own index; it conflicts with the CUDA build above.
@@ -43,6 +45,8 @@ ml-cpu = [
     "skops>=0.16",              # ML-1.5 safe persistence of scikit-learn models (NFR-8)
     "optuna>=5.0",              # HPO-1.2 TPE and the median pruner (ADR-0018)
     "sacrebleu>=2.6",           # EVAL-1.2 BLEU and chrF (K2)
+    "sentence-transformers>=5.0", # LLM-2.1 embeddings (bge-small-en-v1.5, M12 decision 4; SPEC 7.2)
+    "faiss-cpu>=1.12",          # LLM-2.1, LLM-2.4 exact search (IndexFlatIP; SPEC 7.2)
 ]
 
 [dependency-groups]
