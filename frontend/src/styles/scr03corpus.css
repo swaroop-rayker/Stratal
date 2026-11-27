@@ -1,5 +1,6 @@
 /* SCR-03 for corpora (mockup SCR-03corpora_v1; tokens only, classes prefixed co-). */
-.scr03 .co-acts { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.scr03 .co-acts { display: flex; gap: var(--sp-2); align-items: center; flex: none; }
+.scr03 .vhead:has(.co-acts) > div:first-child { min-width: 0; }
 .scr03 .co-acts .narrow-label { display: none; }
 
 /* Region 3: an index version's facts are not filters: the tile without its edge or press. */
@@ -13,6 +14,8 @@
 .scr03 .co-tools .aside { margin-left: auto; font-size: var(--fs-12); color: var(--text-muted); }
 .scr03 .t td.sec { color: var(--text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scr03 .t td.first { color: var(--text-muted); max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* On the selected row the muted text would fall below AA (4.45:1 in dark): the mockup's frame A. */
+.scr03 .t tr[aria-selected="true"] td.first, .scr03 .t tr[aria-selected="true"] td.sec { color: var(--text-secondary); }
 .scr03 .t td.key { font: var(--fs-12) var(--font-mono); white-space: nowrap; }
 .scr03 .t td .reason { font: var(--fs-11) var(--font-mono); color: var(--text-secondary); }
 

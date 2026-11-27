@@ -336,6 +336,7 @@ export function RowsPanel({ versionId, filters, setFilter, reasons, splits, labe
                 return (
                   <tr
                     key={row.row_key}
+                    data-key={row.row_key}
                     aria-rowindex={v.index + 2}
                     aria-selected={v.index === selected}
                     tabIndex={v.index === selected ? 0 : -1}

@@ -276,6 +276,18 @@ describe("SCR-03 for corpora", () => {
     expect(sectionTail("Stratal — Data Model › 4. Schema › 4.1 datasets")).toBe("4. Schema › 4.1 datasets");
   });
 
+  test("test_LLM_2_1_citation_to_a_gone_index_says_so", async () => {
+    stubApi({
+      "/api/v1/versions/ds_0123456789ab": Response.json({ code: "not_found", detail: "No dataset version 'ds_0123456789ab'." }, { status: 404 }),
+      "/api/v1/versions/ds_0123456789ab/*": Response.json({ code: "not_found", detail: "x" }, { status: 404 }),
+    });
+    renderVersion("ds_0123456789ab", `?row=${encodeURIComponent("DATA_MODEL.md#0012")}&cited=1&chat=cs_4854c69731c4`);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("This chunk is not here any more.");
+    expect(alert).toHaveTextContent("DATA_MODEL.md#0012 was cited from an index version since deleted. The conversation keeps the source as it was given.");
+    expect(within(alert).getByRole("link", { name: /Back to the conversation/ })).toHaveAttribute("href", "/chat/cs_4854c69731c4");
+  });
+
   test("test_LLM_2_1_ask_this_index_opens_chat_in_rag", async () => {
     indexRoutes();
     renderVersion(INDEX);

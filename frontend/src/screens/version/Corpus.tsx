@@ -7,7 +7,6 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { ApiError, api, call, type Schemas } from "../../api/client";
 import { useRows } from "../../api/queries";
-import { copy } from "../../components/states";
 import { Drawer } from "../../components/Drawer";
 import { Button, Icon, Kbd } from "../../components/ui";
 import { bytes, count } from "../../lib/format";
@@ -152,12 +151,6 @@ export function CorpusActions({ version, onContinue }: { version: Version; onCon
   const reportLabel = report.data ? "Open the retrieval report" : build.isPending ? "Starting…" : "Build the retrieval report";
   return (
     <span className="co-acts">
-      <span className="wide-action">
-        <Button size="sm" variant="ghost" onClick={() => void copy(version.version_id)}>
-          <Icon name="copy" />
-          Copy ID
-        </Button>
-      </span>
       {index ? (
         <>
           <Button variant="primary" onClick={() => void navigate(`/chat?index=${version.version_id}`)}>
@@ -486,6 +479,12 @@ export function CorpusDrawer({ kind, version, lineage, row, onClose, onMove, onO
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
+      // Esc returns focus to the row (a11y notes); a deep-linked row not yet loaded gives the
+      // selected one instead.
+      returnFocus={() =>
+        document.querySelector<HTMLElement>(`.scr03 tr[data-key="${CSS.escape(row.row_key)}"]`) ??
+        document.querySelector<HTMLElement>('.scr03 tr[aria-selected="true"]')
+      }
       heading={
         <span style={{ display: "inline-flex", gap: "var(--sp-2)", alignItems: "center" }}>
           <Icon name={kind === "pairs" ? "chat" : "note"} />
