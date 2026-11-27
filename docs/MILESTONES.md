@@ -30,7 +30,7 @@
 | M10 | Classical ML, HPO, task metrics | 2 | L | Done 2026-11-20 |
 | M11 | Dashboards and monitoring completion | 2 | L | Done 2026-11-24 |
 | M11b | Tabular transforms | 2 | M | Done 2026-11-26 (with DATA-1.4.AC2, delimited-text tables) |
-| M12 | LLM serving and RAG | 3 | L | Detailed, approved 2026-11-22 |
+| M12 | LLM serving and RAG | 3 | L | In progress (kickoff decisions 2–12, 2026-11-27; decision 1 after S-11) |
 | M13 | Router, tools, caption refinement | 3 | L | Detailed, approved 2026-11-22 |
 | M14 | Text→image and LoRA | 4 | L | Outline |
 | M15 | Translation, chat UI, polish | 5 | L | Outline |
@@ -727,13 +727,22 @@ No screen is built before its design is approved (SPEC §9.2). The gates wait on
 
 | | |
 |---|---|
-| Status | **Approved by the owner on 2026-11-22** ("yes I do approve"). The decisions below are still open: they are put to the owner at M12's kickoff (M13's open points at M13's), and until then each recommendation is only a recommendation. M11b still comes before M12, as planned |
+| Status | **Approved by the owner on 2026-11-22** ("yes I do approve"). **Decisions 2 to 12 taken at M12's kickoff on 2026-11-27** ("Accept all"): the recommended option in each. Decision 1 is taken from S-11's report. M13's open points are still open until M13's kickoff |
 | Done when (SPEC §2) | Chat answers grounded in the corpus, with citations; the router picks the correct model |
 | Requirements | All 12 phase-3 requirements: 4 P0 (LLM-1.1, LLM-2.1, LLM-2.2, LLM-3.1), 5 P1 (DATA-5.3, LLM-2.3, LLM-2.4, LLM-3.2, LABEL-1.6) and 3 P2 (LLM-4.1, LLM-5.1, LABEL-1.7), plus NFR-6. NFR-1, NFR-2, NFR-7 and NFR-8 are checked again for the new services. Each requirement stays in the milestone the outline gave it; nothing is added or dropped |
 
 ### Decisions needed before M12 starts
 
 Each has a recommendation; none is taken until the owner decides. Decision 1 is taken from spike S-11's report.
+
+> **Decided 2026-11-27** (M12's kickoff, "Accept all"): decisions 2 to 12 as recommended below. Facts checked at the kickoff:
+> - **Memory:** the running set's limits already sum to 9,024 MiB, so `ollama` has no room until ADR-0021 rebalances them from S-11's figures (decision 10).
+> - **Files for S-11:** `Qwen3-1.7B-Q4_K_M.gguf` (1,056 MiB) from `unsloth/Qwen3-1.7B-GGUF`, since Qwen publishes only an 8-bit GGUF; `SmolLM3-Q4_K_M.gguf` (1,827 MiB) from `ggml-org/SmolLM3-3B-GGUF`. Both Apache 2.0 and not gated.
+> - **Ollama:** the image pinned at `0.40.16` (2026-11-09); the newer releases were under two weeks old.
+> - **Embedding model:** `BAAI/bge-small-en-v1.5`, 127 MiB of weights, MIT.
+> - **Corpus (decision 5):** about 0.7 MB and 111,000 words.
+> - **Numbering:** M11b used SCREENS.md v4, so the phase-3 G1 revision is **v5**.
+> - **Downloads:** S-11's still need their own approval.
 
 1. **The LLM (LLM-1.1).** One to three billion parameters, 4-bit, under a licence that needs no acceptance (R-20).
    - (a) **Qwen3-1.7B**, Apache 2.0, about 1.1 GB as a 4-bit GGUF file. Trained for tool calls and JSON output; its "thinking" mode is switched off for chat, where it would spend NFR-6's first-token budget.
@@ -820,7 +829,7 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 
 | Gate | Deliverable | Starts | Unblocks |
 |---|---|---|---|
-| G1 revision | SCREENS.md v4: SCR-12's phase-3 slice (decision 9); corpora, chunks and indexes on SCR-02 and SCR-03; the two reports on SCR-06 (decision 8); Flow 5 step by step | M12 kickoff | phase-3 G2 |
+| G1 revision | SCREENS.md v5 (v4 went to M11b): SCR-12's phase-3 slice (decision 9); corpora, chunks and indexes on SCR-02 and SCR-03; the two reports on SCR-06 (decision 8); Flow 5 step by step | M12 kickoff | phase-3 G2 |
 | G2 | SCR-12 in manual mode (chat, RAG with citations and abstention, image search); SCR-03 for a corpus's chunks; SCR-06's retrieval report | alongside M12 | M12's screens |
 | G2 | SCR-12's Auto mode, fallbacks and the assistant's answers; refined captions on SCR-03; the caption comparison on SCR-06 | alongside M12 | M13's screens |
 | G3 | Each screen compared with its mockup, contrast and keyboard checked | in the milestone that builds it | – |
@@ -846,7 +855,7 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 
 **Done when**
 
-- [ ] S-11 report delivered and the model chosen; decisions 1 to 12 recorded; ADR-0021 and ADR-0022 approved
+- [ ] S-11 report delivered and the model chosen; decisions 1 to 12 recorded (2 to 12 on 2026-11-27, "Accept all"); ADR-0021 and ADR-0022 approved
 - [ ] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry
 - [ ] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading
 - [ ] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index
