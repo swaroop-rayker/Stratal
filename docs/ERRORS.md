@@ -35,6 +35,15 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-025 — Checking a model spec on the 2-million-row table killed the api
+
+- **Date:** 2026-11-27
+- **Seen:** SCR-08 at `/models/build?version=ds_1c0761f1fe23` showed "The spec could not be checked · dependency_unavailable · The Stratal API did not answer". `api` restarted at 18:05:37, 4 s after `GET /model-specs/schema`; its restart count went to 2.
+- **Where:** SCR-08's spec check on a tabular version (the endpoint that validates a spec against the version's inputs); NFR-2.
+- **Cause:** Not yet confirmed. Most likely the same as E-024: the check reads the 348 MB manifest whole to learn the table's columns or rows.
+- **Fix:** To do (2026-11-28): find the read, stream it as in E-024, and add an NFR-2 test that forbids the whole read.
+- **Status:** open
+
 ### E-024 — Opening a 2-million-row table's version killed the api
 
 - **Date:** 2026-11-27
