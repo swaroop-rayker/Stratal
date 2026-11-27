@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **v4, amended on 2026-11-24 at the owner's request, the amendment approved the same day**: the *Start pipeline* drawer, type first (DATA-1.4, DATA-5.2, DATA-7.1; M11b scope, commit `3c9e48e`; open point 7). **v4 approved by the owner on 2026-11-24** (tabular transforms, M11b, DATA-7.1–7.5: SCR-15 the transform editor, SCR-03's *Columns* tab and *Transform…* action, Flow 6; open point 6). **v3, approved by the owner on 2026-11-20** (Gate 1 revision: choosing the model kind after the split — the *Train a model* drawer, SCR-03, SCR-08, SCR-09, SCR-11, Flow 4 steps 1–3; open point 5). v2 approved by the owner on 2026-11-17 (phase-2 screens detailed in §3a, Flow 4 in steps, Flow 3's phase-2 part). v1 approved 2026-11-15. Changes from here on are new versions and need approval |
+| Status | **v5, proposed on 2026-11-27 for the owner's approval** (phase 3, M12: SCR-12's phase-3 slice, corpora and indexes on SCR-02 and SCR-03, the retrieval report on SCR-06, Flow 5 in steps, Flow 7; open point 8). **v4, amended on 2026-11-24 at the owner's request, the amendment approved the same day**: the *Start pipeline* drawer, type first (DATA-1.4, DATA-5.2, DATA-7.1; M11b scope, commit `3c9e48e`; open point 7). **v4 approved by the owner on 2026-11-24** (tabular transforms, M11b, DATA-7.1–7.5: SCR-15 the transform editor, SCR-03's *Columns* tab and *Transform…* action, Flow 6; open point 6). **v3, approved by the owner on 2026-11-20** (Gate 1 revision: choosing the model kind after the split — the *Train a model* drawer, SCR-03, SCR-08, SCR-09, SCR-11, Flow 4 steps 1–3; open point 5). v2 approved by the owner on 2026-11-17 (phase-2 screens detailed in §3a, Flow 4 in steps, Flow 3's phase-2 part). v1 approved 2026-11-15. Changes from here on are new versions and need approval |
 | Builds on | [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) v1 (Gate 0, approved 2026-11-15) |
 | Data sources | Endpoints are from [API.md](API.md). Phase-2 screens name the endpoints their milestone adds (*planned*). Phase-3 to phase-5 interfaces are not specified yet, so those screens are outlines and are detailed at their phase kickoff |
 | Approvals | Logged in [design/APPROVALS.md](design/APPROVALS.md) |
@@ -23,19 +23,19 @@ This file lists every screen with its purpose, the requirements it serves, the d
 | ID | Screen | Route | Phase | Requirements | Built in |
 |---|---|---|---|---|---|
 | SCR-01 | App shell and navigation | (wraps all) | 1 | all; UI-2.1 slice, MON-1.4, MON-2.1 | M6 |
-| SCR-02 | Datasets and versions | `/datasets`, `/datasets/:slug` | 1 | DATA-3.1, DATA-3.2, DATA-3.4, UI-2.1; DATA-1.4, DATA-5.2 (*Start pipeline* drawer, v4) | M6; drawer type first in M11b |
-| SCR-03 | Version detail and lineage | `/versions/:version_id` | 1 (UI-2.2 part in 2) | DATA-3.3, DATA-2.1, DATA-2.2, DATA-6.1, DATA-5.1, UI-2.1, UI-2.2; DATA-3.5, DATA-2.3; DATA-7.5 (*Columns*) | M6; v2 additions in M11; *Columns* tab in M11b |
+| SCR-02 | Datasets and versions | `/datasets`, `/datasets/:slug` | 1 | DATA-3.1, DATA-3.2, DATA-3.4, UI-2.1; DATA-1.4, DATA-5.2 (*Start pipeline* drawer, v4); DATA-5.3, LLM-2.1 (corpora, v5) | M6; drawer type first in M11b; corpus types in M12 |
+| SCR-03 | Version detail and lineage | `/versions/:version_id` | 1 (UI-2.2 part in 2) | DATA-3.3, DATA-2.1, DATA-2.2, DATA-6.1, DATA-5.1, UI-2.1, UI-2.2; DATA-3.5, DATA-2.3; DATA-7.5 (*Columns*); DATA-5.3, LLM-2.1 (documents, chunks, indexes, v5) | M6; v2 additions in M11; *Columns* tab in M11b; corpora in M12 |
 | SCR-04 | Live job view | `/jobs/:job_id` | 1 | MON-4.1, MON-4.2, MON-4.3, MON-1.1–1.5, MON-2.1, 2.3, 2.4, 2.5, MON-3.1; RUN-1.1/1.2 slice | M6 |
 | SCR-05 | Labeling review | `/reviews/:review_id` | 1 | LABEL-1.5 | M6 |
-| SCR-06 | Eval report | `/versions/:version_id/report` | 1 (EVAL-1.2 in 2) | EVAL-1.1, EVAL-1.2 | M6 |
+| SCR-06 | Eval report | `/versions/:version_id/report` | 1 (EVAL-1.2 in 2; retrieval in 3) | EVAL-1.1, EVAL-1.2; LLM-2.2, LLM-2.3 (the retrieval report, v5) | M6; retrieval report in M12 |
 | SCR-07 | Jobs list and queue control | `/jobs` | phase-1 slice, completed in 2 ([open point 1](#6-open-points-for-the-owner)) | RUN-1.1, RUN-1.2 | slice in M6; pause, resume and queue control in M8 |
 | SCR-08 | Model builder canvas | `/models/build` | 2 | BUILD-1.1–1.9, UI-2.3, DATA-5.5 | M9 |
 | SCR-09 | Training config and HPO setup | `/runs/new` | 2 | BUILD-1.2, BUILD-1.3, HPO-1.1–1.4, ML-1.1, ML-1.4, RUN-1.9, UI-2.3 | M9–M10 |
 | SCR-10 | HPO results | `/studies/:study_id` | 2 | HPO-1.3, HPO-1.4, HPO-1.5 | M10 |
 | SCR-11 | Model registry and comparison | `/models`, `/models/:lineage` | 2 (adapters in 4) | REG-1.1–1.4, REG-2.1–2.11, EVAL-1.2, EVAL-1.3, EVAL-1.4 | M8, M11 |
-| SCR-12 | Chat (manual and auto mode) | `/chat` | 3, completed in 5 | UI-1.1, LLM-1.1, LLM-2.1, LLM-2.3, LLM-2.4, LLM-3.1, LLM-3.2, IMG-1.1, TRANS-1.1 | M12–M15 |
+| SCR-12 | Chat (manual and auto mode) | `/chat`, `/chat/:session_id` | 3 (a slice, v5), completed in 5 | UI-1.1, LLM-1.1, LLM-2.1, LLM-2.3, LLM-2.4, LLM-3.1, LLM-3.2, IMG-1.1, TRANS-1.1, NFR-6 | manual mode (*LLM*, *RAG*, *Images*) in M12; *Auto* in M13; the rest in M14–M15 |
 | SCR-13 | System monitor | `/system` | 2 | MON-2.1–2.7, MON-3.2, MON-3.3, MON-4.4, MON-4.5, RUN-1.6 | M11 |
-| SCR-14 | Settings | `/settings` | 2 | UI-2.3; thresholds for MON-2.2, MON-2.6, RUN-1.6, RUN-1.7; REG-2.3, REG-2.4 | M8–M11 |
+| SCR-14 | Settings | `/settings` | 2 | UI-2.3; thresholds for MON-2.2, MON-2.6, RUN-1.6, RUN-1.7; REG-2.3, REG-2.4; LLM-2.3 (the abstention threshold, v5) | M8–M11; retrieval section in M12 |
 | SCR-15 | Transform editor (v4) | `/versions/:version_id/transform` | 2 | DATA-7.1–7.5, UI-2.3 | M11b |
 
 SCR-15 is not in SPEC §9.4's initial inventory, which ends at SCR-14; it was added at M11b's kickoff (K8) and in ADR-0019 Addendum B rule 33. Gate 2 order follows SPEC §9.5: SCR-01, 02, 03, 04, 05, 06 first, then the SCR-07 slice.
@@ -50,7 +50,7 @@ SCR-15 is not in SPEC §9.4's initial inventory, which ends at SCR-14; it was ad
 │               (Run → SCR-04)      ▼  │                                   │
 │ Jobs ─── (SCR-07 Jobs list) ──► SCR-04 Live job ──► output version       │
 │ Models ─ SCR-11 Registry ◄── SCR-10 HPO ◄── SCR-09 Run setup ◄── SCR-08  │
-│ Chat ─── SCR-12                                                          │
+│ Chat ─── SCR-12 ──► citation → SCR-03 (chunk) · image → SCR-03 (row)     │
 │ System ─ SCR-13          Settings ─ SCR-14                               │
 │                                                                          │
 │ Always visible: active-job indicator → SCR-04 · resource strip · health  │
@@ -58,6 +58,8 @@ SCR-15 is not in SPEC §9.4's initial inventory, which ends at SCR-14; it was ad
 ```
 
 Phase-1 navigation shows Data and Jobs only. Jobs opens the SCR-07 slice.
+
+**Into chat and retrieval (v5).** SCR-12 opens from the sidebar's *Chat*, or from an index version on SCR-03 with *Ask this index* (`/chat?index=ds_…`). A citation opens SCR-03 on the cited chunk (`/versions/:id?row=<row key>`). *Build the retrieval report* on an index version leads to SCR-06 (`?kind=retrieval`), and SCR-06's threshold action to SCR-14's retrieval section.
 
 **Into a transform (v4).** SCR-15 has no sidebar entry. It is opened from SCR-03 on a table's raw version (*Transform…*), or on a version made by a transform, or downstream of one, with *Edit the transform…* (open point 6b); *Run* leads to SCR-04, and the output version back to SCR-03.
 
@@ -394,6 +396,94 @@ Semantic clusters: a tile (clusters, rows, largest), a Rows filter, a cluster ch
 
 **Other screens touched by v4, with no new region.** SCR-03's lineage strip shows the `transform` node with one fact ("4 operations"); its Config tab shows the operations. SCR-04's timeline shows the `transform` stage like any other, and its stage drawer lists what each operation changed (columns dropped, renamed, recast with the number `cast_failed`, rows re-admitted, rows filtered; rule 28). SCR-08's locked input width and SCR-09's estimator pipeline follow the schema's encodings (rule 29). *Corrected 2026-11-25:* SCR-08 has no one-hot / embedding switch per column (it was never built); the schema's encoding is the one a network uses, and a per-model switch is left for later (ADR-0019 Addendum B, *As built*). The *Start pipeline* drawer does not offer the transform's operations (open point 6e).
 
+## 3b. Phase-3 screens in detail (v5, M12)
+
+From [ADR-0021](decisions/ADR-0021-llm-serving.md) (LLM serving) and [ADR-0022](decisions/ADR-0022-corpora-and-retrieval.md) (corpora and retrieval), both accepted on 2026-11-27, and M12's decisions 8 and 9. Endpoints marked *planned* are added in M12 and specified in API.md as they are built. Open point 8 lists the choices these screens need.
+
+### SCR-12 — Chat, the phase-3 slice (M12)
+
+**Purpose.** Ask the local LLM, ask a question of an index of documents and see where each answer came from, or find images from a description. The slice is manual mode: the person picks *LLM*, *RAG* or *Images*. *Auto* (the router, LLM-3.1) joins in M13 and is hidden until then (rule: unbuilt parts are hidden). UI-1.1's test stays owed in phase 5, when every model type exists (decision 9; SPEC CL-18).
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Sessions | Past conversations, newest first: title (the first question, cut), mode of the last message, when (open point 8a). *New chat* at the top | `GET /chat/sessions` *planned* | a new session appears when its first answer starts |
+| Conversation | The person's messages and the answers as chat bubbles. An answer streams in token by token, with a caret while it streams. A RAG answer shows its `[n]` markers as links. An answer the person stopped is marked "stopped" (open point 8f); an `uncited` RAG answer says "No source cited" under it | `POST /chat` *planned*, streamed (SSE: `meta`, `token`, `citations`, `done`, `error`; ADR-0021 rule 8); `GET /chat/sessions/{id}` *planned* | yes, while streaming |
+| Sources (RAG) | Under a RAG answer, the numbered sources it was given: `[n]`, document › section, relevance (cosine, two decimals), the first lines of the chunk; the cited ones first and marked, the uncited ones folded under "N more sources given". Each opens SCR-03 on its chunk | the `citations` event; the chunk rows | after `done` |
+| Abstention (RAG) | "I don't know." in place of an answer, with the nearest source, its relevance and the threshold ("0.41, below the threshold 0.55"), and a link to it. No LLM was asked, so it also appears while a job holds the GPU (ADR-0022 rule 8). An answer where the model said it doesn't know looks like any answer | the `meta` and `citations` events | |
+| Images | For an *Images* request, the 10 nearest images as a grid: thumbnail, similarity, row key; each opens SCR-03 on its row | `POST /chat` with `mode: images` *planned* (ADR-0022 rule 12) | |
+| Answer footer | Under every answer, small and mono: route (*LLM*, *RAG*, *Images*), model and revision (`qwen3-1.7b · d7f544e`), device, "cold start 3.2 s" when the model had to load, time to the first token, total time, tokens/s; for RAG the index version | the `meta` and `done` events | yes |
+| Composer | The message box; the mode as a segmented control (*LLM* · *RAG* · *Images*); in *RAG*, the index version (a select of index versions, the latest preselected); in *Images*, the labelled version (a select of versions with CLIP vectors); *Send*, or *Stop* while an answer streams | `GET /datasets?type=text_corpus` and the index versions; `GET /datasets?type=image_caption` with CLIP vectors | |
+| GPU line | Above the composer, only when it matters: "The GPU is in use by job_0131 (train). LLM and RAG answers wait for it; questions below the threshold and *Images* still work." with a link to SCR-04; or "Loading the LLM…" during a cold start | `GET /system`, the `error` event `gpu_busy` | yes |
+
+**Actions.**
+
+- *Send* (`Enter`; `Shift+Enter` for a new line); *Stop* (`Esc`) cancels the stream, and the partial answer is kept.
+- Change the mode and the version for the next message; a session may mix modes (open point 8b says what context each mode sends).
+- Open a citation or an image → SCR-03; copy an answer; *New chat*; delete a session (confirm: "Delete this conversation? Its messages are removed; the requests' timings stay for NFR-6.").
+- Keyboard: `/` focuses the composer; `Alt+1`, `Alt+2`, `Alt+3` pick the mode; `j` / `k` move between sessions.
+
+**States.**
+
+- *Empty, no session:* "Ask the local model, ask your documents, or find images." with the three modes explained in one line each, and the composer.
+- *Empty, no index:* *RAG* is disabled with "No index yet. Ingest a corpus and run it to `index` (Datasets)." and a link to SCR-02; *Images* likewise when no labelled version has CLIP vectors.
+- *Loading:* the session list's skeleton; a session's messages' skeleton.
+- *Streaming:* the caret, *Stop*, the footer filling in as `done` arrives.
+- *Refused or failed:* the answer bubble shows the problem's `code`, `detail` and `suggested_action` (ADR-0011) with *Retry*: `gpu_busy` naming the job (link), `llm_busy` ("Two answers are ahead of this one"), `llm_unavailable`, `vram_insufficient`, `no_image_embeddings`. The person's message stays, so *Retry* resends it.
+- *Stream lost:* "Reconnecting…", then the answer is fetched from the session when it has finished.
+
+**Not on this screen in M12.** *Auto* and the router's fallback messages (M13); the assistant's tools (LLM-4.1, M13); image generation and translation (phases 4 and 5); a choice of LLM (one model, decision 1); editing or regenerating an answer.
+
+### SCR-02 and the *Start pipeline* drawer: corpora (v5, M12)
+
+The drawer's type choice gains the two DATA-5.3 types (ADR-0022 rules 1 and 2), each with what its folder holds:
+
+| Type | What the folder holds | Stages |
+|---|---|---|
+| *Text corpus* | `.md` and `.txt` files, at any depth | `ingest → clean_text → chunk → index` |
+| *Instruction pairs* | `.jsonl`, one pair per line: `instruction`, an optional `input`, `output` | `ingest → clean_text → split` |
+
+The stage fields come from the stages' config schemas, as for every type: `chunk`'s `chunk_tokens`, `overlap_tokens` and `min_tokens`; `index`'s embedding model, shown read-only (one model, decision 4). The dataset list shows the modality *text corpus* or *instruction pairs*. Nothing else on SCR-02 changes.
+
+### SCR-03 for corpora (v5, M12)
+
+A corpus's versions use SCR-03's existing regions; what they show by stage:
+
+| Stage | Rows tab | Header facts |
+|---|---|---|
+| `ingest`, `clean_text` (documents) | Path (mono), title (the first heading or the file name), characters, status and reason (`not_utf8`, `empty_text`, `unsupported_format`) | documents, characters |
+| `chunk` | Chunk key (`docs/SPEC.md#0042`), document, section path (`SPEC.md › LLM-2 RAG`), tokens, the text's first line; the row drawer shows the whole chunk with its offsets in the document | chunks, chunk size and overlap |
+| `index` | As `chunk` | vectors, dimension (384), the embedding model and revision, the index's size on disk |
+| instruction pairs | Instruction, input, output (each cut to a line); the row drawer adds the chat format the pairs' adapter makes (ADR-0022 rule 2) | pairs |
+
+- **Lineage strip:** `ingest → clean_text → chunk` ("1,482 chunks · 256 tokens") `→ index` ("1,482 vectors").
+- **A citation's link** opens the chunk's row drawer directly (`?row=`), with the cited chunk's section path in its title.
+- **Actions on an index version:** *Ask this index* → SCR-12 in *RAG* with this version; *Build the retrieval report* → SCR-06 (`?kind=retrieval`), which shows the build and then the report. *Train a model…* and *Transform…* are not shown on corpora.
+- **Distributions tab:** tokens per chunk and chunks per document, as the text lengths are shown today.
+
+### SCR-06 — the retrieval report (v5, M12)
+
+**Purpose.** How well an index version finds the section that answers each question, and where to put the abstention threshold (LLM-2.2, LLM-2.3; ADR-0022 rules 9 to 11). A report of kind `retrieval` on the index version.
+
+| Region | Shows | Source | Live |
+|---|---|---|---|
+| Header | Index version, its chunk settings, the question set (file name, version, SHA-256, answerable and unanswerable counts), k, the building job, created | `GET /versions/{id}/reports/latest?kind=retrieval` *planned* | |
+| hit@k | Three tiles: hit@1, hit@5, hit@10, each as a share and a count ("44 of 50") | report body | |
+| Other index versions | Every retrieval report on the same corpus and question set: index version, chunk size, overlap, hit@1, hit@5, hit@10, created; this one marked. The demo reads its two index versions here | `GET /datasets/{slug}/reports?kind=retrieval` *planned* | |
+| Relevance | The top-1 relevance of the answerable questions and of the unanswerable ones, as two histograms on one axis, with the current threshold drawn; under it a table: for thresholds 0.30 to 0.80 in steps of 0.05, how many answerable questions would still be answered and how many unanswerable ones would abstain | report body | |
+| Missed questions | Each answerable question with no hit in the top 5: the question, its labelled section, and what was retrieved instead (section, relevance). Sorted by relevance | report body | |
+
+**Actions.** Rebuild the report; open the index version, the question set (its file on SCR-03 is not a version; the header shows its path) or the building job; **Set as the abstention threshold…** on a row of the threshold table, with a confirmation that names the value and what it does ("Below 0.55, RAG answers 'I don't know' without asking the model; 46 of 50 answerable questions are above it, 13 of 15 unanswerable below") → `PUT /settings`, the retrieval section (open point 8e). Every chart has its text table (accessibility rule).
+
+**Empty.** "No retrieval report for this index yet." with *Build report*. A corpus version that is not an index (documents or chunks) has no report and says "Retrieval reports are built on an index version." with a link to it.
+
+### SCR-14: the retrieval section (v5, M12)
+
+One section, generated from its schema like the others: the abstention threshold per embedding model (0 to 1, no default until the owner sets one; until then RAG never abstains and the chat's *RAG* mode says so in its empty state), and the default k (5).
+
+### Other screens touched by v5, with no new region
+
+SCR-04's timeline shows `chunk`, `index` and `retrieval_eval` like any other stage; `index` reports progress per batch of embedded chunks and how many vectors came from the cache. SCR-13's load and unload events (MON-3.3) include the LLM's, with NVML's figures and "no PyTorch figure for Ollama" (ADR-0021 rule 6).
+
 ## 4. Later screens (outline)
 
 Detailed at each phase kickoff, when their interfaces are specified. Listed now so the shell and the phase-1 screens leave room.
@@ -409,7 +499,7 @@ Detailed at each phase kickoff, when their interfaces are specified. Listed now 
 | SCR-13 | The machine over time, beyond one job | Resource history, alerts with the action taken (MON-2.6, 2.7), bottleneck diagnostics (MON-3.2), load and unload events with VRAM before and after (MON-3.3), two runs overlaid (MON-4.4), trends across past jobs (MON-4.5) | Pick a time range; pick jobs to compare; open a job |
 | SCR-14 | Defaults and thresholds | Sampling intervals, alert thresholds, temperature limit, stall timeout, retention defaults and overrides, theme — all as schema-generated forms | Edit and save, with validation from the API |
 
-**Not yet placed.** RAG corpus and index management with hit@k results (LLM-2.1, LLM-2.2) and remote-offload bundles (IMG-1.4) have no screen in SPEC §9.4. I propose deciding where they go at the phase-3 and phase-4 kickoffs (a new screen or a tab of SCR-11) rather than now.
+**Not yet placed.** Remote-offload bundles (IMG-1.4) have no screen in SPEC §9.4; decided at the phase-4 kickoff. *Placed in v5:* corpora and indexes are dataset versions on SCR-02 and SCR-03, and hit@k is SCR-06's retrieval report (M12 decisions 7 and 8).
 
 ## 5. Core flows
 
@@ -469,6 +559,30 @@ Step by step (v2; steps 1–3 rewritten in v3), as the phase-2 acceptance runs i
 
 SCR-12: the person types a request in Auto mode → the router classifies it and picks LLM, RAG, image generation, captioner or translator (LLM-3.1) → the answer streams back with its route, latency and, for RAG, citations → if the chosen model fails, the fallback answer or a clear error appears with the reason (LLM-3.2). In manual mode the person picks the model and the router is skipped.
 
+**Manual mode, step by step (v5, M12).** On the documentation corpus `stratal-docs`, index version `ds_…` (chunk size 256):
+
+| # | Screen | The person… | Behind it |
+|---|---|---|---|
+| 1 | SCR-12 | picks *RAG* (the latest index preselected) and asks "How are dataset version IDs computed?"; sees "Loading the LLM…" (a cold start, 3–5 s), then the answer streams with `[1]` and `[2]` | `POST /chat` (`mode: rag`, `index_version_id`): retrieval on the CPU, the lease, Ollama |
+| 2 | SCR-12 | reads the footer (RAG · qwen3-1.7b · GPU · cold start 3.4 s · first token 0.9 s · 4.1 s · 98 tokens/s) and the sources, cited ones first | the `meta`, `citations` and `done` events |
+| 3 | SCR-12 → SCR-03 | opens `[1]`: SCR-03 on the chunk `docs/DATA_MODEL.md#0017`, its section *Version identity*, its lineage back to the source file | `GET /versions/{id}/rows?row=` |
+| 4 | SCR-12 | asks "What is the capital of Peru?"; gets "I don't know." with the nearest source and "0.38, below the threshold 0.55"; no model was asked | retrieval only |
+| 5 | SCR-12 | picks *Images*, the coco10k labelled version, and types "dogs at night"; sees 10 thumbnails with similarities | `POST /chat` (`mode: images`) |
+| 6 | SCR-09 → SCR-12 | starts a training run, comes back and asks in *LLM*; the answer bubble says the GPU is in use by the job (link); a question below the threshold still gets its "I don't know" | `gpu_busy`; ADR-0021 rule 4 |
+
+### Flow 7 — Documents → index → hit@k → threshold (v5, M12)
+
+The M12 demo's retrieval part (MILESTONES.md, M12 *Done when*).
+
+| # | Screen | The person… | Behind it |
+|---|---|---|---|
+| 1 | SCR-02 | clicks *Ingest a folder*, picks `/sources/stratal-docs` and *Text corpus*, leaves `chunk` at 256 tokens | `POST /jobs` (`dataset_type: text_corpus`) |
+| 2 | SCR-04 | watches ingest → clean_text → chunk → index; `index` says how many vectors came from the cache | job stream |
+| 3 | SCR-03 | opens the index version: 1,482 chunks, their sections; clicks *Build the retrieval report* | `POST /versions/{id}/reports` (`kind: retrieval`) |
+| 4 | SCR-03 → SCR-04 | continues from the clean version with `chunk_tokens` 128, which gives a second chunk and index version | *Start pipeline* with `from_version` |
+| 5 | SCR-06 | reads hit@5 for both index versions in *Other index versions*, the missed questions, and the two relevance histograms | `GET /versions/{id}/reports/latest?kind=retrieval` |
+| 6 | SCR-06 → SCR-14 | picks a threshold from the table and confirms *Set as the abstention threshold…* | `PUT /settings` |
+
 ### Flow 6 — Raw table → transform → train (v4, M11b)
 
 The M11b demo on the wine table (MILESTONES.md, M11b *Done when*), from its raw version `ds_b3f4ff09de8a` (178 rows, 13 numeric features, target `cultivar`).
@@ -521,6 +635,15 @@ The M11b demo on the wine table (MILESTONES.md, M11b *Done when*), from its raw 
 
    **Decided 2026-11-24 by the owner: the recommended option in each of (a) to (d)** ("Approved"). `until_stage` kept, drawn as one *Stop after* choice with later stages "not run", `transform` the only stage with its own switch; `GET /dataset-types` gains `stages` and `source`; `transform` reachable from the drawer through SCR-15 (a raw table version) or *Stop after ingest* (a folder); the type required, no default, no guess.
 
+8. **Phase 3's screens (v5, M12, open for Gate 1).**
+   - **(a) Sessions.** *Recommended:* conversations are kept (ADR-0021 rule 9's `chat_sessions`) and listed on the left, titled by their first question; a session can be deleted, with a confirmation. The alternative is one conversation per visit, nothing listed (the requests' timings are stored either way, for NFR-6).
+   - **(b) What context each mode sends.** *Recommended:* *LLM* sends the last turns of the session, up to 1,000 tokens, so a follow-up question works; *RAG* answers each question alone, retrieving on that message only, so its citations always match the sources of that answer; *Images* uses the message only. The alternative sends the history in *RAG* too, which makes "what about X?" work but lets an answer draw on an earlier answer's sources without citing them.
+   - **(c) Citations.** *Recommended:* the `[n]` markers in the text are links, and the sources are listed under the answer, cited first (as above). The alternative is a side panel of sources beside the conversation, which takes width from the answers on a 1280 px screen.
+   - **(d) Image search.** *Recommended:* a third mode of SCR-12, *Images*, with the labelled version chosen in the composer; in M13 the router sends "show me pictures of…" there. The alternative is its own screen, or a search box on SCR-03.
+   - **(e) Setting the threshold.** *Recommended:* from SCR-06's threshold table, with a confirmation that states what it does, and on SCR-14 like every setting. The alternative is SCR-14 only, typing the value read off SCR-06.
+   - **(f) Stopping an answer.** *Recommended:* *Stop* and `Esc` cancel the stream; the partial answer is kept and marked "stopped"; the request is stored with status `stopped`. The alternative discards the partial answer.
+   - **(g) Gate 2 order.** *Recommended:* SCR-12 first (low-fi, then hi-fi), then SCR-03 for corpora, then SCR-06's retrieval report; the drawer's two new types and SCR-14's section follow their screens' existing patterns and are shown in the SCR-03 and SCR-06 mockups rather than gated on their own. The alternative gates each of the five.
+
 ## Revision history
 
 | Version | Date | Changes |
@@ -528,4 +651,5 @@ The M11b demo on the wine table (MILESTONES.md, M11b *Done when*), from its raw 
 | v1 | 2026-11-15 | First version, for Gate 1 review. Approved the same day; open point 1 then decided by the owner as option (a), recorded in place |
 | v2 | 2026-11-17 | Phase-2 kickoff: §3a details SCR-04 v2 (training runs), SCR-07 v2 (pause, resume), SCR-08 to SCR-11, SCR-13, SCR-14 and SCR-03's M11 additions, from the approved phase-2 plan and ADR-0014 to ADR-0016; Flow 4 in steps; Flow 3's phase-2 part. Approved by the owner the same day |
 | v3 | 2026-11-20 | Choosing the model kind after the split (ML-1.1, BUILD-1.3, UI-2.1; the owner's request of 2026-11-20): the *Train a model* drawer (step 1 the split version with its type and task, step 2 the kinds it allows, *Classical* greyed with its reason off tables); SCR-03 and SCR-11 open it, replacing *Build a model…*; SCR-08's dataset selects filled from step 1; SCR-09 receives the chosen kind with *Change…* and entry rules, its empty state reworded; *Train again…*, SCR-10's and SCR-04's starts unchanged; Flow 4's summary and steps 1–3 rewritten, with a table variant; open point 5. Approved by the owner the same day, with the recommended option in each of point 5's choices. Corrected with the approval of the entry's low-fi wireframe (same day): step 1 and SCR-03's button take `tokenize` versions for labelled text as well as `split` versions |
+| v5 | 2026-11-27 | Phase 3, M12 (LLM-1.1, LLM-2.1–2.4, DATA-5.3, NFR-6; ADR-0021 and ADR-0022, M12 decisions 7–9): §3b details SCR-12's phase-3 slice (manual mode *LLM*, *RAG*, *Images*; sessions, streaming answers, sources and citations, abstention, image results, the answer footer, the GPU line, its states; *Auto* hidden until M13), the *Start pipeline* drawer's two corpus types, SCR-03 for documents, chunks, indexes and instruction pairs, SCR-06's retrieval report (hit@k, other index versions, relevance against the threshold, missed questions), SCR-14's retrieval section; the inventory and navigation map; §4's *Not yet placed* updated; Flow 5's manual mode in steps; Flow 7, the retrieval demo; open point 8 (a)–(g). Proposed for approval |
 | v4 | 2026-11-24 | Tabular transforms (M11b, DATA-7.1–7.5; kickoff K8, ADR-0019 Addendum B rules 32–33): SCR-15, the transform editor at `/versions/:version_id/transform` (operations list generated from the stage's schema, column fields per step, the resulting schema, a 50-row preview from the stage's own code, *Run*), with its states; SCR-03's *Columns* tab for any tabular version (kind, role, encoding, missing, distinct, distribution) and its *Transform…* / *Edit the transform…* action, always opening on the raw version; the inventory row and navigation map; the screens the new stage touches without a new region; Flow 6, the wine demo; open point 6 (a)–(e). Approved by the owner the same day, with the recommended option in each of point 6's choices. **Amended the same day** at the owner's request (MILESTONES.md M11b scope, `3c9e48e`): the *Start pipeline* drawer, type first (the type before the stages, only its stages in its order, the stop, `transform` reachable, `dataset_type` always sent); the inventory's SCR-02 row; Flow 1 step 1; open point 7 (a)–(d). The amendment approved by the owner the same day, with the recommended option in each of point 7's choices |
