@@ -73,6 +73,13 @@ _FIELDS: list[tuple[str, pa.DataType]] = [
     # M11 (DATA-2.3, ADR-0013): the semantic cluster an accepted row is in. Nullable and
     # appended, as above.
     ("semantic_cluster_id", pa.string()),
+    # M12 (DATA-5.3, ADR-0022): a document's title; a chunk's document, section path and
+    # character offsets in the cleaned document. Nullable and appended, as above.
+    ("title", pa.string()),
+    ("document", pa.string()),
+    ("section", pa.string()),
+    ("char_start", pa.int32()),
+    ("char_end", pa.int32()),
 ]
 SCHEMA: pa.Schema = pa.schema(
     [pa.field(name, kind, nullable=name != "row_key") for name, kind in _FIELDS]

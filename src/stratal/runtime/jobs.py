@@ -77,18 +77,26 @@ class PipelineRequest(BaseModel):
         description="Per-stage overrides of the default config.",
     )
     until_stage: str | None = Field(default=None, description="Stop after this stage.")
-    dataset_type: Literal["image_caption", "labelled_images", "tabular", "labelled_text"] | None = (
-        Field(
-            default=None,
-            description="Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest "
-            "to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from "
-            "class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, "
-            "stages.ingest.table.target required), transform (only with "
-            "stages.transform.operations, on the raw version), clean_table, split. "
-            "'labelled_text': ingest "
-            "(JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it "
-            "has one, else image_caption.",
-        )
+    dataset_type: (
+        Literal[
+            "image_caption",
+            "labelled_images",
+            "tabular",
+            "labelled_text",
+            "text_corpus",
+            "instruction_pairs",
+        ]
+        | None
+    ) = Field(
+        default=None,
+        description="Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest "
+        "to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from "
+        "class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, "
+        "stages.ingest.table.target required), transform (only with "
+        "stages.transform.operations, on the raw version), clean_table, split. "
+        "'labelled_text': ingest "
+        "(JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it "
+        "has one, else image_caption.",
     )
 
     @model_validator(mode="after")
@@ -236,6 +244,8 @@ _INGEST_KIND: dict[str, str | None] = {
     "labelled_images": "label_from",
     "tabular": "table",
     "labelled_text": "text",
+    "text_corpus": "corpus",
+    "instruction_pairs": "pairs",
 }
 """The ingest field each dataset type needs set (and every other type leaves unset)."""
 
@@ -246,7 +256,7 @@ def _label_problems(dtype: str, plan: list[tuple[str, dict[str, Any]]]) -> list[
     for name, config in plan:
         if name != "ingest":
             continue
-        for field_name in ("label_from", "table", "text"):
+        for field_name in ("label_from", "table", "text", "corpus", "pairs"):
             given = config.get(field_name) is not None
             if given == (field_name == wanted):
                 continue

@@ -19,12 +19,21 @@ from sqlalchemy.orm import Session
 
 from stratal.core.errors import StratalError, ValidationFailed
 from stratal.data import registry
+from stratal.data.chunk_stage import run_chunk
 from stratal.data.clean import OWNER_UNITS, CleanConfig, DedupeUnits, ExactGrouper, run_clean
 from stratal.data.commit import VersionRecord
+from stratal.data.corpus import ChunkConfig, IndexConfig
 from stratal.data.ingest import LABELLED_IMAGES, IngestConfig, config_dtype, run_ingest
 from stratal.data.preprocess import PreprocessConfig, run_preprocess
 from stratal.data.record_clean import CleanTableConfig, CleanTextConfig, run_clean_records
-from stratal.data.records import LABELLED_TEXT, TABULAR, schema_hash, table_schema_of
+from stratal.data.records import (
+    INSTRUCTION_PAIRS,
+    LABELLED_TEXT,
+    TABULAR,
+    TEXT_CORPUS,
+    schema_hash,
+    table_schema_of,
+)
 from stratal.data.split_stage import OWNER_UNITS as SPLIT_UNITS
 from stratal.data.split_stage import PreviousSplit, SplitConfig, SplitUnits, run_split
 from stratal.data.tokenize import TokenizeConfig, run_tokenize
@@ -60,6 +69,9 @@ PIPELINE_ORDERS: dict[str, tuple[str, ...]] = {
     # transform runs only when the request gives it operations (ADR-0019 Addendum B rule 25).
     TABULAR: ("ingest", "transform", "clean_table", "split"),
     LABELLED_TEXT: ("ingest", "clean_text", "split", "tokenize"),
+    # DATA-5.3, ADR-0022: a corpus is chunked and indexed for retrieval, not split.
+    TEXT_CORPUS: ("ingest", "clean_text", "chunk", "index"),
+    INSTRUCTION_PAIRS: ("ingest", "clean_text", "split"),
 }
 """Each dataset type's stages, in order (DATA-5.2)."""
 TYPE_DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
@@ -78,6 +90,16 @@ TYPE_DEFAULTS: dict[str, dict[str, dict[str, Any]]] = {
     TABULAR: {"split": {"stratum_keys": [], "leakage_distance": 0}},
     LABELLED_TEXT: {
         "ingest": {"text": {}},
+        "split": {"stratum_keys": [], "leakage_distance": 0},
+    },
+    # A whole document is one row, and its headings must reach chunk (ADR-0022 rule 1).
+    TEXT_CORPUS: {
+        "ingest": {"corpus": {}},
+        "clean_text": {"max_chars": 1_000_000, "keep_line_breaks": True},
+    },
+    INSTRUCTION_PAIRS: {
+        "ingest": {"pairs": {}},
+        "clean_text": {"max_chars": 20_000},
         "split": {"stratum_keys": [], "leakage_distance": 0},
     },
 }
@@ -139,7 +161,12 @@ def registered() -> dict[str, StageDef]:
     return dict(_REGISTRY)
 
 
-MODALITIES: dict[str | None, str] = {TABULAR: "tabular", LABELLED_TEXT: "text"}
+MODALITIES: dict[str | None, str] = {
+    TABULAR: "tabular",
+    LABELLED_TEXT: "text",
+    TEXT_CORPUS: "text corpus",
+    INSTRUCTION_PAIRS: "instruction pairs",
+}
 """A dataset's modality by type; anything else is images."""
 
 
@@ -408,6 +435,53 @@ register(
     )
 )
 register(StageDef("tokenize", "cpu", TokenizeConfig, _run_tokenize))
+
+
+def _run_chunk(run: StageRun) -> StageResult:
+    """A corpus's documents into chunks (LLM-2.1, ADR-0022 rule 3)."""
+    from stratal.data.rag_index import bge_token_counter  # the tokenizer is in the workers
+
+    def body(given: DerivedInput) -> DerivedOutput:
+        config = ChunkConfig.model_validate(given.config)
+        result = run_chunk(
+            parent_manifest=given.manifest,
+            parent_version_id=given.version_id,
+            data_dir=run.data_dir,
+            config=config,
+            derive=derive_version_identity,
+            sink=run.ctx,
+            count=bge_token_counter(run.data_dir / "models", config.tokenizer),
+            checkpoint=run.ctx.raise_if_cancelled,
+        )
+        return DerivedOutput(result.record, 0, result.metrics)
+
+    return run_derived_stage(run, stage="chunk", config_model=ChunkConfig, body=body)
+
+
+def _run_index(run: StageRun) -> StageResult:
+    """Embed every chunk and write one FAISS index (LLM-2.1, ADR-0022 rule 4)."""
+    from stratal.data.rag_index import BgeEmbedder, run_index
+
+    def body(given: DerivedInput) -> DerivedOutput:
+        config = IndexConfig.model_validate(given.config)
+        result = run_index(
+            parent_manifest=given.manifest,
+            parent_version_id=given.version_id,
+            data_dir=run.data_dir,
+            config=config,
+            derive=derive_version_identity,
+            sink=run.ctx,
+            cache=PgDerivationCache(run.engine, job_id=run.ctx.job_id),
+            embedder=BgeEmbedder(run.data_dir / "models", config.embedding_model),
+            checkpoint=run.ctx.raise_if_cancelled,
+        )
+        return DerivedOutput(result.record, 0, result.metrics)
+
+    return run_derived_stage(run, stage="index", config_model=IndexConfig, body=body)
+
+
+register(StageDef("chunk", "cpu", ChunkConfig, _run_chunk))
+register(StageDef("index", "cpu", IndexConfig, _run_index))
 
 
 def _run_transform(run: StageRun) -> StageResult:
