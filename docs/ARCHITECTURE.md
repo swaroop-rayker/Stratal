@@ -39,7 +39,11 @@ flowchart LR
     WCPU["worker-cpu"]
     WGPU["worker-gpu"]
     MON["monitor (collector, sampler, watchdog)"]
+    INF["inference (models, LLM adapter, RAG, image search)"]
     VOL[("stratal-data volume")]
+    subgraph LLMNET["network llm (internal, no gateway)"]
+      OLL["ollama"]
+    end
   end
   GPU["RTX 4050"]
 
@@ -61,6 +65,11 @@ flowchart LR
   SRC -->|read-only mount| WCPU
   WGPU -.->|CUDA| GPU
   MON -.->|NVML| GPU
+  API -->|predict, chat| INF
+  INF -->|"/api/chat"| OLL
+  INF --> VOL
+  INF -.->|CUDA| GPU
+  OLL -.->|CUDA| GPU
 ```
 
 | Service | Job | From | GPU | Memory limit (initial) |
@@ -68,16 +77,18 @@ flowchart LR
 | `postgres` | System of record: jobs, events, telemetry, dataset versions, lineage, reviews, reports | M0 | no | 0.5 GB |
 | `redis` | Celery broker, event stream buffer, live fan-out, control flags | M0 | no | 0.25 GB |
 | `api` | HTTP and SSE. Loads no models and does not import PyTorch | M0 | no | 0.4 GB |
-| `worker-cpu` | CPU stages: ingest, clean, preprocess, filter, split, evaluate; since M8 also training on the CPU, from its own image with PyTorch's CPU build (`ml-cpu` extra, ADR-0014 rule 11; 1.97 GB against `api`'s 650 MB) | M2 | no | 2.5 GB |
-| `worker-gpu` | GPU stages, one at a time: label and training | M2 | yes | 3.25 GB (4.5 GB until M8, 3.5 GB until M11) |
+| `worker-cpu` | CPU stages: ingest, clean, preprocess, filter, split, evaluate; since M8 also training on the CPU, from its own image with PyTorch's CPU build (`ml-cpu` extra, ADR-0014 rule 11; 1.97 GB against `api`'s 650 MB); since M12 the corpus stages `chunk`, `index` (bge embeddings) and `retrieval_eval` | M2 | no | 1.9 GB (2.5 GB until M12) |
+| `worker-gpu` | GPU stages, one at a time: label and training | M2 | yes | 2.75 GB (4.5 GB until M8, 3.25 GB until M12) |
 | `monitor` | Collector (events to Postgres), sampler (psutil + NVML) with the resource alerts, watchdog (dead and stalled jobs, heat, bottleneck diagnostics; M11) | M2 | NVML only | 0.25 GB |
 | `frontend` | Vite dev server for the web UI (React, SPEC §7.4); proxies `/api` to `api`. Its checks run on demand in `frontend-tools` (1.5 GB, profile `dev`, like `dev`) | M6 | no | 0.4 GB |
 | `beat` | Scheduled maintenance: telemetry downsampling (NFR-12) | M7 | no | 0.2 GB |
-| `inference` | Long-lived process that holds at most one model for `/predict` (REG-1.4, ADR-0016); the `worker-gpu` image, profile `gpu`, port 8100 on the Compose network only | M8 | yes | 1.25 GB (1.0 GB until M11) |
-| `ollama` | Local LLM serving (LLM-1.1) | Phase 3 | yes | to be set |
+| `inference` | Long-lived process that holds at most one model for `/predict` (REG-1.4, ADR-0016); since M12 also Ollama's adapter (the LLM's lease, load and unload), RAG's retrieval and image search, with bge-small and CLIP's text tower on the CPU ([ADR-0021](decisions/ADR-0021-llm-serving.md), [ADR-0022](decisions/ADR-0022-corpora-and-retrieval.md)); the `worker-gpu` image, profile `gpu`, port 8100 on the Compose network only | M8 | yes | 1.35 GB (1.25 GB until M12) |
+| `ollama` | Local LLM serving (LLM-1.1): Qwen3-1.7B Q4_K_M, built from the allow-list's verified file. Pinned image, profile `gpu`, only on the internal network `llm` with `inference`, so it reaches nothing outside the host (NFR-7); `inference` decides when it loads and unloads (ADR-0021) | M12 | yes | 1.0 GB |
 | Host script | PowerShell on Windows: keeps the laptop awake while jobs run, reports sleep and resume | M2 | – | – |
 
 The limits sum to 9.0 GB, which is how NFR-2 is enforced. Spike S-07 ([RISKS.md](RISKS.md)) measured them while labelling 2,000 images on 2026-11-15: every container stayed under half its limit (worker-gpu 2.2 of 4.5 GB, worker-cpu 0.9 of 2.5 GB), so they are kept, with worker-gpu's headroom left for training in phase 2.
+
+**Revised in M12 (2026-11-27, ADR-0021 rule 11).** `ollama` takes 1.0 GB, from `worker-gpu` (−500 MiB) and `worker-cpu` (−600 MiB), and `inference` gains 100 MiB for the CPU models; the sum stays 9,024 MiB. Ollama's runner peaked at 563 MiB of anonymous memory over 60 RAG questions once its prompt cache was turned off (ERRORS E-023).
 
 **Revised in M8 (2026-11-18, ADR-0016 rule 7).** `inference` takes 1 GB from `worker-gpu`, so the sum stays 9.0 GB. Measured from each container's cgroup (`memory.peak`): `worker-gpu` peaked at 1,631 MiB training on CIFAR-10 with 4 loader workers (job_0033, a 2-epoch MLP; the per-process RSS sum said 6.3 GB, counting shared pages once per worker), against 2.2 GB while labelling; `inference` at 397 MiB serving `small_cnn` on the CPU.
 
@@ -113,6 +124,8 @@ Manual review (LABEL-1.5) is not a stage. It is a human activity attached to a v
 As built in M3, memoization applies to every stage that consumes a version (`run_derived_stage`); ingest has no parent version and always runs, which costs little because its blobs are stored by content. The config hash for the lookup comes from the same function that names versions. Owner code that changes its results bumps `ALGORITHM_VERSION`, which is part of the config, so an old version is not reused for new code.
 
 **Expensive per-item results are cached by content.** Captions, CLIP scores, pHashes and image metadata are stored in a derivation cache keyed by the file's content hash plus the parameters that produced the result. A caption batch is committed to the cache as soon as it finishes. That is how LABEL-1.2 is met: after a kill at 60%, the restarted stage finds 60% of its work in the cache and computes only the rest.
+
+**Corpora (M12, [ADR-0022](decisions/ADR-0022-corpora-and-retrieval.md)).** A `text_corpus` (a folder of Markdown and text) runs `ingest → clean_text → chunk → index` on the CPU worker: one row per document, then one per chunk cut at headings and then by size with overlap, then a version whose manifest names a FAISS index blob of the chunks' bge-small vectors (each vector a `text_embedding` derivation, so re-indexing reuses them). An `instruction_pairs` source (JSONL) runs `ingest → clean_text → split`; M13's fine-tuning reads it through the pairs' adapter. `retrieval_eval` scores an index version on a frozen question set (hit@k) and writes a `retrieval` report, with no LLM call. RAG and image search read these versions from `inference`; chat is `api`'s `POST /chat`, streamed over SSE from `inference` and Ollama.
 
 ## 4. Running a job
 
@@ -266,6 +279,7 @@ VRAM handling is owner-implemented (RUN-1.4, RUN-1.5). The architecture fixes th
 - **OOM is handled at the batch boundary.** For inference-style stages such as captioning, the batch is halved and retried, with a WARN event that says so. For training (phase 2) the job fails cleanly with a suggested batch size (RUN-1.5).
 - **Unload is verified, not assumed.** Where a process outlives a model (the phase-2 `inference` service), every unload is followed by a check that allocated VRAM returned to baseline. If it did not, the process restarts itself (RUN-1.4.AC1).
 - **Training uses the same manager (M8).** A GPU run loads its model and optimizer as one `TrainingState` and unloads it at the end; `close()` sets gradients to `None` and empties the optimizer's state, and the unload proves allocated memory is back at its baseline before the process exits. A training OOM is caught outside the failed step, once its tensors are gone: what stays allocated is the fixed part, the rest of the step's peak is divided per sample, and the run fails with `gpu_oom` and the largest power of two below the batch that fits 90 % of the cap (RUN-1.5). When the step fails early, its peak is only a lower bound, so the suggestion tends to half the batch; it fit on the card. The inference service probes `close()` once and uses the GPU only if it works.
+- **The LLM takes the same lease (M12, ADR-0021).** `inference` takes it before Ollama loads the model, checks the card's free VRAM and that every layer went to the GPU, and gives it back after 60 s idle or at once when a job waits. An unload is checked on the card (NVML) against the baseline measured before the load; if the memory does not come back, the lease is kept and chat refuses with `llm_unavailable`. Chat never falls back to the CPU; retrieval, abstention and image search run on the CPU and need no lease.
 - **RAM is bounded from outside.** Each container has a memory limit. A job that exceeds it is killed by the kernel, which cannot be caught in-process, so the supervisor detects it from the exit status and reports "killed: out of memory" with the peak it reached (BUG2, BUG3).
 - **Loading is streamed and bounded.** Decoders feed the GPU through bounded queues, so a slow GPU slows the loader instead of filling RAM. Worker counts are derived from the container's memory limit (BUG3).
 
@@ -320,11 +334,11 @@ Stratal/
 │   ├── storage/        blob store, manifest I/O, derivation cache
 │   ├── data/           ingest, clean, preprocess, split, dataset types, versioning
 │   ├── label/          captioning, CLIP scoring, filter, review
-│   ├── eval/           reports and metrics
+│   ├── eval/           reports and metrics; since M12 hit@k and the frozen RAG question sets (`eval/rag/`)
 │   ├── train/          training: config, reference models, image loader, checkpoints, weights, the train stage (M8)
 │   ├── build/          the model builder: layer and graph specs, shapes, counts, templates (plain Python); compile and from-scratch layers (PyTorch) (M9)
 │   ├── registry/       model registry store, the retention keep rule and the retention job (M8)
-│   ├── inference/      the inference service: the model holder and its /predict app (M8)
+│   ├── inference/      the inference service: the model holder and its /predict app (M8); the LLM adapter, RAG, citations and image search (M12)
 │   ├── pretrained/     the pretrained-model allow-list and the pull command (M4)
 │   ├── runtime/        job model, state machine, supervisor, child, context, GPU lease, VRAM manager
 │   ├── mon/            event schema, emitter, collector, sampler, watchdog
@@ -343,7 +357,7 @@ Domain code in `data/`, `label/` and `eval/` does not import Celery, Redis or Fa
 | Phase | Adds | Architectural effect |
 |---|---|---|
 | 2 | Training runtime, model builder, classical ML, HPO, registry, retention | `inference` service; checkpoints and pause/resume; registry tables; retention as a job; thermal and stall actions in the watchdog |
-| 3 | LLM, RAG, router, tools | `ollama` service behind the GPU lease; FAISS indexes as versioned artifacts; LangGraph router in the API |
+| 3 | LLM, RAG, router, tools | Built in M12: the `ollama` service behind the GPU lease, on its own internal network; corpora and FAISS indexes as dataset versions; chat over SSE. M13: the LangGraph router in the API, tools, QLoRA |
 | 4 | Text→image and LoRA | Heaviest VRAM user; adapters stored as deltas (REG-1.3); export/import bundles for Kaggle and Colab |
 | 5 | Translation, chat UI | Translation models in `inference`; chat screen over SSE |
 

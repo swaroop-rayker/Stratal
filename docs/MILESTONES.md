@@ -858,19 +858,20 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 **Done when**
 
 - [x] S-11 report delivered and the model chosen; decisions 1 to 12 recorded (2 to 12 on 2026-11-27, "Accept all"; 1 the same day, Qwen3-1.7B, `docs/spikes/S-11-llm.md`); ADR-0021 and ADR-0022 approved (both accepted 2026-11-27, "Approve both"). Decision 12 settled 2026-11-27: the owner asked the agent to write hit@k's scoring ("Agent writes it"); no phase-3 unit is the owner's
-- [ ] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry
-- [ ] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading
-- [ ] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index
+- [x] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry (2026-11-27: `test_LLM_1_1_model_is_built_from_the_pinned_blob`, `…_an_answer_streams_meta_tokens_and_timings`, `…_chat_streams_and_stores_the_answer`, Stop's `test_LLM_1_1_stop_*`; live with Qwen3-1.7B on the card)
+- [x] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading (2026-11-27: `test_LLM_2_1_answer_cites_only_given_sources` and the citation filter's tests; live, `tests/acceptance/test_M12_llm_acceptance.py` on question set v2: 39 of 42, 93 %, in three runs; on v1 it was 76 %, then 78–81 % after the prompt's example was fixed; the owner chose v2 on 2026-11-27)
+- [x] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index (2026-11-27: `test_LLM_2_2_hit_at_k_matches_hand_computed_values`, `…_report_on_an_index_version`; on v2, 128-token chunks hit@5 0.92, 256-token 0.88)
   - The question set (`src/stratal/eval/rag/stratal-docs-questions-v1.jsonl`: 50 answerable, 15 unanswerable; drafted by the agent, table in `docs/drafts/rag-question-set-v1.md`) approved by the owner on 2026-11-27 ("Approved as is") and frozen. Decision 12: the agent wrote hit@k's scoring at the owner's request.
-- [ ] `test_LLM_2_3_*`: out-of-corpus questions get an abstention
+  - Question set v2 (`…-v2.jsonl`, v1 plus 56 labels where another chunk states the same fact; `docs/drafts/rag-question-set-v2.md`), chosen by the owner after decision 11's first measurement and approved the same day ("Approved as is"); frozen and the default. Both hashes are pinned in `test_LLM_2_2_the_question_set_is_well_formed`.
+- [x] `test_LLM_2_3_*`: out-of-corpus questions get an abstention (2026-11-27: `test_LLM_2_3_below_the_threshold_abstains_without_the_model`; on the real corpus a threshold of 0.65 abstains on 15 of 15 unanswerable and answers 50 of 50 answerable questions. The threshold itself is the owner's and is not set)
 - [ ] `test_LLM_2_4_*`: planted images are found from their text; live, "dogs at night" on coco10k, judged by the owner
-- [ ] `test_DATA_5_3_*`: samples of both types validate, bad rows are rejected with reasons, and the pairs' adapter gives the chat format
-- [ ] `test_NFR_6_*`: 20 queries measured, as read in decision 11
-- [ ] `test_NFR_7_*` and `test_NFR_8_*` extended: chat and RAG with every outbound connection refused; the model file pinned by hash
-- [ ] `test_BUG6_*` extended: after the adapter's unload the card is back at its baseline, and a queued training job gets the GPU
+- [x] `test_DATA_5_3_*`: samples of both types validate, bad rows are rejected with reasons, and the pairs' adapter gives the chat format (2026-11-27: `test_DATA_5_3_corpus_ingest_one_row_per_document`, `…_pairs_ingest_rejects_bad_rows_with_reasons`, `…_instruction_pairs_are_ingested_cleaned_and_split`, `…_pairs_adapter_gives_the_chat_format`)
+- [x] `test_NFR_6_*`: 20 queries measured, as read in decision 11 (2026-11-27: `test_NFR_6_twenty_queries_meet_their_targets`, 20 of 20 in each of four runs; chat first token median 22–24 ms, RAG answer median 0.5–0.6 s)
+- [x] `test_NFR_7_*` and `test_NFR_8_*` extended: chat and RAG with every outbound connection refused; the model file pinned by hash (2026-11-27: `test_NFR_7_ollama_is_only_on_the_internal_llm_network`, `test_NFR_7_rag_runs_with_outbound_connections_refused`, live probes from `ollama` reaching nothing; the GGUF pinned in `test_NFR_8_the_catalog_pins_safetensors_weights_and_every_file` and built only from its blob)
+- [x] `test_BUG6_*` extended: after the adapter's unload the card is back at its baseline, and a queued training job gets the GPU (2026-11-27: `test_BUG6_idle_release_unloads_the_llm_and_frees_the_lease`, `…_the_answer_in_progress_finishes_before_the_release`, `…_vram_not_given_back_keeps_the_lease`; live, the idle unload brought the card from 1.8 to 0.2 GB)
 - [x] G1 revision approved (SCREENS.md v5, 2026-11-27, with open point 8's recommended options)
 - [x] G2 for SCR-12, SCR-03 for corpora and SCR-06's retrieval report, in that order (all approved 2026-11-27; `docs/design/APPROVALS.md`)
-- [ ] G3 for M12's screens
+- [x] G3 for M12's screens (approved by the owner on 2026-11-27; `docs/design/g3/SCR-12.md`, `SCR-03corpora.md`, `SCR-06retrieval.md`)
 - [ ] Demo: ingest the documentation, build two index versions with different chunk sizes and read their hit@5 on SCR-06; ask SCR-12 questions with citations, and one it must decline; search "dogs at night"; start a training run and watch chat give the GPU back
 - [ ] Docs updated (ARCHITECTURE, DATA_MODEL, API, ERRORS; learning notes)
 - [ ] Owner's OK to merge
