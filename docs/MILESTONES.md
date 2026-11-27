@@ -857,7 +857,7 @@ Not planned: LangChain itself and langchain-community (the RAG chain is four ste
 
 **Done when**
 
-- [ ] S-11 report delivered and the model chosen; decisions 1 to 12 recorded (2 to 12 on 2026-11-27, "Accept all"; 1 the same day, Qwen3-1.7B, `docs/spikes/S-11-llm.md`); ADR-0021 and ADR-0022 approved
+- [x] S-11 report delivered and the model chosen; decisions 1 to 12 recorded (2 to 12 on 2026-11-27, "Accept all"; 1 the same day, Qwen3-1.7B, `docs/spikes/S-11-llm.md`); ADR-0021 and ADR-0022 approved (both accepted 2026-11-27, "Approve both"). Decision 12's one open point, whether the owner writes hit@k's scoring, is asked again with G1
 - [ ] `test_LLM_1_1_*`: an answer streams from the local 4-bit model built from the pinned file; nothing reaches a registry
 - [ ] `test_LLM_2_1_*`: answers cite only chunks they were given; on the question set, citations meet decision 11's reading
 - [ ] `test_LLM_2_2_*`: hit@5 is reported per index version, checked against hand-computed values on a planted index

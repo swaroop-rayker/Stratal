@@ -1,6 +1,6 @@
 # ADR-0021 — LLM serving
 
-**Status:** Proposed, 2026-11-27 (M12). Builds on [ADR-0006](ADR-0006-gpu-ownership-and-vram-policy.md) (the GPU lease), [ADR-0007](ADR-0007-memory-budget.md) (the memory budget, revised here) and [ADR-0016](ADR-0016-inference-service.md) (the inference service). It applies M12's decisions 1 to 4, 10 and 11, taken on 2026-11-27, and spike [S-11](../spikes/S-11-llm.md)'s measurements.
+**Status:** Accepted by the owner on 2026-11-27 ("Approve both"), as proposed (M12). Builds on [ADR-0006](ADR-0006-gpu-ownership-and-vram-policy.md) (the GPU lease), [ADR-0007](ADR-0007-memory-budget.md) (the memory budget, revised here) and [ADR-0016](ADR-0016-inference-service.md) (the inference service). It applies M12's decisions 1 to 4, 10 and 11, taken on 2026-11-27, and spike [S-11](../spikes/S-11-llm.md)'s measurements.
 
 ## Context
 

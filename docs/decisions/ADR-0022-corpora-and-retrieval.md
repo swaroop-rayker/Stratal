@@ -1,6 +1,6 @@
 # ADR-0022 — Corpora and retrieval
 
-**Status:** Proposed, 2026-11-27 (M12). Applies M12's decisions 4 to 8, 11 and 12, taken on 2026-11-27. Serving, the GPU and memory are in [ADR-0021](ADR-0021-llm-serving.md).
+**Status:** Accepted by the owner on 2026-11-27 ("Approve both"), as proposed (M12). Applies M12's decisions 4 to 8, 11 and 12, taken on 2026-11-27. Serving, the GPU and memory are in [ADR-0021](ADR-0021-llm-serving.md).
 
 ## Context
 
