@@ -40,10 +40,14 @@ from stratal.storage.manifest import STATUS_ACCEPTED, iter_rows
 Json = dict[str, Any]
 SOURCE_BUDGET_TOKENS = 3000
 CACHE_KEEP = 2
+# Its first wording gave "like [2]" as the example, and the model then cited [2] far more
+# often than its rank warranted (M12 acceptance, decision 11: 25 of 33). The example now
+# names no single number.
 SYSTEM_RAG = (
-    "You are Stratal's assistant. Answer only from the numbered sources below. After every "
-    "sentence that uses a source, put its number in square brackets, like [2]. If the "
-    'sources do not answer the question, say "I don\'t know".'
+    "You are Stratal's assistant. Answer only from the numbered sources in the message. "
+    "They are listed most relevant first. After each sentence, write in square brackets the "
+    "number of every source that sentence uses, each by its own number, for example [1] or "
+    '[1, 3]. If the sources do not answer the question, say "I don\'t know".'
 )
 
 
