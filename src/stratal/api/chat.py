@@ -18,6 +18,7 @@ Context (open point 8b): *LLM* sends the conversation's last turns, up to about
 
 import json
 import secrets
+import time
 import urllib.error
 import urllib.request
 from collections.abc import AsyncIterator, Callable, Iterator
@@ -36,7 +37,7 @@ from stratal.api.streams import sse
 from stratal.core.errors import DependencyUnavailable, NotFound, ValidationFailed
 from stratal.core.settings import get_settings
 from stratal.db.engine import get_engine
-from stratal.db.models import ChatMessage, ChatSession, InferenceRequest
+from stratal.db.models import ChatMessage, ChatSession, Dataset, DatasetVersion, InferenceRequest
 
 router = APIRouter(tags=["chat"])
 Json = dict[str, Any]
@@ -140,6 +141,7 @@ class _Turn:
     text: list[str] = field(default_factory=lambda: list[str]())
     citations: list[Any] | None = None
     details: Json = field(default_factory=lambda: Json())
+    started: float = field(default_factory=time.monotonic)
 
     def see(self, name: str, data: Json) -> None:
         if name == "meta":
@@ -217,7 +219,8 @@ def _prepare(body: ChatRequest) -> tuple[str, int, list[Json]]:
 
 
 def _store(turn: _Turn) -> None:
-    timings = turn.done or {}
+    # A stopped answer never gets inference's ``done``; its total is the API's own clock.
+    timings = turn.done or {"total_ms": round((time.monotonic() - turn.started) * 1000)}
     error_code = None if turn.error is None else str(turn.error.get("code"))
     with Session(get_engine()) as session, session.begin():
         row = InferenceRequest(
@@ -352,6 +355,93 @@ async def chat(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ---------------------------------------------------------------------------- what to ask
+
+
+class IndexChoice(BaseModel):
+    version_id: str
+    dataset: str
+    chunks: int
+    chunk_tokens: int | None
+    created_at: datetime
+
+
+class ImageChoice(BaseModel):
+    version_id: str
+    dataset: str
+    stage: str
+    images: int
+    created_at: datetime
+
+
+class ChatSources(BaseModel):
+    indexes: list[IndexChoice]
+    images: list[ImageChoice]
+
+
+IMAGE_STAGES = ("label", "filter", "split")
+"""Versions of image–caption datasets the label stage has run on, so they have CLIP vectors."""
+
+
+@router.get("/chat/sources", response_model=ChatSources)
+def chat_sources() -> Json:
+    """What SCR-12's composer offers: index versions for *RAG*, newest first, and labelled
+    image versions for *Images* (SCREENS.md v5)."""
+    with Session(get_engine()) as session:
+        rows = session.execute(
+            select(DatasetVersion, Dataset.slug)
+            .join(Dataset, Dataset.id == DatasetVersion.dataset_id)
+            .where(
+                (DatasetVersion.stage == "index")
+                | (
+                    (DatasetVersion.dtype == "image_caption")
+                    & DatasetVersion.stage.in_(IMAGE_STAGES)
+                )
+            )
+            .order_by(DatasetVersion.created_at.desc())
+        ).all()
+        parents = {
+            v.version_id: dict(v.config)
+            for v in session.scalars(
+                select(DatasetVersion).where(
+                    DatasetVersion.version_id.in_(
+                        [
+                            r.parent_version_id
+                            for r, _ in rows
+                            if r.stage == "index" and r.parent_version_id
+                        ]
+                    )
+                )
+            )
+        }
+    indexes: list[Json] = []
+    images: list[Json] = []
+    for version, slug in rows:
+        accepted = int((version.counts or {}).get("accepted", 0))
+        if version.stage == "index":
+            config = parents.get(version.parent_version_id or "", {})
+            indexes.append(
+                {
+                    "version_id": version.version_id,
+                    "dataset": slug,
+                    "chunks": accepted,
+                    "chunk_tokens": config.get("chunk_tokens"),
+                    "created_at": version.created_at,
+                }
+            )
+        elif accepted:  # a version with no accepted image has nothing to search
+            images.append(
+                {
+                    "version_id": version.version_id,
+                    "dataset": slug,
+                    "stage": version.stage,
+                    "images": accepted,
+                    "created_at": version.created_at,
+                }
+            )
+    return {"indexes": indexes, "images": images}
 
 
 # ---------------------------------------------------------------------------- conversations

@@ -16,6 +16,7 @@ const NAV: { group: string; to: string; label: string; icon: IconName; keys: str
   { group: "Data", to: "/datasets", label: "Datasets", icon: "db", keys: "g d" },
   { group: "Jobs", to: "/jobs", label: "Jobs", icon: "list", keys: "g j" },
   { group: "Models", to: "/models", label: "Models", icon: "grid", keys: "g m" },
+  { group: "Chat", to: "/chat", label: "Chat", icon: "chat", keys: "g c" },
 ];
 
 const SHORTCUTS: [string, ReactNode][] = [
@@ -23,6 +24,7 @@ const SHORTCUTS: [string, ReactNode][] = [
   ["/", "Filter this list"],
   ["g j", "Jobs"],
   ["g m", "Models"],
+  ["g c", "Chat"],
   ["g s", "System"],
   ["j", <>Next row (<kbd>k</kbd> previous)</>],
   ["g a", "Active job"],

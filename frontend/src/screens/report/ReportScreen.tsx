@@ -578,7 +578,7 @@ export function ReportScreen() {
     );
   }
 
-  const body = r.report;
+  const body = r.report as Body;  // the phase-1 report; a retrieval report renders apart
   const used = r.review_session_id;
   // Reviews come newest first: a newest closed review that is not the one used is newer.
   const newer = newestClosed && newestClosed.id !== used ? newestClosed : null;

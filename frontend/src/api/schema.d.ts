@@ -968,6 +968,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/datasets/{slug}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dataset Reports
+         * @description The latest retrieval report of each index version of a corpus, newest first, so
+         *     SCR-06 can compare chunk sizes on one question set (LLM-2.2; SCREENS.md v5).
+         */
+        get: operations["dataset_reports_api_v1_datasets__slug__reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/{report_id}": {
         parameters: {
             query?: never;
@@ -1261,6 +1282,89 @@ export interface paths {
         put: operations["save_settings_api_v1_settings_put"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chat
+         * @description Ask the LLM (LLM-1.1). The answer streams as server-sent events: ``session``,
+         *     ``meta``, ``token``…, ``done``; or ``error`` with a problem document.
+         */
+        post: operations["chat_api_v1_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chat Sources
+         * @description What SCR-12's composer offers: index versions for *RAG*, newest first, and labelled
+         *     image versions for *Images* (SCREENS.md v5).
+         */
+        get: operations["chat_sources_api_v1_chat_sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sessions
+         * @description Conversations, newest first, with the mode of their last message (SCR-12).
+         */
+        get: operations["list_sessions_api_v1_chat_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Session */
+        get: operations["get_session_api_v1_chat_sessions__session_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Session
+         * @description Delete a conversation and its messages; its requests' timings stay (NFR-6).
+         */
+        delete: operations["delete_session_api_v1_chat_sessions__session_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1589,6 +1693,33 @@ export interface components {
              */
             eps: number;
         };
+        /** ChatRequest */
+        ChatRequest: {
+            /**
+             * Session Id
+             * @description Continue this conversation.
+             */
+            session_id?: string | null;
+            /**
+             * Mode
+             * @description LLM answers from the model alone; RAG from an index version, with citations; Images searches a labelled version (SCR-12, SCREENS.md v5).
+             * @enum {string}
+             */
+            mode: "llm" | "rag" | "images";
+            /** Message */
+            message: string;
+            /** Index Version Id */
+            index_version_id?: string | null;
+            /** Labelled Version Id */
+            labelled_version_id?: string | null;
+        };
+        /** ChatSources */
+        ChatSources: {
+            /** Indexes */
+            indexes: components["schemas"]["IndexChoice"][];
+            /** Images */
+            images: components["schemas"]["ImageChoice"][];
+        };
         /** ClassCounts */
         ClassCounts: {
             /** Label */
@@ -1887,9 +2018,14 @@ export interface components {
             /**
              * Kind
              * @default phase1_dataset
-             * @constant
+             * @enum {string}
              */
-            kind: "phase1_dataset";
+            kind: "phase1_dataset" | "retrieval";
+            /**
+             * Question Set
+             * @description retrieval: the frozen question set (default: the current one).
+             */
+            question_set?: string | null;
             /**
              * Review Id
              * @description The review to include; the version's newest closed review when absent.
@@ -2544,6 +2680,38 @@ export interface components {
             /** Last At */
             last_at: string | null;
         };
+        /** ImageChoice */
+        ImageChoice: {
+            /** Version Id */
+            version_id: string;
+            /** Dataset */
+            dataset: string;
+            /** Stage */
+            stage: string;
+            /** Images */
+            images: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** IndexChoice */
+        IndexChoice: {
+            /** Version Id */
+            version_id: string;
+            /** Dataset */
+            dataset: string;
+            /** Chunks */
+            chunks: number;
+            /** Chunk Tokens */
+            chunk_tokens: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** Interval */
         Interval: {
             /** Estimate */
@@ -2932,6 +3100,29 @@ export interface components {
             /** Activation Bytes Per Sample */
             activation_bytes_per_sample: number;
         };
+        /** MessageOut */
+        MessageOut: {
+            /** Id */
+            id: number;
+            /** Role */
+            role: string;
+            /** Mode */
+            mode: string;
+            /** Content */
+            content: string;
+            /** Citations */
+            citations: unknown[] | null;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            } | null;
+            request: components["schemas"]["RequestTimings"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** ModelLineage */
         ModelLineage: {
             /** Id */
@@ -3303,7 +3494,7 @@ export interface components {
              * Dataset Type
              * @description Decides the stages and their defaults (DATA-5.2). 'image_caption': ingest to evaluate. 'labelled_images': ingest, clean, preprocess, split, with labels from class folders or a CSV. 'tabular': ingest (one CSV or Parquet table, stages.ingest.table.target required), transform (only with stages.transform.operations, on the raw version), clean_table, split. 'labelled_text': ingest (JSONL or TXT), clean_text, split, tokenize. Null: the type of 'from_version' if it has one, else image_caption.
              */
-            dataset_type?: ("image_caption" | "labelled_images" | "tabular" | "labelled_text") | null;
+            dataset_type?: ("image_caption" | "labelled_images" | "tabular" | "labelled_text" | "text_corpus" | "instruction_pairs") | null;
         };
         /** PlanCheckpoint */
         PlanCheckpoint: {
@@ -3664,7 +3855,10 @@ export interface components {
             job_id: string | null;
             /** Created At */
             created_at: string;
-            report: components["schemas"]["ReportBody"];
+            /** Report */
+            report: components["schemas"]["ReportBody"] | {
+                [key: string]: unknown;
+            };
         };
         /**
          * ReportBody
@@ -3727,6 +3921,37 @@ export interface components {
             by_split: {
                 [key: string]: number;
             } | null;
+        };
+        /** RequestTimings */
+        RequestTimings: {
+            /** Route */
+            route: string;
+            /** Model */
+            model: string | null;
+            /** Revision */
+            revision: string | null;
+            /** Device */
+            device: string | null;
+            /** Index Version Id */
+            index_version_id: string | null;
+            /** Cold Start */
+            cold_start: boolean;
+            /** Load Ms */
+            load_ms: number | null;
+            /** Ttft Ms */
+            ttft_ms: number | null;
+            /** Total Ms */
+            total_ms: number | null;
+            /** Prompt Tokens */
+            prompt_tokens: number | null;
+            /** Output Tokens */
+            output_tokens: number | null;
+            /** Tokens Per S */
+            tokens_per_s: number | null;
+            /** Status */
+            status: string;
+            /** Error Code */
+            error_code: string | null;
         };
         /**
          * ResourceSample
@@ -3817,6 +4042,34 @@ export interface components {
             overrides?: {
                 [key: string]: number | "all";
             };
+        };
+        /** RetrievalSummaries */
+        RetrievalSummaries: {
+            /** Items */
+            items: components["schemas"]["RetrievalSummary"][];
+        };
+        /** RetrievalSummary */
+        RetrievalSummary: {
+            /** Report Id */
+            report_id: number;
+            /** Version Id */
+            version_id: string;
+            /** Question Set */
+            question_set: string;
+            /** Question Set Sha256 */
+            question_set_sha256: string;
+            /** Chunk Tokens */
+            chunk_tokens: number | null;
+            /** Overlap Tokens */
+            overlap_tokens: number | null;
+            /** Chunks */
+            chunks: number | null;
+            /** Hits */
+            hits: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at: string;
         };
         /** Review */
         Review: {
@@ -4056,7 +4309,7 @@ export interface components {
              * Section
              * @enum {string}
              */
-            section: "retention" | "training" | "monitoring";
+            section: "retention" | "training" | "monitoring" | "retrieval";
             /** Values */
             values: {
                 [key: string]: unknown;
@@ -4082,6 +4335,49 @@ export interface components {
             pairs: components["schemas"]["ClusterPair"][];
             /** Split Groups */
             split_groups: string[];
+        };
+        /** SessionList */
+        SessionList: {
+            /** Items */
+            items: components["schemas"]["SessionSummary"][];
+        };
+        /** SessionOut */
+        SessionOut: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Messages */
+            messages: components["schemas"]["MessageOut"][];
+        };
+        /** SessionSummary */
+        SessionSummary: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Mode */
+            mode: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** SettingsLineage */
         SettingsLineage: {
@@ -4118,7 +4414,7 @@ export interface components {
              * Name
              * @enum {string}
              */
-            name: "retention" | "training" | "monitoring";
+            name: "retention" | "training" | "monitoring" | "retrieval";
             /** Title */
             title: string;
             /** Requirements */
@@ -6670,7 +6966,7 @@ export interface operations {
     latest_report_api_v1_versions__version_id__reports_latest_get: {
         parameters: {
             query?: {
-                kind?: "phase1_dataset";
+                kind?: "phase1_dataset" | "retrieval";
             };
             header?: never;
             path: {
@@ -6687,6 +6983,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dataset_reports_api_v1_datasets__slug__reports_get: {
+        parameters: {
+            query?: {
+                kind?: "retrieval";
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetrievalSummaries"];
                 };
             };
             /** @description Validation Error */
@@ -7202,6 +7531,151 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SettingsSaved"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_api_v1_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequest"];
+            };
+        };
+        responses: {
+            /** @description The answer as SSE */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_sources_api_v1_chat_sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSources"];
+                };
+            };
+        };
+    };
+    list_sessions_api_v1_chat_sessions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_session_api_v1_chat_sessions__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_session_api_v1_chat_sessions__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

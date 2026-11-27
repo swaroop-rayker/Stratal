@@ -140,6 +140,20 @@ def test_LLM_1_1_gpu_busy_is_an_error_event_and_stored_as_refused(chat: Chat) ->
         assert answer.details is not None and answer.details["error"]["code"] == "gpu_busy"
 
 
+def test_LLM_1_1_a_stopped_answer_is_stored_with_its_text_and_time(chat: Chat) -> None:
+    """A stopped answer gets no ``done`` from inference: the API times it itself."""
+    session_id = chat.ask("Hello")[0][1]["session_id"]
+    turn = chat_api._Turn(session_id=session_id, mode="llm")  # pyright: ignore[reportPrivateUsage]
+    turn.see("meta", {"route": "llm", "model": "qwen3-1.7b-q4km", "device": "gpu"})
+    turn.see("token", {"text": "B-trees were"})
+    turn.started -= 1.5
+    chat_api._store(turn)  # pyright: ignore[reportPrivateUsage]
+    last = chat.client.get(f"/api/v1/chat/sessions/{session_id}").json()["messages"][-1]
+    assert last["content"] == "B-trees were" and last["details"] == {"stopped": True}
+    assert last["request"]["status"] == "stopped"
+    assert last["request"]["total_ms"] >= 1500 and last["request"]["ttft_ms"] is None
+
+
 def test_LLM_2_1_rag_needs_an_index_version(chat: Chat) -> None:
     response = chat.client.post("/api/v1/chat", json={"mode": "rag", "message": "Hi"})
     assert response.status_code == 422
