@@ -983,11 +983,14 @@ def job_view(session: Session, job: Job) -> dict[str, Any]:
 def create_report_job(
     session: Session, version_id: str, config: dict[str, Any]
 ) -> tuple[Job, Enqueue]:
-    """Queue a one-stage job that reports on ``version_id`` (EVAL-1.1, API.md §3.6)."""
+    """Queue a one-stage job that reports on ``version_id`` (EVAL-1.1, API.md §3.6); a
+    ``retrieval`` report scores an index version on the question set (LLM-2.2)."""
     from stratal.eval.report import EvaluateConfig
     from stratal.label import review as reviews
 
     version = registry.get_version(session, version_id)
+    if config.get("kind") == "retrieval":
+        return _create_retrieval_report_job(session, version, config)
     try:
         resolved = EvaluateConfig.model_validate(config)
     except ValidationError as exc:
@@ -1007,6 +1010,43 @@ def create_report_job(
         plan=plan,
         dataset_id=version.dataset_id,
         input_version_id=version_id,
+    )
+
+
+def _create_retrieval_report_job(
+    session: Session, version: Any, config: dict[str, Any]
+) -> tuple[Job, Enqueue]:
+    from stratal.eval.retrieval import RetrievalEvalConfig
+
+    if version.stage != "index":
+        raise ValidationFailed(
+            f"Retrieval reports are built on an index version; {version.version_id} is a "
+            f"{version.stage} version.",
+            suggested_action="Open the corpus's index version and build the report there.",
+            errors=[FieldProblem(loc=["kind"], msg="needs an index version", code="invalid")],
+        )
+    body = {k: v for k, v in config.items() if k != "review_id"}
+    try:
+        resolved = RetrievalEvalConfig.model_validate(body)
+    except ValidationError as exc:
+        raise ValidationFailed(
+            "The report request did not pass validation.",
+            suggested_action="Fix the fields listed in 'errors'.",
+            errors=field_problems("retrieval_eval", exc),
+        ) from None
+    plan = [("retrieval_eval", resolved.model_dump(mode="json"))]
+    spec: dict[str, Any] = {
+        "kind": "report",
+        "version_id": version.version_id,
+        "stages": dict(plan),
+    }
+    return create_job_from_plan(
+        session,
+        kind="report",
+        spec=spec,
+        plan=plan,
+        dataset_id=version.dataset_id,
+        input_version_id=version.version_id,
     )
 
 

@@ -375,7 +375,7 @@ class ReviewItem(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
-REPORT_KINDS = ("phase1_dataset",)
+REPORT_KINDS = ("phase1_dataset", "retrieval")
 
 
 class EvalReport(Base):

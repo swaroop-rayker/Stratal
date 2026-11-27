@@ -732,6 +732,93 @@ def make_evaluate_runner(stats: ReportStats) -> Callable[[StageRun], StageResult
 register(StageDef("evaluate", "cpu", EvaluateConfig, make_evaluate_runner(OWNER_STATS)))
 
 
+def _run_retrieval_eval(run: StageRun) -> StageResult:
+    """hit@k of an index version on the frozen question set (LLM-2.2, ADR-0022 rule 11).
+
+    Like ``evaluate`` it writes no version: it stores a ``retrieval`` report and passes its
+    input on. No model is asked, so it needs no GPU."""
+    from stratal.eval.retrieval import (
+        RetrievalEvalConfig,
+        Retrieved,
+        load_question_set,
+        score,
+    )
+    from stratal.inference.rag import Retriever  # FAISS and the embedder are in the workers
+
+    if run.input_version_id is None:
+        raise StratalError(
+            "Stage retrieval_eval needs an index version and was given none.",
+            suggested_action="Build the report on an index version (POST /versions/{id}/reports).",
+        )
+    version_id = run.input_version_id
+    config = RetrievalEvalConfig.model_validate(run.config)
+    questions = load_question_set(config.question_set)
+    retriever = Retriever(engine=run.engine, data_dir=run.data_dir)
+    loaded = retriever.load(version_id)
+    run.ctx.emit(
+        stage="retrieval_eval",
+        message=f"Scoring {version_id} on {questions.name}: {len(questions.questions)} questions, "
+        f"k = {', '.join(str(k) for k in config.ks)}",
+        metrics={"questions": len(questions.questions)},
+    )
+    retrieved: dict[str, list[Retrieved]] = {}
+    for number, question in enumerate(questions.questions, start=1):
+        run.ctx.raise_if_cancelled()
+        _, hits = retriever.search(version_id, question.question, max(config.ks))
+        retrieved[question.id] = [
+            Retrieved(h.row_key, h.document, h.section, h.relevance) for h in hits
+        ]
+        if number % 10 == 0:
+            run.ctx.emit(
+                stage="retrieval_eval",
+                message=f"Retrieved for {number} of {len(questions.questions)} questions",
+                step=number,
+                total=len(questions.questions),
+            )
+    report = score(questions, retrieved, config.ks)
+    with Session(run.engine) as session, session.begin():
+        index_version = registry.get_version(session, version_id)
+        chunk_config: dict[str, Any] = {}
+        if index_version.parent_version_id is not None:
+            chunk_config = dict(
+                registry.get_version(session, index_version.parent_version_id).config
+            )
+        report["index"] = {
+            "version_id": version_id,
+            "dataset_id": index_version.dataset_id,
+            "chunk_tokens": chunk_config.get("chunk_tokens"),
+            "overlap_tokens": chunk_config.get("overlap_tokens"),
+            "chunks": int(loaded.description.get("count") or 0),
+            "model": loaded.description.get("model"),
+            "revision": loaded.description.get("revision"),
+        }
+        row = EvalReport(
+            version_id=version_id, kind="retrieval", report=report, job_id=run.ctx.job_id
+        )
+        session.add(row)
+        session.flush()
+        report_id = row.id
+    metrics: dict[str, MetricValue] = {"report_id": report_id}
+    for name, value in report["hits"].items():
+        metrics[name.replace("@", "_at_")] = value["share"]
+    run.ctx.emit(
+        stage="retrieval_eval",
+        message=f"Stored retrieval report {report_id} for {version_id}: "
+        + ", ".join(f"{k} {v['hits']}/{v['questions']}" for k, v in report["hits"].items()),
+        metrics=metrics,
+    )
+    return StageResult(output_version_id=version_id, metrics=metrics)
+
+
+def _retrieval_eval_config() -> type[BaseModel]:
+    from stratal.eval.retrieval import RetrievalEvalConfig
+
+    return RetrievalEvalConfig
+
+
+register(StageDef("retrieval_eval", "cpu", _retrieval_eval_config(), _run_retrieval_eval))
+
+
 def _run_train(run: StageRun) -> StageResult:
     """The train stage (RUN-1.1, ADR-0014). PyTorch is imported only here, in the worker."""
     try:
