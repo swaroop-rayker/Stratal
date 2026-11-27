@@ -7,10 +7,11 @@ them through unchanged.
 """
 
 import json
-from collections.abc import Iterator
+from collections.abc import AsyncGenerator, Generator, Iterator
 from typing import Any, Literal, Protocol
 
 from fastapi import FastAPI
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -100,14 +101,44 @@ def _problem_event(exc: Exception) -> dict[str, Any]:
     }
 
 
-def ndjson(events: Iterator[dict[str, Any]]) -> Iterator[str]:
+def ndjson(events: Iterator[dict[str, Any]]) -> Generator[str]:
     """One JSON object per line; a failure after the first line becomes an ``error`` event,
-    since the status line has been sent by then."""
+    since the status line has been sent by then. Closing this closes ``events``."""
     try:
         for event in events:
             yield json.dumps(event) + "\n"
     except Exception as exc:
         yield json.dumps(_problem_event(exc)) + "\n"
+    finally:
+        close = getattr(events, "close", None)
+        if close is not None:
+            close()
+
+
+async def closing_stream(lines: Iterator[str]) -> AsyncGenerator[str]:
+    """Stream a blocking iterator, and close it when the client goes away (LLM-1.1 Stop).
+
+    Starlette runs a plain iterator in a worker thread and, on a disconnect, cancels the
+    task without closing it, so its ``finally`` blocks never ran: Ollama kept generating
+    and the LLM stayed claimed until the next request timed out. Here the cancellation
+    reaches this generator, which closes ``lines`` (and through :func:`ndjson` the
+    events), freeing the LLM at once."""
+    try:
+        while True:
+            line = await run_in_threadpool(next, lines, None)
+            if line is None:
+                return
+            yield line
+    finally:
+        # The worker thread has finished its ``next`` by now (a cancelled
+        # ``run_in_threadpool`` waits for it), so closing cannot race it.
+        close = getattr(lines, "close", None)
+        if close is not None:
+            close()
+
+
+def _ndjson_response(events: Iterator[dict[str, Any]]) -> StreamingResponse:
+    return StreamingResponse(closing_stream(ndjson(events)), media_type="application/x-ndjson")
 
 
 ImageDecoder = Any
@@ -178,16 +209,16 @@ def create_inference_app(
                 raise LlmUnavailable("This inference service runs without image search.")
             assert body.question is not None and body.labelled_version_id is not None
             found = images.search(body.question, body.labelled_version_id, body.k or 10)
-            return StreamingResponse(ndjson(found), media_type="application/x-ndjson")
+            return _ndjson_response(found)
         if body.mode == "rag":
             if rag is None:
                 raise LlmUnavailable("This inference service runs without retrieval.")
             assert body.question is not None and body.index_version_id is not None
             events = rag.start(body.question, body.index_version_id, body.k)
-            return StreamingResponse(ndjson(events), media_type="application/x-ndjson")
+            return _ndjson_response(events)
         if llm is None:
             raise LlmUnavailable("This inference service runs without the LLM.")
         generation = llm.start([m.model_dump() for m in body.messages])
-        return StreamingResponse(ndjson(generation.events()), media_type="application/x-ndjson")
+        return _ndjson_response(generation.events())
 
     return app

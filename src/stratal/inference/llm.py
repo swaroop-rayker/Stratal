@@ -309,6 +309,7 @@ class LlmAdapter:
         with self._model_lock:
             if self._ready:
                 return
+            self._unload_leftovers()
             if self.name in self.api.models():
                 self._ready = True
                 return
@@ -328,6 +329,33 @@ class LlmAdapter:
                 message=f"Created the LLM {self.name} from the verified file {self._file.path}",
             )
             self._ready = True
+
+    def _unload_leftovers(self) -> None:
+        """Unload what Ollama still holds from before this process started (rule 5).
+
+        When ``inference`` restarts and ``ollama`` does not, the LLM stays on the card
+        without the GPU lease, and the first load would take that card as its baseline
+        (found in the M12 live check, 2026-11-27: "card 1.8 → 1.8 GB"), so the idle unload
+        would never bring the card back to where it was."""
+        held = [str(m.get("name") or "") for m in self.api.ps()]
+        held = [name for name in held if name]
+        if not held:
+            return
+        before = self._card.used_mb()
+        for name in held:
+            with contextlib.suppress(LlmUnavailable):
+                self.api.unload(name)
+        deadline = time.monotonic() + self._settings.llm_unload_wait_s
+        while self.api.ps() and time.monotonic() < deadline:
+            time.sleep(0.2)
+        after = self._card.used_mb()
+        self._sink.emit(
+            stage="inference",
+            message=f"Unloaded {', '.join(held)}, left on the GPU from before inference "
+            f"started: {_card_text(before, after)}",
+            metrics=_card_metrics(before, after),
+            event_type="model_unloaded",
+        )
 
     # ------------------------------------------------------------------ one answer
     def start(

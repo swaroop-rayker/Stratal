@@ -67,6 +67,23 @@ def test_LLM_1_1_model_is_built_from_the_pinned_blob(setup: Any) -> None:
     assert api.calls == []
 
 
+def test_LLM_1_1_a_restarted_service_unloads_what_ollama_still_holds(setup: Any) -> None:
+    """inference restarted, ollama did not: the LLM is on the card without the lease."""
+    adapter, api, card, _, sink = setup
+    api.created.append(adapter.name)
+    api.loaded = True
+    card.used = card.base + 1657
+    adapter.ensure_model()
+    assert ("unload", adapter.name) in api.calls
+    assert card.used == card.base
+    left = [e for e in sink.events if e.get("type") == "model_unloaded"]
+    assert left and "from before inference started" in left[0]["message"]
+    events = _answer(adapter)
+    assert events[0]["cold_start"] is True
+    loaded = next(e for e in sink.events if e.get("type") == "model_loaded")
+    assert loaded["metrics"]["card_used_mb_before"] == card.base  # the true baseline
+
+
 def test_LLM_1_1_an_answer_streams_meta_tokens_and_timings(setup: Any) -> None:
     adapter, api, _, owner, sink = setup
     events = _answer(adapter)
