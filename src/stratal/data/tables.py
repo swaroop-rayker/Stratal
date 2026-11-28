@@ -100,7 +100,9 @@ class ReadTable:
     def batches(self) -> Iterator[list[dict[str, Any]]]:
         """The records in source order: Parquet in :data:`BATCH_ROWS`, a CSV a block at a time."""
         if self.format == "PARQUET":
-            for batch in pq.ParquetFile(self.path).iter_batches(batch_size=BATCH_ROWS):
+            for batch in pq.ParquetFile(self.path, pre_buffer=False).iter_batches(
+                batch_size=BATCH_ROWS
+            ):
                 yield batch.to_pylist()
             return
         for batch in _csv_strings(self.path, self.names):

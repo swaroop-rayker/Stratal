@@ -37,12 +37,12 @@ def table(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     write_manifest(path, _rows(1000), metadata={}, batch_size=128)
     monkeypatch.setattr(manifest, "_READ_BATCH", 7)
     monkeypatch.setattr(manifest, "_PAGE_BATCH", 7)
-
-    def whole(*_args: object, **_kwargs: object) -> None:
-        raise AssertionError("the manifest was read whole")
-
-    monkeypatch.setattr("pyarrow.parquet.read_table", whole)
+    monkeypatch.setattr("pyarrow.parquet.read_table", _whole)
     return path
+
+
+def _whole(*_args: object, **_kwargs: object) -> None:
+    raise AssertionError("the manifest was read whole")
 
 
 def test_NFR_2_rows_are_paged_without_reading_the_whole_manifest(table: Path) -> None:
@@ -85,6 +85,60 @@ def test_NFR_2_distributions_stream_and_match_a_whole_read(
     target = streamed["columns"][0]
     assert target["key"] == "target_value" and target["raw"]["n"] == 1000
     assert sum(b["raw"] for b in target["bins"]) == 1000
+
+
+def _version(path: Path, keys: range, *, changed: bool) -> Path:
+    rows: list[Row] = []
+    for i in keys:
+        flipped = changed and i % 10 == 0
+        worded = i % 10 == 1
+        rows.append(
+            {
+                "row_key": f"{i:06d}",
+                "sha256": "a" * 64,
+                "status": "rejected" if flipped or worded else "accepted",
+                "decided_at_stage": "clean" if flipped or worded else None,
+                "reason_code": "missing_value" if flipped or worded else None,
+                "reason_detail": f"{'B' if changed else 'A'}: no value" if worded else None,
+                "caption": f"row {i}" if changed and i % 3 == 0 else None,
+            }
+        )
+    write_manifest(path, rows, metadata={}, batch_size=16)
+    return path
+
+
+def test_NFR_2_the_diff_walks_both_versions_side_by_side(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    a = _version(tmp_path / "a.parquet", range(100), changed=False)
+    b = _version(tmp_path / "b.parquet", range(5, 105), changed=True)
+    monkeypatch.setattr(manifest, "_PAGE_BATCH", 7)
+    monkeypatch.setattr("pyarrow.parquet.read_table", _whole)
+
+    def rows(path: Path) -> Iterator[Row]:
+        return iter_rows(path, columns=list(manifest.COLUMNS), batch_size=7)
+
+    steps = [profile.Step("ds_a", "clean", {})]
+    body = profile.diff(
+        rows(a),
+        rows(b),
+        a_steps=steps,
+        b_steps=steps,
+        a_filled=manifest.filled_columns(a),
+        b_filled=manifest.filled_columns(b),
+    )
+
+    assert (body["added"], body["removed"]) == (5, 5)
+    assert (body["changed"], body["wording_only"], body["same"]) == (9, 9, 77)
+    assert body["only_in_b"] == ["caption"] and body["only_in_a"] == []
+    assert body["by_field"]["status"] == 9
+    assert [r["row_key"] for r in body["changed_rows"]][:2] == ["000010", "000020"]
+    assert body["wording_rows"][0] == {
+        "row_key": "000011",
+        "a": "A: no value",
+        "b": "B: no value",
+    }
+    assert profile.filled_in(rows(b)) == manifest.filled_columns(b)
 
 
 def test_NFR_2_histogram_counts_the_top_edge_in_the_last_bin() -> None:

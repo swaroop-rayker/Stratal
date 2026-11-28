@@ -32,7 +32,11 @@ Row = dict[str, Any]
 _READ_BATCH = 20_000
 """Rows per batch when a few columns of a manifest are read back (NFR-2, E-024)."""
 _PAGE_BATCH = 2_000
-"""Rows per batch when whole rows are read for a page: the row group size (NFR-2, E-024)."""
+"""Rows per batch when whole rows are read for a page: the row group size (NFR-2, E-024).
+
+Every streaming read opens the file with ``pre_buffer=False``. PyArrow 26 pre-buffers by
+default, which reads ahead every row group a scan will touch: a full scan of a 348 MB
+manifest held 331 MB in Arrow's pool, against 3 MB without it (E-025)."""
 
 STATUS_ACCEPTED = "accepted"
 STATUS_REJECTED = "rejected"
@@ -186,7 +190,7 @@ def iter_rows(
     A requested column that an older manifest lacks (one appended since, such as M11's
     ``semantic_cluster_id``) comes back as null, as a column of the current schema would.
     """
-    parquet = pq.ParquetFile(path)
+    parquet = pq.ParquetFile(path, pre_buffer=False)  # see _PAGE_BATCH
     try:
         present = set(parquet.schema_arrow.names)
         wanted = None if columns is None else [c for c in columns if c in present]
@@ -230,7 +234,7 @@ def select_rows(
     over the filter columns alone; then full rows are read in ``row_key`` order (the
     order ``write_manifest`` enforces) until the page is full.
     """
-    with pq.ParquetFile(path) as parquet:
+    with pq.ParquetFile(path, pre_buffer=False) as parquet:
         return _select(
             parquet,
             equals=equals,
@@ -294,6 +298,20 @@ def _select(
         if len(rows) >= limit:
             break
     return RowPage(rows=rows, matched=matched)
+
+
+def filled_columns(path: Path) -> set[str]:
+    """The columns at least one row has a value in, read a batch at a time and counted by
+    Arrow, never row by row (the version diff, NFR-2, E-025)."""
+    with pq.ParquetFile(path, pre_buffer=False) as parquet:
+        empty = set(parquet.schema_arrow.names)
+        for batch in parquet.iter_batches(batch_size=_PAGE_BATCH, use_threads=False):
+            for name in list(empty):
+                if batch.column(name).null_count < batch.num_rows:
+                    empty.discard(name)
+            if not empty:
+                break
+        return set(parquet.schema_arrow.names) - empty
 
 
 def read_all(path: Path) -> list[Row]:

@@ -4,7 +4,7 @@ import io
 import json
 import os
 from collections import OrderedDict
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path as FsPath
 from typing import Annotated, Any, Literal, cast
 
@@ -28,7 +28,15 @@ from stratal.registry import store as model_store
 from stratal.runtime.jobs import field_problems
 from stratal.storage.blobs import BlobStore
 from stratal.storage.derivations import KIND_CLIP_IMAGE
-from stratal.storage.manifest import corpus_extent, iter_rows, read_metadata, select_rows
+from stratal.storage.manifest import (
+    COLUMNS,
+    Row,
+    corpus_extent,
+    filled_columns,
+    iter_rows,
+    read_metadata,
+    select_rows,
+)
 
 router = APIRouter(tags=["datasets"])
 Json = dict[str, Any]
@@ -436,8 +444,16 @@ def version_diff(
     a_steps, b_steps = _steps(session, with_), _steps(session, version_id)
 
     def build() -> Json:
+        def rows(path: FsPath) -> Iterator[Row]:  # streamed in row_key order (NFR-2, E-025)
+            return iter_rows(path, columns=list(COLUMNS), batch_size=2_000)
+
         body = profile.diff(
-            profile.read_all(a_path), profile.read_all(b_path), a_steps=a_steps, b_steps=b_steps
+            rows(a_path),
+            rows(b_path),
+            a_steps=a_steps,
+            b_steps=b_steps,
+            a_filled=filled_columns(a_path),
+            b_filled=filled_columns(b_path),
         )
         return {
             "a": {

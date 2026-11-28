@@ -39,10 +39,17 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 - **Date:** 2026-11-27
 - **Seen:** SCR-08 at `/models/build?version=ds_1c0761f1fe23` showed "The spec could not be checked · dependency_unavailable · The Stratal API did not answer". `api` restarted at 18:05:37, 4 s after `GET /model-specs/schema`; its restart count went to 2.
-- **Where:** SCR-08's spec check on a tabular version (the endpoint that validates a spec against the version's inputs); NFR-2.
-- **Cause:** Not yet confirmed. Most likely the same as E-024: the check reads the 348 MB manifest whole to learn the table's columns or rows.
-- **Fix:** To do (2026-11-28): find the read, stream it as in E-024, and add an NFR-2 test that forbids the whole read.
-- **Status:** open
+- **Where:** SCR-08's spec check, `POST /model-specs/validate` → `stratal.build.io.version_io`, on a tabular version; NFR-2, BUILD-1.3. The version diff (`GET /versions/{id}/diff`, DATA-3.5), left open by E-024, had the same flaw.
+- **Cause:** Two things.
+  - To learn the table's input width and classes, the check called `fit(load_tabular(manifest))`: the training preprocessing, which loads every train row's values into Python lists (about 1.4 million rows here). The diff likewise read both manifests whole into dicts keyed by row.
+  - Underneath both, PyArrow 26 opens Parquet files with `pre_buffer=True` by default. A streamed scan then reads ahead every row group it will touch, so even batch-by-batch reading held most of the file in memory: a full scan of the 348 MB manifest took 331 MB of Arrow's pool, against 3 MB with `pre_buffer=False`. This is also why E-024's fix still peaked at 265 MiB.
+- **Fix:**
+  - `build.io.table_shape` gives the builder its ends in one streamed pass that keeps only the train split's distinct categories and classes. The numeric statistics are not needed for a shape, and training still runs the real `fit`.
+  - The diff walks both manifests side by side in `row_key` order (manifests are written sorted). Arrow's null counts, a batch at a time, find which columns each side fills.
+  - Every streaming read of a manifest or a source table opens it with `pre_buffer=False`.
+  - Live, each on a freshly started api: the build screen loads "input vector 2881 → 1 classes" with the api's anonymous memory peaking at 208 MiB; split against its parent compares 2,075,259 rows in 34 s, peaking at 210 MiB (381 MiB before `pre_buffer=False`). No restarts.
+- **Guard:** `tests/unit/test_NFR_2_table_shape.py` holds `table_shape` equal to `fit` (classification and regression, with ignored, ordinal, one-hot and embedding columns). `test_NFR_2_the_diff_walks_both_versions_side_by_side` forbids whole-file reads and uses batches of 7 rows.
+- **Status:** verified
 
 ### E-024 — Opening a 2-million-row table's version killed the api
 
@@ -52,7 +59,7 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 - **Cause:** Both read the whole manifest: `select_rows` with `pq.read_table` even for a page of 50 rows, and distributions as a list of one Python dict per row. That was cheap for image datasets (1 to 2 MB per 10,000 rows), but this manifest is 348 MB on disk, and 2 million dicts take several GB. M11b made ingest and the Columns tab stream; these two endpoints were missed.
 - **Fix:** `select_rows` counts matches over the filter columns alone, in batches, then reads whole rows in `row_key` order, 2,000 at a time, until the page is full. `distributions` makes one pass over a stream of the 17 columns it uses, keeping counters and each numeric column as 8-byte floats. Batches are decoded on one thread. Live, on a restarted api: the first page in 0.4 s, a filtered page in 0.6 s, distributions in 7 s (then cached); the api's anonymous memory peaked at 265 MiB while the page loaded everything at once, and no restart followed.
 - **Guard:** `tests/unit/test_NFR_2_large_manifest_reads.py`: pages and distributions with whole-file reads forbidden and batches of 7 rows, compared with a whole read.
-- **Still open:** the version diff (`GET /versions/{a}/diff/{b}`) still reads both manifests whole, so comparing two versions of this table would hit the same limit.
+- **Later:** the version diff still read both manifests whole; fixed with E-025, which also found why streaming here still used 265 MiB (Parquet's pre-buffering).
 - **Status:** verified
 
 ### E-023 — Ollama's runner was killed after about fifteen RAG questions

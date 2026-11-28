@@ -6,11 +6,12 @@ same function, so the builder and training never disagree about a shape
 is cached per version.
 """
 
+import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -22,6 +23,9 @@ from stratal.data import registry
 from stratal.data.dataset_types import TYPE_INFO, TypeInfo
 from stratal.data.records import LABELLED_TEXT, TABULAR
 from stratal.storage.manifest import STATUS_ACCEPTED, Row
+
+if TYPE_CHECKING:
+    from stratal.train.table_prep import TablePrep
 
 IMAGE_COLUMNS = ["status", "split", "label", "width", "height", "derived_width", "derived_height"]
 TEXT_COLUMNS = ["status", "split", "label"]
@@ -122,11 +126,8 @@ def _cached(engine: Engine, data_dir: str, version_id: str) -> VersionIo:
 def _table_ends(version_id: str, dataset_type: str, info: TypeInfo, manifest: Path) -> VersionIo:
     """A table's ends: the input block's width from the train split, and the classes or one
     output for regression (ADR-0017 rule 6, ADR-0019 rules 13 and 14)."""
-    from stratal.ml.data import load_tabular
-    from stratal.train.table_prep import fit
-
     try:
-        prep = fit(load_tabular(manifest))
+        prep = table_shape(manifest)
     except StratalError as exc:
         return VersionIo(version_id, dataset_type, info, None, None, (), exc.detail)
     if prep.task == "classification" and len(prep.classes) < 2:
@@ -147,6 +148,75 @@ def _table_ends(version_id: str, dataset_type: str, info: TypeInfo, manifest: Pa
         prep.outputs,
         prep.classes,
         None,
+    )
+
+
+def table_shape(manifest: Path) -> "TablePrep":
+    """What ``fit(load_tabular(manifest))`` gives for the builder, without loading the
+    table (NFR-2, E-025): the same column lists, the train split's categories and classes,
+    streamed in one pass that keeps only the distinct values. The numeric statistics are
+    left at identity values: the ends need widths, not scaling. Training still fits the
+    real statistics; ``test_NFR_2_table_shape_equals_fit`` holds the two equal."""
+    from stratal.data.records import table_schema_of, table_task
+    from stratal.ml.data import TabularData
+    from stratal.storage.manifest import iter_rows
+    from stratal.train.table_prep import (
+        CategoricalColumn,
+        EmbeddedColumn,
+        NumericColumn,
+        OrdinalColumn,
+        TablePrep,
+        default_embedding_dim,
+    )
+
+    schema = table_schema_of(manifest)
+    if schema is None:
+        raise StratalError(
+            f"{manifest.name} carries no table schema; it is not a tabular version.",
+            suggested_action="Train classical models on a split of a tabular dataset.",
+        )
+    task = table_task(schema)
+    data = TabularData(schema, task, {})  # its column lists only
+    wanted = [*data.one_hot, *data.embedded]
+    seen: dict[str, set[str]] = {name: set() for name in wanted}
+    classes: set[str] = set()
+    train_rows = 0
+    columns = ["status", "split", *(["record"] if wanted else [])]
+    columns += ["label"] if task == "classification" else []
+    for row in iter_rows(manifest, columns=columns, batch_size=20_000):
+        if row["status"] != STATUS_ACCEPTED or row["split"] != "train":
+            continue
+        train_rows += 1
+        if task == "classification":
+            classes.add(str(row["label"]))
+        if wanted:
+            values: dict[str, Any] = json.loads(row["record"]) if row["record"] else {}
+            for name in wanted:
+                if (value := values.get(name)) is not None:
+                    seen[name].add(str(value))
+    if not train_rows:
+        raise StratalError(
+            f"{manifest.name} has no accepted train rows.",
+            suggested_action="Check the split's proportions and the clean stage's rejections.",
+        )
+
+    def categories(name: str) -> tuple[str, ...]:
+        return tuple(sorted(seen[name]))
+
+    return TablePrep(
+        tuple(NumericColumn(name, 0.0, 1.0, 0.0) for name in data.numeric),
+        tuple(CategoricalColumn(name, categories(name)) for name in data.one_hot),
+        "classification" if task == "classification" else "regression",
+        tuple(sorted(classes)),
+        ordinal=tuple(
+            OrdinalColumn(name, tuple(order), 0.0, 1.0, 0.0) for name, order in data.ordinal
+        ),
+        embedded=tuple(
+            EmbeddedColumn(
+                name, categories(name), default_embedding_dim(max(1, len(categories(name))))
+            )
+            for name in data.embedded
+        ),
     )
 
 
