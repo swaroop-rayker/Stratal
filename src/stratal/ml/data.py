@@ -112,6 +112,78 @@ class TabularData:
         return DataFacts(train_rows=len(train), encoded_width=width)
 
 
+@dataclass(frozen=True)
+class TabularSummary:
+    """What checks on a tabular split need, without its rows (NFR-2, E-026): the schema,
+    the task, the train split's size, each categorical column's distinct train values and
+    the classes. :func:`summarise_tabular` makes it in one streamed pass."""
+
+    schema: TableSchema
+    task: SupervisedTask
+    train_rows: int
+    distinct: Mapping[str, frozenset[Any]]
+    """Per one-hot and embedding column, its non-null values in the train split."""
+    classes: tuple[str, ...]
+    """The train split's classes, sorted, as :attr:`TabularData.classes`; empty for
+    regression."""
+
+    @property
+    def columns(self) -> TabularData:
+        """The column lists (:attr:`TabularData.numeric` and the rest), with no rows."""
+        return TabularData(self.schema, self.task, {})
+
+    def facts(self) -> DataFacts:
+        """Equal to ``load_tabular(manifest).facts()``."""
+        lists = self.columns
+        width = (
+            len(lists.numeric)
+            + len(lists.ordinal)
+            + sum(len(self.distinct[name]) + 1 for name in lists.categorical)
+        )
+        return DataFacts(train_rows=self.train_rows, encoded_width=width)
+
+
+def summarise_tabular(manifest: Path) -> TabularSummary:
+    """A tabular split version's :class:`TabularSummary`, holding one batch of rows at a
+    time and only the distinct values (NFR-2, E-026)."""
+    schema = table_schema_of(manifest)
+    if schema is None:
+        raise StratalError(
+            f"{manifest.name} carries no table schema; it is not a tabular version.",
+            suggested_action="Train classical models on a split of a tabular dataset.",
+        )
+    task = table_task(schema)
+    wanted = TabularData(schema, task, {}).categorical
+    seen: dict[str, set[Any]] = {name: set() for name in wanted}
+    classes: set[str] = set()
+    train_rows = 0
+    columns = ["status", "split", *(["record"] if wanted else [])]
+    columns += ["label"] if task == "classification" else []
+    for row in iter_rows(manifest, columns=columns, batch_size=20_000):
+        if row["status"] != STATUS_ACCEPTED or row["split"] != "train":
+            continue
+        train_rows += 1
+        if task == "classification":
+            classes.add(str(row["label"]))
+        if wanted:
+            values: dict[str, Any] = json.loads(row["record"]) if row["record"] else {}
+            for name in wanted:
+                if (value := values.get(name)) is not None:
+                    seen[name].add(value)
+    if not train_rows:
+        raise StratalError(
+            f"{manifest.name} has no accepted train rows.",
+            suggested_action="Check the split's proportions and the clean stage's rejections.",
+        )
+    return TabularSummary(
+        schema,
+        task,
+        train_rows,
+        {name: frozenset(values) for name, values in seen.items()},
+        tuple(sorted(classes)),
+    )
+
+
 def to_arrow(
     columns: Mapping[str, Sequence[Any]], numeric: Sequence[str], categorical: Sequence[str]
 ) -> Any:

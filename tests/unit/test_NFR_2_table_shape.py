@@ -15,7 +15,7 @@ import pytest
 from stratal.build.io import table_shape
 from stratal.data.dataset_types import Column, TableSchema
 from stratal.data.records import META_TABLE_SCHEMA, schema_to_json
-from stratal.ml.data import load_tabular
+from stratal.ml.data import load_tabular, summarise_tabular
 from stratal.storage.manifest import Row, write_manifest
 from stratal.train.table_prep import fit
 
@@ -87,6 +87,19 @@ def test_NFR_2_table_shape_equals_fit(tmp_path: Path, regression: bool) -> None:
     assert shape.embedded == fitted.embedded
     assert [c.order for c in shape.ordinal] == [c.order for c in fitted.ordinal]
     assert shape.columns() == fitted.columns()
+
+
+@pytest.mark.parametrize("regression", [False, True])
+def test_NFR_2_the_summary_gives_the_full_loads_facts(tmp_path: Path, regression: bool) -> None:
+    """E-026: run requests are checked against a summary, not the loaded table."""
+    path = _manifest(tmp_path, regression=regression)
+
+    summary, data = summarise_tabular(path), load_tabular(path)
+
+    assert summary.facts() == data.facts()
+    assert summary.task == data.task
+    assert list(summary.classes) == data.classes
+    assert summary.train_rows == len(data.splits["train"])
 
 
 def test_NFR_2_table_shape_skips_rows_outside_train(tmp_path: Path) -> None:
