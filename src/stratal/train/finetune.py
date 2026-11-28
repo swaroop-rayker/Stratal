@@ -125,12 +125,13 @@ def _vocab(engine: Engine, data_dir: Path, version_id: str) -> dict[str, Any] | 
 
 
 def _table_prep(engine: Engine, data_dir: Path, version_id: str) -> Any:
-    from stratal.ml.data import load_tabular
-    from stratal.train.table_prep import fit
+    """The table's task and columns, streamed (NFR-2, E-026): the checks compare names,
+    never the fitted statistics."""
+    from stratal.build.io import table_shape
 
     with Session(engine) as session:
         _, manifest = registry.manifest_for(session, data_dir, version_id)
-    return fit(load_tabular(manifest))
+    return table_shape(manifest)
 
 
 def parent_table_prep(data_dir: Path, parent: ModelVersion) -> Any:

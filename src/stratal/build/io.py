@@ -6,7 +6,6 @@ same function, so the builder and training never disagree about a shape
 is cached per version.
 """
 
-import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from functools import lru_cache
@@ -157,9 +156,7 @@ def table_shape(manifest: Path) -> "TablePrep":
     streamed in one pass that keeps only the distinct values. The numeric statistics are
     left at identity values: the ends need widths, not scaling. Training still fits the
     real statistics; ``test_NFR_2_table_shape_equals_fit`` holds the two equal."""
-    from stratal.data.records import table_schema_of, table_task
-    from stratal.ml.data import TabularData
-    from stratal.storage.manifest import iter_rows
+    from stratal.ml.data import summarise_tabular
     from stratal.train.table_prep import (
         CategoricalColumn,
         EmbeddedColumn,
@@ -169,45 +166,17 @@ def table_shape(manifest: Path) -> "TablePrep":
         default_embedding_dim,
     )
 
-    schema = table_schema_of(manifest)
-    if schema is None:
-        raise StratalError(
-            f"{manifest.name} carries no table schema; it is not a tabular version.",
-            suggested_action="Train classical models on a split of a tabular dataset.",
-        )
-    task = table_task(schema)
-    data = TabularData(schema, task, {})  # its column lists only
-    wanted = [*data.one_hot, *data.embedded]
-    seen: dict[str, set[str]] = {name: set() for name in wanted}
-    classes: set[str] = set()
-    train_rows = 0
-    columns = ["status", "split", *(["record"] if wanted else [])]
-    columns += ["label"] if task == "classification" else []
-    for row in iter_rows(manifest, columns=columns, batch_size=20_000):
-        if row["status"] != STATUS_ACCEPTED or row["split"] != "train":
-            continue
-        train_rows += 1
-        if task == "classification":
-            classes.add(str(row["label"]))
-        if wanted:
-            values: dict[str, Any] = json.loads(row["record"]) if row["record"] else {}
-            for name in wanted:
-                if (value := values.get(name)) is not None:
-                    seen[name].add(str(value))
-    if not train_rows:
-        raise StratalError(
-            f"{manifest.name} has no accepted train rows.",
-            suggested_action="Check the split's proportions and the clean stage's rejections.",
-        )
+    summary = summarise_tabular(manifest)
+    data = summary.columns
 
     def categories(name: str) -> tuple[str, ...]:
-        return tuple(sorted(seen[name]))
+        return tuple(sorted({str(v) for v in summary.distinct[name]}))
 
     return TablePrep(
         tuple(NumericColumn(name, 0.0, 1.0, 0.0) for name in data.numeric),
         tuple(CategoricalColumn(name, categories(name)) for name in data.one_hot),
-        "classification" if task == "classification" else "regression",
-        tuple(sorted(classes)),
+        "classification" if summary.task == "classification" else "regression",
+        summary.classes,
         ordinal=tuple(
             OrdinalColumn(name, tuple(order), 0.0, 1.0, 0.0) for name, order in data.ordinal
         ),

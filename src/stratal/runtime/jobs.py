@@ -552,9 +552,10 @@ def network_task(session: Session, version: DatasetVersion) -> str:
 
 
 def _tabular_data(session: Session, version: DatasetVersion) -> Any:
-    """A tabular split's data, or ``validation_error`` at ``dataset_version``."""
+    """A tabular split's summary (its task and :class:`DataFacts`, never its rows: NFR-2,
+    E-026), or ``validation_error`` at ``dataset_version``."""
     from stratal.core.settings import get_settings
-    from stratal.ml.data import load_tabular
+    from stratal.ml.data import summarise_tabular
 
     version_id = version.version_id
     if version.dtype != stage_registry.TABULAR or version.stage != "split":
@@ -568,7 +569,7 @@ def _tabular_data(session: Session, version: DatasetVersion) -> Any:
             ],
         )
     _, manifest = registry.manifest_for(session, get_settings().data_dir, version_id)
-    return load_tabular(manifest)
+    return summarise_tabular(manifest)
 
 
 def _classical_problems(config: ClassicalConfig, data: Any) -> list[FieldProblem]:

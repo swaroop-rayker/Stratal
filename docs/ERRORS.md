@@ -35,6 +35,17 @@ These seven come from the owner's input (SPEC §8.2). They describe failures the
 
 ## Log
 
+### E-026 — Starting a classical run on the 2-million-row table killed the api
+
+- **Date:** 2026-11-28
+- **Seen:** SCR-09 at `/runs/new?version=ds_1c0761f1fe23&kind=classical` showed "The run could not be started · dependency_unavailable · The Stratal API did not answer". `api` restarted at 13:53:53 with no `POST /jobs` response logged.
+- **Where:** `POST /jobs` → `stratal.runtime.jobs._tabular_data`, which checks a classical run, a study and a network's task (ML-1.4, HPO-1.4); and the fine-tune check (`stratal.train.finetune._table_prep`, RUN-1.6). NFR-2.
+- **Cause:** To check a request, the api loaded the whole table with `load_tabular` (every split's rows as Python lists), though the checks need only the task, the train split's row count and its encoded width. The fine-tune check ran the full `fit` to compare column names. E-025 fixed the same pattern in the builder only.
+- **Fix:** `ml.data.summarise_tabular` gives the schema, task, train row count, each categorical column's distinct train values and the classes, in one streamed pass. `facts()` on it equals `load_tabular(…).facts()`. `_tabular_data` returns it, the fine-tune check uses `build.io.table_shape`, and `table_shape` now builds on the summary. Live, on a freshly started api: a classifier requested on this regression table was refused with its field error in 8.8 s, the api peaking at 203 MiB; no restart.
+- **Guard:** `test_NFR_2_the_summary_gives_the_full_loads_facts` (classification and regression), with `test_NFR_2_table_shape_equals_fit`.
+- **Not covered:** a real classical run on this table trains in `worker-cpu` (1.9 GB limit) on every train row, and `Date` and `Time` are one-hot encoded, about 2,900 categories between them. That run may be killed or crawl. Setting those columns to `ignore` or `embedding` on SCR-15 is the owner's choice.
+- **Status:** verified
+
 ### E-025 — Checking a model spec on the 2-million-row table killed the api
 
 - **Date:** 2026-11-27
