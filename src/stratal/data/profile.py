@@ -13,13 +13,13 @@ import math
 from array import array
 from bisect import bisect_right
 from collections import Counter, defaultdict
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from stratal.storage.manifest import COLUMNS, STATUS_ACCEPTED, Row, read_all
 
-__all__ = ["DISTRIBUTION_FIELDS", "Step", "diff", "distributions", "read_all"]
+__all__ = ["DISTRIBUTION_FIELDS", "Step", "diff", "distributions", "filled_in", "read_all"]
 
 Json = dict[str, Any]
 
@@ -342,12 +342,38 @@ def _field_group(field: str) -> str:
     return field
 
 
+def filled_in(rows: Iterable[Row]) -> set[str]:
+    """The columns at least one row has a value in."""
+    return {f for r in rows for f, v in r.items() if v is not None}
+
+
+def _pairs(a_rows: Iterable[Row], b_rows: Iterable[Row]) -> Iterator[tuple[Row | None, Row | None]]:
+    """Both sides' rows matched by ``row_key``, in key order; ``None`` where one side has
+    no such row. Both inputs must be sorted by ``row_key``, as manifests are."""
+    a_it, b_it = iter(a_rows), iter(b_rows)
+    ra, rb = next(a_it, None), next(b_it, None)
+    while ra is not None or rb is not None:
+        ka = None if ra is None else str(ra["row_key"])
+        kb = None if rb is None else str(rb["row_key"])
+        if kb is None or (ka is not None and ka < kb):
+            yield ra, None
+            ra = next(a_it, None)
+        elif ka is None or kb < ka:
+            yield None, rb
+            rb = next(b_it, None)
+        else:
+            yield ra, rb
+            ra, rb = next(a_it, None), next(b_it, None)
+
+
 def diff(
     a_rows: Iterable[Row],
     b_rows: Iterable[Row],
     *,
     a_steps: Sequence[Step],
     b_steps: Sequence[Step],
+    a_filled: Collection[str],
+    b_filled: Collection[str],
 ) -> Json:
     """Rows added, removed and changed from A to B, matched by ``row_key`` (DATA-3.5).
 
@@ -355,25 +381,29 @@ def diff(
     (the owner's answer at the low-fi, 2026-11-21); a row whose only difference is
     ``reason_detail`` is counted on its own line as wording only. A field one side has
     for no row (a label version's caption against a clean version) is listed once, not
-    per row.
+    per row: ``a_filled`` and ``b_filled`` name each side's columns that have any value.
+
+    Both sides are streams sorted by ``row_key`` and are walked side by side, so neither
+    is held in memory (NFR-2, E-025): a manifest of millions of rows can be compared.
     """
-    a = {str(r["row_key"]): r for r in a_rows}
-    b = {str(r["row_key"]): r for r in b_rows}
-
-    def filled(rows: Mapping[str, Row], field: str) -> bool:
-        return any(r.get(field) is not None for r in rows.values())
-
-    only_a = [f for f in COLUMNS if f not in _IGNORED and filled(a, f) and not filled(b, f)]
-    only_b = [f for f in COLUMNS if f not in _IGNORED and filled(b, f) and not filled(a, f)]
+    only_a = [f for f in COLUMNS if f not in _IGNORED and f in a_filled and f not in b_filled]
+    only_b = [f for f in COLUMNS if f not in _IGNORED and f in b_filled and f not in a_filled]
     compared = [f for f in COLUMNS if f not in _IGNORED and f not in only_a and f not in only_b]
     changed: list[Json] = []
     by_field: Counter[str] = Counter()
     wording: list[Json] = []
-    same = 0
-    for key in sorted(a.keys() & b.keys()):
-        ra, rb = a[key], b[key]
+    same = added = removed = changed_count = 0
+    for ra, rb in _pairs(a_rows, b_rows):
+        if rb is None:
+            removed += 1
+            continue
+        if ra is None:
+            added += 1
+            continue
+        key = str(ra["row_key"])
         fields = [f for f in compared if ra.get(f) != rb.get(f)]
         if fields:
+            changed_count += 1
             for group in {_field_group(f) for f in fields}:
                 by_field[group] += 1
             if len(changed) < _SHOWN_LIMIT:
@@ -390,14 +420,11 @@ def diff(
         else:
             same += 1
     wording_count = by_field.pop("__wording", 0)
-    changed_count = sum(
-        1 for k in a.keys() & b.keys() if any(a[k].get(f) != b[k].get(f) for f in compared)
-    )
     return {
         "stages_differ": a_steps[-1].stage != b_steps[-1].stage if a_steps and b_steps else False,
         "config_diff": _config_diff(a_steps, b_steps),
-        "added": len(b.keys() - a.keys()),
-        "removed": len(a.keys() - b.keys()),
+        "added": added,
+        "removed": removed,
         "changed": changed_count,
         "wording_only": wording_count,
         "same": same,
